@@ -1,0 +1,223 @@
+
+    <html>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>flomo · 浮墨笔记</title>
+        <style type="text/css">
+          * { margin: 0; padding: 0; }
+          body { background: #fafafa; }
+          header .logo { text-align: center; border-bottom: 1px solid #efefef; }
+          header .top { display: flex; justify-content: space-between; align-items: center; }
+          header .logo, header .top .user { padding: 40px 0; }
+          header .top .user .name { color: #454545; font-size: 16px; }
+          header .top .user .date { font-size: 12px; color: #9d9d9d; }
+          header .top .filter { display: none; justify-content: space-between; align-items: center; }
+          header .top .filter button { padding: 9px 10px; background: #30cf79; border-radius: 3px; color: #fff; font-size: 14px; border: none; cursor: pointer; }
+          header, .memos { width: 600px; margin: 0 auto; }
+          .memos h1 { margin-top: 30px; }
+          .memo { margin: 20px 0; background: #fff; padding: 20px; border-radius: 6px; word-wrap: break-word; }
+          .memo:hover { box-shadow: 0px 2px 10px #dddddd; }
+          .memo .time { color: #8d8d8d; font-size: 12px; }
+          .memo .content { color: #323232; font-size: 14px; }
+          .memo .content p { line-height: 1.8; min-height: 20px; margin: 0; }
+          .memo .content ul, .memo .content ol { padding-inline-start: 22px; margin: 0; }
+          .memo .content li { line-height: 1.8; }
+          .memo .files img { max-width: 100%; border: 1px solid #e6e6e6; border-radius: 4px; margin: 6px 0; }
+          .custom-select { position: relative; font-size: 14px; color: #9d9d9d; background: #efefef; border-radius: 3px; border: none; margin-right: 10px; }
+          .custom-select select { display: none; }
+          .select-selected { background: #efefef; color: #9d9d9d; }
+          .select-selected:after { position: absolute; content: ""; top: 14px; right: 10px; width: 0; height: 0; border: 6px solid transparent; border-color: #7d7d7d transparent transparent transparent; }
+          .select-selected.select-arrow-active:after { border-color: transparent transparent #7d7d7d transparent; top: 7px; }
+          .select-items div, .select-selected { color: rgba(157, 157, 157, 1); padding: 9px 12px; font-size: 14px; color: #9d9d9d; border: none; cursor: pointer; border-radius: 3px; border: none; width: 120px; user-select: none; }
+          .select-items { position: absolute; background-color: white; top: 100%; left: 0; right: 0; z-index: 99; max-height: 200px; overflow-y: auto; overflow-x: hidden; box-shadow: 0px 4px 2px #dddddd; }
+          .select-items::-webkit-scrollbar { width: 5px; }
+          .select-items::-webkit-scrollbar-track { background: #f1f1f1; }
+          .select-items::-webkit-scrollbar-thumb { background: #888; }
+          .select-hide { display: none; }
+          .select-items div:hover, .same-as-selected { background-color: rgba(0, 0, 0, 0.1); }
+            /* --- Audio Player Styles --- */
+          .audio-player {
+            width: 100%;
+            background: #f7f7f7; /* 替换 var(--commentItemBg) 为一个具体的颜色值 */
+            border-radius: 6px;
+            margin-top: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+          }
+
+          .audio-player audio {
+            /* 设置宽度确保它充满容器 */
+            width: 100%;
+          }
+
+          /* 音频转录内容的样式 */
+          .audio-player__content {
+            padding-top: 10px;
+            margin-top: 10px;
+            border-top: 1px solid #eeeeee; /* 添加一个分割线，使其更清晰 */
+            font-size: 14px;
+            color: #555555; /* 替换 #9d9d9d 为一个更清晰的颜色 */
+            line-height: 1.8;
+            white-space: pre-wrap; /* 保留换行和空格 */
+            word-wrap: break-word; /* 确保长文本能正常换行 */
+          } 
+          </style>
+      </head>
+      <body>
+        <header>
+          <div class="logo">
+            <svg width="96" height="31" viewBox="0 0 96 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M4.87056 9.11086C4.87056 6.25522 5.89594 4.89539 7.81854 4.89539H12.5609V0H7.81854C2.69163 0 0 3.39957 0 9.11086V10.8786V14.9581V30.3242H4.87056V15.3661H12.5609V10.8786H4.87056V9.11086ZM79.5937 27.8765C81.3881 29.7803 83.6952 30.7321 86.3868 30.7321C89.0785 30.7321 91.2574 29.7803 93.18 27.8765C95.1026 25.9727 95.9998 23.525 95.9998 20.5334C95.9998 17.5418 94.9744 15.0941 93.18 13.1903C91.2574 11.2866 89.0785 10.3347 86.3868 10.3347C83.6952 10.3347 81.5163 11.2866 79.5937 13.1903C77.6711 15.0941 76.7739 17.5418 76.7739 20.5334C76.7739 23.525 77.7993 25.9727 79.5937 27.8765ZM81.6444 20.5334C81.6444 17.5418 83.6952 15.502 86.3868 15.502C89.0785 15.502 91.2574 17.5418 91.1292 20.5334C91.1292 23.661 89.0785 25.7008 86.3868 25.7008C83.6952 25.7008 81.6444 23.661 81.6444 20.5334ZM32.8147 30.7321C30.1231 30.7321 27.816 29.7802 26.0215 27.8765C24.2271 25.9727 23.2017 23.661 23.2017 20.6694C23.2017 17.6777 24.0989 15.23 26.0215 13.3263C27.9441 11.4225 30.1231 10.4706 32.8147 10.4706C35.5063 10.4706 37.6853 11.4225 39.6079 13.3263C41.5305 15.23 42.4277 17.6777 42.4277 20.6694C42.4277 23.661 41.5305 26.1087 39.6079 28.0124C37.6853 29.9162 35.5063 30.7321 32.8147 30.7321ZM32.8147 15.502C30.1231 15.502 28.0723 17.5418 28.0723 20.5334C28.0723 23.661 30.1231 25.7007 32.8147 25.7007C35.5063 25.7007 37.5571 23.661 37.5571 20.5334C37.5571 17.5418 35.5063 15.502 32.8147 15.502ZM62.0358 19.9894V30.4601H57.2934V19.7175C57.2934 17.1338 55.8835 15.502 53.9609 15.502C51.7819 15.502 50.1157 16.8618 50.1157 19.9894V30.4601H45.3733V10.8786H50.1157V13.7342C51.0129 11.5585 53.32 10.4706 55.3708 10.4706C58.3187 10.6066 60.2413 11.8305 61.2667 14.1422C62.5484 11.6945 64.471 10.4706 67.0345 10.4706C71.5205 10.4706 74.084 13.5982 74.084 19.3095V30.4601H69.3416V19.8535C69.3416 17.1338 67.9317 15.502 65.8809 15.502C63.5738 15.502 62.0358 17.1338 62.0358 19.9894ZM15.6366 4.89539V0H20.379V30.4602H15.6366V7.2071V4.89539Z" fill="#202020"/>
+            </svg>
+          </div>
+          <div class="top">
+            <div class="user">
+              <div class="name">@顾飞飞</div>
+              <div class="date">于 2026-5-4 导出 3 条 MEMO</div>
+            </div>
+            <div class="filter">
+              <div class='custom-select'>
+                <select name="date" id="date">
+                  <option value="">选择年月</option>
+                  <option value="2026-05">2026-05</option>
+                </select>
+              </div>
+              <div class='custom-select'>
+                <select name="tag" id="tag">
+                  <option value="">选择标签</option>
+                  <option value="感性的人类">感性的人类</option><option value="感性的人类/DONE">感性的人类/DONE</option>
+                </select>
+              </div>
+              <button>筛选</button>
+            </div>
+          </div>
+        </header>
+        <div class="memos">
+    <div class="memo">
+      <div class="time">2026-05-03 13:35:34</div>
+      <div class="content"><p>#感性的人类/DONE </p><p>01</p><p>去沃尔玛的路上 </p><p>遇到一间小小的店铺</p><p>一个角度有个阿姨在卖粽子</p><p>闻着很香 于是激情下单</p><p>很香很糯很好吃 后面也常常回购</p><p></p><p>刷视频刷到一家农家杏干</p><p>9.9 试吃 100g</p><p>评价说很酸很好吃 再次激情下单</p><p>真的很酸很好吃</p><p>于是复购 还买了正装寄回家</p><p></p><p>会觉得 开一间小小的店铺</p><p>卖几款真材实料 独家的东西</p><p>遇见我这种买家 不断的复购</p><p>那么只要坚持 就能够谋生</p><p>是一件 双赢的事情</p><p></p><p>/</p><p></p><p>02</p><p>出家门 电梯口</p><p>遇到一个阿伯扶着一辆共享单车</p><p>问这个锁不了车 怎么办</p><p></p><p>我拿着他手机帮他操作</p><p>他骑着车就往外走 </p><p>手机就在我手上也不担心</p><p></p><p>觉得这个世界真的什么都可以做</p><p>共享单车锁不了车</p><p>就把车带回家研究</p><p>手机可以不设防的</p><p>给到一个陌生人手里</p><p></p><p>/</p><p></p><p> 03</p><p>小猫吃饱后</p><p>发现还有没吃饭</p><p>会扒拉爪子</p><p>做出埋屎的动作</p><p></p><p>掩盖气味</p><p>避免吸引捕猎者</p><p>以及</p><p>吃不完 藏起来</p><p>留着下次吃</p><p></p><p>怪可爱的</p></div>
+      <div class="files">
+        
+        
+      </div>
+    </div>
+  
+    <div class="memo">
+      <div class="time">2026-05-03 11:05:52</div>
+      <div class="content"><p>#感性的人类/DONE </p><p>01</p><p>重新决定每个账号的风格</p><p>就想要重新起昵称</p><p>我想了很久</p><p></p><p>喜欢的物件 追逐的目标</p><p>想要成为的人 想要做的事</p><p>我想了很久</p><p></p><p>我想不到的理由</p><p>大概是因为我是个抽象的人</p><p>总是思考"不切实际"的问题</p><p>于是连喜欢的名词 </p><p>都需要绞尽脑汁</p><p></p><p>/</p><p></p><p>02</p><p>发票有奖活动</p><p>之前总是上传失败</p><p>于是就放弃</p><p></p><p>直到朋友再次怂恿</p><p>于是再次尝试</p><p>才知道是没太认真研究规则</p><p>于是最近一直在开各种发票</p><p>然后满怀期待的去抽奖</p><p></p><p>在抽到 50 的时候惊呼</p><p>在抽到 10 的时候沉默</p><p>在抽到谢谢惠顾的时候皱眉</p><p></p><p>/</p><p></p><p>03</p><p>最近开始做梦</p><p>做梦自己哪一天能抽中几千万</p><p>然后再也不用为工作发愁</p><p></p><p>看不上刮刮乐</p><p>会觉得</p><p>既耗费了运气 </p><p>又不能完成财务自由的目标</p><p></p><p>所以会在路过体彩的时候</p><p>买一张随机五注的彩票</p><p>然后中了 18 元</p><p>emmmm...</p><p>继续做梦吧</p></div>
+      <div class="files">
+        
+        
+      </div>
+    </div>
+  
+    <div class="memo">
+      <div class="time">2026-05-02 07:14:37</div>
+      <div class="content"><p>#感性的人类/DONE<br></p><p>01</p><p>即使是不同的 AI</p><p>看完我的日记 都会知道 </p><p>我是一个理性高效的人</p><p></p><p>这其实不错 但过于"偏科"</p><p>所以我过得还不错 但不太快乐</p><p></p><p>趁着假期 我重新审视我的日记</p><p>结合 AI 给我的建议</p><p>决定开始在小红书记录我的"文科"</p><p>在抖音继续保持我的"理科"分数</p><p></p><p>下一阶段目标："文理双全"</p><p></p><p>/</p><p></p><p>02</p><p>有些庆幸 </p><p>前几天就开始训练小猫 听吹风机的声音</p><p>小猫也慢慢开始适应 不会像第一次那样</p><p>疯狂逃窜</p><p></p><p>所以在这天早晨 楼上钻洞机响起的时候 </p><p>虽然慌不择路 但起码有了吹风机作为过渡</p><p>不会不得已 突然经受那么大的噪音</p><p>却毫无准备</p><p></p><p>这么想的话 我是不是也该庆幸</p><p>庆幸我现在遇到的各种小小磨难</p><p>也是在 未雨绸缪</p><p>让我不至于在未来某个瞬间 束手无策</p><p></p><p>/</p><p></p><p>03</p><p>由于我一直在拍我的小猫</p><p>而我的小猫又过于好看</p><p>于是我的小猫收到了一份来自商家的玩具</p><p>这是我的小猫自己挣的玩具呢</p><p></p><p>从未想过</p><p>原来能够以这种方式</p><p>获得某件物品</p><p>完成某个"交易"</p><p></p><p>这是我见到所有朋友</p><p>都要炫耀的一件事情</p><p>毕竟我的小猫</p><p>这么厉害</p></div>
+      <div class="files">
+        
+        
+      </div>
+    </div>
+  </div>
+        <script>
+          // 检测 JS 是否可执行，如果可执行则显示 filter
+          (function() {
+            try {
+              const filterEl = document.querySelector(".filter");
+              if (filterEl) {
+                filterEl.style.display = "flex";
+              }
+            } catch (e) {
+              // JS 不可执行时保持隐藏状态
+            }
+          })();
+          
+          const memos = document.querySelectorAll(".memo");
+          const dateSelect = document.querySelector("#date");
+          const tagSelect = document.querySelector("#tag");
+          const filterBtn = document.querySelector("button");
+          filterBtn.addEventListener("click", () => {
+            const date = dateSelect.value;
+            const tag = tagSelect.value;
+            memos.forEach((memo) => {
+              const time = memo.querySelector(".time").innerText;
+              const content = memo.querySelector(".content").innerText;
+              const isDateMatch = !date || time.includes(date);
+              const isTagMatch = !tag || content.includes(tag);
+              memo.style.display = (isDateMatch && isTagMatch) ? "block" : "none";
+            });
+          });
+          
+          // 自定义选择框功能
+          var x, i, j, l, ll, selElmnt, a, b, c;
+          x = document.getElementsByClassName("custom-select");
+          l = x.length;
+          for (i = 0; i < l; i++) {
+            selElmnt = x[i].getElementsByTagName("select")[0];
+            ll = selElmnt.length;
+            a = document.createElement("DIV");
+            a.setAttribute("class", "select-selected");
+            a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
+            x[i].appendChild(a);
+            b = document.createElement("DIV");
+            b.setAttribute("class", "select-items select-hide");
+            for (j = 0; j < ll; j++) {
+              c = document.createElement("DIV");
+              c.innerHTML = selElmnt.options[j].innerHTML;
+              c.addEventListener("click", function (e) {
+                var y, i, k, s, h, sl, yl;
+                s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+                sl = s.length;
+                h = this.parentNode.previousSibling;
+                for (i = 0; i < sl; i++) {
+                  if (s.options[i].innerHTML == this.innerHTML) {
+                    s.selectedIndex = i;
+                    h.innerHTML = this.innerHTML;
+                    y = this.parentNode.getElementsByClassName("same-as-selected");
+                    yl = y.length;
+                    for (k = 0; k < yl; k++) {
+                      y[k].removeAttribute("class");
+                    }
+                    this.setAttribute("class", "same-as-selected");
+                    break;
+                  }
+                }
+                h.click();
+              });
+              b.appendChild(c);
+            }
+            x[i].appendChild(b);
+            a.addEventListener("click", function (e) {
+              e.stopPropagation();
+              closeAllSelect(this);
+              this.nextSibling.classList.toggle("select-hide");
+              this.classList.toggle("select-arrow-active");
+            });
+          }
+          
+          function closeAllSelect(elmnt) {
+            var x, y, i, xl, yl, arrNo = [];
+            x = document.getElementsByClassName("select-items");
+            y = document.getElementsByClassName("select-selected");
+            xl = x.length;
+            yl = y.length;
+            for (i = 0; i < yl; i++) {
+              if (elmnt == y[i]) {
+                arrNo.push(i);
+              } else {
+                y[i].classList.remove("select-arrow-active");
+              }
+            }
+            for (i = 0; i < xl; i++) {
+              if (arrNo.indexOf(i)) {
+                x[i].classList.add("select-hide");
+              }
+            }
+          }
+
+          document.addEventListener("click", closeAllSelect);
+        </script>
+      </body>
+    </html>
+  
