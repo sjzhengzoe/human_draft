@@ -29,12 +29,48 @@
       <button
         type="button"
         class="action-btn"
-        @click="handleToDownload"
+        @click="handlePreviewImage"
         :disabled="isDownloading"
-        title="下载图片"
+        title="预览图片"
       >
         <Download class="action-btn__icon" :size="22" />
       </button>
+    </div>
+
+    <div
+      v-if="imagePreviewUrls.length"
+      class="image-preview"
+      @click="closeImagePreview"
+    >
+      <div class="image-preview__content" @click.stop>
+        <button
+          type="button"
+          class="image-preview__close"
+          @click="closeImagePreview"
+        >
+          ×
+        </button>
+        <Swiper
+          :modules="previewModules"
+          :slides-per-view="1"
+          :space-between="16"
+          :speed="300"
+          :touch-ratio="1"
+          class="image-preview__swiper"
+        >
+          <SwiperSlide
+            v-for="(url, index) in imagePreviewUrls"
+            :key="url"
+            class="image-preview__slide"
+          >
+            <img
+              class="image-preview__img"
+              :src="url"
+              :alt="`图片预览 ${index + 1}`"
+            />
+          </SwiperSlide>
+        </Swiper>
+      </div>
     </div>
 
     <div v-if="showEditModal" class="edit-modal" @click="closeEditModal">
@@ -77,26 +113,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive } from "vue";
+import { computed, onBeforeUnmount, reactive, ref } from "vue";
 import { useStore } from "./store";
 import { useCommonStore } from "@/store/commonStore";
 import Header from "@/components/Header.vue";
 import Card from "./components/Card.vue";
 import { Clipboard, Pencil, Download } from "lucide-vue-next";
+import { Swiper, SwiperSlide } from "swiper/vue";
+import "swiper/css";
 import {
   convertBackgroundImagesToBase64,
   replaceSVGCSSVariables,
 } from "@/utils/dataToImages";
 import html2canvas from "html2canvas";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
 
 const store = useStore();
 const loadingStore = useCommonStore();
 const formData = computed(() => store.formData);
 const showEditModal = ref(false);
 const isDownloading = ref(false);
+const imagePreviewUrls = ref<string[]>([]);
 const IMAGE_EXPORT_WIDTH = 2160;
+const previewModules: any[] = [];
 
 const editFormData = reactive({
   content: "",
@@ -129,45 +167,38 @@ const handlePasteContent = async () => {
   }
 };
 
-const handleToDownload = async () => {
+const closeImagePreview = () => {
+  imagePreviewUrls.value.forEach((url) => URL.revokeObjectURL(url));
+  imagePreviewUrls.value = [];
+};
+
+onBeforeUnmount(closeImagePreview);
+
+const handlePreviewImage = async () => {
   if (isDownloading.value) return;
   isDownloading.value = true;
-  const zip = new JSZip();
-  let index = 0;
 
   loadingStore.showLoading();
 
+  const urls: string[] = [];
   try {
     await document.fonts.ready;
+    closeImagePreview();
+
+    let index = 0;
     while (true) {
       const node = document.getElementById(`pic_${index}`);
       if (!node) break;
 
       const blob = await generateImage(node);
-      const now = new Date();
-      const localDate = new Date(
-        now.getTime() - now.getTimezoneOffset() * 60000,
-      );
-      zip.file(
-        `xiaohongshu_${String(index + 1).padStart(2, "0")}.png`,
-        blob,
-        {
-          date: localDate,
-        },
-      );
+      urls.push(URL.createObjectURL(blob));
       index++;
     }
 
-    if (index > 0) {
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const date = getContentDate(formData.value.content)
-        .replace(/[^\d]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      saveAs(zipBlob, `xiaohongshu_${date}.zip`);
-    }
+    imagePreviewUrls.value = urls;
   } catch (err) {
-    console.error("下载失败:", err);
+    urls.forEach((url) => URL.revokeObjectURL(url));
+    console.error("生成预览失败:", err);
   } finally {
     loadingStore.hideLoading();
     isDownloading.value = false;
@@ -198,16 +229,6 @@ async function generateImage(node: HTMLElement): Promise<Blob> {
       "image/png",
     );
   });
-}
-
-function getContentDate(content: string) {
-  return (
-    content
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((line) => line.trim())
-      .find((line) => /^\d{4}\.\d{2}\.\d{2}/.test(line)) || "flomo"
-  );
 }
 
 function persistAll() {
@@ -306,6 +327,60 @@ function persistAll() {
     color: var(--text-primary);
     line-height: 1;
   }
+}
+
+.image-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.88);
+  box-sizing: border-box;
+}
+
+.image-preview__content {
+  position: relative;
+  width: min(100%, 460px);
+  max-width: 100%;
+}
+
+.image-preview__swiper {
+  width: 100%;
+  max-height: 84vh;
+}
+
+.image-preview__slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview__img {
+  display: block;
+  width: min(100%, 420px);
+  max-height: 84vh;
+  border-radius: 12px;
+  object-fit: contain;
+  -webkit-touch-callout: default;
+  user-select: auto;
+}
+
+.image-preview__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111111;
+  font-size: 22px;
+  line-height: 34px;
+  cursor: pointer;
 }
 
 .edit-modal {
