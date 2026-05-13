@@ -13,6 +13,14 @@
       <button
         type="button"
         class="action-btn"
+        @click="handleCopyContent"
+        title="复制小红书文案"
+      >
+        <Copy class="action-btn__icon" :size="22" />
+      </button>
+      <button
+        type="button"
+        class="action-btn"
         @click="handlePasteContent"
         title="粘贴文案"
       >
@@ -118,7 +126,7 @@ import { useStore } from "./store";
 import { useCommonStore } from "@/store/commonStore";
 import Header from "@/components/Header.vue";
 import Card from "./components/Card.vue";
-import { Clipboard, Pencil, Download } from "lucide-vue-next";
+import { Clipboard, Copy, Pencil, Download } from "lucide-vue-next";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/css";
 import {
@@ -134,6 +142,9 @@ const showEditModal = ref(false);
 const isDownloading = ref(false);
 const imagePreviewUrls = ref<string[]>([]);
 const IMAGE_EXPORT_WIDTH = 2160;
+const XIAOHONGSHU_BLANK_LINE = "\u2800";
+const XIAOHONGSHU_TAGS =
+  "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
 const previewModules: any[] = [];
 
 const editFormData = reactive({
@@ -165,6 +176,39 @@ const handlePasteContent = async () => {
   } catch (err) {
     console.error("读取剪贴板失败:", err);
   }
+};
+
+const handleCopyContent = async () => {
+  try {
+    const text = getCopyableContent(formData.value.content);
+    if (!text) return;
+
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    console.error("写入剪贴板失败:", err);
+  }
+};
+
+const getCopyableContent = (content: string) => {
+  const lines = content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => !line.trim().startsWith("#"));
+
+  while (lines.length && !lines[0].trim()) {
+    lines.shift();
+  }
+
+  while (lines.length && !lines[lines.length - 1].trim()) {
+    lines.pop();
+  }
+
+  const body = lines
+    .map((line) => (line.trim() ? line : XIAOHONGSHU_BLANK_LINE))
+    .join("\n");
+
+  return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
 };
 
 const closeImagePreview = () => {

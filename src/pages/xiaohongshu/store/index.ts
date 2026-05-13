@@ -20,7 +20,7 @@ const useStore = defineStore("xiaohongshuStore", {
 在抖音继续保持我的"理科"分数
 
 下一阶段目标："文理双全"
-/
+
 02
 有些庆幸 
 前几天就开始训练小猫 听吹风机的声音
@@ -36,7 +36,7 @@ const useStore = defineStore("xiaohongshuStore", {
 庆幸我现在遇到的各种小小磨难
 也是在 未雨绸缪
 让我不至于在未来某个瞬间 束手无策
-/
+
 03
 由于我一直在拍我的小猫
 而我的小猫又过于好看

@@ -74,6 +74,7 @@ const getParagraphLines = (text: string) =>
     )
     .filter(Boolean);
 const normalizeText = (text: string) => text.replace(/\r\n/g, "\n");
+const pageNumberPattern = /^(?:0\d|1\d)$/;
 const getFirstLine = (text: string) =>
   normalizeText(text)
     .split("\n")
@@ -93,17 +94,24 @@ const removeFirstLine = (text: string) => {
     .trim();
 };
 const getContentSlides = (content: string) => {
-  const body = content
+  const lines = content
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trimEnd())
-    .filter((line) => !line.trim().startsWith("#"))
-    .join("\n")
-    .trim();
+    .filter((line) => !line.trim().startsWith("#"));
+  const slides = lines.reduce<string[][]>((result, line) => {
+    const currentSlide = result[result.length - 1];
 
-  return body
-    .split(/\n\s*\/\s*\n/)
-    .map((item) => item.trim())
+    if (pageNumberPattern.test(line.trim()) && currentSlide.some(Boolean)) {
+      result.push([]);
+    }
+
+    result[result.length - 1].push(line);
+    return result;
+  }, [[]]);
+
+  return slides
+    .map((item) => item.join("\n").trim())
     .filter(Boolean);
 };
 
