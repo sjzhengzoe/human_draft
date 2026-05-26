@@ -3,14 +3,6 @@
     <Header />
 
     <main class="materials-main">
-      <section class="materials-panel">
-        <div class="materials-panel__meta">当前功能区</div>
-        <h1 class="materials-panel__title">素材</h1>
-        <p class="materials-panel__sub">
-          A4 底纸 210 × 297mm，虚线框按真实物理尺寸绘制
-        </p>
-      </section>
-
       <section class="paper-stage" aria-label="A4 尺寸素材参考">
         <div class="a4-sheet">
           <div
@@ -133,36 +125,8 @@ const handlePrint = () => {
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  margin-top: 20px;
+  margin-top: 0;
   overflow: hidden;
-}
-
-.usePx .materials-panel {
-  flex: 0 0 auto;
-  width: min(390px, 100%);
-  margin: 0 auto 14px;
-}
-
-.usePx .materials-panel__meta {
-  margin-bottom: 4px;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1;
-}
-
-.usePx .materials-panel__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.usePx .materials-panel__sub {
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.35;
 }
 
 .usePx .paper-stage {
@@ -317,7 +281,6 @@ const handlePrint = () => {
     overflow: visible;
   }
 
-  .usePx .materials-panel,
   .usePx .floating-actions {
     display: none;
   }

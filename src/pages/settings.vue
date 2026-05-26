@@ -42,6 +42,8 @@ const goBack = () => {
 }
 
 .settings-header {
+  position: sticky;
+  top: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -50,8 +52,6 @@ const goBack = () => {
   background: var(--panel-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  position: sticky;
-  top: 0;
   z-index: 100;
 }
 
@@ -77,10 +77,16 @@ const goBack = () => {
 }
 
 .settings-title {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  margin: 0;
   font-size: 17px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
+  line-height: 36px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .settings-content {

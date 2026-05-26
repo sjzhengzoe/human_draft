@@ -3,12 +3,6 @@
     <Header />
 
     <main class="menu-page__main">
-      <section class="workspace-panel">
-        <div class="workspace-panel__meta">当前功能区</div>
-        <h1 class="workspace-panel__title">菜单</h1>
-        <p class="workspace-panel__sub">{{ layoutDescription }}</p>
-      </section>
-
       <section
         ref="workspaceRef"
         class="menu-workspace"
@@ -16,12 +10,28 @@
         @touchstart.passive="handleTouchStart"
         @touchend.passive="handleTouchEnd"
       >
+        <div class="layout-tabs" role="tablist" aria-label="菜单版式切换">
+          <button
+            v-for="(page, index) in a4Pages"
+            :key="page.key"
+            type="button"
+            class="layout-tabs__item"
+            :class="{ 'layout-tabs__item--active': activePageIndex === index }"
+            role="tab"
+            :aria-selected="activePageIndex === index"
+            @click="setActivePage(index)"
+          >
+            {{ getPageTabLabel(page, index) }}
+          </button>
+        </div>
+
         <div
           v-if="activeA4Page"
           class="menu-a4-preview-frame"
           :style="a4PreviewFrameStyle"
         >
           <div
+            ref="a4SheetRef"
             :key="activeA4Page.key"
             :class="[
               'menu-a4-sheet',
@@ -93,14 +103,13 @@
       <button
         type="button"
         class="action-btn"
-        title="上一张"
-        aria-label="上一张 A4"
-        :disabled="activePageIndex === 0"
-        @click="showPrevPage"
+        title="预览图片"
+        aria-label="预览图片"
+        :disabled="isGeneratingPreview"
+        @click="handlePreviewImage"
       >
-        <ChevronLeft class="action-btn__icon" :size="22" />
+        <Download class="action-btn__icon" :size="22" />
       </button>
-      <div class="page-indicator">{{ pageIndicatorText }}</div>
       <button
         type="button"
         class="action-btn"
@@ -110,16 +119,23 @@
       >
         <Printer class="action-btn__icon" :size="22" />
       </button>
-      <button
-        type="button"
-        class="action-btn"
-        title="下一张"
-        aria-label="下一张 A4"
-        :disabled="activePageIndex === a4Pages.length - 1"
-        @click="showNextPage"
-      >
-        <ChevronRight class="action-btn__icon" :size="22" />
-      </button>
+    </div>
+
+    <div
+      v-if="imagePreviewUrl"
+      class="image-preview"
+      @click="closeImagePreview"
+    >
+      <div class="image-preview__content" @click.stop>
+        <button
+          type="button"
+          class="image-preview__close"
+          @click="closeImagePreview"
+        >
+          ×
+        </button>
+        <img class="image-preview__img" :src="imagePreviewUrl" alt="图片预览" />
+      </div>
     </div>
 
     <div v-if="showEditModal" class="edit-modal" @click="closeEditModal">
@@ -179,11 +195,19 @@ import {
 } from "vue";
 import Header from "@/components/Header.vue";
 import { useStore, type MenuCardData } from "./store";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-vue-next";
+import { useCommonStore } from "@/store/commonStore";
+import { Download, Printer } from "lucide-vue-next";
+import {
+  convertBackgroundImagesToBase64,
+  replaceSVGCSSVariables,
+} from "@/utils/dataToImages";
+import html2canvas from "html2canvas";
 
 const A4_PORTRAIT_WIDTH_MM = 210;
 const A4_PORTRAIT_HEIGHT_MM = 297;
 const PREVIEW_PX_PER_MM = 4;
+const SCREEN_PREVIEW_SCALE = 0.9;
+const IMAGE_EXPORT_WIDTH = 3000;
 
 type A4LayoutSpec = {
   key: string;
@@ -217,158 +241,6 @@ type A4PageView = Omit<A4Page, "specs"> & {
 
 const a4PageSpecs: A4Page[] = [
   {
-    key: "landscape",
-    label: "A4 横版菜单拼版",
-    cardOrientation: "landscape",
-    paperOrientation: "portrait",
-    width: A4_PORTRAIT_WIDTH_MM,
-    height: A4_PORTRAIT_HEIGHT_MM,
-    specs: [
-      {
-        key: "five-inch-landscape",
-        name: "5寸横版 127×89mm",
-        width: 127,
-        height: 89,
-        x: 0,
-        y: 0,
-        cardIndex: 0,
-        imageRatio: "127 / 89",
-        imageRatioLabel: "16:9",
-      },
-      {
-        key: "instax-wide-landscape",
-        name: "Instax Wide 108×86mm",
-        width: 108,
-        height: 86,
-        x: 102,
-        y: 89,
-        cardIndex: 1,
-        imageRatio: "99 / 62",
-        imageRatioLabel: "3:2",
-      },
-      {
-        key: "four-inch-landscape",
-        name: "4寸横版 102×76mm",
-        width: 102,
-        height: 76,
-        x: 0,
-        y: 89,
-        cardIndex: 2,
-        imageRatio: "4 / 3",
-        imageRatioLabel: "3:2",
-      },
-      {
-        key: "three-inch-landscape",
-        name: "3寸横版 89×63mm",
-        width: 89,
-        height: 63,
-        x: 0,
-        y: 165,
-        cardIndex: 3,
-        imageRatio: "4 / 3",
-        imageRatioLabel: "16:9",
-      },
-      {
-        key: "instax-square-landscape",
-        name: "Instax Square 86×72mm",
-        width: 86,
-        height: 72,
-        x: 89,
-        y: 175,
-        cardIndex: 4,
-        imageRatio: "62 / 62",
-        imageRatioLabel: "3:2",
-      },
-      {
-        key: "instax-mini-landscape",
-        name: "Instax Mini横版 86×54mm",
-        width: 86,
-        height: 54,
-        x: 0,
-        y: 228,
-        cardIndex: 5,
-        imageRatio: "62 / 46",
-        imageRatioLabel: "2:1",
-      },
-    ],
-  },
-  {
-    key: "portrait",
-    label: "A4 竖版菜单拼版",
-    cardOrientation: "portrait",
-    paperOrientation: "portrait",
-    width: A4_PORTRAIT_WIDTH_MM,
-    height: A4_PORTRAIT_HEIGHT_MM,
-    specs: [
-      {
-        key: "five-inch-portrait",
-        name: "5寸竖版 89×127mm",
-        width: 89,
-        height: 127,
-        x: 0,
-        y: 0,
-        cardIndex: 0,
-        imageRatio: "89 / 127",
-        imageRatioLabel: "4:5",
-      },
-      {
-        key: "instax-wide-portrait",
-        name: "Instax Wide竖版 86×108mm",
-        width: 86,
-        height: 108,
-        x: 102,
-        y: 0,
-        cardIndex: 1,
-        imageRatio: "62 / 99",
-        imageRatioLabel: "1:1",
-      },
-      {
-        key: "instax-square-portrait",
-        name: "Instax Square竖版 72×86mm",
-        width: 72,
-        height: 86,
-        x: 124,
-        y: 108,
-        cardIndex: 4,
-        imageRatio: "62 / 62",
-        imageRatioLabel: "1:1",
-      },
-      {
-        key: "four-inch-portrait",
-        name: "4寸竖版 76×102mm",
-        width: 76,
-        height: 102,
-        x: 0,
-        y: 127,
-        cardIndex: 2,
-        imageRatio: "3 / 4",
-        imageRatioLabel: "4:5",
-      },
-      {
-        key: "three-inch-portrait",
-        name: "3寸竖版 63×89mm",
-        width: 63,
-        height: 89,
-        x: 76,
-        y: 194,
-        cardIndex: 3,
-        imageRatio: "3 / 4",
-        imageRatioLabel: "4:5",
-      },
-      {
-        key: "instax-mini-portrait",
-        name: "Instax Mini竖版 54×86mm",
-        width: 54,
-        height: 86,
-        x: 139,
-        y: 194,
-        cardIndex: 5,
-        imageRatio: "46 / 62",
-        imageRatioLabel: "3:4",
-      },
-    ],
-  },
-  {
     key: "instax-mini-landscape-grid",
     label: "A4 Instax Mini 横版满铺",
     cardOrientation: "landscape",
@@ -395,12 +267,12 @@ const a4PageSpecs: A4Page[] = [
 ];
 
 const store = useStore();
+const loadingStore = useCommonStore();
 const workspaceRef = ref<HTMLElement | null>(null);
+const a4SheetRef = ref<HTMLElement | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const formData = computed(() => store.formData);
 const cards = computed(() => formData.value.cards);
-const layoutDescription =
-  "A4 横版一张、竖版一张，去掉 6 寸，按真实尺寸放入 5寸、4寸、3寸、Instax Wide、Instax Square、Instax Mini";
 const a4Pages = computed<A4PageView[]>(() =>
   a4PageSpecs.map(({ specs, ...page }) => ({
     ...page,
@@ -414,6 +286,8 @@ const activeImageIndex = ref<number | null>(null);
 const activeEditIndex = ref<number | null>(null);
 const showEditModal = ref(false);
 const activePageIndex = ref(0);
+const imagePreviewUrl = ref("");
+const isGeneratingPreview = ref(false);
 const touchStartX = ref(0);
 const touchStartY = ref(0);
 const previewScale = ref(1);
@@ -436,11 +310,8 @@ const a4PreviewSheetStyle = computed(() => ({
   height: `${activeA4BaseHeight.value}px`,
   transform: `scale(${previewScale.value})`,
 }));
-const pageIndicatorText = computed(() => {
-  const page = activeA4Page.value;
-  if (!page) return "";
-  return `${activePageIndex.value + 1}/${a4Pages.value.length} ${page.cardOrientation === "landscape" ? "横版" : "竖版"}`;
-});
+const getPageTabLabel = (page: A4PageView, index: number) =>
+  `${index + 1}/${a4Pages.value.length} ${page.cardOrientation === "landscape" ? "横版" : "竖版"}`;
 
 const mainstreamImageRatios = [
   9 / 16,
@@ -558,6 +429,70 @@ const handlePrint = () => {
   window.print();
 };
 
+const closeImagePreview = () => {
+  if (imagePreviewUrl.value) {
+    URL.revokeObjectURL(imagePreviewUrl.value);
+    imagePreviewUrl.value = "";
+  }
+};
+
+const handlePreviewImage = async () => {
+  if (isGeneratingPreview.value) return;
+  isGeneratingPreview.value = true;
+  loadingStore.showLoading();
+
+  const node = a4SheetRef.value;
+  if (!node) {
+    loadingStore.hideLoading();
+    isGeneratingPreview.value = false;
+    return;
+  }
+
+  const previousTransform = node.style.transform;
+
+  try {
+    await document.fonts.ready;
+    node.style.transform = "none";
+
+    const blob = await generateMenuImage(node);
+    closeImagePreview();
+    imagePreviewUrl.value = URL.createObjectURL(blob);
+  } catch (err) {
+    console.error("生成菜单预览失败:", err);
+  } finally {
+    node.style.transform = previousTransform;
+    loadingStore.hideLoading();
+    isGeneratingPreview.value = false;
+  }
+};
+
+async function generateMenuImage(node: HTMLElement): Promise<Blob> {
+  await convertBackgroundImagesToBase64(node);
+  replaceSVGCSSVariables(node);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  const width = activeA4BaseWidth.value;
+  const height = activeA4BaseHeight.value;
+  const scale = IMAGE_EXPORT_WIDTH / width;
+  const canvas = await html2canvas(node, {
+    width,
+    height,
+    useCORS: true,
+    scale,
+    logging: false,
+    backgroundColor: "#ffffff",
+  });
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob: Blob | null) =>
+        blob ? resolve(blob) : reject(new Error("无法生成 blob")),
+      "image/png",
+    );
+  });
+}
+
 const updatePreviewScale = () => {
   const workspace = workspaceRef.value;
   const page = activeA4Page.value;
@@ -566,7 +501,9 @@ const updatePreviewScale = () => {
   const rect = workspace.getBoundingClientRect();
   const baseWidth = page.width * PREVIEW_PX_PER_MM;
   const baseHeight = page.height * PREVIEW_PX_PER_MM;
-  const scale = Math.min(rect.width / baseWidth, rect.height / baseHeight);
+  const scale =
+    Math.min(rect.width / baseWidth, rect.height / baseHeight) *
+    SCREEN_PREVIEW_SCALE;
 
   previewScale.value = Math.max(0.1, Math.min(1, scale));
 };
@@ -580,6 +517,10 @@ const showNextPage = () => {
     a4Pages.value.length - 1,
     activePageIndex.value + 1,
   );
+};
+
+const setActivePage = (index: number) => {
+  activePageIndex.value = index;
 };
 
 const handleTouchStart = (event: TouchEvent) => {
@@ -624,6 +565,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  closeImagePreview();
   workspaceResizeObserver?.disconnect();
 });
 </script>
@@ -669,36 +611,8 @@ onBeforeUnmount(() => {
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  margin-top: 20px;
+  margin-top: 0;
   overflow: hidden;
-}
-
-.usePx .workspace-panel {
-  flex: 0 0 auto;
-  width: min(390px, 100%);
-  margin: 0 auto 14px;
-}
-
-.usePx .workspace-panel__meta {
-  margin-bottom: 4px;
-  font-size: 11px;
-  line-height: 1;
-  color: var(--text-muted);
-}
-
-.usePx .workspace-panel__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.usePx .workspace-panel__sub {
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.3;
 }
 
 .usePx .layout-switch {
@@ -738,10 +652,49 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   min-height: 0;
   padding: 0;
   overflow: hidden;
   container-type: size;
+}
+
+.usePx .layout-tabs {
+  position: relative;
+  z-index: 20;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px;
+  box-sizing: border-box;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: rgba(17, 19, 31, 0.82);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.usePx .layout-tabs__item {
+  min-width: 74px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 30px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.usePx .layout-tabs__item--active {
+  background: #ffffff;
+  color: #11131f;
 }
 
 .usePx .menu-a4-preview-frame {
@@ -1350,17 +1303,6 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(20px);
 }
 
-.usePx .page-indicator {
-  min-width: 70px;
-  padding: 0 2px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 48px;
-  text-align: center;
-  white-space: nowrap;
-}
-
 .usePx .action-btn {
   display: flex;
   align-items: center;
@@ -1646,8 +1588,8 @@ onBeforeUnmount(() => {
     overflow: hidden;
   }
 
-  .usePx .workspace-panel,
   .usePx .floating-actions,
+  .usePx .layout-tabs,
   .usePx .menu-toast,
   .usePx .image-preview,
   .usePx .edit-modal {

@@ -11,6 +11,7 @@
           <PanelLeft class="header__btn-icon" :size="18" />
         </button>
       </div>
+      <h1 class="header__title">{{ currentTitle }}</h1>
       <div class="header__right">
         <button
           type="button"
@@ -68,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   PanelLeft,
@@ -92,6 +93,10 @@ const menuItems: { path: string; label: string; icon: unknown }[] = [
   { path: "/menu", label: "菜单", icon: Utensils },
   { path: "/materials", label: "素材", icon: Ruler },
 ];
+
+const currentTitle = computed(
+  () => menuItems.find((item) => item.path === route.path)?.label || "设置",
+);
 
 const toggleTabPanel = () => {
   showTabPanel.value = !showTabPanel.value;
@@ -129,6 +134,22 @@ const selectFeature = (path: string) => {
 .header__right {
   display: flex;
   align-items: center;
+}
+
+.header__title {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 38px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 .header__btn {

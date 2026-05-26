@@ -2,10 +2,6 @@
   <div class="page">
     <Header />
     <main class="page__main">
-      <section class="workspace-panel">
-        <div class="workspace-panel__meta">当前功能区</div>
-        <h1 class="workspace-panel__title">抖音模板</h1>
-      </section>
       <Card />
     </main>
 
@@ -281,29 +277,9 @@ function persistAll() {
 
 .page__main {
   flex: 1;
-  margin-top: 20px;
+  margin-top: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.workspace-panel {
-  width: min(300px, 100%);
-  margin: 0 auto 14px;
-}
-
-.workspace-panel__meta {
-  margin-bottom: 4px;
-  font-size: 11px;
-  line-height: 1;
-  color: var(--text-muted);
-}
-
-.workspace-panel__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.3;
 }
 
 .floating-actions {
