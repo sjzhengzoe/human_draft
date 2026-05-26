@@ -17,6 +17,14 @@ const router: Router = createRouter({
       component: () => import("@/pages/xiaohongshu/App.vue"),
     },
     {
+      path: "/menu",
+      component: () => import("@/pages/menu/App.vue"),
+    },
+    {
+      path: "/materials",
+      component: () => import("@/pages/materials/App.vue"),
+    },
+    {
       path: "/settings",
       component: () => import("@/pages/settings.vue"),
     },

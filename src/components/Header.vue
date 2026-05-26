@@ -77,6 +77,8 @@ import {
   ChevronRight,
   BookHeart,
   Video,
+  Utensils,
+  Ruler,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -87,6 +89,8 @@ const showTabPanel = ref(false);
 const menuItems: { path: string; label: string; icon: unknown }[] = [
   { path: "/douyin", label: "抖音模板", icon: Video },
   { path: "/xiaohongshu", label: "小红书模板", icon: BookHeart },
+  { path: "/menu", label: "菜单", icon: Utensils },
+  { path: "/materials", label: "素材", icon: Ruler },
 ];
 
 const toggleTabPanel = () => {
