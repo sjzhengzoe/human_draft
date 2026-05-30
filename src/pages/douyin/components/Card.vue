@@ -15,27 +15,33 @@
           <div class="card-item">
             <div :id="`pic_${idx}`" class="pic-box pic-box--douyin">
               <div class="content-body">
-                <p
-                  v-for="(paragraph, i) in page"
-                  :key="i"
-                  :class="[
-                    'content-paragraph',
-                    { 'content-paragraph--title': paragraph.isTitle },
-                  ]"
-                >
-                  <span
-                    v-for="(part, partIndex) in paragraph.parts"
-                    :key="partIndex"
+                <template v-for="(paragraph, i) in page" :key="i">
+                  <div
+                    v-if="paragraph.isSpacer"
+                    class="content-spacer"
+                    aria-hidden="true"
+                  />
+                  <p
+                    v-else
                     :class="[
-                      {
-                        'content-title-text': paragraph.isTitle,
-                        'content-emphasis': part.emphasis,
-                      },
+                      'content-paragraph',
+                      { 'content-paragraph--title': paragraph.isTitle },
                     ]"
                   >
-                    {{ part.text }}
-                  </span>
-                </p>
+                    <span
+                      v-for="(part, partIndex) in paragraph.parts"
+                      :key="partIndex"
+                      :class="[
+                        {
+                          'content-title-text': paragraph.isTitle,
+                          'content-emphasis': part.emphasis,
+                        },
+                      ]"
+                    >
+                      {{ part.text }}
+                    </span>
+                  </p>
+                </template>
               </div>
             </div>
           </div>
@@ -58,41 +64,58 @@ type TextPart = {
 type Paragraph = {
   parts: TextPart[];
   isTitle: boolean;
+  isSpacer: boolean;
 };
 
 const store = useStore();
 const formData = computed(() => store.formData);
-const paragraphs = computed<Paragraph[]>(() =>
-  getParagraphLines(formData.value.content).map((line, index) => ({
-    parts: parseEmphasis(line),
-    isTitle: index === 0,
-  })),
-);
+const paragraphs = computed<Paragraph[]>(() => {
+  let hasTitle = false;
+
+  return getParagraphLines(formData.value.content).map((line) => {
+    const isSpacer = line === "";
+    const isTitle = !isSpacer && !hasTitle;
+
+    if (isTitle) {
+      hasTitle = true;
+    }
+
+    return {
+      parts: isSpacer ? [] : parseEmphasis(line),
+      isTitle,
+      isSpacer,
+    };
+  });
+});
 const pages = computed(() =>
-  paragraphs.value.length ? [paragraphs.value] : [],
+  paragraphs.value.some((paragraph) => !paragraph.isSpacer)
+    ? [paragraphs.value]
+    : [],
 );
 
 function getParagraphLines(text: string) {
-  return normalizeText(text)
+  const lines = normalizeText(text)
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !line.startsWith("#") && line !== "/")
-    .reduce<string[]>((paragraphs, line) => {
-      const isListItem = /^\d+[.．、]\s*/.test(line);
-      const lastIndex = paragraphs.length - 1;
+    .filter((line) => !line.startsWith("#") && line !== "/");
 
-      if (isListItem && lastIndex >= 0) {
-        paragraphs[lastIndex] = `${paragraphs[lastIndex]}\n${line}`;
-        return paragraphs;
-      }
-
-      paragraphs.push(line);
-      return paragraphs;
-    }, []);
+  return trimEmptyLines(lines);
 }
 function normalizeText(text: string) {
   return text.replace(/\r\n/g, "\n");
+}
+function trimEmptyLines(lines: string[]) {
+  const result = [...lines];
+
+  while (result[0] === "") {
+    result.shift();
+  }
+
+  while (result[result.length - 1] === "") {
+    result.pop();
+  }
+
+  return result;
 }
 function parseEmphasis(text: string) {
   return text
@@ -185,8 +208,8 @@ const breakpoints = {
   white-space: pre-line;
 }
 
-.content-paragraph + .content-paragraph {
-  margin-top: 14px;
+.content-spacer {
+  height: 13px;
 }
 
 .content-paragraph--title {
@@ -210,6 +233,10 @@ const breakpoints = {
 
 .content-paragraph--title + .content-paragraph {
   margin-top: 20px;
+}
+
+.content-paragraph--title + .content-spacer {
+  height: 20px;
 }
 
 .content-title-text,

@@ -171,15 +171,32 @@ const getCopyableContent = (content: string) => {
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
+    .filter((line) => !line.startsWith("#") && line !== "/");
 
   if (!lines.length) return "";
 
-  const bodyLines = lines.slice(1);
+  const titleIndex = lines.findIndex(Boolean);
+  if (titleIndex < 0) return "";
+
+  const bodyLines = trimEmptyLines(lines.slice(titleIndex + 1));
   if (!bodyLines.length) return DOUYIN_TAGS;
 
-  return [bodyLines.join("\n\n"), DOUYIN_TAGS].join("\n\n");
+  return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
 };
+
+function trimEmptyLines(lines: string[]) {
+  const result = [...lines];
+
+  while (result[0] === "") {
+    result.shift();
+  }
+
+  while (result[result.length - 1] === "") {
+    result.pop();
+  }
+
+  return result;
+}
 
 const showCopyToast = () => {
   copyToastVisible.value = true;
