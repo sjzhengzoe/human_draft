@@ -2,6 +2,28 @@
 
 ## Project Skills
 
+When converting raw thoughts in `flomo/text.md` into 小策论 posts, use the project-local skill:
+
+`skills/flomo-xiaocelun-writing/SKILL.md`
+
+Use it for requests involving:
+- `改成小策论`
+- `小策论`
+- `更新` when the active context is `flomo/text.md`
+- `整理想法`
+- turning raw notes into Douyin/Flomo short-line reflective prose
+
+Key rules from the skill:
+- Start with Thought Partner questions before drafting when `## 想法` contains new raw material.
+- Ask one question at a time and wait for the user's answer.
+- Preserve the user's original idea path; do not rewrite it into a different topic.
+- Generate title candidates before final drafting unless the user explicitly skips that step.
+- Use a category tag, then a short center-sentence title, then short-line prose.
+- Prefer 3 body paragraphs, max 4; total body lines ideally 10-13, max 15, excluding blank lines.
+- Each paragraph should usually be 3-4 lines; each line ideally 10-18 Chinese characters, max 22.
+- Short lines are only rhythm accents; do not create consecutive tiny lines or fragment sentences mechanically.
+- Clear `## 想法` after finalizing the 小策论.
+
 When working on A6 landscape loose-leaf menu backgrounds, use the project-local skill:
 
 `skills/menu-binder-background-design/SKILL.md`
