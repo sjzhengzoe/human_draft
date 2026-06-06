@@ -98,11 +98,11 @@
       .preview {
         position: relative;
         width: 100%;
-        aspect-ratio: 437 / 620;
+        aspect-ratio: var(--cell-ratio);
         background-image: var(--image);
         background-position: var(--sprite-x) var(--sprite-y);
         background-repeat: no-repeat;
-        background-size: 400% 200%;
+        background-size: var(--bg-size);
         border-bottom: 1px solid #eee9df;
       }
 
@@ -184,7 +184,7 @@
       <section class="hero">
         <h1>番茄炒蛋画风记录</h1>
         <p class="intro">
-          记录三版 A6 横版画风打样。每张卡片的图片来自对应 A6 对比图的单格裁切，
+          记录五版 A6 横版画风打样。每张卡片的图片来自对应 A6 对比图的单格裁切，
           下方保留风格描述和后续单独生成菜品图时可复用的提示词。
         </p>
       </section>
@@ -195,6 +195,72 @@
     <script>
       const baseSubject =
         "Tomato scrambled eggs / Chinese 番茄炒鸡蛋 on a simple small white plate, white or near-white background, centered 3:2 menu-card composition, readable at small A6 print size. Avoid photorealistic photography, semi-realistic glossy digital painting, anime, people, logo, watermark, fake menu text, dark background, and cluttered props.";
+
+      const referenceAnimeMenuItems = [
+        {
+          name: "日系治愈动画风",
+          desc: "温暖深夜食堂氛围，柔和灯光和轻微热气，安静治愈。",
+          prompt:
+            "Japanese healing animation food illustration, cozy late-night diner mood, soft warm lamp light, gentle steam, quiet restaurant atmosphere, no characters. " +
+            baseSubject,
+        },
+        {
+          name: "韩系 INS 菜单风",
+          desc: "干净简约、轻盈可爱，适合社交媒体菜单卡。",
+          prompt:
+            "Korean Instagram menu illustration, clean white background, light cute doodle accents, fresh simple composition, cheerful but not childish. " +
+            baseSubject,
+        },
+        {
+          name: "二次元厚涂风",
+          desc: "高饱和、强高光、CG 感明显，视觉冲击更强。",
+          prompt:
+            "Thick-paint 2D anime food art, saturated colors, strong highlights, polished CG feeling, glossy tomato red and golden egg, illustration not photography. " +
+            baseSubject,
+        },
+        {
+          name: "新海诚电影感",
+          desc: "通透光影、空气感、窗边日光，偏电影截图氛围。",
+          prompt:
+            "Japanese cinematic animation food illustration, airy sunlit window lighting, blue-green daylight highlights, transparent atmosphere, soft movie-still glow. " +
+            baseSubject,
+        },
+        {
+          name: "Q 版可爱风",
+          desc: "圆润、萌系、糖果色，但不要人物脸或过度幼稚。",
+          prompt:
+            "Cute Q-version food illustration, rounded soft shapes, adorable glossy food rendering, candy-like warm colors, gentle decorative accents, no faces. " +
+            baseSubject,
+        },
+        {
+          name: "游戏料理 UI 风",
+          desc: "像 RPG 高级料理道具图，暗底聚光、金色发光、界面感强。",
+          prompt:
+            "Game cooking UI style, RPG item icon or premium dish card mood, dark warm plate spotlight, subtle golden glow effects, fantasy cooking interface feeling, no text or rating stars. " +
+            baseSubject,
+        },
+        {
+          name: "和风浮世绘二次元",
+          desc: "日式纹样、平面配色、古风纸感，装饰性强。",
+          prompt:
+            "Japanese ukiyo-e inspired 2D food illustration, flat decorative composition, vintage Japanese pattern feeling, restrained old-print texture, warm paper mood. " +
+            baseSubject,
+        },
+        {
+          name: "日漫食战夸张风",
+          desc: "高光爆炸、热气和速度线，强调食欲冲击。",
+          prompt:
+            "Exaggerated manga food battle style, dramatic high contrast, explosive appetite, steam, sparkle energy, speed-line impact, bold highlights, no characters. " +
+            baseSubject,
+        },
+        {
+          name: "轻像素二次元风",
+          desc: "像素游戏素材感，可爱、图标化、边缘清晰。",
+          prompt:
+            "Cute pixel-art 2D food icon, low-resolution pixelated plate and tomato egg shapes, limited pixel palette, crisp square pixels, game asset feeling. " +
+            baseSubject,
+        },
+      ];
 
       const versions = [
         {
@@ -386,6 +452,14 @@
             },
           ],
         },
+        {
+          title: "第四版：9 种菜单参考风格",
+          note: "参考用户提供的九宫格方向，使用第二次生成版本，更偏干净打印打样。",
+          image: "./A6番茄炒蛋画风对比04.png",
+          columns: 3,
+          rows: 3,
+          items: referenceAnimeMenuItems,
+        },
       ];
 
       const container = document.querySelector("#versions");
@@ -406,14 +480,22 @@
 
         const grid = document.createElement("div");
         grid.className = "grid";
+        const columns = version.columns || 4;
+        const rows = version.rows || 2;
+        const bgSize = `${columns * 100}% ${rows * 100}%`;
+        const cellRatio = `${1748 / columns} / ${1240 / rows}`;
 
         version.items.forEach((item, index) => {
-          const spriteX = `${((index % 4) / 3) * 100}%`;
-          const spriteY = `${Math.floor(index / 4) * 100}%`;
+          const spriteX =
+            columns > 1 ? `${((index % columns) / (columns - 1)) * 100}%` : "0%";
+          const spriteY =
+            rows > 1
+              ? `${(Math.floor(index / columns) / (rows - 1)) * 100}%`
+              : "0%";
           const card = document.createElement("article");
           card.className = "card";
           card.innerHTML = `
-            <div class="preview" style="--image: url('${encodeURI(version.image)}'); --sprite-x: ${spriteX}; --sprite-y: ${spriteY};">
+            <div class="preview" style="--image: url('${encodeURI(version.image)}'); --sprite-x: ${spriteX}; --sprite-y: ${spriteY}; --bg-size: ${bgSize}; --cell-ratio: ${cellRatio};">
               <div class="index">${versionIndex + 1}-${index + 1}</div>
             </div>
             <div class="card__body">

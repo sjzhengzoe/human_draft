@@ -364,24 +364,34 @@ function getFoodNameParts(filename: string) {
   };
 }
 
-function createFoodItem(status: FoodPickerTabKey, directory: string, filename: string) {
+function createFoodItem(
+  status: FoodPickerTabKey,
+  directory: string,
+  filename: string,
+  displayName?: string,
+) {
   const { category, name } = getFoodNameParts(filename);
+  const itemName = displayName || name;
 
   return {
     key: `${status}-${filename}`,
     status,
     category,
-    name,
-    dishName: `${category}·${name}`,
+    name: itemName,
+    dishName: `${category}·${itemName}`,
     imageUrl: encodeURI(`/${directory}/${filename}`),
   };
 }
 
 const foodPickerItems: FoodPickerItem[] = [
-  createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋.png"),
   createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-复古食谱.png"),
   createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-日式杂志.png"),
-  createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-水彩手绘.png"),
+  createFoodItem(
+    "pending",
+    "食物待打印",
+    "半荤 · 番茄炒鸡蛋-水彩手绘-透明.png",
+    "番茄炒鸡蛋-透明底",
+  ),
   createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-干净实拍.png"),
   createFoodItem("pending", "食物待打印", "荤菜 · 香辣虾.PNG"),
   createFoodItem("pending", "食物待打印", "荤菜 · 煎牛排.PNG"),
@@ -1431,6 +1441,14 @@ onBeforeUnmount(() => {
   width: calc((78 / 148) * 100%);
   height: calc((52 / 105) * 100%);
   border-radius: 1mm;
+  background: transparent;
+}
+
+.usePx
+  .menu-card--a4[data-orientation="landscape"][data-page-key="a6-landscape-single-image"]
+  .menu-card__image
+  img {
+  object-fit: contain;
 }
 
 .usePx

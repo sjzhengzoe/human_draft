@@ -1,0 +1,4 @@
+interface:
+  display_name: "Menu Dish Image Generation"
+  short_description: "生成 A6 菜单用的透明底水彩菜品主图。"
+  default_prompt: "按当前菜单风格生成一张透明底菜品图"

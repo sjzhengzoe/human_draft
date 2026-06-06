@@ -52,3 +52,27 @@ Key rules from the skill:
 - Name background files from the secondary tab name plus two digits, e.g. `基础极简01.png`.
 - If wiring a background into the UI, add it to the A6 background list with `name` matching the filename without extension and `src` using `encodeURI("/菜谱背景图/{filename}.png")`.
 - Run `npm run build` after code changes.
+
+When generating foreground dish images for the A6 menu image area, use the project-local skill:
+
+`skills/menu-dish-image-generation/SKILL.md`
+
+Use it for requests involving:
+- `生成菜图`
+- `生成菜品图片`
+- `菜的图片`
+- `菜单主图`
+- `透明底菜图`
+- `食物待打印`
+- matching the accepted tomato scrambled egg watercolor dish image style
+
+Key rules from the skill:
+- Save final dish images under `public/食物待打印/`.
+- Keep final dish images at `1536 × 1024px`, PNG, 3:2 landscape.
+- Final files should be transparent-background `RGBA` PNGs.
+- Match the accepted reference style: soft watercolor food illustration, warm appetizing colors, centered dish, print-friendly.
+- Use final production names like `{分类} · {菜名}.png`, for example `半荤 · 番茄炒鸡蛋.png`.
+- Do not add style suffixes like `-水彩手绘` or `-透明` unless generating comparison variants.
+- Avoid photorealistic food photography, semi-realistic glossy digital painting, anime, text, logos, hard frames, and visible white background blocks.
+- If wiring a dish into the menu UI, add it to `foodPickerItems` in `src/pages/menu/App.vue`.
+- Run `npm run build` after code changes.
