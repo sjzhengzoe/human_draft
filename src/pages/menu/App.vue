@@ -353,6 +353,15 @@ const foodPickerTabs: { key: FoodPickerTabKey; label: string }[] = [
   { key: "printed", label: "已打印" },
 ];
 
+const foodImageGlobs = {
+  pending: import.meta.glob(
+    "/public/食物待打印/*.{png,PNG,jpg,JPG,jpeg,JPEG,webp,WEBP,gif,GIF}",
+  ),
+  printed: import.meta.glob(
+    "/public/食物已打印/*.{png,PNG,jpg,JPG,jpeg,JPEG,webp,WEBP,gif,GIF}",
+  ),
+} satisfies Record<FoodPickerTabKey, Record<string, unknown>>;
+
 function getFoodNameParts(filename: string) {
   const nameWithoutExtension = filename.replace(/\.[^.]+$/, "");
   const [category, ...nameParts] = nameWithoutExtension.split("·");
@@ -364,44 +373,45 @@ function getFoodNameParts(filename: string) {
   };
 }
 
-function createFoodItem(
-  status: FoodPickerTabKey,
-  directory: string,
-  filename: string,
-  displayName?: string,
-) {
+function getFilenameFromPath(path: string) {
+  return path.split("/").pop() || path;
+}
+
+function createFoodItem(status: FoodPickerTabKey, directory: string, filename: string) {
   const { category, name } = getFoodNameParts(filename);
-  const itemName = displayName || name;
 
   return {
     key: `${status}-${filename}`,
     status,
     category,
-    name: itemName,
-    dishName: `${category}·${itemName}`,
+    name,
+    dishName: `${category}·${name}`,
     imageUrl: encodeURI(`/${directory}/${filename}`),
   };
 }
 
+function createFoodItemsFromDirectory(
+  status: FoodPickerTabKey,
+  directory: string,
+  modules: Record<string, unknown>,
+) {
+  return Object.keys(modules)
+    .map(getFilenameFromPath)
+    .sort((left, right) => left.localeCompare(right, "zh-Hans-CN"))
+    .map((filename) => createFoodItem(status, directory, filename));
+}
+
 const foodPickerItems: FoodPickerItem[] = [
-  createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-复古食谱.png"),
-  createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-日式杂志.png"),
-  createFoodItem(
+  ...createFoodItemsFromDirectory(
     "pending",
     "食物待打印",
-    "半荤 · 番茄炒鸡蛋-水彩手绘-透明.png",
-    "番茄炒鸡蛋-透明底",
+    foodImageGlobs.pending,
   ),
-  createFoodItem("pending", "食物待打印", "半荤 · 番茄炒鸡蛋-干净实拍.png"),
-  createFoodItem("pending", "食物待打印", "荤菜 · 香辣虾.PNG"),
-  createFoodItem("pending", "食物待打印", "荤菜 · 煎牛排.PNG"),
-  createFoodItem("pending", "食物待打印", "素菜 · 炒番薯叶.PNG"),
-  createFoodItem("pending", "食物待打印", "荤菜 · 煎三文鱼扒.PNG"),
-  createFoodItem("pending", "食物待打印", "半荤 · 菠萝炒牛肉.PNG"),
-  createFoodItem("pending", "食物待打印", "主食 · 烤贝贝南瓜.PNG"),
-  createFoodItem("pending", "食物待打印", "素菜 · 炒花菜.PNG"),
-  createFoodItem("pending", "食物待打印", "荤菜 · 九层塔炒鸡.PNG"),
-  createFoodItem("pending", "食物待打印", "荤菜 · 炒花甲.PNG"),
+  ...createFoodItemsFromDirectory(
+    "printed",
+    "食物已打印",
+    foodImageGlobs.printed,
+  ),
 ];
 
 function loadA6StyleIndex() {

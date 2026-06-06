@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const DEFAULT_IMAGE_URL = encodeURI("/食物待打印/半荤 · 番茄炒鸡蛋-水彩手绘-透明.png");
+const DEFAULT_IMAGE_URL = encodeURI("/食物待打印/半荤 · 番茄炒鸡蛋.png");
 const MENU_FORM_DATA_CARDS = "MENU_FORM_DATA_CARDS";
 const MENU_LAYOUT_MODE = "MENU_LAYOUT_MODE";
 const MENU_IMAGE_DB_NAME = "MENU_IMAGE_DB";

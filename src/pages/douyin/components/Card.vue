@@ -182,7 +182,8 @@ const breakpoints = {
   --fc_3: #5d5d5d;
   --fc_2: #111111;
   width: 300px;
-  max-height: 533px;
+  height: 400px;
+  aspect-ratio: 3 / 4;
   display: flex;
   flex-direction: column;
   overflow: hidden;
