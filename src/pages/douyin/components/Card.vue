@@ -186,6 +186,7 @@ const breakpoints = {
   aspect-ratio: 3 / 4;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow: hidden;
   padding: 38px 43px 40px 22px;
   background: url("@/assets/background/theme_bg22.jpg") top/cover no-repeat;
@@ -196,7 +197,7 @@ const breakpoints = {
 }
 
 .content-body {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.72;
   color: #1a1a1a;
 }
