@@ -1487,25 +1487,25 @@ onBeforeUnmount(() => {
 .usePx
   .menu-card--a4[data-orientation="landscape"][data-page-key="a6-landscape-single-image"]
   .menu-card__eyebrow {
-  margin-bottom: 1.8mm;
-  color: rgba(48, 39, 32, 0.54);
+  margin-bottom: 1.9mm;
+  color: rgba(48, 39, 32, 0.5);
   font-family: "MenuText";
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
 }
 
 .usePx
   .menu-card--a4[data-orientation="landscape"][data-page-key="a6-landscape-single-image"]
   .menu-card__meta {
-  margin-top: 2mm;
-  color: rgba(48, 39, 32, 0.56);
+  margin-top: 2.1mm;
+  color: rgba(48, 39, 32, 0.46);
   font-family: "MenuText";
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
 
 .usePx
@@ -2204,15 +2204,19 @@ onBeforeUnmount(() => {
   .usePx
     .menu-card--a4[data-page-key="a6-landscape-single-image"]
     .menu-card__eyebrow {
-    margin-bottom: 1.8mm;
-    font-size: 1.8mm;
+    margin-bottom: 1.9mm;
+    color: rgba(48, 39, 32, 0.5);
+    font-size: 1.9mm;
+    letter-spacing: 0.16em;
   }
 
   .usePx
     .menu-card--a4[data-page-key="a6-landscape-single-image"]
     .menu-card__meta {
-    margin-top: 2mm;
-    font-size: 2mm;
+    margin-top: 2.1mm;
+    color: rgba(48, 39, 32, 0.46);
+    font-size: 1.9mm;
+    letter-spacing: 0.08em;
   }
 }
 
