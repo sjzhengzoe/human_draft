@@ -134,26 +134,28 @@
           </button>
         </div>
 
-        <div
-          ref="cropFrameRef"
-          class="crop-frame"
-          :style="cropFrameStyle"
-          @pointerdown="handleCropPointerDown"
-          @pointermove="handleCropPointerMove"
-          @pointerup="handleCropPointerUp"
-          @pointercancel="handleCropPointerUp"
-        >
-          <img
-            class="crop-frame__image"
-            :src="cropDraft.src"
-            alt="待裁剪图片"
-            draggable="false"
-            :style="cropImageStyle"
-          />
-          <span class="crop-frame__grid crop-frame__grid--v1" />
-          <span class="crop-frame__grid crop-frame__grid--v2" />
-          <span class="crop-frame__grid crop-frame__grid--h1" />
-          <span class="crop-frame__grid crop-frame__grid--h2" />
+        <div class="crop-workspace">
+          <div
+            ref="cropFrameRef"
+            class="crop-frame"
+            :style="cropFrameStyle"
+            @pointerdown="handleCropPointerDown"
+            @pointermove="handleCropPointerMove"
+            @pointerup="handleCropPointerUp"
+            @pointercancel="handleCropPointerUp"
+          >
+            <img
+              class="crop-frame__image"
+              :src="cropDraft.src"
+              alt="待裁剪图片"
+              draggable="false"
+              :style="cropImageStyle"
+            />
+            <span class="crop-frame__grid crop-frame__grid--v1" />
+            <span class="crop-frame__grid crop-frame__grid--v2" />
+            <span class="crop-frame__grid crop-frame__grid--h1" />
+            <span class="crop-frame__grid crop-frame__grid--h2" />
+          </div>
         </div>
 
         <label class="crop-zoom">
@@ -1143,16 +1145,41 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   color: currentColor;
 }
 
+.usePx .crop-workspace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: min(86vw, 760px);
+  height: min(62vh, 560px);
+  overflow: hidden;
+  border-radius: 12px;
+  background: #070812;
+}
+
 .usePx .crop-frame {
   position: relative;
-  width: min(82vw, 720px, calc(68vh * var(--crop-ratio, 1)));
-  max-height: 68vh;
-  overflow: hidden;
-  align-self: center;
-  background: #ffffff;
+  width: min(82vw, 720px, calc(62vh * var(--crop-ratio, 1)));
+  max-width: calc(100% - 56px);
+  max-height: calc(100% - 56px);
+  overflow: visible;
+  background: transparent;
   cursor: grab;
+  outline: 2px solid rgba(255, 255, 255, 0.94);
+  outline-offset: -1px;
   touch-action: none;
   user-select: none;
+}
+
+.usePx .crop-frame::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  box-shadow: 0 0 0 2000px rgba(5, 5, 8, 0.58);
+  content: "";
+  pointer-events: none;
 }
 
 .usePx .crop-frame:active {
@@ -1163,6 +1190,7 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   position: absolute;
   top: 50%;
   left: 50%;
+  z-index: 1;
   max-width: none;
   max-height: none;
   pointer-events: none;
@@ -1173,7 +1201,7 @@ async function cropDraftToDataUrl(draft: CropDraft) {
 
 .usePx .crop-frame__grid {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   display: block;
   background: rgba(255, 255, 255, 0.58);
   pointer-events: none;
