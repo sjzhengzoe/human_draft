@@ -678,7 +678,7 @@ const applyPrintPageStyle = () => {
   style.textContent = `
     @media print {
       @page {
-        size: ${page.width}mm ${page.height}mm;
+        size: A6 landscape;
         margin: 0;
       }
     }
@@ -2101,15 +2101,15 @@ onBeforeUnmount(() => {
 
 @media print {
   @page {
-    size: A4 portrait;
+    size: A6 landscape;
     margin: 0;
   }
 
   :global(html),
   :global(body),
   :global(#app) {
-    width: var(--menu-print-width, 210mm) !important;
-    height: var(--menu-print-height, 297mm) !important;
+    width: 100% !important;
+    height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -2131,11 +2131,12 @@ onBeforeUnmount(() => {
   }
 
   .usePx.menu-page {
-    position: fixed;
-    inset: 0 auto auto 0;
+    position: absolute;
+    top: 0;
+    left: 0;
     display: block;
-    width: var(--menu-print-width, 210mm) !important;
-    height: var(--menu-print-height, 297mm) !important;
+    width: 100% !important;
+    height: 100% !important;
     padding: 0;
     overflow: hidden;
     background: #ffffff;
@@ -2144,8 +2145,8 @@ onBeforeUnmount(() => {
   .usePx .menu-page__main,
   .usePx .menu-workspace {
     display: block;
-    width: var(--menu-print-width, 210mm) !important;
-    height: var(--menu-print-height, 297mm) !important;
+    width: 100% !important;
+    height: 100% !important;
     margin: 0;
     overflow: hidden;
   }
@@ -2159,17 +2160,21 @@ onBeforeUnmount(() => {
   }
 
   .usePx .menu-a4-preview-frame {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
-    width: var(--menu-print-width, 210mm) !important;
-    height: var(--menu-print-height, 297mm) !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   .usePx.menu-a4-sheet {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
+    width: 100% !important;
+    height: 100% !important;
     transform: none !important;
     box-shadow: none;
     break-after: avoid;
@@ -2180,8 +2185,8 @@ onBeforeUnmount(() => {
 
   .usePx.menu-a4-sheet--landscape,
   .usePx.menu-a4-sheet--portrait {
-    width: var(--menu-print-width, 210mm) !important;
-    height: var(--menu-print-height, 297mm) !important;
+    width: 100% !important;
+    height: 100% !important;
   }
 
   .usePx .menu-card--a4 .dish-name {

@@ -1,5 +1,8 @@
 <template>
-  <div class="materials-page usePx">
+  <div
+    class="materials-page usePx"
+    :class="{ 'materials-page--exporting': isDownloadingImage }"
+  >
     <Header />
 
     <main class="materials-main">
@@ -20,8 +23,13 @@
         </div>
 
         <div
+          ref="paperSheetRef"
           class="paper-sheet"
-          :class="`paper-sheet--${activeMaterial.kind}`"
+          :class="[
+            `paper-sheet--${activeMaterial.kind}`,
+            { 'paper-sheet--exporting': isDownloadingImage },
+          ]"
+          :data-material-key="activeMaterial.key"
           :style="paperSheetStyle"
         >
           <div v-if="activeMaterial.kind === 'proof'" class="a6-style-proof">
@@ -52,6 +60,68 @@
             </div>
           </div>
 
+          <div
+            v-else-if="activeMaterial.kind === 'calibration'"
+            class="print-calibration"
+          >
+            <div class="print-calibration__grid" aria-hidden="true" />
+            <span
+              v-for="frame in calibrationInsetFrames"
+              :key="frame.key"
+              class="print-calibration__inset-frame"
+              :class="`print-calibration__inset-frame--${frame.key}`"
+              :style="frame.style"
+              aria-hidden="true"
+            />
+            <span
+              v-for="line in calibrationCenterLines"
+              :key="line.key"
+              class="print-calibration__center-line"
+              :class="`print-calibration__center-line--${line.key}`"
+              :style="line.style"
+              aria-hidden="true"
+            />
+            <span
+              v-for="tick in calibrationTicks"
+              :key="tick.key"
+              class="print-calibration__tick"
+              :class="[
+                `print-calibration__tick--${tick.side}`,
+                {
+                  'print-calibration__tick--major': tick.isMajor,
+                  'print-calibration__tick--medium': tick.isMedium,
+                },
+              ]"
+              :style="tick.style"
+              aria-hidden="true"
+            />
+            <span
+              v-for="label in calibrationLabels"
+              :key="label.key"
+              class="print-calibration__label"
+              :style="label.style"
+            >
+              {{ label.text }}
+            </span>
+            <span
+              class="print-calibration__ruler print-calibration__ruler--horizontal"
+            >
+              <span>100mm / 10cm</span>
+            </span>
+            <span
+              class="print-calibration__ruler print-calibration__ruler--vertical"
+            >
+              <span>100mm / 10cm</span>
+            </span>
+            <div class="print-calibration__summary">
+              <strong>A4 打印校准</strong>
+              <span>210mm × 297mm</span>
+              <span>小格 1mm / 0.1cm</span>
+              <span>四边读数看裁切</span>
+              <span>100mm 参考尺看缩放</span>
+            </div>
+          </div>
+
           <div v-else class="upload-material">
             <button
               v-for="(slot, index) in activeUploadSlots"
@@ -59,6 +129,7 @@
               type="button"
               class="upload-slot"
               :class="{ 'upload-slot--active': activeSlotIndex === index }"
+              :data-slot-key="slot.key"
               :style="getUploadSlotStyle(slot)"
               :title="`上传图片到${activeMaterial.name}`"
               @click="triggerImageUpload(index)"
@@ -75,10 +146,10 @@
               </span>
             </button>
             <span
-              v-for="mark in activeDividerMarks"
+              v-for="mark in activeCutMarks"
               :key="mark.key"
-              class="divider-mark"
-              :class="`divider-mark--${mark.direction}`"
+              class="cut-mark"
+              :class="`cut-mark--${mark.side}`"
               :style="mark.style"
             />
           </div>
@@ -89,6 +160,7 @@
           class="file-input"
           type="file"
           accept="image/*"
+          multiple
           @change="handleImageChange"
         />
       </section>
@@ -114,9 +186,47 @@
       >
         <RefreshCw class="action-btn__icon" :size="22" />
       </button>
+      <button
+        v-if="canDownloadMaterialImage"
+        type="button"
+        class="action-btn"
+        :title="`预览图片：${activeMaterial.name}`"
+        :aria-label="`预览${activeMaterial.name}图片`"
+        :disabled="isDownloadingImage"
+        @click="handleDownloadImage"
+      >
+        <Download class="action-btn__icon" :size="22" />
+      </button>
       <button type="button" class="action-btn" title="打印" @click="handlePrint">
         <Printer class="action-btn__icon" :size="22" />
       </button>
+    </div>
+
+    <div
+      v-if="imagePreviewUrl"
+      class="image-preview"
+      @click="closeImagePreview"
+    >
+      <div class="image-preview__content" @click.stop>
+        <button
+          type="button"
+          class="image-preview__close"
+          title="关闭"
+          aria-label="关闭"
+          @click="closeImagePreview"
+        >
+          ×
+        </button>
+        <img class="image-preview__img" :src="imagePreviewUrl" alt="图片预览" />
+        <button
+          type="button"
+          class="image-preview__download"
+          @click="downloadPreviewImage"
+        >
+          <Download :size="17" />
+          保存图片
+        </button>
+      </div>
     </div>
 
     <div v-if="cropDraft" class="crop-modal" @click="closeCropEditor">
@@ -198,12 +308,14 @@ import Header from "@/components/Header.vue";
 import { computed, nextTick, ref } from "vue";
 import {
   Check,
+  Download,
   ImagePlus,
   Printer,
   RefreshCw,
   Upload,
   X,
 } from "lucide-vue-next";
+import html2canvas from "html2canvas";
 
 const MATERIAL_INDEX_STORAGE_KEY = "MATERIALS_ACTIVE_INDEX";
 const PRINT_PAGE_STYLE_ID = "materials-print-page-style";
@@ -212,6 +324,7 @@ const A6_LANDSCAPE_HEIGHT_MM = 105;
 const A4_PORTRAIT_WIDTH_MM = 210;
 const A4_PORTRAIT_HEIGHT_MM = 297;
 const MAX_CROPPED_IMAGE_LONG_EDGE = 3508;
+const IMAGE_EXPORT_DPI = 300;
 
 type StyleProof = {
   kind: "proof";
@@ -245,11 +358,45 @@ type UploadMaterial = {
   slots: UploadSlot[];
 };
 
-type Material = UploadMaterial | StyleProof;
-
-type DividerMark = {
+type PrintCalibration = {
+  kind: "calibration";
   key: string;
-  direction: "vertical" | "horizontal";
+  name: string;
+  shortName: string;
+  width: number;
+  height: number;
+};
+
+type Material = UploadMaterial | StyleProof | PrintCalibration;
+
+type CutMark = {
+  key: string;
+  side:
+    | "top"
+    | "bottom"
+    | "left"
+    | "right"
+    | "center-horizontal"
+    | "center-vertical";
+  style: Record<string, string>;
+};
+
+type CalibrationTick = {
+  key: string;
+  side: "top" | "bottom" | "left" | "right";
+  isMajor: boolean;
+  isMedium: boolean;
+  style: Record<string, string>;
+};
+
+type CalibrationLabel = {
+  key: string;
+  text: string;
+  style: Record<string, string>;
+};
+
+type CalibrationGuide = {
+  key: string;
   style: Record<string, string>;
 };
 
@@ -277,6 +424,32 @@ type CropDragStart = {
 };
 
 const uploadMaterials: UploadMaterial[] = [
+  {
+    kind: "upload",
+    key: "menu-a6-landscape-two",
+    name: "菜单打印",
+    shortName: "菜单打印",
+    width: A6_LANDSCAPE_WIDTH_MM,
+    height: A6_LANDSCAPE_HEIGHT_MM * 2,
+    slots: [
+      {
+        key: "top",
+        label: "上传上方菜单",
+        x: 0,
+        y: 0,
+        width: A6_LANDSCAPE_WIDTH_MM,
+        height: A6_LANDSCAPE_HEIGHT_MM,
+      },
+      {
+        key: "bottom",
+        label: "上传下方菜单",
+        x: 0,
+        y: A6_LANDSCAPE_HEIGHT_MM,
+        width: A6_LANDSCAPE_WIDTH_MM,
+        height: A6_LANDSCAPE_HEIGHT_MM,
+      },
+    ],
+  },
   {
     kind: "upload",
     key: "a4-landscape",
@@ -365,7 +538,100 @@ const uploadMaterials: UploadMaterial[] = [
       },
     ],
   },
+  {
+    kind: "upload",
+    key: "a4-landscape-four",
+    name: "横版 A4 四合一",
+    shortName: "横版四合一",
+    width: A4_PORTRAIT_HEIGHT_MM,
+    height: A4_PORTRAIT_WIDTH_MM,
+    slots: [
+      {
+        key: "top-left",
+        label: "上传左上",
+        x: 0,
+        y: 0,
+        width: A4_PORTRAIT_HEIGHT_MM / 2,
+        height: A4_PORTRAIT_WIDTH_MM / 2,
+      },
+      {
+        key: "top-right",
+        label: "上传右上",
+        x: A4_PORTRAIT_HEIGHT_MM / 2,
+        y: 0,
+        width: A4_PORTRAIT_HEIGHT_MM / 2,
+        height: A4_PORTRAIT_WIDTH_MM / 2,
+      },
+      {
+        key: "bottom-left",
+        label: "上传左下",
+        x: 0,
+        y: A4_PORTRAIT_WIDTH_MM / 2,
+        width: A4_PORTRAIT_HEIGHT_MM / 2,
+        height: A4_PORTRAIT_WIDTH_MM / 2,
+      },
+      {
+        key: "bottom-right",
+        label: "上传右下",
+        x: A4_PORTRAIT_HEIGHT_MM / 2,
+        y: A4_PORTRAIT_WIDTH_MM / 2,
+        width: A4_PORTRAIT_HEIGHT_MM / 2,
+        height: A4_PORTRAIT_WIDTH_MM / 2,
+      },
+    ],
+  },
+  {
+    kind: "upload",
+    key: "a4-portrait-four",
+    name: "竖版 A4 四合一",
+    shortName: "竖版四合一",
+    width: A4_PORTRAIT_WIDTH_MM,
+    height: A4_PORTRAIT_HEIGHT_MM,
+    slots: [
+      {
+        key: "top-left",
+        label: "上传左上",
+        x: 0,
+        y: 0,
+        width: A4_PORTRAIT_WIDTH_MM / 2,
+        height: A4_PORTRAIT_HEIGHT_MM / 2,
+      },
+      {
+        key: "top-right",
+        label: "上传右上",
+        x: A4_PORTRAIT_WIDTH_MM / 2,
+        y: 0,
+        width: A4_PORTRAIT_WIDTH_MM / 2,
+        height: A4_PORTRAIT_HEIGHT_MM / 2,
+      },
+      {
+        key: "bottom-left",
+        label: "上传左下",
+        x: 0,
+        y: A4_PORTRAIT_HEIGHT_MM / 2,
+        width: A4_PORTRAIT_WIDTH_MM / 2,
+        height: A4_PORTRAIT_HEIGHT_MM / 2,
+      },
+      {
+        key: "bottom-right",
+        label: "上传右下",
+        x: A4_PORTRAIT_WIDTH_MM / 2,
+        y: A4_PORTRAIT_HEIGHT_MM / 2,
+        width: A4_PORTRAIT_WIDTH_MM / 2,
+        height: A4_PORTRAIT_HEIGHT_MM / 2,
+      },
+    ],
+  },
 ];
+
+const printCalibrationMaterial: PrintCalibration = {
+  kind: "calibration",
+  key: "a4-print-calibration",
+  name: "A4 打印校准",
+  shortName: "打印校准",
+  width: A4_PORTRAIT_WIDTH_MM,
+  height: A4_PORTRAIT_HEIGHT_MM,
+};
 
 const styleProofs: StyleProof[] = [
   {
@@ -455,16 +721,33 @@ const styleProofs: StyleProof[] = [
   },
 ];
 
-const materials: Material[] = [...uploadMaterials, ...styleProofs];
+const legacyMaterials: Material[] = [...uploadMaterials, ...styleProofs];
+const materials: Material[] = [
+  printCalibrationMaterial,
+  ...uploadMaterials,
+  ...styleProofs,
+];
 
 function loadMaterialIndex() {
+  const storedKey = localStorage.getItem("MATERIALS_ACTIVE_KEY");
+  const storedKeyIndex = storedKey
+    ? materials.findIndex((material) => material.key === storedKey)
+    : -1;
+
+  if (storedKeyIndex >= 0) return storedKeyIndex;
+
   const storedIndex = Number(localStorage.getItem(MATERIAL_INDEX_STORAGE_KEY));
 
-  if (Number.isInteger(storedIndex) && materials[storedIndex]) {
-    return storedIndex;
+  if (Number.isInteger(storedIndex) && legacyMaterials[storedIndex]) {
+    const legacyKey = legacyMaterials[storedIndex].key;
+    const migratedIndex = materials.findIndex(
+      (material) => material.key === legacyKey,
+    );
+
+    if (migratedIndex >= 0) return migratedIndex;
   }
 
-  if (Number.isInteger(storedIndex) && storedIndex >= materials.length) {
+  if (Number.isInteger(storedIndex) && storedIndex >= legacyMaterials.length) {
     return materials.length - 1;
   }
 
@@ -474,10 +757,14 @@ function loadMaterialIndex() {
 const activeMaterialIndex = ref(loadMaterialIndex());
 const activeSlotIndex = ref(0);
 const fileInputRef = ref<HTMLInputElement | null>(null);
+const paperSheetRef = ref<HTMLElement | null>(null);
 const cropFrameRef = ref<HTMLElement | null>(null);
 const uploadedImages = ref<Record<string, Record<string, string>>>({});
 const cropDraft = ref<CropDraft | null>(null);
 const cropDragStart = ref<CropDragStart | null>(null);
+const isDownloadingImage = ref(false);
+const imagePreviewUrl = ref("");
+const imagePreviewFileName = ref("");
 const activeMaterial = computed(
   () => materials[activeMaterialIndex.value] || materials[0],
 );
@@ -513,39 +800,260 @@ const cropZoom = computed(() => {
 
   return draft.scale / draft.minScale;
 });
-const activeDividerMarks = computed<DividerMark[]>(() => {
+const canDownloadMaterialImage = computed(
+  () => getDownloadableMaterialFileName(activeMaterial.value) !== "",
+);
+
+const calibrationTicks: CalibrationTick[] = [
+  ...createCalibrationAxisTicks(A4_PORTRAIT_WIDTH_MM, "horizontal"),
+  ...createCalibrationAxisTicks(A4_PORTRAIT_HEIGHT_MM, "vertical"),
+];
+const calibrationLabels: CalibrationLabel[] = [
+  ...createCalibrationAxisLabels(A4_PORTRAIT_WIDTH_MM, "horizontal"),
+  ...createCalibrationAxisLabels(A4_PORTRAIT_HEIGHT_MM, "vertical"),
+];
+const calibrationInsetFrames: CalibrationGuide[] = [
+  { key: "5mm", style: { inset: "5mm" } },
+  { key: "10mm", style: { inset: "10mm" } },
+];
+const calibrationCenterLines: CalibrationGuide[] = [
+  {
+    key: "vertical",
+    style: { left: `${A4_PORTRAIT_WIDTH_MM / 2}mm` },
+  },
+  {
+    key: "horizontal",
+    style: { top: `${A4_PORTRAIT_HEIGHT_MM / 2}mm` },
+  },
+];
+
+function getCalibrationTickLength(value: number) {
+  if (value % 10 === 0) return 18;
+  if (value % 5 === 0) return 13;
+
+  return 8;
+}
+
+function createCalibrationAxisTicks(
+  max: number,
+  axis: "horizontal" | "vertical",
+): CalibrationTick[] {
+  return Array.from({ length: max + 1 }, (_, value) => {
+    const isMajor = value % 10 === 0;
+    const isMedium = value % 5 === 0 && !isMajor;
+    const style: Record<string, string> = {
+      [axis === "horizontal" ? "left" : "top"]: `${value}mm`,
+      "--tick-length": `${getCalibrationTickLength(value)}mm`,
+    };
+
+    if (axis === "horizontal") {
+      return [
+        {
+          key: `top-${value}`,
+          side: "top" as const,
+          isMajor,
+          isMedium,
+          style,
+        },
+        {
+          key: `bottom-${value}`,
+          side: "bottom" as const,
+          isMajor,
+          isMedium,
+          style,
+        },
+      ];
+    }
+
+    return [
+      {
+        key: `left-${value}`,
+        side: "left" as const,
+        isMajor,
+        isMedium,
+        style,
+      },
+      {
+        key: `right-${value}`,
+        side: "right" as const,
+        isMajor,
+        isMedium,
+        style,
+      },
+    ];
+  }).flat();
+}
+
+function createCalibrationAxisLabels(
+  max: number,
+  axis: "horizontal" | "vertical",
+): CalibrationLabel[] {
+  const values = Array.from({ length: Math.floor(max / 10) + 1 }, (_, index) =>
+    index * 10,
+  );
+  const normalizedValues =
+    values[values.length - 1] === max ? values : [...values, max];
+  const labels: CalibrationLabel[] = [];
+
+  for (const value of normalizedValues) {
+    const text = `${value / 10}cm`;
+
+    if (axis === "horizontal") {
+      const horizontalStyle: Record<string, string> =
+        value === 0
+          ? { left: "1.8mm", transform: "none", textAlign: "left" }
+          : value === max
+            ? { right: "1.8mm", transform: "none", textAlign: "right" }
+            : { left: `${value}mm`, transform: "translateX(-50%)" };
+
+      labels.push(
+        {
+          key: `top-label-${value}`,
+          text,
+          style: {
+            ...horizontalStyle,
+            top: "20.2mm",
+          },
+        },
+        {
+          key: `bottom-label-${value}`,
+          text,
+          style: {
+            ...horizontalStyle,
+            bottom: "20.2mm",
+          },
+        },
+      );
+    } else {
+      const verticalStyle: Record<string, string> =
+        value === 0
+          ? { top: "1.8mm", transform: "none" }
+          : { top: `${value}mm`, transform: "translateY(-50%)" };
+
+      labels.push(
+        {
+          key: `left-label-${value}`,
+          text,
+          style: {
+            ...verticalStyle,
+            left: "10.4mm",
+          },
+        },
+        {
+          key: `right-label-${value}`,
+          text,
+          style: {
+            ...verticalStyle,
+            right: "10.4mm",
+            textAlign: "right",
+          },
+        },
+      );
+    }
+  }
+
+  return labels;
+}
+
+function roundMarkPosition(value: number) {
+  return Math.round(value * 1000) / 1000;
+}
+
+function normalizeMarkPosition(value: number, max: number) {
+  return roundMarkPosition(Math.max(0, Math.min(max, value)));
+}
+
+const activeCutMarks = computed<CutMark[]>(() => {
   const material = activeMaterial.value;
-  if (material.kind !== "upload" || material.slots.length < 2) return [];
+  if (material.kind !== "upload") return [];
 
-  if (material.key === "a4-landscape-two") {
-    return [
-      {
-        key: "center-vertical",
-        direction: "vertical",
-        style: {
-          left: "50%",
-          top: "0",
-          height: "100%",
+  const xPositions = Array.from(
+    new Set(
+      material.slots.flatMap((slot) => [
+        normalizeMarkPosition(slot.x, material.width),
+        normalizeMarkPosition(slot.x + slot.width, material.width),
+      ]),
+    ),
+  ).sort((left, right) => left - right);
+  const yPositions = Array.from(
+    new Set(
+      material.slots.flatMap((slot) => [
+        normalizeMarkPosition(slot.y, material.height),
+        normalizeMarkPosition(slot.y + slot.height, material.height),
+      ]),
+    ),
+  ).sort((top, bottom) => top - bottom);
+  const innerXPositions = xPositions.filter((x) => x > 0 && x < material.width);
+  const innerYPositions = yPositions.filter((y) => y > 0 && y < material.height);
+  const innerVerticalMarkYs =
+    innerYPositions.length > 0
+      ? innerYPositions
+      : innerXPositions.length > 0
+        ? [material.height / 2]
+        : [];
+  const innerHorizontalMarkXs =
+    innerXPositions.length > 0
+      ? innerXPositions
+      : innerYPositions.length > 0
+        ? [material.width / 2]
+        : [];
+
+  return [
+    ...xPositions.flatMap((x) => {
+      const left = `${(x / material.width) * 100}%`;
+      return [
+        {
+          key: `top-${x}`,
+          side: "top" as const,
+          style: { left, top: "0" },
         },
-      },
-    ];
-  }
-
-  if (material.key === "a4-portrait-two") {
-    return [
-      {
-        key: "center-horizontal",
-        direction: "horizontal",
-        style: {
-          left: "0",
-          top: "50%",
-          width: "100%",
+        {
+          key: `bottom-${x}`,
+          side: "bottom" as const,
+          style: { left, top: "100%" },
         },
-      },
-    ];
-  }
+      ];
+    }),
+    ...yPositions.flatMap((y) => {
+      const top = `${(y / material.height) * 100}%`;
+      return [
+        {
+          key: `left-${y}`,
+          side: "left" as const,
+          style: { left: "0", top },
+        },
+        {
+          key: `right-${y}`,
+          side: "right" as const,
+          style: { left: "100%", top },
+        },
+      ];
+    }),
+    ...innerXPositions.flatMap((x) =>
+      innerVerticalMarkYs.map((y) => {
+        const left = `${(x / material.width) * 100}%`;
+        const top = `${(y / material.height) * 100}%`;
 
-  return [];
+        return {
+          key: `center-vertical-${x}-${y}`,
+          side: "center-vertical" as const,
+          style: { left, top },
+        };
+      }),
+    ),
+    ...innerYPositions.flatMap((y) =>
+      innerHorizontalMarkXs.map((x) => {
+        const left = `${(x / material.width) * 100}%`;
+        const top = `${(y / material.height) * 100}%`;
+
+        return {
+          key: `center-horizontal-${x}-${y}`,
+          side: "center-horizontal" as const,
+          style: { left, top },
+        };
+      }),
+    ),
+  ];
 });
 
 const setActiveMaterial = (index: number) => {
@@ -553,6 +1061,7 @@ const setActiveMaterial = (index: number) => {
   activeMaterialIndex.value = index;
   activeSlotIndex.value = 0;
   localStorage.setItem(MATERIAL_INDEX_STORAGE_KEY, String(index));
+  localStorage.setItem("MATERIALS_ACTIVE_KEY", materials[index].key);
 };
 
 const cycleMaterial = () => {
@@ -591,26 +1100,59 @@ const triggerImageUpload = (slotIndex = getNextUploadSlotIndex()) => {
 
 const handleImageChange = async (event: Event) => {
   const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
+  const files = Array.from(input.files || []);
   const material = activeMaterial.value;
   const slot = activeUploadSlots.value[activeSlotIndex.value];
 
-  if (!file || material.kind !== "upload" || !slot) {
+  if (files.length === 0 || material.kind !== "upload" || !slot) {
     input.value = "";
     return;
   }
 
   try {
-    await openCropEditor(file, material.key, slot.key, slot.width / slot.height);
+    if (files.length === 1) {
+      await openCropEditor(
+        files[0],
+        material.key,
+        slot.key,
+        slot.width / slot.height,
+      );
+    } else {
+      await applyMultipleImages(files, material);
+    }
   } catch (err) {
-    console.error("打开裁剪图片失败:", err);
+    console.error("处理上传图片失败:", err);
   } finally {
     input.value = "";
   }
 };
 
+const applyMultipleImages = async (files: File[], material: UploadMaterial) => {
+  const startIndex = activeSlotIndex.value;
+  const targetSlots = material.slots.slice(startIndex, startIndex + files.length);
+  const nextImages: Record<string, string> = {
+    ...(uploadedImages.value[material.key] || {}),
+  };
+
+  for (const [index, file] of files.entries()) {
+    const targetSlot = targetSlots[index];
+    if (!targetSlot) break;
+
+    nextImages[targetSlot.key] = await cropFileToRatio(
+      file,
+      targetSlot.width / targetSlot.height,
+    );
+  }
+
+  uploadedImages.value = {
+    ...uploadedImages.value,
+    [material.key]: nextImages,
+  };
+};
+
 const applyPrintPageStyle = () => {
-  const { width, height } = activeMaterial.value;
+  const material = activeMaterial.value;
+  const { width, height } = material;
   let style = document.getElementById(
     PRINT_PAGE_STYLE_ID,
   ) as HTMLStyleElement | null;
@@ -654,6 +1196,132 @@ const handlePrint = () => {
   applyPrintPageStyle();
   window.print();
 };
+
+function getDownloadableMaterialFileName(material: Material) {
+  if (material.key === "a4-landscape-four") return "横版A4四合一.png";
+  if (material.key === "a4-print-calibration") return "A4打印校准.png";
+
+  return "";
+}
+
+const handleDownloadImage = async () => {
+  const node = paperSheetRef.value;
+  const material = activeMaterial.value;
+  const previewFileName = getDownloadableMaterialFileName(material);
+
+  if (!node || !previewFileName || isDownloadingImage.value) {
+    return;
+  }
+
+  isDownloadingImage.value = true;
+  let exportHost: HTMLElement | null = null;
+
+  try {
+    await nextTick();
+    await document.fonts.ready;
+
+    const exportNodes = createImageExportNodes(node, material);
+    exportHost = exportNodes.host;
+    const rect = exportNodes.target.getBoundingClientRect();
+    const outputWidth = mmToPx(material.width, IMAGE_EXPORT_DPI);
+    const scale = outputWidth / rect.width;
+    const canvas = await html2canvas(exportNodes.target, {
+      width: rect.width,
+      height: rect.height,
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      ignoreElements: (element: Element) =>
+        element.classList.contains("upload-slot__placeholder"),
+    });
+    const blob = await canvasToBlob(canvas);
+    closeImagePreview();
+    imagePreviewFileName.value = previewFileName;
+    imagePreviewUrl.value = URL.createObjectURL(blob);
+  } catch (err) {
+    console.error(`生成${material.name}预览图片失败:`, err);
+  } finally {
+    exportHost?.remove();
+    isDownloadingImage.value = false;
+  }
+};
+
+function createImageExportNodes(node: HTMLElement, material: Material) {
+  const host = document.createElement("div");
+  const sheet = node.cloneNode(true) as HTMLElement;
+
+  host.className = "materials-page usePx materials-page--exporting";
+  copyVueScopeAttributes(node, host);
+  host.style.position = "fixed";
+  host.style.top = "0";
+  host.style.right = "auto";
+  host.style.bottom = "auto";
+  host.style.left = "-10000px";
+  host.style.display = "block";
+  host.style.width = `${material.width}mm`;
+  host.style.height = `${material.height}mm`;
+  host.style.padding = "0";
+  host.style.margin = "0";
+  host.style.overflow = "hidden";
+  host.style.boxSizing = "border-box";
+  host.style.background = "#ffffff";
+  host.style.pointerEvents = "none";
+  host.style.zIndex = "-1";
+
+  sheet.classList.add("paper-sheet--exporting");
+  sheet.style.position = "relative";
+  sheet.style.top = "auto";
+  sheet.style.left = "auto";
+  sheet.style.width = `${material.width}mm`;
+  sheet.style.height = `${material.height}mm`;
+  sheet.style.maxHeight = "none";
+  sheet.style.aspectRatio = `${material.width} / ${material.height}`;
+  sheet.style.boxShadow = "none";
+
+  host.appendChild(sheet);
+  document.body.appendChild(host);
+
+  return { host, sheet, target: host };
+}
+
+function copyVueScopeAttributes(source: HTMLElement, target: HTMLElement) {
+  Array.from(source.attributes)
+    .filter((attribute) => attribute.name.startsWith("data-v-"))
+    .forEach((attribute) => target.setAttribute(attribute.name, attribute.value));
+}
+
+const closeImagePreview = () => {
+  if (!imagePreviewUrl.value) return;
+
+  URL.revokeObjectURL(imagePreviewUrl.value);
+  imagePreviewUrl.value = "";
+  imagePreviewFileName.value = "";
+};
+
+const downloadPreviewImage = () => {
+  if (!imagePreviewUrl.value) return;
+
+  const link = document.createElement("a");
+  link.href = imagePreviewUrl.value;
+  link.download = imagePreviewFileName.value || `${activeMaterial.value.name}.png`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+function mmToPx(mm: number, dpi: number) {
+  return Math.round((mm / 25.4) * dpi);
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("无法生成图片"))),
+      "image/png",
+    );
+  });
+}
 
 const openCropEditor = async (
   file: File,
@@ -800,6 +1468,35 @@ function loadImage(src: string) {
   });
 }
 
+async function cropFileToRatio(file: File, targetRatio: number) {
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(dataUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const sourceRatio = sourceWidth / sourceHeight;
+  let cropWidth = sourceWidth;
+  let cropHeight = sourceHeight;
+  let cropX = 0;
+  let cropY = 0;
+
+  if (sourceRatio > targetRatio) {
+    cropWidth = sourceHeight * targetRatio;
+    cropX = (sourceWidth - cropWidth) / 2;
+  } else {
+    cropHeight = sourceWidth / targetRatio;
+    cropY = (sourceHeight - cropHeight) / 2;
+  }
+
+  return drawCroppedImageToDataUrl(
+    image,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
+    targetRatio,
+  );
+}
+
 async function cropDraftToDataUrl(draft: CropDraft) {
   const image = await loadImage(draft.src);
   const displayedWidth = draft.imageWidth * draft.scale;
@@ -817,18 +1514,32 @@ async function cropDraftToDataUrl(draft: CropDraft) {
     draft.frameHeight / draft.scale,
   );
 
+  return drawCroppedImageToDataUrl(
+    image,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
+    draft.targetRatio,
+  );
+}
+
+function drawCroppedImageToDataUrl(
+  image: HTMLImageElement,
+  cropX: number,
+  cropY: number,
+  cropWidth: number,
+  cropHeight: number,
+  targetRatio: number,
+) {
   const outputLongEdge = Math.min(
     Math.max(cropWidth, cropHeight),
     MAX_CROPPED_IMAGE_LONG_EDGE,
   );
   const outputWidth =
-    cropWidth >= cropHeight
-      ? outputLongEdge
-      : outputLongEdge * draft.targetRatio;
+    cropWidth >= cropHeight ? outputLongEdge : outputLongEdge * targetRatio;
   const outputHeight =
-    cropHeight >= cropWidth
-      ? outputLongEdge
-      : outputLongEdge / draft.targetRatio;
+    cropHeight >= cropWidth ? outputLongEdge : outputLongEdge / targetRatio;
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
@@ -1005,6 +1716,239 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   white-space: nowrap;
 }
 
+.usePx .print-calibration {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  color: rgba(75, 85, 99, 0.92);
+  font-family:
+    "PingFang SC",
+    "Noto Sans SC",
+    "Microsoft YaHei",
+    Arial,
+    sans-serif;
+}
+
+.usePx .print-calibration__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(107, 114, 128, 0.16) 0 0.04mm,
+      transparent 0.04mm
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(107, 114, 128, 0.16) 0 0.04mm,
+      transparent 0.04mm
+    ),
+    linear-gradient(
+      to right,
+      rgba(107, 114, 128, 0.28) 0 0.08mm,
+      transparent 0.08mm
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(107, 114, 128, 0.28) 0 0.08mm,
+      transparent 0.08mm
+    );
+  background-size:
+    1mm 1mm,
+    1mm 1mm,
+    10mm 10mm,
+    10mm 10mm;
+}
+
+.usePx .print-calibration__inset-frame {
+  position: absolute;
+  z-index: 2;
+  border: 0.12mm dashed rgba(107, 114, 128, 0.58);
+  pointer-events: none;
+}
+
+.usePx .print-calibration__inset-frame--10mm {
+  border-style: solid;
+  border-color: rgba(107, 114, 128, 0.58);
+}
+
+.usePx .print-calibration__center-line {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+}
+
+.usePx .print-calibration__center-line--vertical {
+  top: 0;
+  bottom: 0;
+  width: 0.12mm;
+  border-left: 0.12mm dashed rgba(107, 114, 128, 0.58);
+  transform: translateX(-0.06mm);
+}
+
+.usePx .print-calibration__center-line--horizontal {
+  right: 0;
+  left: 0;
+  height: 0.12mm;
+  border-top: 0.12mm dashed rgba(107, 114, 128, 0.58);
+  transform: translateY(-0.06mm);
+}
+
+.usePx .print-calibration__tick {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  background: rgba(107, 114, 128, 0.58);
+  pointer-events: none;
+}
+
+.usePx .print-calibration__tick--top,
+.usePx .print-calibration__tick--bottom {
+  width: 0.12mm;
+  height: var(--tick-length, 8mm);
+  transform: translateX(-0.06mm);
+}
+
+.usePx .print-calibration__tick--top {
+  top: 0;
+}
+
+.usePx .print-calibration__tick--bottom {
+  bottom: 0;
+}
+
+.usePx .print-calibration__tick--left,
+.usePx .print-calibration__tick--right {
+  width: var(--tick-length, 8mm);
+  height: 0.12mm;
+  transform: translateY(-0.06mm);
+}
+
+.usePx .print-calibration__tick--left {
+  left: 0;
+}
+
+.usePx .print-calibration__tick--right {
+  right: 0;
+}
+
+.usePx .print-calibration__tick--medium {
+  background: rgba(107, 114, 128, 0.58);
+}
+
+.usePx .print-calibration__tick--major {
+  background: rgba(107, 114, 128, 0.58);
+}
+
+.usePx .print-calibration__tick--top.print-calibration__tick--medium,
+.usePx .print-calibration__tick--bottom.print-calibration__tick--medium {
+  width: 0.12mm;
+  transform: translateX(-0.06mm);
+}
+
+.usePx .print-calibration__tick--top.print-calibration__tick--major,
+.usePx .print-calibration__tick--bottom.print-calibration__tick--major {
+  width: 0.12mm;
+  transform: translateX(-0.06mm);
+}
+
+.usePx .print-calibration__tick--left.print-calibration__tick--medium,
+.usePx .print-calibration__tick--right.print-calibration__tick--medium {
+  height: 0.12mm;
+  transform: translateY(-0.06mm);
+}
+
+.usePx .print-calibration__tick--left.print-calibration__tick--major,
+.usePx .print-calibration__tick--right.print-calibration__tick--major {
+  height: 0.12mm;
+  transform: translateY(-0.06mm);
+}
+
+.usePx .print-calibration__label {
+  position: absolute;
+  z-index: 5;
+  min-width: 6mm;
+  color: rgba(75, 85, 99, 0.92);
+  font-size: 2.2mm;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.usePx .print-calibration__ruler {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(75, 85, 99, 0.92);
+  font-size: 2.8mm;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.usePx .print-calibration__ruler--horizontal {
+  top: 118mm;
+  left: 55mm;
+  width: 100mm;
+  height: 9mm;
+  border-top: 0.12mm solid rgba(107, 114, 128, 0.58);
+  border-right: 0.12mm solid rgba(107, 114, 128, 0.58);
+  border-left: 0.12mm solid rgba(107, 114, 128, 0.58);
+}
+
+.usePx .print-calibration__ruler--horizontal span {
+  margin-top: 2.6mm;
+}
+
+.usePx .print-calibration__ruler--vertical {
+  top: 98.5mm;
+  left: 162mm;
+  width: 9mm;
+  height: 100mm;
+  border-top: 0.12mm solid rgba(107, 114, 128, 0.58);
+  border-bottom: 0.12mm solid rgba(107, 114, 128, 0.58);
+  border-left: 0.12mm solid rgba(107, 114, 128, 0.58);
+}
+
+.usePx .print-calibration__ruler--vertical span {
+  display: block;
+  width: 40mm;
+  text-align: center;
+  transform: rotate(90deg);
+}
+
+.usePx .print-calibration__summary {
+  position: absolute;
+  top: 136.5mm;
+  left: 55mm;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2mm;
+  width: 72mm;
+  padding: 4mm 5mm;
+  box-sizing: border-box;
+  border: 0.12mm solid rgba(107, 114, 128, 0.58);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(75, 85, 99, 0.92);
+  font-size: 3mm;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+}
+
+.usePx .print-calibration__summary strong {
+  font-size: 4mm;
+  line-height: 1.1;
+}
+
 .usePx .upload-material {
   position: absolute;
   inset: 0;
@@ -1026,6 +1970,29 @@ async function cropDraftToDataUrl(draft: CropDraft) {
 
 .usePx .upload-slot--active {
   box-shadow: inset 0 0 0 0.45mm rgba(242, 163, 58, 0.78);
+}
+
+.usePx .paper-sheet--exporting .upload-slot,
+.usePx .paper-sheet--exporting .upload-slot--active {
+  outline: none;
+  box-shadow: none;
+}
+
+.usePx
+  .paper-sheet[data-material-key="a4-landscape-four"].paper-sheet--exporting {
+  border: 0 !important;
+  outline: none !important;
+}
+
+.usePx
+  .paper-sheet[data-material-key="a4-landscape-four"].paper-sheet--exporting
+  .upload-material,
+.usePx
+  .paper-sheet[data-material-key="a4-landscape-four"].paper-sheet--exporting
+  .upload-slot {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .usePx .upload-slot__image {
@@ -1060,22 +2027,46 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   line-height: 1;
 }
 
-.usePx .divider-mark {
+.usePx .cut-mark {
   position: absolute;
   z-index: 5;
   display: block;
-  background: rgba(17, 24, 39, 0.24);
+  background: rgba(107, 114, 128, 0.58);
   pointer-events: none;
 }
 
-.usePx .divider-mark--vertical {
-  width: 0.25mm;
-  transform: translateX(-0.125mm);
+.usePx .cut-mark--top,
+.usePx .cut-mark--bottom {
+  width: 0.12mm;
+  height: 8mm;
+  transform: translateX(-0.06mm);
 }
 
-.usePx .divider-mark--horizontal {
-  height: 0.25mm;
-  transform: translateY(-0.125mm);
+.usePx .cut-mark--bottom {
+  transform: translate(-0.06mm, -8mm);
+}
+
+.usePx .cut-mark--left,
+.usePx .cut-mark--right {
+  width: 8mm;
+  height: 0.12mm;
+  transform: translateY(-0.06mm);
+}
+
+.usePx .cut-mark--right {
+  transform: translate(-8mm, -0.06mm);
+}
+
+.usePx .cut-mark--center-horizontal {
+  width: 6mm;
+  height: 0.12mm;
+  transform: translate(-3mm, -0.06mm);
+}
+
+.usePx .cut-mark--center-vertical {
+  width: 0.12mm;
+  height: 6mm;
+  transform: translate(-0.06mm, -3mm);
 }
 
 .usePx .file-input {
@@ -1084,6 +2075,73 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+.usePx .image-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.88);
+}
+
+.usePx .image-preview__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.usePx .image-preview__img {
+  display: block;
+  max-width: min(90vw, 920px);
+  max-height: 78vh;
+  border-radius: 8px;
+  background: #ffffff;
+  object-fit: contain;
+  object-position: center center;
+  -webkit-touch-callout: default;
+  user-select: auto;
+}
+
+.usePx .image-preview__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111111;
+  font-size: 22px;
+  line-height: 34px;
+  cursor: pointer;
+}
+
+.usePx .image-preview__download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #11131f;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .usePx .crop-modal {
@@ -1317,6 +2375,16 @@ async function cropDraftToDataUrl(draft: CropDraft) {
     transform: scale(0.95);
     background: rgba(99, 102, 241, 0.15);
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    &:active {
+      transform: none;
+      background: transparent;
+    }
+  }
 }
 
 .usePx .action-btn__icon {
@@ -1357,8 +2425,8 @@ async function cropDraftToDataUrl(draft: CropDraft) {
   }
 
   .usePx.materials-page {
-    position: fixed;
-    inset: 0 auto auto 0;
+    position: relative;
+    inset: auto;
     display: block;
     width: var(--materials-print-width, 148mm) !important;
     height: var(--materials-print-height, 105mm) !important;
@@ -1378,21 +2446,44 @@ async function cropDraftToDataUrl(draft: CropDraft) {
 
   .usePx .material-tabs,
   .usePx .floating-actions,
-  .usePx .crop-modal {
+  .usePx .crop-modal,
+  .usePx .image-preview {
     display: none !important;
   }
 
   .usePx .paper-sheet {
-    position: fixed;
-    top: 0;
-    left: 0;
+    position: relative;
+    top: auto;
+    left: auto;
     width: var(--materials-print-width, 148mm) !important;
     height: var(--materials-print-height, 105mm) !important;
+    max-height: none;
     box-shadow: none;
   }
 
+  .usePx .upload-slot {
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .usePx .paper-sheet[data-material-key="a4-landscape-four"] {
+    border: 0 !important;
+    outline: none !important;
+  }
+
+  .usePx .paper-sheet[data-material-key="a4-landscape-four"] .upload-material,
+  .usePx .paper-sheet[data-material-key="a4-landscape-four"] .upload-slot {
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
   .usePx .upload-slot--active {
-    box-shadow: none;
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   .usePx .upload-slot__placeholder {
