@@ -1,5 +1,5 @@
 <template>
-  <div ref="cardBoxRef" class="card-box">
+  <div class="card-box">
     <div class="card-box__preview custom-scrollbar">
       <Swiper
         ref="swiperRef"
@@ -8,10 +8,8 @@
         :space-between="12"
         :speed="300"
         :touch-ratio="1"
-        :auto-height="true"
         :breakpoints="breakpoints"
         class="card-swiper"
-        @swiper="setSwiper"
       >
         <SwiperSlide
           v-for="(item, idx) in slides"
@@ -19,12 +17,8 @@
           class="card-slide"
         >
           <div class="card-item">
-            <div
-              :id="`pic_${idx}`"
-              class="pic-box pic-box--xiaohongshu"
-              :style="cardHeightStyle"
-            >
-              <div class="sub-title">- {{ getSlideOrder(item, idx) }} -</div>
+            <div :id="`pic_${idx}`" class="pic-box pic-box--xiaohongshu">
+              <div class="sub-title">{{ getSlideOrder(item, idx) }}</div>
               <div class="content-body">
                 <p
                   v-for="(paragraph, i) in getParagraphs(item)"
@@ -43,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed } from "vue";
 import { useStore } from "../store";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/css";
@@ -51,13 +45,6 @@ import "swiper/css";
 const store = useStore();
 const formData = computed(() => store.formData);
 const slides = computed(() => getContentSlides(formData.value.content));
-const cardBoxRef = ref<HTMLElement>();
-const swiperInstance = ref<any>();
-const unifiedCardHeight = ref<number>();
-const MAX_CARD_HEIGHT = 400;
-const cardHeightStyle = computed(() =>
-  unifiedCardHeight.value ? { height: `${unifiedCardHeight.value}px` } : {},
-);
 const getParagraphs = (text: string) =>
   getParagraphLines(removeFirstLine(text));
 const getSlideOrder = (text: string, index: number) =>
@@ -99,20 +86,21 @@ const getContentSlides = (content: string) => {
     .split("\n")
     .map((line) => line.trimEnd())
     .filter((line) => !line.trim().startsWith("#"));
-  const slides = lines.reduce<string[][]>((result, line) => {
-    const currentSlide = result[result.length - 1];
+  const slides = lines.reduce<string[][]>(
+    (result, line) => {
+      const currentSlide = result[result.length - 1];
 
-    if (pageNumberPattern.test(line.trim()) && currentSlide.some(Boolean)) {
-      result.push([]);
-    }
+      if (pageNumberPattern.test(line.trim()) && currentSlide.some(Boolean)) {
+        result.push([]);
+      }
 
-    result[result.length - 1].push(line);
-    return result;
-  }, [[]]);
+      result[result.length - 1].push(line);
+      return result;
+    },
+    [[]],
+  );
 
-  return slides
-    .map((item) => item.join("\n").trim())
-    .filter(Boolean);
+  return slides.map((item) => item.join("\n").trim()).filter(Boolean);
 };
 
 const modules: any[] = [];
@@ -122,37 +110,6 @@ const breakpoints = {
   768: { slidesPerView: 2 },
   1024: { slidesPerView: 3 },
 };
-const setSwiper = (swiper: any) => {
-  swiperInstance.value = swiper;
-  updateUnifiedCardHeight();
-};
-
-const updateUnifiedCardHeight = async () => {
-  unifiedCardHeight.value = undefined;
-  await nextTick();
-  await document.fonts?.ready;
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-
-  const cards = Array.from(
-    cardBoxRef.value?.querySelectorAll<HTMLElement>(".pic-box--xiaohongshu") ||
-      [],
-  );
-
-  if (!cards.length) {
-    return;
-  }
-
-  const maxContentHeight = Math.max(...cards.map((card) => card.scrollHeight));
-  unifiedCardHeight.value = Math.min(maxContentHeight, MAX_CARD_HEIGHT);
-  await nextTick();
-  swiperInstance.value?.update?.();
-  swiperInstance.value?.updateAutoHeight?.(0);
-};
-
-watch(slides, updateUnifiedCardHeight, {
-  immediate: true,
-  flush: "post",
-});
 </script>
 
 <style lang="less" scoped>
@@ -167,6 +124,7 @@ watch(slides, updateUnifiedCardHeight, {
   max-width: 100%;
   border-radius: 20px;
   overflow: hidden;
+  max-height: 553px;
   box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
@@ -176,16 +134,10 @@ watch(slides, updateUnifiedCardHeight, {
   border-radius: 16px;
 }
 
-.card-swiper :deep(.swiper-wrapper) {
-  height: auto;
-  align-items: flex-start;
-}
-
 .card-slide {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  height: auto;
   overflow: hidden;
 }
 
@@ -202,12 +154,13 @@ watch(slides, updateUnifiedCardHeight, {
   --fc_3: #5d5d5d;
   --fc_2: #111111;
   width: 300px;
-  height: auto;
-  max-height: 400px;
+  height: 400px;
+  aspect-ratio: 3 / 4;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow: hidden;
-  padding: 29px 43px 28px 25px;
+  padding: 38px 43px 40px 22px;
   background: url("@/assets/background/theme_bg22.jpg") top/cover no-repeat;
   background-color: rgba(255, 251, 240, 0.5);
   font-family: "font_03_subset", "font_03_full", "font_6", serif;
@@ -216,11 +169,11 @@ watch(slides, updateUnifiedCardHeight, {
 }
 
 .sub-title {
-  margin-bottom: 10px;
+  margin: 0 0 13px;
   font-size: 11px;
-  line-height: 1;
-  text-align: center;
-  letter-spacing: 0.08em;
+  line-height: 1.72;
+  text-align: left;
+  letter-spacing: 0;
   color: #1a1a1a;
 }
 
@@ -232,12 +185,13 @@ watch(slides, updateUnifiedCardHeight, {
 
 .content-paragraph {
   margin: 0;
-  text-align: center;
+  text-align: left;
+  text-justify: inter-ideograph;
   word-break: break-word;
   white-space: pre-line;
 }
 
 .content-paragraph + .content-paragraph {
-  margin-top: 18px;
+  margin-top: 13px;
 }
 </style>
