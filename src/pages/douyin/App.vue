@@ -142,7 +142,7 @@ const imagePreviewUrls = ref<string[]>([]);
 const copyToastVisible = ref(false);
 let copyToastTimer: ReturnType<typeof window.setTimeout> | undefined;
 const IMAGE_EXPORT_WIDTH = 2160;
-const DOUYIN_COPY_PREFIX = "最近的一些想法：";
+const DOUYIN_COPY_PREFIX = "最近的一些想法 :)";
 const DOUYIN_TAGS = "#文字的力量 #记录真是生活 #思考 #讨论";
 const previewModules: any[] = [];
 
@@ -211,9 +211,10 @@ const getCopyableContent = (content: string) => {
     : getBodyLinesWithoutTitle(lines);
   if (!bodyLines.length) return DOUYIN_TAGS;
 
-  return [[DOUYIN_COPY_PREFIX, bodyLines.join("\n")].join("\n"), DOUYIN_TAGS].join(
-    "\n\n",
-  );
+  return [
+    [DOUYIN_COPY_PREFIX, bodyLines.join("\n")].join("\n\n"),
+    DOUYIN_TAGS,
+  ].join("\n\n");
 };
 
 function getContentLines(content: string) {
