@@ -174,7 +174,6 @@ const IMAGE_EXPORT_WIDTH = 2880;
 const XIAOHONGSHU_BLANK_LINE = "\u2800";
 const XIAOHONGSHU_TAGS =
   "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
-const DOUYIN_COPY_PREFIX = "最近的一些想法 :)";
 const DOUYIN_TAGS = "#文字的力量 #记录真是生活 #思考 #讨论";
 const EXPORT_VARIANTS = [
   { key: "3-4", width: 3, height: 4, theme: "default" },
@@ -245,6 +244,12 @@ const handleCopyContent = async (mode: CopyMode) => {
 };
 
 const getXiaohongshuCopyableContent = (content: string) => {
+  const body = getXiaohongshuCopyableBody(content);
+
+  return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
+};
+
+const getXiaohongshuCopyableBody = (content: string) => {
   const lines = content
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -259,104 +264,16 @@ const getXiaohongshuCopyableContent = (content: string) => {
     lines.pop();
   }
 
-  const body = lines
+  return lines
     .map((line) => (line.trim() ? line : XIAOHONGSHU_BLANK_LINE))
     .join("\n");
-
-  return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
 };
 
 const getDouyinCopyableContent = (content: string) => {
-  const contentLines = getDouyinContentLines(content);
-  const slides = getDouyinVisibleContentSlides(content);
-  if (!slides.length) return "";
+  const body = getXiaohongshuCopyableBody(content);
 
-  const hasPageNumbers = contentLines.some((line) => isPageNumber(line.trim()));
-  const slideIndex = hasPageNumbers
-    ? Math.min(store.activePageIndex, slides.length - 1)
-    : 0;
-  const lines = getDouyinCopyableLines(slides[slideIndex]).filter(
-    (line) => !isPageNumber(line),
-  );
-
-  if (!lines.length) return "";
-
-  const bodyLines = hasPageNumbers
-    ? trimEmptyLines(lines)
-    : getDouyinBodyLinesWithoutTitle(lines);
-  if (!bodyLines.length) return DOUYIN_TAGS;
-
-  return [
-    [DOUYIN_COPY_PREFIX, bodyLines.join("\n")].join("\n\n"),
-    DOUYIN_TAGS,
-  ].join("\n\n");
+  return [body, XIAOHONGSHU_BLANK_LINE, DOUYIN_TAGS].join("\n");
 };
-
-function getDouyinContentLines(content: string) {
-  return normalizeText(content)
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => !line.trim().startsWith("#") && line.trim() !== "/");
-}
-
-function getDouyinContentSlides(content: string) {
-  const lines = getDouyinContentLines(content);
-  const slides = lines.reduce<string[][]>(
-    (result, line) => {
-      const currentSlide = result[result.length - 1];
-
-      if (isPageNumber(line.trim()) && currentSlide.some(Boolean)) {
-        result.push([]);
-      }
-
-      result[result.length - 1].push(line);
-      return result;
-    },
-    [[]],
-  );
-
-  return slides.map((item) => item.join("\n").trim()).filter(Boolean);
-}
-
-function getDouyinVisibleContentSlides(content: string) {
-  return getDouyinContentSlides(content).filter((slide) =>
-    getDouyinCopyableLines(slide).some((line) => line && !isPageNumber(line)),
-  );
-}
-
-function getDouyinCopyableLines(content: string) {
-  return normalizeText(content)
-    .split("\n")
-    .map((line) => line.trim());
-}
-
-function normalizeText(text: string) {
-  return text.replace(/\r\n/g, "\n");
-}
-
-function getDouyinBodyLinesWithoutTitle(lines: string[]) {
-  const titleIndex = lines.findIndex(Boolean);
-
-  if (titleIndex < 0) {
-    return [];
-  }
-
-  return trimEmptyLines(lines.slice(titleIndex + 1));
-}
-
-function trimEmptyLines(lines: string[]) {
-  const result = [...lines];
-
-  while (result[0] === "") {
-    result.shift();
-  }
-
-  while (result[result.length - 1] === "") {
-    result.pop();
-  }
-
-  return result;
-}
 
 const showCopyToast = () => {
   copyToastVisible.value = true;
@@ -580,9 +497,6 @@ function persistAll() {
   localStorage.setItem("XIAOHONGSHU_FORM_DATA_CONTENT", formData.value.content);
 }
 
-function isPageNumber(line: string) {
-  return /^(?:0\d|1\d)$/.test(line);
-}
 </script>
 
 <style lang="less" scoped>
