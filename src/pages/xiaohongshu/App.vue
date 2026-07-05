@@ -170,15 +170,15 @@ const isDownloading = ref(false);
 const imagePreviewUrls = ref<string[]>([]);
 const copyToastVisible = ref(false);
 let copyToastTimer: ReturnType<typeof window.setTimeout> | undefined;
-const IMAGE_EXPORT_WIDTH = 2160;
+const IMAGE_EXPORT_WIDTH = 2880;
 const XIAOHONGSHU_BLANK_LINE = "\u2800";
 const XIAOHONGSHU_TAGS =
   "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
 const DOUYIN_COPY_PREFIX = "最近的一些想法 :)";
 const DOUYIN_TAGS = "#文字的力量 #记录真是生活 #思考 #讨论";
 const EXPORT_VARIANTS = [
-  { key: "3-4", width: 3, height: 4 },
-  { key: "9-16", width: 9, height: 16 },
+  { key: "3-4", width: 3, height: 4, theme: "default" },
+  { key: "3-4-black", width: 3, height: 4, theme: "dark" },
 ] as const;
 const previewModules: any[] = [];
 type CopyMode = "xiaohongshu" | "douyin";
@@ -520,6 +520,10 @@ function createExportTarget(node: HTMLElement, variant: ExportVariant) {
   target.style.height = `${height}px`;
   target.style.aspectRatio = `${variant.width} / ${variant.height}`;
 
+  if (variant.theme === "dark") {
+    applyDarkExportStyle(target);
+  }
+
   host.appendChild(target);
   document.body.appendChild(host);
 
@@ -527,6 +531,21 @@ function createExportTarget(node: HTMLElement, variant: ExportVariant) {
     target,
     cleanup: () => host.remove(),
   };
+}
+
+function applyDarkExportStyle(target: HTMLElement) {
+  target.style.background = "#050505";
+  target.style.backgroundImage = "none";
+  target.style.backgroundColor = "#050505";
+  target.style.color = "#f7f7f7";
+
+  target
+    .querySelectorAll<HTMLElement>(
+      ".sub-title, .content-body, .content-paragraph",
+    )
+    .forEach((element) => {
+      element.style.color = "#f7f7f7";
+    });
 }
 
 function getDownloadFileName() {
