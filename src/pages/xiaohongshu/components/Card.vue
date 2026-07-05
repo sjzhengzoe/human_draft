@@ -10,6 +10,8 @@
         :touch-ratio="1"
         :breakpoints="breakpoints"
         class="card-swiper"
+        @swiper="syncActivePageIndex"
+        @slide-change="syncActivePageIndex"
       >
         <SwiperSlide
           v-for="(item, idx) in slides"
@@ -37,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useStore } from "../store";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/css";
@@ -110,6 +112,20 @@ const breakpoints = {
   768: { slidesPerView: 2 },
   1024: { slidesPerView: 3 },
 };
+
+function syncActivePageIndex(swiper: { activeIndex?: number }) {
+  store.activePageIndex = Math.max(swiper.activeIndex ?? 0, 0);
+}
+
+watch(
+  slides,
+  (items) => {
+    if (store.activePageIndex >= items.length) {
+      store.activePageIndex = Math.max(items.length - 1, 0);
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <style lang="less" scoped>

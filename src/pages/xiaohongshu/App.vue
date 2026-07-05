@@ -17,8 +17,8 @@
       <button
         type="button"
         class="action-btn"
-        @click="handleCopyContent"
-        title="复制小红书文案"
+        @click="openCopyModePicker"
+        title="复制文案"
       >
         <Copy class="action-btn__icon" :size="22" />
       </button>
@@ -51,6 +51,29 @@
     </div>
 
     <div v-if="copyToastVisible" class="copy-toast">复制成功</div>
+
+    <div
+      v-if="copyModePickerVisible"
+      class="copy-mode"
+      @click="closeCopyModePicker"
+    >
+      <div class="copy-mode__panel" @click.stop>
+        <button
+          type="button"
+          class="copy-mode__btn"
+          @click="handleCopyContent('xiaohongshu')"
+        >
+          复制小红书
+        </button>
+        <button
+          type="button"
+          class="copy-mode__btn"
+          @click="handleCopyContent('douyin')"
+        >
+          复制抖音版
+        </button>
+      </div>
+    </div>
 
     <div
       v-if="imagePreviewUrls.length"
@@ -151,11 +174,24 @@ const IMAGE_EXPORT_WIDTH = 2160;
 const XIAOHONGSHU_BLANK_LINE = "\u2800";
 const XIAOHONGSHU_TAGS =
   "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
+const DOUYIN_COPY_PREFIX = "最近的一些想法 :)";
+const DOUYIN_TAGS = "#文字的力量 #记录真是生活 #思考 #讨论";
+const EXPORT_VARIANTS = [
+  { key: "3-4", width: 3, height: 4 },
+  { key: "9-16", width: 9, height: 16 },
+] as const;
 const previewModules: any[] = [];
+type CopyMode = "xiaohongshu" | "douyin";
+type ExportVariant = (typeof EXPORT_VARIANTS)[number];
+type ExportedImage = {
+  blob: Blob;
+  fileName: string;
+};
 
 const editFormData = reactive({
   content: "",
 });
+const copyModePickerVisible = ref(false);
 
 const openEditModal = () => {
   editFormData.content = formData.value.content;
@@ -166,8 +202,17 @@ const closeEditModal = () => {
   showEditModal.value = false;
 };
 
+const openCopyModePicker = () => {
+  copyModePickerVisible.value = true;
+};
+
+const closeCopyModePicker = () => {
+  copyModePickerVisible.value = false;
+};
+
 const handleSaveEdit = () => {
   store.formData.content = editFormData.content.trim();
+  store.activePageIndex = 0;
   persistAll();
   closeEditModal();
 };
@@ -183,19 +228,23 @@ const handlePasteContent = async () => {
   }
 };
 
-const handleCopyContent = async () => {
+const handleCopyContent = async (mode: CopyMode) => {
   try {
-    const text = getCopyableContent(formData.value.content);
+    const text =
+      mode === "xiaohongshu"
+        ? getXiaohongshuCopyableContent(formData.value.content)
+        : getDouyinCopyableContent(formData.value.content);
     if (!text) return;
 
     await navigator.clipboard.writeText(text);
+    closeCopyModePicker();
     showCopyToast();
   } catch (err) {
     console.error("写入剪贴板失败:", err);
   }
 };
 
-const getCopyableContent = (content: string) => {
+const getXiaohongshuCopyableContent = (content: string) => {
   const lines = content
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -216,6 +265,98 @@ const getCopyableContent = (content: string) => {
 
   return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
 };
+
+const getDouyinCopyableContent = (content: string) => {
+  const contentLines = getDouyinContentLines(content);
+  const slides = getDouyinVisibleContentSlides(content);
+  if (!slides.length) return "";
+
+  const hasPageNumbers = contentLines.some((line) => isPageNumber(line.trim()));
+  const slideIndex = hasPageNumbers
+    ? Math.min(store.activePageIndex, slides.length - 1)
+    : 0;
+  const lines = getDouyinCopyableLines(slides[slideIndex]).filter(
+    (line) => !isPageNumber(line),
+  );
+
+  if (!lines.length) return "";
+
+  const bodyLines = hasPageNumbers
+    ? trimEmptyLines(lines)
+    : getDouyinBodyLinesWithoutTitle(lines);
+  if (!bodyLines.length) return DOUYIN_TAGS;
+
+  return [
+    [DOUYIN_COPY_PREFIX, bodyLines.join("\n")].join("\n\n"),
+    DOUYIN_TAGS,
+  ].join("\n\n");
+};
+
+function getDouyinContentLines(content: string) {
+  return normalizeText(content)
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => !line.trim().startsWith("#") && line.trim() !== "/");
+}
+
+function getDouyinContentSlides(content: string) {
+  const lines = getDouyinContentLines(content);
+  const slides = lines.reduce<string[][]>(
+    (result, line) => {
+      const currentSlide = result[result.length - 1];
+
+      if (isPageNumber(line.trim()) && currentSlide.some(Boolean)) {
+        result.push([]);
+      }
+
+      result[result.length - 1].push(line);
+      return result;
+    },
+    [[]],
+  );
+
+  return slides.map((item) => item.join("\n").trim()).filter(Boolean);
+}
+
+function getDouyinVisibleContentSlides(content: string) {
+  return getDouyinContentSlides(content).filter((slide) =>
+    getDouyinCopyableLines(slide).some((line) => line && !isPageNumber(line)),
+  );
+}
+
+function getDouyinCopyableLines(content: string) {
+  return normalizeText(content)
+    .split("\n")
+    .map((line) => line.trim());
+}
+
+function normalizeText(text: string) {
+  return text.replace(/\r\n/g, "\n");
+}
+
+function getDouyinBodyLinesWithoutTitle(lines: string[]) {
+  const titleIndex = lines.findIndex(Boolean);
+
+  if (titleIndex < 0) {
+    return [];
+  }
+
+  return trimEmptyLines(lines.slice(titleIndex + 1));
+}
+
+function trimEmptyLines(lines: string[]) {
+  const result = [...lines];
+
+  while (result[0] === "") {
+    result.shift();
+  }
+
+  while (result[result.length - 1] === "") {
+    result.pop();
+  }
+
+  return result;
+}
 
 const showCopyToast = () => {
   copyToastVisible.value = true;
@@ -239,6 +380,7 @@ onBeforeUnmount(() => {
   if (copyToastTimer) {
     window.clearTimeout(copyToastTimer);
   }
+  closeCopyModePicker();
 });
 
 const handlePreviewImage = async () => {
@@ -251,8 +393,8 @@ const handlePreviewImage = async () => {
   try {
     closeImagePreview();
 
-    const blobs = await generatePreviewImageBlobs();
-    blobs.forEach((blob) => urls.push(URL.createObjectURL(blob)));
+    const images = await generatePreviewImages();
+    images.forEach((image) => urls.push(URL.createObjectURL(image.blob)));
 
     imagePreviewUrls.value = urls;
   } catch (err) {
@@ -271,8 +413,8 @@ const handleDownloadImages = async () => {
   loadingStore.showLoading();
 
   try {
-    const blobs = await generatePreviewImageBlobs();
-    await saveImageBlobs(blobs);
+    const images = await generatePreviewImages();
+    await saveImages(images);
   } catch (err) {
     console.error("下载失败:", err);
   } finally {
@@ -281,33 +423,41 @@ const handleDownloadImages = async () => {
   }
 };
 
-async function generatePreviewImageBlobs() {
+async function generatePreviewImages() {
   await document.fonts.ready;
 
-  const blobs: Blob[] = [];
-  let index = 0;
+  const images: ExportedImage[] = [];
+  const nodes: HTMLElement[] = [];
 
-  while (true) {
-    const node = document.getElementById(`pic_${index}`);
+  for (let index = 0; ; index++) {
+    const node = document.getElementById(`pic_${index}`) as HTMLElement | null;
     if (!node) break;
 
-    const blob = await generateImage(node);
-    blobs.push(blob);
-    index++;
+    nodes.push(node);
   }
 
-  return blobs;
+  for (const variant of EXPORT_VARIANTS) {
+    for (const [index, node] of nodes.entries()) {
+      const blob = await generateImage(node, variant);
+      images.push({
+        blob,
+        fileName: `xiaohongshu_${String(index + 1).padStart(2, "0")}_${variant.key}.png`,
+      });
+    }
+  }
+
+  return images;
 }
 
-async function saveImageBlobs(blobs: Blob[]) {
-  if (!blobs.length) return;
+async function saveImages(images: ExportedImage[]) {
+  if (!images.length) return;
 
   const zip = new JSZip();
   const now = new Date();
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
 
-  blobs.forEach((blob, index) => {
-    zip.file(`xiaohongshu_${String(index + 1).padStart(2, "0")}.png`, blob, {
+  images.forEach((image) => {
+    zip.file(image.fileName, image.blob, {
       date: localDate,
     });
   });
@@ -316,30 +466,67 @@ async function saveImageBlobs(blobs: Blob[]) {
   saveAs(zipBlob, getDownloadFileName());
 }
 
-async function generateImage(node: HTMLElement): Promise<Blob> {
-  await convertBackgroundImagesToBase64(node);
-  replaceSVGCSSVariables(node);
+async function generateImage(
+  node: HTMLElement,
+  variant: ExportVariant,
+): Promise<Blob> {
+  const { target, cleanup } = createExportTarget(node, variant);
+
+  await convertBackgroundImagesToBase64(target);
+  replaceSVGCSSVariables(target);
   await new Promise((r) => requestAnimationFrame(r));
   await new Promise((r) => requestAnimationFrame(r));
 
-  const rect = node.getBoundingClientRect();
+  const rect = target.getBoundingClientRect();
   const scale = IMAGE_EXPORT_WIDTH / rect.width;
-  const canvas = await html2canvas(node, {
-    width: rect.width,
-    height: rect.height,
-    useCORS: true,
-    scale,
-    logging: false,
-    backgroundColor: null,
-  });
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob: Blob | null) =>
-        blob ? resolve(blob) : reject(new Error("无法生成 blob")),
-      "image/png",
-    );
-  });
+  try {
+    const canvas = await html2canvas(target, {
+      width: rect.width,
+      height: rect.height,
+      useCORS: true,
+      scale,
+      logging: false,
+      backgroundColor: null,
+    });
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob: Blob | null) =>
+          blob ? resolve(blob) : reject(new Error("无法生成 blob")),
+        "image/png",
+      );
+    });
+  } finally {
+    cleanup();
+  }
+}
+
+function createExportTarget(node: HTMLElement, variant: ExportVariant) {
+  const rect = node.getBoundingClientRect();
+  const host = document.createElement("div");
+  const target = node.cloneNode(true) as HTMLElement;
+  const height = rect.width * (variant.height / variant.width);
+
+  host.style.position = "fixed";
+  host.style.top = "0";
+  host.style.left = "-10000px";
+  host.style.width = `${rect.width}px`;
+  host.style.height = `${height}px`;
+  host.style.pointerEvents = "none";
+  host.style.zIndex = "-1";
+
+  target.style.width = `${rect.width}px`;
+  target.style.height = `${height}px`;
+  target.style.aspectRatio = `${variant.width} / ${variant.height}`;
+
+  host.appendChild(target);
+  document.body.appendChild(host);
+
+  return {
+    target,
+    cleanup: () => host.remove(),
+  };
 }
 
 function getDownloadFileName() {
@@ -363,6 +550,7 @@ function getContentDate(content: string) {
 
 function syncPastedContent(content: string) {
   store.formData.content = content;
+  store.activePageIndex = 0;
   douyinStore.formData.content = content;
   douyinStore.activePageIndex = 0;
   persistAll();
@@ -371,6 +559,10 @@ function syncPastedContent(content: string) {
 
 function persistAll() {
   localStorage.setItem("XIAOHONGSHU_FORM_DATA_CONTENT", formData.value.content);
+}
+
+function isPageNumber(line: string) {
+  return /^(?:0\d|1\d)$/.test(line);
 }
 </script>
 
@@ -463,6 +655,47 @@ function persistAll() {
   line-height: 1;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.36);
   pointer-events: none;
+}
+
+.copy-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 16px calc(92px + env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.copy-mode__panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 320px);
+  padding: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: rgba(17, 19, 31, 0.94);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.copy-mode__btn {
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:active {
+    background: rgba(99, 102, 241, 0.22);
+  }
 }
 
 .image-preview {

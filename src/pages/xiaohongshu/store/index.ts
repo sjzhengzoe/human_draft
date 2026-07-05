@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 
 const useStore = defineStore("xiaohongshuStore", {
   state: () => ({
+    activePageIndex: 0,
     formData: {
       content:
         localStorage.getItem(`XIAOHONGSHU_FORM_DATA_CONTENT`) ||
