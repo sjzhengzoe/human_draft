@@ -174,7 +174,7 @@ const IMAGE_EXPORT_WIDTH = 2880;
 const XIAOHONGSHU_BLANK_LINE = "\u2800";
 const XIAOHONGSHU_TAGS =
   "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
-const DOUYIN_TAGS = "#文字的力量 #记录真是生活 #思考 #讨论";
+const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
 const EXPORT_VARIANTS = [
   { key: "3-4", width: 3, height: 4, theme: "default" },
   { key: "3-4-black", width: 3, height: 4, theme: "dark" },
@@ -496,7 +496,6 @@ function syncPastedContent(content: string) {
 function persistAll() {
   localStorage.setItem("XIAOHONGSHU_FORM_DATA_CONTENT", formData.value.content);
 }
-
 </script>
 
 <style lang="less" scoped>
