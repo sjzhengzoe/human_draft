@@ -1,0 +1,4 @@
+interface:
+  display_name: "Menu Binder Background Design"
+  short_description: "Generate prompts and specs for A6 loose-leaf menu backgrounds."
+  default_prompt: "帮我按活页菜单背景规则生成一组 A6 横版背景图提示词"

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "server": "node --watch server/index.mjs",
+    "dev:https": "DEV_HTTPS=1 vite --host",
     "build": "vue-tsc && vite build",
     "preview": "vite preview"
   },

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>番茄炒蛋画风记录</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #f6f3ee;
+        color: #1f2933;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 36px 24px 64px;
+      }
+
+      .hero {
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 30px;
+        line-height: 1.2;
+      }
+
+      .intro {
+        max-width: 760px;
+        margin: 0;
+        color: #5c6672;
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      .version {
+        margin-top: 28px;
+        padding: 22px;
+        border: 1px solid #e3ded5;
+        border-radius: 12px;
+        background: #fffdf8;
+      }
+
+      .version__header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 21px;
+        line-height: 1.3;
+      }
+
+      .version__note {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .version__link {
+        flex: 0 0 auto;
+        color: #9b4d1f;
+        font-size: 14px;
+        text-decoration: none;
+      }
+
+      .version__link:hover {
+        text-decoration: underline;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid #e5e0d8;
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .preview {
+        position: relative;
+        width: 100%;
+        aspect-ratio: var(--cell-ratio);
+        background-image: var(--image);
+        background-position: var(--sprite-x) var(--sprite-y);
+        background-repeat: no-repeat;
+        background-size: var(--bg-size);
+        border-bottom: 1px solid #eee9df;
+      }
+
+      .index {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        min-width: 24px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        color: #374151;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .card__body {
+        padding: 14px;
+      }
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        line-height: 1.35;
+      }
+
+      .desc {
+        margin: 0 0 12px;
+        color: #4b5563;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .prompt-label {
+        margin: 0 0 6px;
+        color: #8a5a33;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .prompt {
+        margin: 0;
+        padding: 10px;
+        border: 1px solid #eee6dc;
+        border-radius: 8px;
+        background: #fbf8f2;
+        color: #374151;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          max-width: none;
+          padding: 10mm;
+        }
+
+        .version {
+          break-inside: avoid;
+        }
+
+        .card {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>番茄炒蛋画风记录</h1>
+        <p class="intro">
+          记录五版 A6 横版画风打样。每张卡片的图片来自对应 A6 对比图的单格裁切，
+          下方保留风格描述和后续单独生成菜品图时可复用的提示词。
+        </p>
+      </section>
+
+      <div id="versions"></div>
+    </main>
+
+    <script>
+      const baseSubject =
+        "Tomato scrambled eggs / Chinese 番茄炒鸡蛋 on a simple small white plate, white or near-white background, centered 3:2 menu-card composition, readable at small A6 print size. Avoid photorealistic photography, semi-realistic glossy digital painting, anime, people, logo, watermark, fake menu text, dark background, and cluttered props.";
+
+      const referenceAnimeMenuItems = [
+        {
+          name: "日系治愈动画风",
+          desc: "温暖深夜食堂氛围，柔和灯光和轻微热气，安静治愈。",
+          prompt:
+            "Japanese healing animation food illustration, cozy late-night diner mood, soft warm lamp light, gentle steam, quiet restaurant atmosphere, no characters. " +
+            baseSubject,
+        },
+        {
+          name: "韩系 INS 菜单风",
+          desc: "干净简约、轻盈可爱，适合社交媒体菜单卡。",
+          prompt:
+            "Korean Instagram menu illustration, clean white background, light cute doodle accents, fresh simple composition, cheerful but not childish. " +
+            baseSubject,
+        },
+        {
+          name: "二次元厚涂风",
+          desc: "高饱和、强高光、CG 感明显，视觉冲击更强。",
+          prompt:
+            "Thick-paint 2D anime food art, saturated colors, strong highlights, polished CG feeling, glossy tomato red and golden egg, illustration not photography. " +
+            baseSubject,
+        },
+        {
+          name: "新海诚电影感",
+          desc: "通透光影、空气感、窗边日光，偏电影截图氛围。",
+          prompt:
+            "Japanese cinematic animation food illustration, airy sunlit window lighting, blue-green daylight highlights, transparent atmosphere, soft movie-still glow. " +
+            baseSubject,
+        },
+        {
+          name: "Q 版可爱风",
+          desc: "圆润、萌系、糖果色，但不要人物脸或过度幼稚。",
+          prompt:
+            "Cute Q-version food illustration, rounded soft shapes, adorable glossy food rendering, candy-like warm colors, gentle decorative accents, no faces. " +
+            baseSubject,
+        },
+        {
+          name: "游戏料理 UI 风",
+          desc: "像 RPG 高级料理道具图，暗底聚光、金色发光、界面感强。",
+          prompt:
+            "Game cooking UI style, RPG item icon or premium dish card mood, dark warm plate spotlight, subtle golden glow effects, fantasy cooking interface feeling, no text or rating stars. " +
+            baseSubject,
+        },
+        {
+          name: "和风浮世绘二次元",
+          desc: "日式纹样、平面配色、古风纸感，装饰性强。",
+          prompt:
+            "Japanese ukiyo-e inspired 2D food illustration, flat decorative composition, vintage Japanese pattern feeling, restrained old-print texture, warm paper mood. " +
+            baseSubject,
+        },
+        {
+          name: "日漫食战夸张风",
+          desc: "高光爆炸、热气和速度线，强调食欲冲击。",
+          prompt:
+            "Exaggerated manga food battle style, dramatic high contrast, explosive appetite, steam, sparkle energy, speed-line impact, bold highlights, no characters. " +
+            baseSubject,
+        },
+        {
+          name: "轻像素二次元风",
+          desc: "像素游戏素材感，可爱、图标化、边缘清晰。",
+          prompt:
+            "Cute pixel-art 2D food icon, low-resolution pixelated plate and tomato egg shapes, limited pixel palette, crisp square pixels, game asset feeling. " +
+            baseSubject,
+        },
+      ];
+
+      const versions = [
+        {
+          title: "第一版：纸感手绘 / 日系生活",
+          note: "偏轻柔、纸面融合、生活感，排除强实拍和强商业半写实。",
+          image: "./A6番茄炒蛋画风对比01.png",
+          items: [
+            {
+              name: "水彩手绘",
+              desc: "透明水彩晕染，边缘柔和，纸面融合度高，适合温柔家常菜单。",
+              prompt:
+                "Loose watercolor food illustration. Transparent watercolor washes, soft hand-painted edges, warm tomato red and egg yellow, gentle paper-friendly texture, clean and elegant. " +
+                baseSubject,
+            },
+            {
+              name: "日式杂志",
+              desc: "安静留白、低饱和、生活杂志感，比二次元更克制。",
+              prompt:
+                "Quiet Japanese lifestyle magazine food illustration. Airy white space, muted colors, soft pencil-like lines, gentle flat color plus light shading, calm and clean. " +
+                baseSubject,
+            },
+            {
+              name: "水彩细线稿",
+              desc: "水彩加轻轮廓，小尺寸打印时比纯水彩更清楚。",
+              prompt:
+                "Watercolor with fine ink linework. Clear light contours, transparent color wash, handmade paper feeling, soft but readable edges. " +
+                baseSubject,
+            },
+            {
+              name: "色铅笔食谱",
+              desc: "温柔家常、铅笔质感明显，像食谱本里的手绘菜图。",
+              prompt:
+                "Colored pencil cookbook illustration. Warm home-cooking feeling, visible pencil texture, gentle hand-drawn shading, simple appetizing colors. " +
+                baseSubject,
+            },
+            {
+              name: "钢笔淡彩",
+              desc: "细线结构加淡彩，有旅行手账、老食谱的纸感。",
+              prompt:
+                "Pen-and-wash illustration. Thin brown or black sketch lines with light color wash, casual but refined, old cookbook and travel journal mood. " +
+                baseSubject,
+            },
+            {
+              name: "日式淡彩平涂",
+              desc: "形状简洁、阴影少、颜色淡，适合做统一菜品系列。",
+              prompt:
+                "Japanese pale flat-color illustration. Simple shapes, minimal shadow, calm muted red and soft yellow, refined and restrained. " +
+                baseSubject,
+            },
+            {
+              name: "轻水粉",
+              desc: "比水彩更饱满，但仍保持哑光、柔和、纸面友好。",
+              prompt:
+                "Soft gouache food illustration. Matte paint texture, slightly fuller color, gentle handmade feeling, clear tomato and egg shapes. " +
+                baseSubject,
+            },
+            {
+              name: "手账贴纸",
+              desc: "像手账素材，轻白边和软阴影，可爱但不幼稚。",
+              prompt:
+                "Journal sticker style food illustration. Handmade sticker feeling, subtle white edge and very soft shadow, simple color fills, clean and not childish. " +
+                baseSubject,
+            },
+          ],
+        },
+        {
+          title: "第二版：平面 / 绘画感",
+          note: "围绕平面插画、印象派笔触和后印象派色块扩展，测试更设计化或更绘画化的方向。",
+          image: "./A6番茄炒蛋画风对比02.png",
+          items: [
+            {
+              name: "平面插画",
+              desc: "简化形状和明确色块，识别度高，阴影很少。",
+              prompt:
+                "Flat illustration. Clean simplified shapes, clear tomato red and egg yellow color blocks, very little shadow, graphic and tidy. " +
+                baseSubject,
+            },
+            {
+              name: "柔和平面",
+              desc: "保留平面色块，但颜色更淡、更圆润，纸上不刺眼。",
+              prompt:
+                "Soft flat illustration. Muted paper-friendly palette, rounded organic shapes, gentle minimal shading, clean white space. " +
+                baseSubject,
+            },
+            {
+              name: "印象派笔触",
+              desc: "松散笔触和光感更强，绘画味明显，但需要注意小尺寸清晰度。",
+              prompt:
+                "Impressionist brush strokes. Loose visible strokes, bright natural light feeling, lively color variation, still readable as tomato scrambled eggs. " +
+                baseSubject,
+            },
+            {
+              name: "后印象派色块",
+              desc: "比印象派轮廓更明确，色块和装饰节奏更强。",
+              prompt:
+                "Post-impressionist decorative color blocks. Stronger contour rhythm, expressive warm colors, clear plated dish shape, painterly but organized. " +
+                baseSubject,
+            },
+            {
+              name: "油画棒肌理",
+              desc: "蜡质触感、手作感强，颜色温暖，适合家常菜氛围。",
+              prompt:
+                "Oil pastel texture illustration. Tactile waxy strokes, warm home-cooking feeling, soft but readable red and yellow shapes. " +
+                baseSubject,
+            },
+            {
+              name: "粉彩绘画",
+              desc: "粉质、轻柔、安静，整体比油画棒更淡。",
+              prompt:
+                "Soft pastel drawing. Gentle powdery texture, calm colors, light handmade paper feeling, soft tomato red and egg yellow. " +
+                baseSubject,
+            },
+            {
+              name: "现代海报插画",
+              desc: "更设计化的构图和色块，像编辑类海报插图。",
+              prompt:
+                "Modern editorial poster illustration. Graphic composition, refined color blocking, tasteful simplified shapes, print-friendly contrast. " +
+                baseSubject,
+            },
+            {
+              name: "绘本插画",
+              desc: "温暖、亲切、手绘感强，但避免儿童化表情。",
+              prompt:
+                "Picture-book food illustration. Warm hand-painted charm, clean and not childish, friendly simple colors, soft line and shape. " +
+                baseSubject,
+            },
+          ],
+        },
+        {
+          title: "第三版：手绘线稿小食物",
+          note: "参考黑色 ink 小食物 doodle，白底、线稿、少量上色，统一成本低。",
+          image: "./A6番茄炒蛋画风对比03.png",
+          items: [
+            {
+              name: "黑色线稿小食物",
+              desc: "黑色手绘线条，少量红黄填色，像简单 snack doodle。",
+              prompt:
+                "Black ink small food doodle. Casual black line drawing, simple red tomato and yellow egg fills, playful little motion accents, white background. " +
+                baseSubject,
+            },
+            {
+              name: "手账涂鸦",
+              desc: "更像手账随手画，线条松、装饰小短线多一些。",
+              prompt:
+                "Journal doodle style. Loose sketchbook food drawing, imperfect relaxed lines, tiny decorative marks, light red and yellow marker fills. " +
+                baseSubject,
+            },
+            {
+              name: "儿童绘本线描",
+              desc: "黑线更圆润，颜色温暖，有绘本感但不要表情化。",
+              prompt:
+                "Children's picture-book line drawing. Rounded friendly black outlines, warm simple colors, charming but no faces and not overly childish. " +
+                baseSubject,
+            },
+            {
+              name: "咖啡馆菜单线稿",
+              desc: "像菜单板上的手绘图标，稍微复古，适合菜单系统。",
+              prompt:
+                "Cafe menu line art. Clean hand-drawn menu-board food icon feeling, slightly retro, black lines with restrained tomato red and egg yellow. " +
+                baseSubject,
+            },
+            {
+              name: "极简日式 doodle",
+              desc: "线更少、留白更多、颜色更淡，更克制安静。",
+              prompt:
+                "Minimal Japanese food doodle. Very sparse clean lines, lots of white space, muted pale red and soft yellow, calm and refined. " +
+                baseSubject,
+            },
+            {
+              name: "贴纸边框手绘",
+              desc: "黑线加简单填色，有轻微贴纸边缘和软阴影。",
+              prompt:
+                "Hand-drawn sticker style. Black outline, simple color fills, subtle white sticker edge feeling and very soft shadow, still on white background. " +
+                baseSubject,
+            },
+            {
+              name: "粗马克笔线稿",
+              desc: "线条更粗、更醒目，小尺寸打印可读性强。",
+              prompt:
+                "Bold marker line style. Thicker black marker outlines, quick confident strokes, brighter red and yellow fills, readable and energetic. " +
+                baseSubject,
+            },
+            {
+              name: "复古包装插画",
+              desc: "像老零食包装上的有限色插图，怀旧但简单。",
+              prompt:
+                "Vintage snack packaging illustration. Limited color palette, black ink outline, slight nostalgic printed-package charm, simple and warm. " +
+                baseSubject,
+            },
+          ],
+        },
+        {
+          title: "第四版：9 种菜单参考风格",
+          note: "参考用户提供的九宫格方向，使用第二次生成版本，更偏干净打印打样。",
+          image: "./A6番茄炒蛋画风对比04.png",
+          columns: 3,
+          rows: 3,
+          items: referenceAnimeMenuItems,
+        },
+      ];
+
+      const container = document.querySelector("#versions");
+
+      versions.forEach((version, versionIndex) => {
+        const section = document.createElement("section");
+        section.className = "version";
+
+        const header = document.createElement("div");
+        header.className = "version__header";
+        header.innerHTML = `
+          <div>
+            <h2>${version.title}</h2>
+            <p class="version__note">${version.note}</p>
+          </div>
+          <a class="version__link" href="${encodeURI(version.image)}" target="_blank">打开整张 A6 图</a>
+        `;
+
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        const columns = version.columns || 4;
+        const rows = version.rows || 2;
+        const bgSize = `${columns * 100}% ${rows * 100}%`;
+        const cellRatio = `${1748 / columns} / ${1240 / rows}`;
+
+        version.items.forEach((item, index) => {
+          const spriteX =
+            columns > 1 ? `${((index % columns) / (columns - 1)) * 100}%` : "0%";
+          const spriteY =
+            rows > 1
+              ? `${(Math.floor(index / columns) / (rows - 1)) * 100}%`
+              : "0%";
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="preview" style="--image: url('${encodeURI(version.image)}'); --sprite-x: ${spriteX}; --sprite-y: ${spriteY}; --bg-size: ${bgSize}; --cell-ratio: ${cellRatio};">
+              <div class="index">${versionIndex + 1}-${index + 1}</div>
+            </div>
+            <div class="card__body">
+              <h3>${item.name}</h3>
+              <p class="desc">${item.desc}</p>
+              <p class="prompt-label">提示词</p>
+              <pre class="prompt">${item.prompt}</pre>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+        section.appendChild(header);
+        section.appendChild(grid);
+        container.appendChild(section);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flomo 小策论 Writing"
+  short_description: "把 flomo/text.md 里的原始想法整理成短行散文式小策论。"
+  default_prompt: "把当前 flomo/text.md 的想法改成小策论"

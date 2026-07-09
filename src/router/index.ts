@@ -6,7 +6,27 @@ const router: Router = createRouter({
   routes: [
     {
       path: "/",
-      component: () => import("@/pages/home/App.vue"),
+      redirect: "/douyin",
+    },
+    {
+      path: "/douyin",
+      component: () => import("@/pages/douyin/App.vue"),
+    },
+    {
+      path: "/douyin2",
+      component: () => import("@/pages/douyin2/App.vue"),
+    },
+    {
+      path: "/xiaohongshu",
+      component: () => import("@/pages/xiaohongshu/App.vue"),
+    },
+    {
+      path: "/menu",
+      component: () => import("@/pages/menu/App.vue"),
+    },
+    {
+      path: "/materials",
+      component: () => import("@/pages/materials/App.vue"),
     },
     {
       path: "/settings",

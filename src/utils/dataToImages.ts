@@ -140,7 +140,9 @@ export const replaceSVGCSSVariables = (element: HTMLElement): void => {
 export const convertBackgroundImagesToBase64 = async (
   element: HTMLElement
 ): Promise<void> => {
-  const picBoxes = element.querySelectorAll(".pic_box");
+  const picBoxes = element.matches(".pic-box, .pic_box")
+    ? [element]
+    : Array.from(element.querySelectorAll(".pic-box, .pic_box"));
   const promises: Promise<void>[] = [];
 
   picBoxes.forEach((el) => {
