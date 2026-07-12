@@ -54,6 +54,22 @@ import {
 } from "./lib/life-lists.mjs";
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
+import {
+  createWardrobeCategory,
+  createWardrobeItem,
+  deleteWardrobeCategory,
+  deleteWardrobeItem,
+  getWardrobeCategory,
+  getWardrobeItem,
+  getWardrobeStats,
+  listWardrobeCategories,
+  listWardrobeItems,
+  replaceWardrobeItemImage,
+  swapWardrobeCategorySortOrders,
+  swapWardrobeItemSortOrders,
+  updateWardrobeCategory,
+  updateWardrobeItem,
+} from "./lib/wardrobe.mjs";
 
 export function buildServer(options = {}) {
   const getSupabaseAdmin = () => options.supabase ?? getDefaultSupabaseAdmin();
@@ -349,6 +365,146 @@ export function buildServer(options = {}) {
 
   app.delete("/api/dining/:id", { preHandler: writable }, async (request) => {
     await deleteDiningPlace(getSupabaseAdmin(), request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
+
+  app.get("/api/wardrobe/categories", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      items: await listWardrobeCategories(getSupabaseAdmin(), request.auth.user.id),
+    },
+  }));
+
+  app.get("/api/wardrobe/stats", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await getWardrobeStats(getSupabaseAdmin(), request.auth.user.id),
+  }));
+
+  app.get("/api/wardrobe/categories/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await getWardrobeCategory(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+      ),
+    },
+  }));
+
+  app.post("/api/wardrobe/categories", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createWardrobeCategory(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
+    return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.put("/api/wardrobe/categories/order/swap", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await swapWardrobeCategorySortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+
+  app.put("/api/wardrobe/categories/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await updateWardrobeCategory(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
+  }));
+
+  app.delete("/api/wardrobe/categories/:id", { preHandler: authenticated }, async (request) => {
+    await deleteWardrobeCategory(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
+    return { ok: true, data: { deleted: true } };
+  });
+
+  app.get("/api/wardrobe/items", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      items: await listWardrobeItems(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {},
+      ),
+    },
+  }));
+
+  app.get("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await getWardrobeItem(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+      ),
+    },
+  }));
+
+  app.post("/api/wardrobe/items", { preHandler: authenticated }, async (request, reply) => {
+    const { fields, image } = await readMultipartImage(request);
+    const item = await createWardrobeItem(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      fields,
+      image,
+    );
+    return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.put("/api/wardrobe/items/order/swap", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await swapWardrobeItemSortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+
+  app.put("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await updateWardrobeItem(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
+  }));
+
+  app.post("/api/wardrobe/items/:id/image", { preHandler: authenticated }, async (request) => {
+    const { image } = await readMultipartImage(request);
+    return {
+      ok: true,
+      data: {
+        item: await replaceWardrobeItemImage(
+          getSupabaseAdmin(),
+          request.auth.user.id,
+          request.params.id,
+          image,
+        ),
+      },
+    };
+  });
+
+  app.delete("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => {
+    await deleteWardrobeItem(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
     return { ok: true, data: { deleted: true } };
   });
 

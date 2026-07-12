@@ -29,6 +29,7 @@ export const config = {
   supabaseUrl: normalizeSupabaseUrl(process.env.SUPABASE_URL),
   supabaseSecretKey,
   dishBucket: process.env.SUPABASE_DISH_BUCKET || "dish-images",
+  wardrobeBucket: process.env.SUPABASE_WARDROBE_BUCKET || "wardrobe-images",
   avatarBucket: process.env.SUPABASE_AVATAR_BUCKET || "user-avatars",
   wechatAppId: process.env.WECHAT_APP_ID || "",
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",
