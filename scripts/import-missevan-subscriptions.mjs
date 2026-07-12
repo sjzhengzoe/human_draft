@@ -44,6 +44,7 @@ const EXTRA_PATTERN = /番外|小剧场|剧场版|特别篇|特别放送|特供|
 const MAIN_EPISODE_PATTERN = /第[零〇一二两三四五六七八九十百壹贰叁肆伍陆柒捌玖拾\d]+集/;
 const MAIN_PERIOD_PATTERN = /第[零〇一二两三四五六七八九十百壹贰叁肆伍陆柒捌玖拾\d]+期/;
 const MAIN_ALIAS_PATTERN = /^(?:正剧|楔子|序章|终章|尾声|全一期)(?:$|[·（(：:\s-])/;
+const CORE_CHAPTER_PATTERN = /^(?:原罪|美德)[零〇一二两三四五六七八九十百壹贰叁肆伍陆柒捌玖拾\d]+(?:$|[·（(：:\s-])/;
 const SCENE_PATTERN = /^[▷▶]?Scene\s*\d+(?:$|[·（(：:\s-])/i;
 const NUMBERED_TITLE_PATTERN = /^\d{1,3}[、.．·]/;
 const SEASON_SUFFIX_PATTERN = /^(.*?)[\s·]*(第[零〇一二两三四五六七八九十百壹贰叁肆伍陆柒捌玖拾\d]+季(?:（[^）]+）)?|全一季(?:（[^）]+）)?|完结季(?:（[^）]+）)?|番外篇|独家番外|番外)$/;
@@ -78,6 +79,7 @@ function parseSubscriptionName(rawName) {
 function classifyEpisode(name) {
   if (SCENE_PATTERN.test(name) || NUMBERED_TITLE_PATTERN.test(name)) return "main";
   if (EXTRA_PATTERN.test(name)) return "extra";
+  if (CORE_CHAPTER_PATTERN.test(name)) return "main";
   if (MAIN_EPISODE_PATTERN.test(name)) return "main";
   if (MAIN_PERIOD_PATTERN.test(name) && !MATERIAL_PATTERN.test(name)) return "main";
   if (MAIN_ALIAS_PATTERN.test(name)) return "main";
