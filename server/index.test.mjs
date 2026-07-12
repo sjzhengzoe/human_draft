@@ -46,7 +46,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
     }
 
     then(resolve, reject) {
-      return Promise.resolve({ data: null, error: null }).then(resolve, reject);
+      return Promise.resolve({ data: this.rows, error: null }).then(resolve, reject);
     }
   }
 
@@ -219,7 +219,16 @@ test("delete routes return a JSON success envelope", async (t) => {
 
 test("media writes validate and normalize platforms before the create RPC", async (t) => {
   const supabase = createFakeSupabase({
-    tables: authenticatedTables(),
+    tables: authenticatedTables({
+      media_entries: [{
+        id: TARGET_ID,
+        title: "千与千寻",
+        media_type: "电影",
+        watch_status: "completed",
+        platforms: [],
+        sort_order: 1000,
+      }],
+    }),
     rpc: {
       create_media_entry_at_end: (params) => ({
         data: {
@@ -252,6 +261,20 @@ test("media writes validate and normalize platforms before the create RPC", asyn
   assert.equal(invalidResponse.json().error.code, "INVALID_MEDIA_PLATFORM");
   assert.equal(supabase.rpcCalls.length, 0);
 
+  const duplicateResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: " 千与千寻 ",
+      media_type: "电影",
+      platforms: [],
+    },
+  });
+  assert.equal(duplicateResponse.statusCode, 409);
+  assert.equal(duplicateResponse.json().error.code, "MEDIA_TITLE_EXISTS");
+  assert.equal(supabase.rpcCalls.length, 0);
+
   const validResponse = await app.inject({
     method: "POST",
     url: "/api/media",
@@ -259,8 +282,7 @@ test("media writes validate and normalize platforms before the create RPC", asyn
     payload: {
       title: "合法平台条目",
       media_type: "电影",
-      watch_status: "planned",
-      platforms: ["腾讯视频", "腾讯视频", "爱奇艺"],
+      platforms: ["猫耳", "猫耳", "漫播"],
     },
   });
   assert.equal(validResponse.statusCode, 201);
@@ -269,8 +291,8 @@ test("media writes validate and normalize platforms before the create RPC", asyn
     params: {
       p_title: "合法平台条目",
       p_media_type: "电影",
-      p_watch_status: "planned",
-      p_platforms: ["腾讯视频", "爱奇艺"],
+      p_watch_status: "completed",
+      p_platforms: ["猫耳", "漫播"],
     },
   });
 });
@@ -334,6 +356,40 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
     platforms: ["腾讯视频"],
     sort_order: 2000,
   });
+});
+
+test("media edits reject a duplicate title in the same category", async (t) => {
+  const existing = {
+    id: MEDIA_ID,
+    title: "原名称",
+    media_type: "电影",
+    watch_status: "completed",
+    platforms: [],
+    sort_order: 1000,
+  };
+  const duplicate = {
+    ...existing,
+    id: TARGET_ID,
+    title: "重复名称",
+    sort_order: 2000,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: [existing, duplicate] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { title: " 重复名称 " },
+  });
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.json().error.code, "MEDIA_TITLE_EXISTS");
 });
 
 test("swap routes map only their expected SQLSTATE errors", async (t) => {

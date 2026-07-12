@@ -1,9 +1,8 @@
 import { assertCondition } from "./errors.mjs";
 import { throwSupabaseError } from "./supabase.mjs";
 
-export const MEDIA_TYPES = ["电影", "电视剧", "动漫", "动画", "广播剧", "小说"];
 export const MEDIA_STATUSES = ["planned", "in_progress", "completed"];
-export const MEDIA_PLATFORMS = ["腾讯视频", "爱奇艺", "哔哩哔哩", "夸克", "优酷", "芒果 TV"];
+export const MEDIA_PLATFORMS = ["腾讯视频", "爱奇艺", "哔哩哔哩", "夸克", "优酷", "芒果 TV", "猫耳", "漫播"];
 export const ACTIVITY_TYPES = ["室内", "户外", "居家"];
 export const DINING_MODES = ["takeout", "dine_in"];
 
@@ -60,6 +59,32 @@ function mediaPlatforms(value) {
   return platforms;
 }
 
+async function assertMediaTitleAvailable(supabase, title, mediaType, excludedId = "") {
+  const { data, error } = await supabase
+    .from("media_entries")
+    .select("id,title")
+    .eq("media_type", mediaType);
+  throwSupabaseError(error, "检查影视名称失败。");
+  const normalizedTitle = title.toLocaleLowerCase();
+  const duplicate = (data || []).some(
+    (entry) => entry.id !== excludedId && entry.title.trim().toLocaleLowerCase() === normalizedTitle,
+  );
+  assertCondition(
+    !duplicate,
+    409,
+    "MEDIA_TITLE_EXISTS",
+    `“${title}”已存在于“${mediaType}”分类中，不能重复添加。`,
+  );
+}
+
+const MEDIA_TITLE_UNIQUE_ERROR = {
+  23505: {
+    statusCode: 409,
+    code: "MEDIA_TITLE_EXISTS",
+    message: "同一分类下已存在同名影视条目。",
+  },
+};
+
 async function nextSortOrder(supabase, table, filters = {}) {
   let query = supabase
     .from(table)
@@ -86,9 +111,7 @@ async function requireRecord(supabase, table, id, fields = "*") {
 }
 
 export async function listMediaEntries(supabase, query) {
-  const mediaType = query.media_type
-    ? enumValue(query.media_type, MEDIA_TYPES, "影视分类")
-    : MEDIA_TYPES[0];
+  const mediaType = requiredText(query.media_type, "影视分类", 40);
   let request = supabase
     .from("media_entries")
     .select("*")
@@ -122,35 +145,45 @@ export async function getMediaEntry(supabase, id) {
 }
 
 export async function createMediaEntry(supabase, body) {
-  const mediaType = enumValue(body.media_type, MEDIA_TYPES, "影视分类");
+  const mediaType = requiredText(body.media_type, "影视分类", 40);
+  const title = requiredText(body.title, "名称");
+  await assertMediaTitleAvailable(supabase, title, mediaType);
   const { data, error } = await supabase
     .rpc("create_media_entry_at_end", {
-      p_title: requiredText(body.title, "名称"),
+      p_title: title,
       p_media_type: mediaType,
       p_watch_status: enumValue(
-        body.watch_status || "planned",
+        body.watch_status || "completed",
         MEDIA_STATUSES,
         "观看状态",
       ),
       p_platforms: mediaPlatforms(body.platforms || []),
     })
     .single();
-  throwSupabaseError(error, "新增影视条目失败。");
+  throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
   return data;
 }
 
 export async function updateMediaEntry(supabase, id, body) {
-  await requireRecord(supabase, "media_entries", id, "id");
+  const current = await requireRecord(supabase, "media_entries", id);
   const changes = {};
   if (body.title !== undefined) changes.title = requiredText(body.title, "名称");
   if (body.media_type !== undefined) {
-    changes.media_type = enumValue(body.media_type, MEDIA_TYPES, "影视分类");
+    changes.media_type = requiredText(body.media_type, "影视分类", 40);
   }
   if (body.watch_status !== undefined) {
     changes.watch_status = enumValue(body.watch_status, MEDIA_STATUSES, "观看状态");
   }
   if (body.platforms !== undefined) changes.platforms = mediaPlatforms(body.platforms);
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
+  if (changes.title !== undefined || changes.media_type !== undefined) {
+    await assertMediaTitleAvailable(
+      supabase,
+      changes.title ?? current.title,
+      changes.media_type ?? current.media_type,
+      id,
+    );
+  }
   // Any explicit category assignment must be resolved under the destination
   // category lock. The category may have changed after the existence check.
   if (changes.media_type) {
@@ -164,6 +197,7 @@ export async function updateMediaEntry(supabase, id, body) {
       })
       .single();
     throwSupabaseError(error, "更新影视条目失败。", {
+      ...MEDIA_TITLE_UNIQUE_ERROR,
       P0002: {
         statusCode: 404,
         code: "MEDIA_ENTRY_NOT_FOUND",
@@ -179,7 +213,7 @@ export async function updateMediaEntry(supabase, id, body) {
     .eq("id", id)
     .select("*")
     .single();
-  throwSupabaseError(error, "更新影视条目失败。");
+  throwSupabaseError(error, "更新影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
   return data;
 }
 
@@ -190,7 +224,7 @@ export async function deleteMediaEntry(supabase, id) {
 }
 
 export async function reorderMediaEntries(supabase, body) {
-  const mediaType = enumValue(body.media_type, MEDIA_TYPES, "影视分类");
+  const mediaType = requiredText(body.media_type, "影视分类", 40);
   const ids = Array.isArray(body.ids) ? body.ids : [];
   assertCondition(
     ids.length > 0 && ids.length <= 500 && ids.every((id) => typeof id === "string"),
@@ -211,6 +245,77 @@ export async function reorderMediaEntries(supabase, body) {
     },
   });
   return { updated: ids.length };
+}
+
+export async function listMediaCategories(supabase) {
+  const { data, error } = await supabase
+    .from("media_categories")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  throwSupabaseError(error, "读取影视分类失败。");
+  return data;
+}
+
+export async function getMediaCategory(supabase, id) {
+  assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视分类编号无效。");
+  return requireRecord(supabase, "media_categories", id);
+}
+
+export async function createMediaCategory(supabase, body) {
+  const { data, error } = await supabase
+    .rpc("create_media_category_at_end", { p_name: requiredText(body.name, "分类名称", 40) })
+    .single();
+  throwSupabaseError(error, "新增影视分类失败。", {
+    23505: { statusCode: 409, code: "MEDIA_CATEGORY_EXISTS", message: "分类名称已存在。" },
+  });
+  return data;
+}
+
+export async function updateMediaCategory(supabase, id, body) {
+  await getMediaCategory(supabase, id);
+  const { data, error } = await supabase
+    .from("media_categories")
+    .update({ name: requiredText(body.name, "分类名称", 40) })
+    .eq("id", id)
+    .select("*")
+    .single();
+  throwSupabaseError(error, "更新影视分类失败。", {
+    23505: { statusCode: 409, code: "MEDIA_CATEGORY_EXISTS", message: "分类名称已存在。" },
+  });
+  return data;
+}
+
+export async function deleteMediaCategory(supabase, id) {
+  const category = await getMediaCategory(supabase, id);
+  const { data: entry, error: entryError } = await supabase
+    .from("media_entries")
+    .select("id")
+    .eq("media_type", category.name)
+    .limit(1)
+    .maybeSingle();
+  throwSupabaseError(entryError, "检查影视分类失败。");
+  assertCondition(!entry, 409, "MEDIA_CATEGORY_NOT_EMPTY", "分类下还有影视条目，暂时不能删除。");
+  const { error } = await supabase.from("media_categories").delete().eq("id", id);
+  throwSupabaseError(error, "删除影视分类失败。");
+}
+
+export async function swapMediaCategorySortOrders(supabase, body) {
+  const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
+  const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
+  assertCondition(
+    UUID_PATTERN.test(sourceId) && UUID_PATTERN.test(targetId) && sourceId !== targetId,
+    400,
+    "INVALID_IDS",
+    "请选择两个不同的影视分类。",
+  );
+  const { error } = await supabase.rpc("swap_media_category_sort_orders", {
+    p_source_id: sourceId,
+    p_target_id: targetId,
+  });
+  throwSupabaseError(error, "调整影视分类排序失败。", {
+    P0002: { statusCode: 404, code: "MEDIA_CATEGORY_NOT_FOUND", message: "影视分类不存在。" },
+  });
+  return { updated: 2 };
 }
 
 export async function swapMediaEntrySortOrders(supabase, body) {

@@ -31,26 +31,32 @@ import {
   createLuggageItem,
   createLuggageScene,
   createMediaEntry,
+  createMediaCategory,
   deleteActivityItem,
   deleteDiningPlace,
   deleteLuggageGroup,
   deleteLuggageItem,
   deleteLuggageScene,
   deleteMediaEntry,
+  deleteMediaCategory,
   getDiningPlace,
   getMediaEntry,
+  getMediaCategory,
   listActivityItems,
   listDiningPlaces,
   listLuggageScenes,
   listMediaEntries,
+  listMediaCategories,
   reorderMediaEntries,
   swapMediaEntrySortOrders,
+  swapMediaCategorySortOrders,
   updateActivityItem,
   updateDiningPlace,
   updateLuggageGroup,
   updateLuggageItem,
   updateLuggageScene,
   updateMediaEntry,
+  updateMediaCategory,
 } from "./lib/life-lists.mjs";
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
@@ -206,6 +212,36 @@ export function buildServer(options = {}) {
     ok: true,
     data: { items: await listMediaEntries(getSupabaseAdmin(), request.query || {}) },
   }));
+
+  app.get("/api/media-categories", { preHandler: authenticated }, async () => ({
+    ok: true,
+    data: { items: await listMediaCategories(getSupabaseAdmin()) },
+  }));
+
+  app.get("/api/media-categories/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: { item: await getMediaCategory(getSupabaseAdmin(), request.params.id) },
+  }));
+
+  app.post("/api/media-categories", { preHandler: writable }, async (request, reply) => {
+    const item = await createMediaCategory(getSupabaseAdmin(), request.body || {});
+    return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.put("/api/media-categories/order/swap", { preHandler: writable }, async (request) => ({
+    ok: true,
+    data: await swapMediaCategorySortOrders(getSupabaseAdmin(), request.body || {}),
+  }));
+
+  app.put("/api/media-categories/:id", { preHandler: writable }, async (request) => ({
+    ok: true,
+    data: { item: await updateMediaCategory(getSupabaseAdmin(), request.params.id, request.body || {}) },
+  }));
+
+  app.delete("/api/media-categories/:id", { preHandler: writable }, async (request) => {
+    await deleteMediaCategory(getSupabaseAdmin(), request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
 
   app.get("/api/media/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
