@@ -218,7 +218,7 @@ export function buildServer(options = {}) {
 
   app.get("/api/media", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listMediaEntries(getSupabaseAdmin(), request.query || {}) },
+    data: await listMediaEntries(getSupabaseAdmin(), request.query || {}),
   }));
 
   app.get("/api/media-episodes/favorites", { preHandler: authenticated }, async (request) => ({

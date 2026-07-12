@@ -44,6 +44,14 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    ilike(field, pattern) {
+      const keyword = String(pattern).replace(/^%|%$/g, "").toLocaleLowerCase();
+      this.rows = this.rows.filter((row) =>
+        String(row[field] || "").toLocaleLowerCase().includes(keyword)
+      );
+      return this;
+    }
+
     gt(field, value) {
       this.rows = this.rows.filter((row) => row[field] > value);
       return this;
@@ -51,6 +59,12 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     order() {
       return this;
+    }
+
+    async range(from, to) {
+      const count = this.rows.length;
+      this.rows = this.rows.slice(from, to + 1);
+      return { data: this.materialize(), error: null, count };
     }
 
     materialize() {
@@ -204,6 +218,52 @@ test("media and dining detail routes load records by id", async (t) => {
   });
   assert.equal(unauthenticatedResponse.statusCode, 401);
   assert.equal(unauthenticatedResponse.json().error.code, "UNAUTHORIZED");
+});
+
+test("media list supports server-side pagination and fuzzy title search", async (t) => {
+  const entries = Array.from({ length: 25 }, (_, index) => ({
+    id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    title: index === 3 ? "默读" : index === 17 ? "沉默的真相" : `广播剧 ${index + 1}`,
+    media_type: "广播剧",
+    watch_status: "completed",
+    platforms: [],
+    sort_order: (index + 1) * 1000,
+  }));
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: entries }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const pageResponse = await app.inject({
+    method: "GET",
+    url: "/api/media?media_type=%E5%B9%BF%E6%92%AD%E5%89%A7&page=2&page_size=10",
+    headers: authHeaders,
+  });
+  assert.equal(pageResponse.statusCode, 200);
+  assert.equal(pageResponse.json().data.items.length, 10);
+  assert.deepEqual(pageResponse.json().data.pagination, {
+    page: 2,
+    page_size: 10,
+    total: 25,
+    has_more: true,
+  });
+
+  const searchResponse = await app.inject({
+    method: "GET",
+    url: "/api/media?media_type=%E5%B9%BF%E6%92%AD%E5%89%A7&keyword=%E9%BB%98&page_size=1",
+    headers: authHeaders,
+  });
+  assert.equal(searchResponse.statusCode, 200);
+  assert.equal(searchResponse.json().data.items[0].title, "默读");
+  assert.deepEqual(searchResponse.json().data.pagination, {
+    page: 1,
+    page_size: 1,
+    total: 2,
+    has_more: true,
+  });
 });
 
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {

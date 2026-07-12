@@ -128,9 +128,13 @@ async function requireRecord(supabase, table, id, fields = "*") {
 
 export async function listMediaEntries(supabase, query) {
   const mediaType = requiredText(query.media_type, "影视分类", 40);
+  const page = Math.max(1, Math.trunc(Number(query.page) || 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(Number(query.page_size) || 20)));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
   let request = supabase
     .from("media_entries")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("media_type", mediaType);
 
   if (query.watch_status) {
@@ -151,9 +155,17 @@ export async function listMediaEntries(supabase, query) {
       .order("created_at", { ascending: false });
   }
 
-  const { data, error } = await request;
+  const { data, error, count } = await request.range(from, to);
   throwSupabaseError(error, "读取影视清单失败。");
-  return data;
+  return {
+    items: data,
+    pagination: {
+      page,
+      page_size: pageSize,
+      total: count || 0,
+      has_more: to + 1 < (count || 0),
+    },
+  };
 }
 
 export async function getMediaEntry(supabase, id) {
