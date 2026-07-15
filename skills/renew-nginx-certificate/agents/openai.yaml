@@ -1,0 +1,4 @@
+interface:
+  display_name: "更新腾讯云 Nginx 证书"
+  short_description: "安全校验、部署并验证 gufeifei.cn HTTPS 证书"
+  default_prompt: "Use $renew-nginx-certificate to update the Tencent Cloud Nginx certificate from my downloaded ZIP."

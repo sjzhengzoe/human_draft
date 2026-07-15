@@ -2,6 +2,23 @@
 
 ## Project Skills
 
+When renewing the gufeifei.cn HTTPS certificate on Tencent Cloud, use the project-local skill:
+
+`skills/renew-nginx-certificate/SKILL.md`
+
+Use it for requests involving:
+- `更新腾讯云证书`
+- `更新证书` or `更换证书` in this project
+- Nginx certificate expiry or renewal
+- a supplied `gufeifei.cn_nginx.zip`
+
+Key rules from the skill:
+- Validate hostname, dates, and certificate/CSR/private-key matching before deployment.
+- Commit only public certificate files; never commit or expose the private key.
+- Use the existing `ssh gufeifei` alias for authorized Tencent Cloud terminal work; never store SSH credentials in the repository.
+- Keep the certificate in the repository and the private key protected under `/etc/nginx`.
+- Test Nginx before reload and verify HTTPS without bypassing certificate checks.
+
 When converting raw thoughts in `flomo/text.md` into 小策论 posts, use the project-local skill:
 
 `skills/flomo-xiaocelun-writing/SKILL.md`
