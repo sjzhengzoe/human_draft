@@ -1,3 +1,5 @@
+<page-meta page-style="{{sorting ? 'overflow: hidden;' : ''}}" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载菜单…</view>
@@ -44,8 +46,6 @@
       </view>
     </view>
 
-    <view wx:if="{{canReorder}}" class="sort-hint">按住卡片右下角的拖拽图标，拖到目标菜品即可交换位置</view>
-
     <view wx:if="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
       <button class="retry-button" bindtap="handleRetry">重试</button>
@@ -56,9 +56,14 @@
       <view
         wx:for="{{dishes}}"
         wx:key="id"
-        class="dish-card js-sortable-dish {{draggingIndex === index ? 'dish-card--dragging' : ''}} {{dragTargetIndex === index && draggingIndex !== index ? 'dish-card--drop-target' : ''}}"
+        class="dish-card js-sortable-dish {{draggingIndex === index ? 'dish-card--dragging' : ''}} {{dragTargetIndex === index && draggingIndex !== index ? (dragInsertAfter ? 'dish-card--insert-after' : 'dish-card--insert-before') : ''}}"
         data-id="{{item.id}}"
+        data-index="{{index}}"
         bindtap="handleDishTap"
+        bindlongpress="handleDragStart"
+        bindtouchmove="handleDragMove"
+        bindtouchend="handleDragEnd"
+        bindtouchcancel="handleDragCancel"
       >
         <view class="dish-card__image-wrap">
           <image class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
@@ -66,19 +71,11 @@
         <view class="dish-card__body">
           <view class="dish-card__name">{{item.name}}</view>
           <view class="dish-card__category">{{item.category && item.category.name ? item.category.name : '未分类'}}</view>
-          <view wx:if="{{canReorder}}" class="dish-card__tools">
-            <view
-              class="drag-handle {{sorting ? 'drag-handle--disabled' : ''}}"
-              data-index="{{index}}"
-              aria-label="拖拽调整菜品位置"
-              catchlongpress="handleDragStart"
-              catchtouchmove="handleDragMove"
-              catchtouchend="handleDragEnd"
-              catchtouchcancel="handleDragCancel"
-            ><app-icon name="grip-vertical" size="30" /></view>
-          </view>
         </view>
       </view>
     </view>
+  </view>
+  <view wx:if="{{dragGhostVisible}}" class="drag-ghost" style="left: {{dragGhostX}}px; top: {{dragGhostY}}px;">
+    <app-icon name="grip-vertical" size="27" /><text class="drag-ghost__label">{{dragGhostLabel}}</text>
   </view>
 </view>

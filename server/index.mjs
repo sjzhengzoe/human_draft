@@ -53,6 +53,7 @@ import {
   listFavoriteMediaEpisodes,
   listMediaCategories,
   moveLuggageItem,
+  moveLuggageGroup,
   reorderMediaEntries,
   setMediaEntryCoverFromSeason,
   swapMediaEntrySortOrders,
@@ -82,6 +83,7 @@ import {
   listWardrobeCategories,
   listWardrobeItems,
   replaceWardrobeItemImage,
+  reorderWardrobeItems,
   swapWardrobeCategorySortOrders,
   swapWardrobeItemSortOrders,
   updateWardrobeCategory,
@@ -435,6 +437,11 @@ export function buildServer(options = {}) {
     return { ok: true, data: { swapped: true } };
   });
 
+  app.put("/api/luggage/groups/order/move", { preHandler: writable }, async (request) => {
+    await moveLuggageGroup(getSupabaseAdmin(), request.body || {});
+    return { ok: true, data: { moved: true } };
+  });
+
   app.post("/api/luggage/items", { preHandler: writable }, async (request, reply) => {
     const item = await createLuggageItem(getSupabaseAdmin(), request.body || {});
     return reply.code(201).send({ ok: true, data: { item } });
@@ -594,6 +601,15 @@ export function buildServer(options = {}) {
   app.put("/api/wardrobe/items/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await swapWardrobeItemSortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+
+  app.put("/api/wardrobe/items/reorder", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await reorderWardrobeItems(
       getSupabaseAdmin(),
       request.auth.user.id,
       request.body || {},

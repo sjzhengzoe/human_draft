@@ -16,6 +16,7 @@
         wx:key="id"
         class="side-tab {{activeCategoryId === item.id ? 'side-tab--active' : ''}}"
         data-id="{{item.id}}"
+        data-index="{{index}}"
         bindtap="handleCategoryTap"
       >{{item.name}}</view>
     </scroll-view>
@@ -24,7 +25,7 @@
     </view>
   </view>
 
-  <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y="{{!sorting}}" enhanced show-scrollbar="{{false}}">
     <view class="header">
       <view class="header__topline">
         <view class="header__title-group">
@@ -48,8 +49,6 @@
       </view>
     </view>
 
-    <view wx:if="{{canReorder}}" class="sort-hint">长按卡片右下角的拖拽图标，拖到目标衣物即可交换位置</view>
-
     <view wx:if="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
       <button class="retry-button" bindtap="handleRetry">重试</button>
@@ -63,12 +62,16 @@
       <view
         wx:for="{{items}}"
         wx:key="id"
-        class="item-card js-sortable-wardrobe {{draggingIndex === index ? 'item-card--dragging' : ''}} {{dragTargetIndex === index && draggingIndex !== index ? 'item-card--drop-target' : ''}}"
+        class="item-card js-sortable-wardrobe {{draggingIndex === index ? 'item-card--dragging' : ''}} {{dragTargetIndex === index && draggingIndex !== index ? (dragInsertAfter ? 'item-card--insert-after' : 'item-card--insert-before') : ''}}"
         data-id="{{item.id}}"
         bindtap="handleItemTap"
+        bindlongpress="handleDragStart"
+        bindtouchmove="handleDragMove"
+        bindtouchend="handleDragEnd"
+        bindtouchcancel="handleDragCancel"
       >
         <image class="item-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
-        <view class="item-card__body {{canReorder ? 'item-card__body--sortable' : ''}}">
+        <view class="item-card__body">
           <view class="item-card__topline">
             <view class="item-card__name">{{item.name}}</view>
             <view class="item-card__category">{{item.category.name}}</view>
@@ -80,18 +83,12 @@
             </view>
           </view>
           <view wx:else class="attribute-empty">暂未填写尺寸</view>
-          <view
-            wx:if="{{canReorder}}"
-            class="drag-handle"
-            data-index="{{index}}"
-            catchlongpress="handleDragStart"
-            catchtouchmove="handleDragMove"
-            catchtouchend="handleDragEnd"
-            catchtouchcancel="handleDragCancel"
-          ><app-icon name="grip-vertical" size="30" /></view>
         </view>
       </view>
     </view>
     <view class="bottom-space" />
   </scroll-view>
+  <view wx:if="{{dragGhostVisible}}" class="drag-ghost" style="left: {{dragGhostX}}px; top: {{dragGhostY}}px;">
+    <app-icon name="grip-vertical" size="27" /><text class="drag-ghost__label">{{dragGhostLabel}}</text>
+  </view>
 </view>

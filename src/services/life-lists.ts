@@ -150,6 +150,14 @@ export function swapMediaEntrySortOrders(
   })
 }
 
+export function reorderMediaEntrySortOrders(mediaType: MediaType, ids: string[]): Promise<{ updated: number }> {
+  return request<{ updated: number }>({
+    path: "/api/media/reorder",
+    method: "PUT",
+    data: { media_type: mediaType, ids }
+  })
+}
+
 export async function listMediaSeasons(mediaEntryId: string): Promise<MediaSeason[]> {
   const data = await request<{ items: MediaSeason[] }>({
     path: `/api/media/${mediaEntryId}/seasons`
@@ -309,6 +317,18 @@ export function swapLuggageGroupSortOrders(sourceId: string, targetId: string): 
   })
 }
 
+export function moveLuggageGroup(
+  sourceId: string,
+  targetId: string,
+  insertAfter: boolean
+): Promise<void> {
+  return request<void>({
+    path: "/api/luggage/groups/order/move",
+    method: "PUT",
+    data: { source_id: sourceId, target_id: targetId, insert_after: insertAfter }
+  })
+}
+
 export async function createLuggageItem(groupId: string, name: string): Promise<LuggageItem> {
   const data = await request<{ item: LuggageItem }>({
     path: "/api/luggage/items",
@@ -325,12 +345,13 @@ export function updateLuggageItem(id: string, name: string): Promise<void> {
 export function moveLuggageItem(
   id: string,
   targetGroupId: string,
-  targetItemId?: string
+  targetItemId?: string,
+  insertAfter = false
 ): Promise<void> {
   return request<void>({
     path: `/api/luggage/items/${id}/move`,
     method: "PUT",
-    data: { target_group_id: targetGroupId, target_item_id: targetItemId || null }
+    data: { target_group_id: targetGroupId, target_item_id: targetItemId || null, insert_after: insertAfter }
   })
 }
 

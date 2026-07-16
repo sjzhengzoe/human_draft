@@ -84,3 +84,7 @@ export function swapDishSortOrders(
     data: { source_id: sourceId, target_id: targetId }
   })
 }
+
+export function reorderDishSortOrders(ids: string[]): Promise<{ updated: number }> {
+  return request<{ updated: number }>({ path: "/api/dishes/reorder", method: "PUT", data: { ids } })
+}

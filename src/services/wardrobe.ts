@@ -160,3 +160,11 @@ export function swapWardrobeItemSortOrders(
     data: { source_id: sourceId, target_id: targetId }
   })
 }
+
+export function reorderWardrobeItemSortOrders(ids: string[]): Promise<{ updated: number }> {
+  return request<{ updated: number }>({
+    path: "/api/wardrobe/items/reorder",
+    method: "PUT",
+    data: { ids }
+  })
+}

@@ -3,7 +3,7 @@ import {
   listMediaCategories,
   listMediaEntries,
   updateMediaEntry,
-  swapMediaEntrySortOrders
+  reorderMediaEntrySortOrders
 } from "../../services/life-lists"
 import type {
   MediaEntry,
@@ -47,6 +47,7 @@ let dragTargetIndex = -1
 let dragRects: SortableRect[] = []
 let dragItemIds: string[] = []
 let suppressEditTapUntil = 0
+let dragInsertAfter = false
 let savedPageScrollTop = 0
 let mediaListSnapshot: MediaListSnapshot | null = null
 
@@ -63,6 +64,7 @@ function resetDragSession(): void {
   dragTargetIndex = -1
   dragRects = []
   dragItemIds = []
+  dragInsertAfter = false
 }
 
 Page({
@@ -83,7 +85,12 @@ Page({
     canReorder: false,
     draggingIndex: -1,
     dragTargetIndex: -1,
+    dragInsertAfter: false,
     sorting: false,
+    dragGhostVisible: false,
+    dragGhostLabel: "",
+    dragGhostX: 0,
+    dragGhostY: 0,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -324,8 +331,17 @@ Page({
     dragTargetIndex = index
     dragItemIds = this.data.items.map((item) => item.id)
     suppressEditTapUntil = Date.now() + 1000
+    const touch = event.touches[0] || event.changedTouches[0]
     invalidateAsyncPageRequests(this)
-    this.setData({ draggingIndex: index, dragTargetIndex: index, sorting: true })
+    this.setData({
+      draggingIndex: index,
+      dragTargetIndex: index,
+      sorting: true,
+      dragGhostVisible: true,
+      dragGhostLabel: this.data.items[index].title,
+      dragGhostX: touch?.clientX || 0,
+      dragGhostY: touch?.clientY || 0
+    })
 
     wx.createSelectorQuery()
       .selectAll(".js-sortable-media")
@@ -346,15 +362,19 @@ Page({
     if (dragSourceIndex < 0 || dragRects.length === 0) return
     const touch = event.touches[0] || event.changedTouches[0]
     if (!touch) return
+    this.setData({ dragGhostX: touch.clientX, dragGhostY: touch.clientY })
     const target = findClosestSortTarget(dragRects, touch.clientX, touch.clientY)
-    if (target < 0 || target === dragTargetIndex) return
+    if (target < 0) return
+    const insertAfter = touch.clientY > (dragRects[target].top + dragRects[target].bottom) / 2
+    if (target === dragTargetIndex && insertAfter === dragInsertAfter) return
     dragTargetIndex = target
-    this.setData({ dragTargetIndex: target })
+    dragInsertAfter = insertAfter
+    this.setData({ dragTargetIndex: target, dragInsertAfter: insertAfter })
   },
 
   handleDragCancel() {
     resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false })
+    this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
   },
 
   async handleDragEnd() {
@@ -362,8 +382,9 @@ Page({
     const target = dragTargetIndex
     const sourceId = dragItemIds[source] || ""
     const targetId = dragItemIds[target] || ""
+    const insertAfter = dragInsertAfter
     resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1 })
+    this.setData({ draggingIndex: -1, dragTargetIndex: -1, dragGhostVisible: false })
     if (
       source < 0 ||
       target < 0 ||
@@ -383,13 +404,12 @@ Page({
       this.setData({ sorting: false })
       return
     }
-    const sourceItem = items[currentSourceIndex]
-    const targetItem = items[currentTargetIndex]
-    items[currentSourceIndex] = { ...targetItem, sort_order: sourceItem.sort_order }
-    items[currentTargetIndex] = { ...sourceItem, sort_order: targetItem.sort_order }
+    const [sourceItem] = items.splice(currentSourceIndex, 1)
+    const nextTargetIndex = items.findIndex((item) => item.id === targetId)
+    items.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceItem)
     this.setData({ items })
     try {
-      await swapMediaEntrySortOrders(sourceItem.id, targetItem.id)
+      await reorderMediaEntrySortOrders(this.data.activeType, items.map((item) => item.id))
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })

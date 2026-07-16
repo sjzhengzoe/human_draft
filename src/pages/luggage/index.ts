@@ -8,7 +8,7 @@ import {
   deleteLuggageScene,
   listLuggageScenes,
   moveLuggageItem,
-  swapLuggageGroupSortOrders,
+  moveLuggageGroup,
   updateLuggageGroup,
   updateLuggageItem,
   updateLuggageScene
@@ -31,11 +31,13 @@ let dragTargetItemId = ""
 let dragItems: Array<SortableRect & { id: string; groupId: string }> = []
 let dragGroupRects: Array<SortableRect & { id: string }> = []
 let dragTargetGroupId = ""
+let dragInsertAfter = false
 let suppressItemTapUntil = 0
 let groupDragSourceIndex = -1
 let groupDragTargetIndex = -1
 let groupDragIds: string[] = []
 let groupDragRects: SortableRect[] = []
+let groupDragInsertAfter = false
 
 function resetDragSession(): void {
   dragSourceId = ""
@@ -44,6 +46,7 @@ function resetDragSession(): void {
   dragItems = []
   dragGroupRects = []
   dragTargetGroupId = ""
+  dragInsertAfter = false
 }
 
 function resetGroupDragSession(): void {
@@ -51,6 +54,7 @@ function resetGroupDragSession(): void {
   groupDragTargetIndex = -1
   groupDragIds = []
   groupDragRects = []
+  groupDragInsertAfter = false
 }
 
 function getTouchPoint(event: WechatMiniprogram.TouchEvent) {
@@ -96,6 +100,8 @@ Page({
     groupSorting: false,
     draggingGroupIndex: -1,
     dragTargetGroupIndex: -1,
+    dragInsertAfter: false,
+    groupDragInsertAfter: false,
     draggingItemId: "",
     dragTargetItemId: "",
     dragTargetGroupId: "",
@@ -251,19 +257,23 @@ Page({
     if (!touch) return
     this.setData({ dragGhostX: touch.clientX, dragGhostY: touch.clientY })
     const target = findClosestSortTarget(groupDragRects, touch.clientX, touch.clientY)
-    if (target < 0 || target === groupDragTargetIndex) return
+    if (target < 0) return
+    const insertAfter = touch.clientY > (groupDragRects[target].top + groupDragRects[target].bottom) / 2
+    if (target === groupDragTargetIndex && insertAfter === groupDragInsertAfter) return
     groupDragTargetIndex = target
-    this.setData({ dragTargetGroupIndex: target })
+    groupDragInsertAfter = insertAfter
+    this.setData({ dragTargetGroupIndex: target, groupDragInsertAfter: insertAfter })
   },
 
   handleGroupDragCancel() {
     resetGroupDragSession()
-    this.setData({ groupSorting: false, draggingGroupIndex: -1, dragTargetGroupIndex: -1, dragGhostVisible: false })
+    this.setData({ groupSorting: false, draggingGroupIndex: -1, dragTargetGroupIndex: -1, groupDragInsertAfter: false, dragGhostVisible: false })
   },
 
   async handleGroupDragEnd() {
     const sourceId = groupDragIds[groupDragSourceIndex] || ""
     const targetId = groupDragIds[groupDragTargetIndex] || ""
+    const insertAfter = groupDragInsertAfter
     resetGroupDragSession()
     this.setData({ draggingGroupIndex: -1, dragTargetGroupIndex: -1, dragGhostVisible: false })
     if (!sourceId || !targetId || sourceId === targetId) {
@@ -271,7 +281,7 @@ Page({
       return
     }
     try {
-      await swapLuggageGroupSortOrders(sourceId, targetId)
+      await moveLuggageGroup(sourceId, targetId, insertAfter)
       if (isAsyncPageActive(this)) await this.loadScenes()
     } catch (error) {
       if (isAsyncPageActive(this)) {
@@ -388,10 +398,14 @@ Page({
     const groupItems = dragItems.filter((item) => item.groupId === nextGroupId)
     const nextIndex = findClosestSortTarget(groupItems, touch.clientX, touch.clientY)
     const nextItemId = nextIndex >= 0 ? groupItems[nextIndex]?.id || "" : ""
-    if (nextGroupId === dragTargetGroupId && nextItemId === dragTargetItemId) return
+    const insertAfter = nextIndex >= 0
+      ? touch.clientY > (groupItems[nextIndex].top + groupItems[nextIndex].bottom) / 2
+      : false
+    if (nextGroupId === dragTargetGroupId && nextItemId === dragTargetItemId && insertAfter === dragInsertAfter) return
     dragTargetGroupId = nextGroupId
     dragTargetItemId = nextItemId
-    this.setData({ dragTargetGroupId: nextGroupId, dragTargetItemId: nextItemId })
+    dragInsertAfter = insertAfter
+    this.setData({ dragTargetGroupId: nextGroupId, dragTargetItemId: nextItemId, dragInsertAfter: insertAfter })
   },
 
   handleDragCancel() {
@@ -404,6 +418,7 @@ Page({
     const sourceGroupId = dragSourceGroupId
     const targetGroupId = dragTargetGroupId
     const targetItemId = dragTargetItemId
+    const insertAfter = dragInsertAfter
     const unchanged = targetGroupId === sourceGroupId && sourceId === targetItemId
     resetDragSession()
     this.setData({ draggingItemId: "", dragTargetItemId: "", dragTargetGroupId: "", dragGhostVisible: false })
@@ -412,7 +427,7 @@ Page({
       return
     }
     try {
-      await moveLuggageItem(sourceId, targetGroupId, targetItemId)
+      await moveLuggageItem(sourceId, targetGroupId, targetItemId, insertAfter)
       if (!isAsyncPageActive(this)) return
       await this.loadScenes()
     } catch (error) {

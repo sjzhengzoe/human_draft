@@ -826,6 +826,18 @@ export async function swapLuggageGroupSortOrders(supabase, body) {
   throwSupabaseError(error, "调整行李层级顺序失败。");
 }
 
+export async function moveLuggageGroup(supabase, body) {
+  const sourceId = requiredText(body.source_id, "源行李层级");
+  const targetId = requiredText(body.target_id, "目标行李层级");
+  assertCondition(typeof body.insert_after === "boolean", 400, "INVALID_POSITION", "层级插入位置无效。" );
+  const { error } = await supabase.rpc("move_luggage_group", {
+    p_source_id: sourceId,
+    p_target_id: targetId,
+    p_insert_after: body.insert_after,
+  });
+  throwSupabaseError(error, "调整行李层级顺序失败。");
+}
+
 export async function createLuggageItem(supabase, body) {
   const groupId = requiredText(body.group_id, "行李层级");
   await requireRecord(supabase, "luggage_groups", groupId, "id");
@@ -859,10 +871,12 @@ export async function moveLuggageItem(supabase, id, body) {
   const targetItemId = body.target_item_id == null || body.target_item_id === ""
     ? null
     : requiredText(body.target_item_id, "目标物品");
+  assertCondition(typeof body.insert_after === "boolean", 400, "INVALID_POSITION", "物品插入位置无效。" );
   const { error } = await supabase.rpc("move_luggage_item", {
     p_source_id: id,
     p_target_group_id: targetGroupId,
     p_target_item_id: targetItemId,
+    p_insert_after: body.insert_after,
   });
   throwSupabaseError(error, "移动行李物品失败。");
 }

@@ -505,3 +505,15 @@ export async function swapWardrobeItemSortOrders(supabase, userId, body) {
   });
   return { updated: 2 };
 }
+
+export async function reorderWardrobeItems(supabase, userId, body) {
+  const ids = Array.isArray(body.ids) ? body.ids.map((id) => assertUuid(id, "衣物")) : [];
+  assertCondition(ids.length > 0 && ids.length <= 500, 400, "INVALID_IDS", "排序列表不能为空。" );
+  assertCondition(new Set(ids).size === ids.length, 400, "DUPLICATE_IDS", "排序列表包含重复衣物。" );
+  const { error } = await supabase.rpc("reorder_wardrobe_items", {
+    p_user_id: userId,
+    p_item_ids: ids,
+  });
+  throwSupabaseError(error, "调整衣物顺序失败。");
+  return { updated: ids.length };
+}

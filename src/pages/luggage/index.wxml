@@ -1,3 +1,5 @@
+<page-meta page-style="{{sorting || groupSorting ? 'overflow: hidden;' : ''}}" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载行李清单…</view>
@@ -59,23 +61,20 @@
       </view>
 
       <view class="group-list">
-        <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:key="id" class="group-card js-group-card js-sortable-group {{sorting && dragTargetGroupId === group.id ? 'group-card--drop-target' : ''}} {{draggingGroupIndex === index ? 'group-card--dragging' : ''}} {{dragTargetGroupIndex === index && draggingGroupIndex !== index ? 'group-card--sort-target' : ''}}" data-group-id="{{group.id}}">
-          <view class="group-header">
+        <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:key="id" class="group-card js-group-card js-sortable-group {{sorting && dragTargetGroupId === group.id ? 'group-card--drop-target' : ''}} {{draggingGroupIndex === index ? 'group-card--dragging' : ''}} {{dragTargetGroupIndex === index && draggingGroupIndex !== index ? (groupDragInsertAfter ? 'group-card--insert-after' : 'group-card--insert-before') : ''}}" data-group-id="{{group.id}}">
+          <view
+            class="group-header"
+            data-index="{{index}}"
+            bindlongpress="handleGroupDragStart"
+            bindtouchmove="handleGroupDragMove"
+            bindtouchend="handleGroupDragEnd"
+            bindtouchcancel="handleGroupDragCancel"
+          >
             <view class="group-header__main">
               <view class="group-title">{{group.name}}</view>
               <view class="group-count">{{group.items.length}} 件物品</view>
             </view>
             <view wx:if="{{canWrite}}" class="inline-icon-actions">
-              <view
-                class="inline-icon-button group-drag-handle"
-                role="button"
-                aria-label="拖动调整分组顺序"
-                data-index="{{index}}"
-                catchlongpress="handleGroupDragStart"
-                catchtouchmove="handleGroupDragMove"
-                catchtouchend="handleGroupDragEnd"
-                catchtouchcancel="handleGroupDragCancel"
-              ><app-icon name="grip-vertical" size="27" /></view>
               <view
                 class="inline-icon-button"
                 role="button"
@@ -99,21 +98,24 @@
             </view>
           </view>
           <view class="luggage-items">
-            <view wx:for="{{group.items}}" wx:for-item="luggageItem" wx:for-index="itemIndex" wx:key="id" class="luggage-item js-luggage-item {{draggingItemId === luggageItem.id ? 'luggage-item--dragging' : ''}} {{dragTargetItemId === luggageItem.id && draggingItemId !== luggageItem.id ? 'luggage-item--drop-target' : ''}}" data-id="{{luggageItem.id}}" data-group-id="{{group.id}}" data-name="{{luggageItem.name}}" bindtap="handleItemTap">
+            <view
+              wx:for="{{group.items}}"
+              wx:for-item="luggageItem"
+              wx:for-index="itemIndex"
+              wx:key="id"
+              class="luggage-item js-luggage-item {{draggingItemId === luggageItem.id ? 'luggage-item--dragging' : ''}} {{dragTargetItemId === luggageItem.id && draggingItemId !== luggageItem.id ? (dragInsertAfter ? 'luggage-item--insert-after' : 'luggage-item--insert-before') : ''}}"
+              data-id="{{luggageItem.id}}"
+              data-group-id="{{group.id}}"
+              data-name="{{luggageItem.name}}"
+              bindtap="handleItemTap"
+              catchlongpress="handleDragStart"
+              bindtouchmove="handleDragMove"
+              bindtouchend="handleDragEnd"
+              bindtouchcancel="handleDragCancel"
+            >
               <view class="luggage-item__marker">{{itemIndex + 1}}</view>
               <view class="luggage-item__name">{{luggageItem.name}}</view>
               <view wx:if="{{canWrite}}" class="inline-icon-actions">
-                <view
-                  class="item-drag-handle"
-                  role="button"
-                  aria-label="拖动调整物品层级或顺序"
-                  data-id="{{luggageItem.id}}"
-                  data-group-id="{{group.id}}"
-                  catchlongpress="handleDragStart"
-                  catchtouchmove="handleDragMove"
-                  catchtouchend="handleDragEnd"
-                  catchtouchcancel="handleDragCancel"
-                ><app-icon name="grip-vertical" size="28" /></view>
                 <view
                   class="item-delete-button"
                   role="button"
