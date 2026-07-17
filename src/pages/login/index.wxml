@@ -1,5 +1,5 @@
 <view class="page">
-  <view wx:if="{{stage === 'welcome'}}" class="login-card">
+  <view class="login-card">
     <view class="login-mark">E</view>
     <view class="login-title">登录 Earth</view>
     <view wx:if="{{errorMessage}}" class="error-message welcome-error">{{errorMessage}}</view>
@@ -8,45 +8,6 @@
       disabled="{{preparingProfile}}"
       bindtap="handleLoginTap"
     >{{preparingProfile ? '正在登录…' : '微信账号登录'}}</button>
+    <button class="back-button" disabled="{{preparingProfile}}" bindtap="handleSkipTap">继续以游客登录</button>
   </view>
-
-  <form wx:else class="login-card profile-card" bindsubmit="handleConfirmLogin">
-    <view class="login-title profile-title">完善个人资料</view>
-    <view class="login-desc">头像和昵称将展示在“我的”页面</view>
-
-    <view class="avatar-picker-wrap">
-      <view class="avatar-visual">
-        <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
-        <view wx:else class="avatar-placeholder">选择头像</view>
-      </view>
-      <button
-        class="avatar-hit-area"
-        open-type="chooseAvatar"
-        bindchooseavatar="handleChooseAvatar"
-      ></button>
-      <view class="avatar-edit">更换</view>
-    </view>
-
-    <view class="profile-field">
-      <view class="profile-label">昵称</view>
-      <input
-        class="nickname-input"
-        name="displayName"
-        type="nickname"
-        value="{{displayName}}"
-        maxlength="40"
-        placeholder="请选择或输入微信昵称"
-        bindinput="handleNicknameInput"
-      />
-    </view>
-
-    <view wx:if="{{errorMessage}}" class="error-message">{{errorMessage}}</view>
-
-    <button
-      class="primary-button confirm-button"
-      disabled="{{loggingIn}}"
-      form-type="submit"
-    >{{loggingIn ? '正在登录…' : '确认并登录'}}</button>
-    <button class="back-button" disabled="{{loggingIn}}" bindtap="handleProfileBack">返回</button>
-  </form>
 </view>

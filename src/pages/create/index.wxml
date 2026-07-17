@@ -23,6 +23,7 @@
       data-title="{{item.title}}"
       data-path="{{item.path}}"
       data-available="{{item.available}}"
+      data-requires-login="{{item.requiresLogin}}"
       bindtap="handleFeatureTap"
     >
       <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="30" /></view>

@@ -10,11 +10,13 @@
       <view wx:else class="profile-avatar-fallback">{{avatarInitial}}</view>
       <view class="profile-main">
         <view class="profile-name">{{displayName}}</view>
-        <view class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
+        <view wx:if="{{loggedIn}}" class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
       </view>
+      <button wx:if="{{!loggedIn}}" class="profile-login-button" bindtap="handleLoginTap">登录</button>
+      <button wx:else class="profile-login-button profile-login-button--logout" bindtap="handleLogoutTap">退出</button>
     </view>
 
-    <view class="settings-section">
+    <view wx:if="{{loggedIn}}" class="settings-section">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
         <view
@@ -28,15 +30,6 @@
             <text class="settings-item__value">{{openidLabel}}</text>
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="26" /></view>
           </view>
-        </view>
-        <view
-          class="settings-item"
-          hover-class="settings-item--hover"
-          hover-stay-time="80"
-          bindtap="handleLogoutTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="log-out-danger" size="25" /><text class="settings-item__label settings-item__label--danger">退出登录</text></view>
-          <view class="settings-item__arrow"><app-icon name="chevron-right" size="26" /></view>
         </view>
       </view>
     </view>

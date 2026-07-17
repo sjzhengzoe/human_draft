@@ -1,4 +1,4 @@
-import { getCurrentUser, redirectToLogin } from "../../services/auth"
+import { getCurrentUser } from "../../services/auth"
 import { hideGlobalLoading } from "../../services/loading"
 
 type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
@@ -15,7 +15,8 @@ Component({
         title: "小红书模板",
         desc: "生成图文卡片",
         path: "/pages/xiaohongshu/index",
-        available: true
+        available: true,
+        requiresLogin: false
       },
       {
         key: "douyin2",
@@ -23,7 +24,8 @@ Component({
         title: "抖音模板",
         desc: "生成短句卡片",
         path: "/pages/douyin2/index",
-        available: true
+        available: true,
+        requiresLogin: false
       },
       {
         key: "menu",
@@ -31,7 +33,8 @@ Component({
         title: "我的菜单",
         desc: "管理日常菜品",
         path: "/pages/menu/index",
-        available: true
+        available: true,
+        requiresLogin: true
       },
       {
         key: "media",
@@ -39,7 +42,8 @@ Component({
         title: "影视清单",
         desc: "记录观影进度",
         path: "/pages/media/index",
-        available: true
+        available: true,
+        requiresLogin: true
       },
       {
         key: "activities",
@@ -47,7 +51,8 @@ Component({
         title: "活动清单",
         desc: "收藏活动灵感",
         path: "/pages/activities/index",
-        available: true
+        available: true,
+        requiresLogin: true
       },
       {
         key: "luggage",
@@ -55,7 +60,8 @@ Component({
         title: "行李清单",
         desc: "整理出行物品",
         path: "/pages/luggage/index",
-        available: true
+        available: true,
+        requiresLogin: true
       },
       {
         key: "dining",
@@ -63,7 +69,8 @@ Component({
         title: "用餐清单",
         desc: "收藏用餐店铺",
         path: "/pages/dining/index",
-        available: true
+        available: true,
+        requiresLogin: true
       },
       {
         key: "wardrobe",
@@ -71,7 +78,8 @@ Component({
         title: "我的衣橱",
         desc: "记录衣物尺寸",
         path: "/pages/wardrobe/index",
-        available: true
+        available: true,
+        requiresLogin: true
       }
     ]
   },
@@ -84,10 +92,6 @@ Component({
   },
   pageLifetimes: {
     show() {
-      if (!getCurrentUser()) {
-        redirectToLogin()
-        return
-      }
       const page = this as CreatePageInstance
       const tabBar = page.getTabBar && page.getTabBar()
 
@@ -104,13 +108,27 @@ Component({
   },
   methods: {
     handleFeatureTap(event: WechatMiniprogram.TouchEvent) {
-      const { path, available, title } = event.currentTarget.dataset
+      const { path, available, title, requiresLogin } = event.currentTarget.dataset
       const isAvailable = available === true || available === "true"
+      const needsLogin = requiresLogin === true || requiresLogin === "true"
 
       if (!isAvailable || !path) {
         wx.showToast({
           title: `${title || "功能"}待迁移`,
           icon: "none"
+        })
+        return
+      }
+
+      if (needsLogin && !getCurrentUser()) {
+        wx.showModal({
+          title: "登录后使用",
+          content: `${title || "该功能"}需要登录后保存个人内容。你可以先体验图文生成工具，或现在登录。`,
+          confirmText: "去登录",
+          cancelText: "暂不登录",
+          success: (result) => {
+            if (result.confirm) wx.navigateTo({ url: "/pages/login/index" })
+          }
         })
         return
       }

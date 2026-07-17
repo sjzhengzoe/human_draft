@@ -1,4 +1,4 @@
-import { getCurrentUser, logout, redirectToLogin } from "../../services/auth"
+import { getCurrentUser, logout } from "../../services/auth"
 
 function shortOpenId(openid: string): string {
   if (openid.length <= 14) return openid
@@ -8,6 +8,7 @@ function shortOpenId(openid: string): string {
 Component({
   data: {
     ready: false,
+    loggedIn: false,
     icpNumber: "粤ICP备2025373031号",
     displayName: "",
     avatarUrl: "",
@@ -20,8 +21,16 @@ Component({
     show() {
       const user = getCurrentUser()
       if (!user) {
-        this.setData({ ready: false })
-        redirectToLogin()
+        this.setData({
+          ready: true,
+          loggedIn: false,
+          displayName: "游客",
+          avatarUrl: "",
+          avatarInitial: "E",
+          isAdmin: false,
+          openid: "",
+          openidLabel: ""
+        })
         return
       }
 
@@ -33,6 +42,7 @@ Component({
 
       this.setData({
         ready: true,
+        loggedIn: true,
         displayName: user.display_name,
         avatarUrl: user.avatar_url,
         avatarInitial: user.display_name.trim().slice(0, 1) || "E",
@@ -43,6 +53,9 @@ Component({
     }
   },
   methods: {
+    handleLoginTap() {
+      wx.navigateTo({ url: "/pages/login/index" })
+    },
     handleLogoutTap() {
       wx.showModal({
         title: "退出登录",
@@ -57,7 +70,7 @@ Component({
           } finally {
             wx.hideLoading()
             this.setData({ ready: false })
-            wx.reLaunch({ url: "/pages/login/index" })
+            wx.switchTab({ url: "/pages/create/index" })
           }
         }
       })

@@ -139,7 +139,7 @@ function mockWechatLogin(context, openId) {
   }));
 }
 
-test("local-avatar signup stays incomplete and requires profile on the next login", async (context) => {
+test("local-avatar signup stays incomplete and can log in again without profile", async (context) => {
   mockWechatLogin(context, "openid-local-avatar");
   const supabase = createFakeSupabase();
 
@@ -151,12 +151,9 @@ test("local-avatar signup stays incomplete and requires profile on the next logi
   assert.equal(supabase.state.users[0].profile_completed, false);
   assert.equal(supabase.state.sessions.length, 1);
 
-  await assert.rejects(
-    loginWithWechatCode(supabase, "second-code"),
-    (error) =>
-      error?.statusCode === 409 && error?.code === "PROFILE_REQUIRED",
-  );
-  assert.equal(supabase.state.sessions.length, 1);
+  const session = await loginWithWechatCode(supabase, "second-code");
+  assert.equal(session.user.display_name, "测试用户");
+  assert.equal(supabase.state.sessions.length, 2);
 });
 
 test("a migrated completed user can still log in without an avatar", async (context) => {
@@ -217,7 +214,7 @@ test("temporary local avatar URLs are rejected by the login endpoint", async (co
   assert.equal(supabase.state.sessions.length, 0);
 });
 
-test("incomplete profile sessions can only authenticate profile-completion routes", async (context) => {
+test("incomplete profile sessions can authenticate normal routes", async (context) => {
   mockWechatLogin(context, "openid-incomplete-profile");
   const supabase = createFakeSupabase();
   const session = await loginWithWechatCode(supabase, "incomplete-profile-code", {
@@ -226,15 +223,20 @@ test("incomplete profile sessions can only authenticate profile-completion route
   });
   const headers = { authorization: `Bearer ${session.token}` };
 
-  await assert.rejects(
-    requireAuth(supabase, { headers }),
-    (error) => error?.statusCode === 409 && error?.code === "PROFILE_REQUIRED",
-  );
-
   const request = { headers };
-  const auth = await requireAuth(supabase, request, {
-    allowIncompleteProfile: true,
-  });
+  const auth = await requireAuth(supabase, request);
   assert.equal(auth.user.id, supabase.state.users[0].id);
   assert.equal(request.auth.user.id, supabase.state.users[0].id);
+});
+
+test("new users can sign up without avatar or nickname", async (context) => {
+  mockWechatLogin(context, "openid-default-profile");
+  const supabase = createFakeSupabase();
+
+  const session = await loginWithWechatCode(supabase, "signup-code");
+
+  assert.equal(session.user.display_name, "微信用户");
+  assert.equal(session.user.avatar_url, "");
+  assert.equal(supabase.state.users[0].profile_completed, false);
+  assert.equal(supabase.state.sessions.length, 1);
 });

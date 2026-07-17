@@ -138,14 +138,6 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
 
   let user;
   if (existingUser) {
-    if (!existingUser.profile_completed) {
-      assertCondition(
-        typeof profile.displayName === "string" && profile.displayName.trim(),
-        409,
-        "PROFILE_REQUIRED",
-        "请先完善头像和昵称。",
-      );
-    }
     const changes = { last_login_at: now };
     if (typeof profile.displayName === "string" && profile.displayName.trim()) {
       changes.display_name = requiredDisplayName(profile.displayName);
@@ -164,13 +156,9 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
     throwSupabaseError(error, "更新小程序账号失败。");
     user = data;
   } else {
-    assertCondition(
-      typeof profile.displayName === "string" && profile.displayName.trim(),
-      409,
-      "PROFILE_REQUIRED",
-      "首次登录请完善头像和昵称。",
-    );
-    const displayName = requiredDisplayName(profile.displayName);
+    const displayName = typeof profile.displayName === "string" && profile.displayName.trim()
+      ? requiredDisplayName(profile.displayName)
+      : "微信用户";
     const avatarUrl = optionalAvatarUrl(profile.avatarUrl);
     const { data, error } = await supabase
       .from("app_users")
@@ -224,13 +212,6 @@ export async function requireAuth(supabase, request, options = {}) {
     .maybeSingle();
   throwSupabaseError(userError, "读取账号信息失败。");
   assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );
-  assertCondition(
-    options.allowIncompleteProfile || user.profile_completed,
-    409,
-    "PROFILE_REQUIRED",
-    "请先完善头像和昵称。",
-  );
-
   request.auth = {
     sessionId: session.id,
     tokenHash,
