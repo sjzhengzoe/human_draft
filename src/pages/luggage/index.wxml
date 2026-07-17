@@ -13,7 +13,7 @@
     </view>
   </view>
 
-  <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
+  <view class="content">
     <view wx:if="{{!activeScene}}" class="empty-state">
       <view>还没有行李场景</view>
       <button wx:if="{{canWrite}}" class="primary-button" bindtap="handleAddScene">新增第一个场景</button>
@@ -68,6 +68,7 @@
         </view>
       </view>
 
+      <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
       <view class="group-list">
         <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="id" class="group-card">
           <view class="group-header">
@@ -144,8 +145,9 @@
           </view>
         </view>
       </view>
+      </scroll-view>
     </block>
-  </scroll-view>
+  </view>
 
   <operation-loading
     visible="{{ordering || savingItem || savingGroup || savingScene || editing || deleting}}"

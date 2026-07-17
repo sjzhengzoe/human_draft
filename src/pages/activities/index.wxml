@@ -24,6 +24,7 @@
         </view>
       </view>
     </view>
+    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view wx:if="{{items.length === 0}}" class="state">还没有记录</view>
     <view wx:else class="item-list">
       <view wx:for="{{items}}" wx:key="id" class="item-card">
@@ -34,6 +35,7 @@
         </view>
       </view>
     </view>
+    </scroll-view>
   </view>
 
   <view wx:if="{{showEditor}}" class="modal" bindtap="closeEditor">

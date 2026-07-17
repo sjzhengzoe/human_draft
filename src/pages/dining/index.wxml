@@ -31,6 +31,7 @@
       </view>
     </view>
   </view>
+  <scroll-view class="place-scroll" scroll-y enhanced show-scrollbar="{{false}}">
   <view wx:if="{{errorMessage}}" class="state">{{errorMessage}}</view>
   <view wx:elif="{{items.length === 0}}" class="state">还没有店铺记录</view>
   <view wx:else class="place-list">
@@ -49,6 +50,7 @@
       </view>
     </view>
   </view>
+  </scroll-view>
   </view>
   <operation-loading visible="{{switchingScene || deleting}}" text="{{deleting ? '正在删除店铺…' : '正在切换场景…'}}" />
 </view>

@@ -44,6 +44,7 @@
       </view>
     </view>
 
+    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view wx:if="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
       <button class="retry-button" bindtap="handleRetry">重试</button>
@@ -72,6 +73,7 @@
         </view>
       </view>
     </view>
+    </scroll-view>
   </view>
   <operation-loading visible="{{ordering}}" text="正在调整顺序…" />
 </view>

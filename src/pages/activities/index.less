@@ -1,10 +1,11 @@
-.page { display: flex; min-height: 100vh; background: #f7f7f7; }
-.side-tabs { position: fixed; top: 0; bottom: 0; left: 0; width: 144rpx; box-sizing: border-box; padding: 0; border-right: 1rpx solid #e3e3e3; background: #fff; }
+.page { display: flex; height: 100vh; overflow: hidden; background: #f7f7f7; }
+.side-tabs { position: relative; width: 144rpx; height: 100vh; box-sizing: border-box; flex: 0 0 144rpx; padding: 0; border-right: 1rpx solid #e3e3e3; background: #fff; }
 .side-tab { position: relative; display: flex; min-height: 96rpx; box-sizing: border-box; align-items: center; justify-content: center; padding: 18rpx 12rpx; color: #777; font-size: 25rpx; text-align: center; }
 .side-tab--active { background: #f7f7f7; color: #111; font-weight: 650; }
 .side-tab--active::before { position: absolute; top: 24rpx; bottom: 24rpx; left: 0; width: 6rpx; border-radius: 0 6rpx 6rpx 0; background: #111; content: ""; }
-.content { width: 100%; box-sizing: border-box; padding: 34rpx 24rpx 50rpx 168rpx; }
-.activity-overview { min-height: 190rpx; }
+.content { display: flex; min-width: 0; height: 100vh; box-sizing: border-box; flex: 1; flex-direction: column; overflow: hidden; padding: 34rpx 24rpx 0; }
+.activity-overview { min-height: 190rpx; flex: 0 0 auto; }
+.list-scroll { min-height: 0; flex: 1; box-sizing: border-box; padding-bottom: 50rpx; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: 20rpx; }
 .add-button { display: flex; flex: 0 0 64rpx !important; align-items: center; justify-content: center; width: 64rpx !important; min-width: 64rpx !important; max-width: 64rpx !important; height: 64rpx !important; box-sizing: border-box !important; margin: 0 !important; padding: 0 !important; border-radius: 999rpx !important; background: #111; color: #fff; font-size: 36rpx; line-height: 1; }
 .add-button::after, .cancel-button::after, .save-button::after { border: 0; }

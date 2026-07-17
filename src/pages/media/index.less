@@ -1,5 +1,5 @@
-.page { display: flex; min-height: 100vh; background: #f7f7f7; }
-.side-tabs { position: fixed; z-index: 2; top: 0; bottom: 0; left: 0; display: flex; width: 144rpx; box-sizing: border-box; flex-direction: column; border-right: 1rpx solid #e3e3e3; background: #fff; }
+.page { display: flex; height: 100vh; overflow: hidden; background: #f7f7f7; }
+.side-tabs { position: relative; z-index: 2; display: flex; width: 144rpx; height: 100vh; box-sizing: border-box; flex: 0 0 144rpx; flex-direction: column; border-right: 1rpx solid #e3e3e3; background: #fff; }
 .side-tabs__list { min-height: 0; flex: 1; }
 .side-tab { position: relative; display: flex; min-height: 96rpx; box-sizing: border-box; align-items: center; justify-content: center; padding: 18rpx 12rpx; color: #777; font-size: 25rpx; text-align: center; }
 .side-tab--active { background: #111; color: #fff; font-weight: 650; }
@@ -7,8 +7,9 @@
 .side-tabs__edit { display: flex; min-height: 96rpx; box-sizing: border-box; flex: 0 0 auto; align-items: center; justify-content: center; padding: 12rpx 8rpx calc(12rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #e8e8e8; background: #fff; color: #555; }
 .side-tabs__edit-button { display: flex; width: 56rpx; height: 56rpx; align-items: center; justify-content: center; }
 .side-tabs__edit:active .side-tabs__edit-button { opacity: .5; }
-.content { width: 100%; box-sizing: border-box; padding: 32rpx 24rpx 50rpx 168rpx; }
-.media-overview { min-height: 190rpx; }
+.content { display: flex; min-width: 0; height: 100vh; box-sizing: border-box; flex: 1; flex-direction: column; overflow: hidden; padding: 32rpx 24rpx 0; }
+.media-overview { min-height: 190rpx; flex: 0 0 auto; }
+.list-scroll { min-height: 0; flex: 1; box-sizing: border-box; padding-bottom: 50rpx; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: 20rpx; }
 .icon-add-button { display: flex; flex: 0 0 62rpx !important; width: 62rpx !important; min-width: 62rpx !important; max-width: 62rpx !important; height: 62rpx !important; box-sizing: border-box !important; margin: 0 !important; padding: 0 !important; align-items: center; justify-content: center; border-radius: 999rpx !important; background: #111; color: #fff; font-size: 36rpx; font-weight: 300; line-height: 1; }
 .icon-add-button::after { border: 0; }

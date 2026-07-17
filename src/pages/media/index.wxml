@@ -61,6 +61,7 @@
       </view>
     </scroll-view>
 
+    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}" bindscrolltolower="onReachBottom" lower-threshold="120">
     <view wx:if="{{contentLoading}}" class="content-loading">
       <view class="content-loading__spinner" />
       <view class="content-loading__text">正在加载内容…</view>
@@ -108,7 +109,7 @@
       </view>
       <view wx:if="{{hasMore && !loadingMore}}" class="load-more-state">继续上滑加载更多</view>
     </view>
-
+    </scroll-view>
   </view>
   <operation-loading visible="{{ordering}}" text="正在调整顺序…" />
 </view>

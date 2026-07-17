@@ -67,12 +67,16 @@
 }
 
 .content {
+  display: flex;
   min-width: 0;
   height: 100vh;
   flex: 1;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
   padding: 32rpx 24rpx 0;
 }
+.list-scroll { min-height: 0; flex: 1; }
 
 .header {
   min-height: 226rpx;
@@ -81,6 +85,7 @@
   border: 1rpx solid #ececec;
   border-radius: 16rpx;
   background: #ffffff;
+  flex: 0 0 auto;
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
 }
 
