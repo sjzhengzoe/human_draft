@@ -31,16 +31,9 @@ export function claimExerciseExtra(minutes: number): Promise<ExerciseDashboard> 
   })
 }
 
-export function completeExerciseDaily(): Promise<ExerciseDashboard> {
+export function completeExercise(minutes: number): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({
-    path: "/api/exercise/daily-complete",
-    method: "POST"
-  })
-}
-
-export function completeExerciseExtra(minutes: number): Promise<ExerciseDashboard> {
-  return request<ExerciseDashboard>({
-    path: "/api/exercise/extra-complete",
+    path: "/api/exercise/complete",
     method: "POST",
     data: { minutes }
   })

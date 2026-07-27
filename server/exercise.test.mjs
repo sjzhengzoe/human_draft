@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   calculateCatState,
+  calculateExerciseRollup,
   calculateMonthlyClaim,
   calculatePendingBreakdown,
   getExerciseDashboard,
@@ -101,6 +102,41 @@ test("unfinished daily and extra minutes accumulate in today's pending display",
   });
 });
 
+test("rolling credit makes the total balance negative and offsets daily work before extras", () => {
+  const rollup = calculateExerciseRollup({
+    months: [{
+      month_start: "2026-07-01",
+      claim_date: "2026-07-01",
+      claim_end_date: "2026-07-31",
+      base_task_minutes: 100,
+      extra_task_minutes: 20,
+      base_completed_minutes: 100,
+      extra_completed_minutes: 20,
+      completed_minutes: 120,
+    }],
+    creditMinutes: 30,
+    today: "2026-07-31",
+  });
+
+  assert.equal(rollup.remainingMinutes, -30);
+  assert.equal(rollup.pendingMinutes, 0);
+  assert.equal(rollup.extraPendingMinutes, 0);
+  assert.equal(rollup.bowlLevel, "full");
+
+  const prioritized = calculatePendingBreakdown({
+    baseTaskMinutes: 100,
+    extraTaskMinutes: 400,
+    baseCompletedMinutes: 20,
+    extraCompletedMinutes: 100,
+    futureBaseMinutes: 0,
+    creditMinutes: 100,
+  });
+  assert.deepEqual(prioritized, {
+    pendingMinutes: 0,
+    extraPendingMinutes: 280,
+  });
+});
+
 test("dashboard reads every exercise table with the authenticated user scope", async () => {
   const scopedTables = [];
   const tables = {
@@ -126,6 +162,13 @@ test("dashboard reads every exercise table with the authenticated user scope", a
           );
           return { data: matching || null, error: null };
         },
+        async order() {
+          scopedTables.push({ table, filters });
+          const matching = (tables[table] || []).filter((row) =>
+            filters.every(([field, value]) => row[field] === value)
+          );
+          return { data: matching, error: null };
+        },
       };
       return query;
     },
@@ -133,13 +176,27 @@ test("dashboard reads every exercise table with the authenticated user scope", a
 
   await getExerciseDashboard(supabase, USER_ID, JULY_FIRST_CHINA);
 
-  assert.equal(scopedTables.length, 3);
+  assert.equal(scopedTables.length, 2);
   for (const entry of scopedTables) {
     assert.ok(
       entry.filters.some(([field, value]) => field === "user_id" && value === USER_ID),
       `${entry.table} must be filtered by the authenticated user`,
     );
   }
+});
+
+test("rolling-credit migration records completions and carries surplus forward", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/202607270003_exercise_rolling_credit.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /credit_minutes integer not null default 0/i);
+  assert.match(migration, /create table if not exists public\.exercise_completion_events/i);
+  assert.match(migration, /create or replace function public\.complete_exercise_tasks/i);
+  assert.match(migration, /available_minutes := public\.allocate_exercise_minutes/i);
+  assert.match(migration, /set credit_minutes = available_minutes/i);
+  assert.match(migration, /order by month_start, created_at[\s\S]*?for update/i);
 });
 
 test("exercise migration enforces per-user rows and service-role-only mutations", async () => {

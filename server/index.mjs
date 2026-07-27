@@ -82,8 +82,7 @@ import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
 import {
   addExerciseTask,
   claimExerciseMonth,
-  completeExerciseDaily,
-  completeExerciseExtra,
+  completeExerciseTasks,
   getExerciseDashboard,
   saveExerciseSettings,
 } from "./lib/exercise.mjs";
@@ -213,17 +212,9 @@ export function buildServer(options = {}) {
     ),
   }));
 
-  app.post("/api/exercise/daily-complete", { preHandler: authenticated }, async (request) => ({
+  app.post("/api/exercise/complete", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await completeExerciseDaily(
-      getSupabaseAdmin(),
-      request.auth.user.id,
-    ),
-  }));
-
-  app.post("/api/exercise/extra-complete", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: await completeExerciseExtra(
+    data: await completeExerciseTasks(
       getSupabaseAdmin(),
       request.auth.user.id,
       request.body || {},

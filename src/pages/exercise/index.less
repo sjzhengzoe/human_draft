@@ -27,10 +27,43 @@
 
 .pet-card,
 .balance-card,
+.monthly-claim-card,
 .action-section {
   border: 1rpx solid #e3e3df;
   background: #fff;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.025);
+}
+
+.monthly-claim-card {
+  margin-top: 18rpx;
+  padding: 20rpx;
+  border-radius: 20rpx;
+}
+
+.monthly-claim-button {
+  display: flex;
+  width: 100% !important;
+  min-height: 96rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 18rpx !important;
+  border: 1rpx solid #171717;
+  border-radius: 15rpx;
+  background: #171717;
+  color: #fff;
+  text-align: center;
+}
+
+.monthly-claim-button::after {
+  border: 0;
+}
+
+.monthly-claim-button--disabled {
+  border-color: #e6e6e3;
+  background: #eeeeeb;
+  color: #aaa9a4;
 }
 
 .pet-card {

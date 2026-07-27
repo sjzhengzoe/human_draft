@@ -1,8 +1,7 @@
 import {
   claimExerciseExtra,
   claimExerciseMonth,
-  completeExerciseDaily,
-  completeExerciseExtra,
+  completeExercise,
   getExerciseDashboard
 } from "../../services/exercise"
 import type { ExerciseDashboard } from "../../types/exercise"
@@ -70,9 +69,7 @@ Page({
     remainingMinutes: 0,
     todayPendingMinutes: 0,
     todayExtraPendingMinutes: 0,
-    dailyMinutes: 30,
     claimed: false,
-    dailyCompleted: false,
     bowlLabel: "没有",
     emotionLabel: "平淡",
     catImage: CAT_IMAGES.neutral,
@@ -111,9 +108,7 @@ Page({
       remainingMinutes: dashboard.month.remainingMinutes,
       todayPendingMinutes: dashboard.today.pending_minutes,
       todayExtraPendingMinutes: dashboard.today.extra_pending_minutes,
-      dailyMinutes: dashboard.profile.daily_minutes,
       claimed: dashboard.month.claimed,
-      dailyCompleted: dashboard.today.completed,
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: dashboard.cat.emotion_label,
       catImage: CAT_IMAGES[dashboard.cat.emotion],
@@ -169,20 +164,11 @@ Page({
     if (minutes) this.runAction("extra-claim", () => claimExerciseExtra(minutes), `已加入 ${minutes} 分钟`)
   },
 
-  handleDailyComplete() {
-    if (this.data.dailyCompleted || this.data.todayPendingMinutes === 0 || this.data.busy) return
-    this.runAction("daily", () => completeExerciseDaily(), "今日任务完成")
-  },
-
-  async handleExtraComplete() {
-    if (this.data.remainingMinutes === 0 || this.data.busy) return
-    const minutes = await promptMinutes("额外任务完成", `最多 ${this.data.remainingMinutes} 分钟`)
+  async handleComplete() {
+    if (this.data.busy) return
+    const minutes = await promptMinutes("完成任务", "输入本次完成分钟数")
     if (!minutes) return
-    if (minutes > this.data.remainingMinutes) {
-      wx.showToast({ title: "不能超过当前待完成分钟数", icon: "none" })
-      return
-    }
-    this.runAction("extra-complete", () => completeExerciseExtra(minutes), `已完成 ${minutes} 分钟`)
+    this.runAction("complete", () => completeExercise(minutes), `已完成 ${minutes} 分钟`)
   },
 
   async runAction(

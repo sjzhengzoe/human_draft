@@ -47,18 +47,20 @@
     </view>
   </view>
 
+  <view class="monthly-claim-card">
+    <button
+      class="monthly-claim-button {{claimed ? 'monthly-claim-button--disabled' : ''}}"
+      disabled="{{claimed || busy}}"
+      loading="{{busyAction === 'monthly'}}"
+      bindtap="handleMonthlyClaim"
+    >
+      <view class="task-button__title">领取本月任务</view>
+    </button>
+  </view>
+
   <view class="action-section">
     <view class="action-column">
       <view class="action-column__sign">＋</view>
-
-      <button
-        class="task-button task-button--dark {{claimed ? 'task-button--disabled' : ''}}"
-        disabled="{{claimed || busy}}"
-        loading="{{busyAction === 'monthly'}}"
-        bindtap="handleMonthlyClaim"
-      >
-        <view class="task-button__title">领取本月任务</view>
-      </button>
 
       <button
         class="task-button"
@@ -76,21 +78,12 @@
       <view class="action-column__sign">−</view>
 
       <button
-        class="task-button task-button--dark {{dailyCompleted || todayPendingMinutes === 0 ? 'task-button--disabled' : ''}}"
-        disabled="{{dailyCompleted || todayPendingMinutes === 0 || busy}}"
-        loading="{{busyAction === 'daily'}}"
-        bindtap="handleDailyComplete"
+        class="task-button task-button--dark"
+        disabled="{{busy}}"
+        loading="{{busyAction === 'complete'}}"
+        bindtap="handleComplete"
       >
-        <view class="task-button__title">完成今日任务</view>
-      </button>
-
-      <button
-        class="task-button {{remainingMinutes === 0 ? 'task-button--disabled' : ''}}"
-        disabled="{{remainingMinutes === 0 || busy}}"
-        loading="{{busyAction === 'extra-complete'}}"
-        bindtap="handleExtraComplete"
-      >
-        <view class="task-button__title">完成额外任务</view>
+        <view class="task-button__title">完成任务</view>
       </button>
     </view>
   </view>

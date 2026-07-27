@@ -183,8 +183,23 @@ function monthTotals(month) {
     extraCompletedMinutes,
     completedMinutes,
     totalMinutes: baseTaskMinutes + extraTaskMinutes,
-    remainingMinutes: Math.max(0, baseTaskMinutes + extraTaskMinutes - completedMinutes),
+    remainingMinutes: baseTaskMinutes + extraTaskMinutes - completedMinutes,
   };
+}
+
+export function calculateBaseDueMinutes(month, today) {
+  const baseMinutes = Number(month?.base_task_minutes || 0);
+  if (baseMinutes === 0 || !month?.claim_date) return 0;
+  const claimDate = month.claim_date;
+  const claimEndDate = month.claim_end_date || claimDate;
+  if (today < claimDate) return 0;
+  if (today >= claimEndDate) return baseMinutes;
+  const claimWindowDays = Math.max(1, daysBetween(claimDate, claimEndDate) + 1);
+  const futureDays = Math.max(0, daysBetween(today, claimEndDate));
+  return Math.max(
+    0,
+    baseMinutes - Math.round(baseMinutes * Math.min(1, futureDays / claimWindowDays)),
+  );
 }
 
 export function calculatePendingBreakdown({
@@ -193,17 +208,112 @@ export function calculatePendingBreakdown({
   baseCompletedMinutes,
   extraCompletedMinutes,
   futureBaseMinutes,
+  creditMinutes = 0,
 }) {
   const baseDueThroughToday = Math.max(0, baseTaskMinutes - futureBaseMinutes);
+  const basePending = Math.max(0, baseDueThroughToday - baseCompletedMinutes);
+  const creditAfterBase = Math.max(0, creditMinutes - basePending);
   return {
-    pendingMinutes: Math.max(0, baseDueThroughToday - baseCompletedMinutes),
-    extraPendingMinutes: Math.max(0, extraTaskMinutes - extraCompletedMinutes),
+    pendingMinutes: Math.max(0, basePending - creditMinutes),
+    extraPendingMinutes: Math.max(
+      0,
+      extraTaskMinutes - extraCompletedMinutes - creditAfterBase,
+    ),
+  };
+}
+
+export function calculateExerciseRollup({
+  months = [],
+  creditMinutes = 0,
+  today,
+}) {
+  const totals = months.reduce((result, month) => {
+    const item = monthTotals(month);
+    const baseDueMinutes = calculateBaseDueMinutes(month, today);
+    result.baseTaskMinutes += item.baseTaskMinutes;
+    result.extraTaskMinutes += item.extraTaskMinutes;
+    result.baseCompletedMinutes += item.baseCompletedMinutes;
+    result.extraCompletedMinutes += item.extraCompletedMinutes;
+    result.completedMinutes += item.completedMinutes;
+    result.basePendingMinutes += Math.max(
+      0,
+      baseDueMinutes - item.baseCompletedMinutes,
+    );
+    result.extraPendingMinutes += Math.max(
+      0,
+      item.extraTaskMinutes - item.extraCompletedMinutes,
+    );
+    result.dueMinutes += baseDueMinutes + item.extraTaskMinutes;
+    return result;
+  }, {
+    baseTaskMinutes: 0,
+    extraTaskMinutes: 0,
+    baseCompletedMinutes: 0,
+    extraCompletedMinutes: 0,
+    completedMinutes: 0,
+    basePendingMinutes: 0,
+    extraPendingMinutes: 0,
+    dueMinutes: 0,
+  });
+  const totalMinutes = totals.baseTaskMinutes + totals.extraTaskMinutes;
+  const creditAfterBase = Math.max(0, creditMinutes - totals.basePendingMinutes);
+  const pendingMinutes = Math.max(0, totals.basePendingMinutes - creditMinutes);
+  const extraPendingMinutes = Math.max(
+    0,
+    totals.extraPendingMinutes - creditAfterBase,
+  );
+  const effectiveCompletedMinutes = totals.completedMinutes + creditMinutes;
+  const foodRatio = totals.dueMinutes === 0
+    ? effectiveCompletedMinutes > 0 ? 1 : 0
+    : Math.max(0, Math.min(1, effectiveCompletedMinutes / totals.dueMinutes));
+
+  let bowlLevel = "empty";
+  let bowlLabel = "没有";
+  let emotion = totalMinutes === 0 && creditMinutes === 0 ? "neutral" : "hungry";
+  let emotionLabel = emotion === "neutral" ? "平淡" : "肚子饿";
+  let statusText = totalMinutes === 0
+    ? "领取任务后，小猫会等你投喂"
+    : "猫碗空了，今天动一动吧";
+  if (foodRatio >= 0.9) {
+    bowlLevel = "full";
+    bowlLabel = "很满";
+    emotion = "happy";
+    emotionLabel = "开心";
+    statusText = "今天的进度很棒，小猫吃饱啦";
+  } else if (foodRatio >= 0.42) {
+    bowlLevel = "normal";
+    bowlLabel = "一般";
+    emotion = "neutral";
+    emotionLabel = "平淡";
+    statusText = "再完成一点，猫碗就会变满";
+  } else if (foodRatio > 0.05) {
+    bowlLevel = "low";
+    bowlLabel = "偏少";
+    emotion = "hungry";
+    emotionLabel = "肚子饿";
+    statusText = "进度有点落后，小猫在等你运动";
+  }
+
+  return {
+    ...totals,
+    totalMinutes,
+    creditMinutes,
+    remainingMinutes: totalMinutes - totals.completedMinutes - creditMinutes,
+    pendingMinutes,
+    extraPendingMinutes,
+    foodRatio,
+    bowlLevel,
+    bowlLabel,
+    emotion,
+    emotionLabel,
+    statusText,
+    paceGapMinutes: pendingMinutes + extraPendingMinutes,
   };
 }
 
 export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   const context = monthContext(now);
-  const [profileResult, monthResult, dailyResult] = await Promise.all([
+  const [profileResult, monthsResult] = await Promise.all([
     supabase
       .from("exercise_profiles")
       .select("*")
@@ -213,43 +323,29 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       .from("exercise_months")
       .select("*")
       .eq("user_id", userId)
-      .eq("month_start", context.monthStart)
-      .maybeSingle(),
-    supabase
-      .from("exercise_daily_completions")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("completion_date", context.today)
-      .maybeSingle(),
+      .order("month_start", { ascending: true }),
   ]);
   throwSupabaseError(profileResult.error, "读取运动设置失败。");
-  throwSupabaseError(monthResult.error, "读取本月运动任务失败。");
-  throwSupabaseError(dailyResult.error, "读取今日运动记录失败。");
+  throwSupabaseError(monthsResult.error, "读取运动任务失败。");
 
   const profile = {
     daily_minutes: Number(profileResult.data?.daily_minutes || DEFAULT_DAILY_MINUTES),
     monthly_rest_days: Number(
       profileResult.data?.monthly_rest_days ?? DEFAULT_MONTHLY_REST_DAYS,
     ),
+    credit_minutes: Number(profileResult.data?.credit_minutes || 0),
   };
   const claimPreview = calculateMonthlyClaim({
     dailyMinutes: profile.daily_minutes,
     monthlyRestDays: profile.monthly_rest_days,
     now,
   });
-  const month = monthResult.data;
-  const totals = monthTotals(month);
-  const cat = calculateCatState({
-    month: {
-      ...month,
-      completed_minutes: totals.completedMinutes,
-    },
-    dailyMinutes: profile.daily_minutes,
+  const months = monthsResult.data || [];
+  const month = months.find((item) => item.month_start === context.monthStart);
+  const rollup = calculateExerciseRollup({
+    months,
+    creditMinutes: profile.credit_minutes,
     today: context.today,
-  });
-  const { pendingMinutes, extraPendingMinutes } = calculatePendingBreakdown({
-    ...totals,
-    futureBaseMinutes: cat.futureBaseMinutes,
   });
 
   return {
@@ -258,13 +354,19 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       month_start: context.monthStart,
       claimed: Boolean(month?.claimed_at),
       claimed_at: month?.claimed_at || null,
-      ...totals,
+      baseTaskMinutes: rollup.baseTaskMinutes,
+      extraTaskMinutes: rollup.extraTaskMinutes,
+      baseCompletedMinutes: rollup.baseCompletedMinutes,
+      extraCompletedMinutes: rollup.extraCompletedMinutes,
+      completedMinutes: rollup.completedMinutes,
+      totalMinutes: rollup.totalMinutes,
+      remainingMinutes: rollup.remainingMinutes,
     },
     today: {
       date: context.today,
-      completed: Boolean(dailyResult.data),
-      pending_minutes: pendingMinutes,
-      extra_pending_minutes: extraPendingMinutes,
+      completed: rollup.pendingMinutes === 0,
+      pending_minutes: rollup.pendingMinutes,
+      extra_pending_minutes: rollup.extraPendingMinutes,
     },
     claim_preview: {
       minutes: claimPreview.taskMinutes,
@@ -273,13 +375,13 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       rest_days: claimPreview.proratedRestDays,
     },
     cat: {
-      food_ratio: Number(cat.foodRatio.toFixed(3)),
-      bowl_level: cat.bowlLevel,
-      bowl_label: cat.bowlLabel,
-      emotion: cat.emotion,
-      emotion_label: cat.emotionLabel,
-      status_text: cat.statusText,
-      pace_gap_minutes: cat.paceGapMinutes,
+      food_ratio: Number(rollup.foodRatio.toFixed(3)),
+      bowl_level: rollup.bowlLevel,
+      bowl_label: rollup.bowlLabel,
+      emotion: rollup.emotion,
+      emotion_label: rollup.emotionLabel,
+      status_text: rollup.statusText,
+      pace_gap_minutes: rollup.paceGapMinutes,
     },
   };
 }
@@ -333,49 +435,14 @@ export async function addExerciseTask(supabase, userId, body, now = new Date()) 
   return getExerciseDashboard(supabase, userId, now);
 }
 
-export async function completeExerciseDaily(supabase, userId, now = new Date()) {
-  const dashboard = await getExerciseDashboard(supabase, userId, now);
+export async function completeExerciseTasks(supabase, userId, body, now = new Date()) {
+  const minutes = integerValue(body.minutes, "完成分钟数", 1, 10_000);
   const context = monthContext(now);
-  const { error } = await supabase.rpc("complete_exercise_daily", {
+  const { error } = await supabase.rpc("complete_exercise_tasks", {
     p_user_id: userId,
-    p_month_start: context.monthStart,
     p_completion_date: context.today,
-    p_minutes: dashboard.profile.daily_minutes,
-  });
-  throwSupabaseError(error, "完成今日任务失败。", {
-    23505: {
-      statusCode: 409,
-      code: "EXERCISE_DAILY_ALREADY_COMPLETED",
-      message: "今日任务已经完成过了。",
-    },
-    P0002: {
-      statusCode: 409,
-      code: "EXERCISE_TASK_EMPTY",
-      message: "当前没有待完成任务。",
-    },
-  });
-  return getExerciseDashboard(supabase, userId, now);
-}
-
-export async function completeExerciseExtra(supabase, userId, body, now = new Date()) {
-  const minutes = integerValue(body.minutes, "额外完成分钟数", 1, 10_000);
-  const context = monthContext(now);
-  const { error } = await supabase.rpc("complete_exercise_extra", {
-    p_user_id: userId,
-    p_month_start: context.monthStart,
     p_minutes: minutes,
   });
-  throwSupabaseError(error, "记录额外完成失败。", {
-    P0002: {
-      statusCode: 409,
-      code: "EXERCISE_TASK_EMPTY",
-      message: "当前没有待完成任务。",
-    },
-    "22023": {
-      statusCode: 400,
-      code: "EXERCISE_COMPLETION_TOO_LARGE",
-      message: "完成分钟数不能超过当前待完成任务。",
-    },
-  });
+  throwSupabaseError(error, "记录完成任务失败。");
   return getExerciseDashboard(supabase, userId, now);
 }

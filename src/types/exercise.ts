@@ -5,6 +5,7 @@ export type ExerciseDashboard = {
   profile: {
     daily_minutes: number
     monthly_rest_days: number
+    credit_minutes: number
   }
   month: {
     month_start: string
