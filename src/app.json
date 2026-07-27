@@ -12,6 +12,8 @@
     "pages/media/categories/index",
     "pages/media/category-edit/index",
     "pages/activities/index",
+    "pages/exercise/index",
+    "pages/exercise/settings/index",
     "pages/luggage/index",
     "pages/luggage/scenes/index",
     "pages/luggage/scene-edit/index",

@@ -80,6 +80,14 @@ import {
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
 import {
+  addExerciseTask,
+  claimExerciseMonth,
+  completeExerciseDaily,
+  completeExerciseExtra,
+  getExerciseDashboard,
+  saveExerciseSettings,
+} from "./lib/exercise.mjs";
+import {
   createWardrobeCategory,
   createWardrobeItem,
   deleteWardrobeCategory,
@@ -170,6 +178,57 @@ export function buildServer(options = {}) {
     await logoutSession(getSupabaseAdmin(), request);
     return { ok: true };
   });
+
+  app.get("/api/exercise", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await getExerciseDashboard(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+    ),
+  }));
+
+  app.put("/api/exercise/settings", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await saveExerciseSettings(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+
+  app.post("/api/exercise/monthly-claim", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await claimExerciseMonth(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+    ),
+  }));
+
+  app.post("/api/exercise/extra-claim", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await addExerciseTask(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+
+  app.post("/api/exercise/daily-complete", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await completeExerciseDaily(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+    ),
+  }));
+
+  app.post("/api/exercise/extra-complete", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await completeExerciseExtra(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
 
   app.get("/api/categories", { preHandler: authenticated }, async () => ({
     ok: true,

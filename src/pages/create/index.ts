@@ -55,6 +55,15 @@ Component({
         requiresLogin: true
       },
       {
+        key: "exercise",
+        icon: "dumbbell-white",
+        title: "运动打卡",
+        desc: "运动喂饱小猫",
+        path: "/pages/exercise/index",
+        available: true,
+        requiresLogin: true
+      },
+      {
         key: "luggage",
         icon: "luggage-white",
         title: "行李清单",

@@ -1,0 +1,97 @@
+<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在看看小猫…</view>
+</view>
+
+<view wx:else class="page">
+  <view class="pet-card">
+    <view class="pet-stage">
+      <view class="bowl-zone">
+        <view class="bowl">
+          <image class="bowl__image" src="/assets/exercise/cat-bowl.png" mode="aspectFit" />
+          <view
+            wx:if="{{foodHeight > 0}}"
+            class="bowl__food-surface"
+            style="top: {{foodTop}}rpx; width: {{foodWidth}}rpx; height: {{foodDepth}}rpx;"
+          >
+            <view
+              wx:for="{{kibblePieces}}"
+              wx:key="id"
+              class="bowl__kibble"
+              style="left: {{item.x}}%; top: {{item.y}}%; transform: rotate({{item.rotate}}deg);"
+            />
+          </view>
+        </view>
+        <view class="stage-label">猫碗 {{bowlLabel}}</view>
+      </view>
+
+      <view class="cat-zone">
+        <image class="cat-image" src="{{catImage}}" mode="aspectFit" />
+        <view class="stage-label">{{emotionLabel}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="settings-toolbar">
+    <view class="settings-button" role="button" aria-label="运动设置" bindtap="handleSettings">
+      <app-icon name="settings-2" size="27" />
+    </view>
+  </view>
+
+  <view class="balance-card">
+    <view class="balance-label">当前待完成任务</view>
+    <view class="balance-value">{{remainingMinutes}}<text class="balance-unit">分钟</text></view>
+    <view class="balance-details">
+      <view><text class="balance-details__value">{{todayPendingMinutes}}</text><text>今日待完成</text></view>
+      <view><text class="balance-details__value">{{todayExtraPendingMinutes}}</text><text>今日待完成加餐</text></view>
+    </view>
+  </view>
+
+  <view class="action-section">
+    <view class="action-column">
+      <view class="action-column__sign">＋</view>
+
+      <button
+        class="task-button task-button--dark {{claimed ? 'task-button--disabled' : ''}}"
+        disabled="{{claimed || busy}}"
+        loading="{{busyAction === 'monthly'}}"
+        bindtap="handleMonthlyClaim"
+      >
+        <view class="task-button__title">领取本月任务</view>
+      </button>
+
+      <button
+        class="task-button"
+        disabled="{{busy}}"
+        loading="{{busyAction === 'extra-claim'}}"
+        bindtap="handleExtraClaim"
+      >
+        <view class="task-button__title">领取额外任务</view>
+      </button>
+    </view>
+
+    <view class="action-divider" />
+
+    <view class="action-column">
+      <view class="action-column__sign">−</view>
+
+      <button
+        class="task-button task-button--dark {{dailyCompleted || todayPendingMinutes === 0 ? 'task-button--disabled' : ''}}"
+        disabled="{{dailyCompleted || todayPendingMinutes === 0 || busy}}"
+        loading="{{busyAction === 'daily'}}"
+        bindtap="handleDailyComplete"
+      >
+        <view class="task-button__title">完成今日任务</view>
+      </button>
+
+      <button
+        class="task-button {{remainingMinutes === 0 ? 'task-button--disabled' : ''}}"
+        disabled="{{remainingMinutes === 0 || busy}}"
+        loading="{{busyAction === 'extra-complete'}}"
+        bindtap="handleExtraComplete"
+      >
+        <view class="task-button__title">完成额外任务</view>
+      </button>
+    </view>
+  </view>
+</view>

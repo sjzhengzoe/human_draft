@@ -1,0 +1,44 @@
+<view wx:if="{{loading}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在读取设置…</view>
+</view>
+
+<view wx:else class="page">
+  <view class="intro-card">
+    <view class="intro-card__eyebrow">EXERCISE PLAN</view>
+    <view class="intro-card__title">设置适合你的节奏</view>
+    <view class="intro-card__text">设置只影响之后领取的本月任务；已经领取的任务总量不会被重新计算。</view>
+  </view>
+
+  <view class="form-card">
+    <view class="field">
+      <view class="field__main">
+        <view class="field__label">每日运动分钟数</view>
+        <view class="field__hint">点击“今日任务完成”时减少的分钟数</view>
+      </view>
+      <view class="number-input">
+        <input type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
+        <text>分钟</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="field__main">
+        <view class="field__label">每月休息天数</view>
+        <view class="field__hint">领取月任务时按剩余天数等比例折算</view>
+      </view>
+      <view class="number-input">
+        <input type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
+        <text>天</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="preview-card">
+    <view class="preview-card__label">按当前设置，本月现在领取</view>
+    <view class="preview-card__value">{{previewMinutes}}<text>分钟</text></view>
+    <view class="preview-card__desc">剩余 {{calendarDays}} 天，计划运动 {{exerciseDays}} 天，休息 {{restDays}} 天</view>
+  </view>
+
+  <button class="save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="handleSave">保存设置</button>
+</view>

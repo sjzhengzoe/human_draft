@@ -35,7 +35,7 @@ async function sendRequest<T>(options: RequestOptions): Promise<T> {
         url: `${API_BASE_URL}${options.path}`,
         method: options.method || "GET",
         data:
-          options.data === undefined && options.method === "DELETE"
+          options.data === undefined && options.method && options.method !== "GET"
             ? {}
             : options.data,
         header: { Authorization: `Bearer ${session.token}` },
