@@ -1,4 +1,5 @@
-namespace Douyin2Page {
+import { checkTextContent } from "../../services/content-security";
+
   type ActionKey = "paste" | "copy" | "edit" | "export";
 
   type TextPart = {
@@ -105,6 +106,7 @@ namespace Douyin2Page {
   Component({
     data: {
       content: "",
+      hasCustomContent: false,
       editContent: "",
       showEditTextarea: false,
       pages: [] as Paragraph[][],
@@ -124,9 +126,11 @@ namespace Douyin2Page {
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
-        this.syncContent(
-          typeof storedContent === "string" ? storedContent : DEFAULT_CONTENT,
-        );
+        if (typeof storedContent === "string") {
+          this.loadStoredContent(storedContent);
+        } else {
+          this.syncContent(DEFAULT_CONTENT);
+        }
         this.loadDouyin2Font();
       },
       ready() {
@@ -136,14 +140,14 @@ namespace Douyin2Page {
       },
     },
     pageLifetimes: {
-      show() {
+      async show() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
 
         if (
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
-          this.syncContent(storedContent, this.data.activeIndex);
+          await this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
     },
@@ -156,6 +160,14 @@ namespace Douyin2Page {
           .catch((error) => {
             console.warn("加载抖音 2 字体失败，使用系统字体回退", error);
           });
+      },
+
+      async loadStoredContent(content: string, activeIndex = 0) {
+        if (content.trim() && !(await this.ensureSafeContent(content))) {
+          this.syncContent("");
+          return;
+        }
+        this.syncContent(content, activeIndex);
       },
 
       handleAction(event: WechatMiniprogram.TouchEvent) {
@@ -216,8 +228,11 @@ namespace Douyin2Page {
         });
       },
 
-      saveEditContent() {
-        this.syncContent(this.data.editContent.trim());
+      async saveEditContent() {
+        const content = this.data.editContent.trim();
+        if (!(await this.ensureSafeContent(content))) return;
+
+        this.syncContent(content);
         this.closeEditModal();
         wx.showToast({
           title: "已保存",
@@ -227,7 +242,7 @@ namespace Douyin2Page {
 
       handlePasteContent() {
         wx.getClipboardData({
-          success: (result) => {
+          success: async (result) => {
             const content = result.data.trim();
             if (!content) {
               wx.showToast({
@@ -236,6 +251,8 @@ namespace Douyin2Page {
               });
               return;
             }
+
+            if (!(await this.ensureSafeContent(content))) return;
 
             this.syncContent(content);
             wx.showToast({
@@ -252,7 +269,9 @@ namespace Douyin2Page {
         });
       },
 
-      handleCopyContent() {
+      async handleCopyContent() {
+        if (!(await this.ensureSafeContent(this.data.content))) return;
+
         const text = getCopyableContent(this.data.content);
         if (!text) return;
 
@@ -275,6 +294,7 @@ namespace Douyin2Page {
 
       async handleSaveImages() {
         if (this.data.isGenerating) return;
+        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
         wx.showLoading({ title: "保存中" });
@@ -413,7 +433,8 @@ namespace Douyin2Page {
       },
 
       syncContent(content: string, activeIndex = 0) {
-        const pages = getPages(content);
+        const hasCustomContent = Boolean(content.trim());
+        const pages = hasCustomContent ? getPages(content) : [];
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
@@ -422,6 +443,7 @@ namespace Douyin2Page {
         this.setData(
           {
             content,
+            hasCustomContent,
             pages,
             renderedImageUrls: [],
             activeIndex: nextActiveIndex,
@@ -432,6 +454,27 @@ namespace Douyin2Page {
         );
 
         wx.setStorageSync(STORAGE_KEY, content);
+      },
+
+      async ensureSafeContent(content: string) {
+        if (!content.trim()) return true;
+
+        wx.showLoading({ title: "安全检测中", mask: true });
+        try {
+          await checkTextContent(content);
+          return true;
+        } catch (error) {
+          wx.showToast({
+            title:
+              error instanceof Error
+                ? error.message
+                : "内容安全检测失败",
+            icon: "none",
+          });
+          return false;
+        } finally {
+          wx.hideLoading();
+        }
       },
     },
   });
@@ -749,4 +792,3 @@ namespace Douyin2Page {
 
     return run;
   }
-}

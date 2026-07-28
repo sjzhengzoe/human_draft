@@ -1,5 +1,15 @@
 <view class="page">
+  <view wx:if="{{!hasCustomContent}}" class="card-swiper card-slide">
+    <view class="card-item card-item--loading">
+      <view class="card-loading">
+        <view class="card-loading__title">当前是默认文案</view>
+        <view class="card-loading__desc">请编辑文案</view>
+      </view>
+    </view>
+  </view>
+
   <swiper
+    wx:else
     class="card-swiper"
     current="{{activeIndex}}"
     indicator-dots="{{renderedImageUrls.length > 1}}"

@@ -1,4 +1,5 @@
-namespace XiaohongshuPage {
+import { checkTextContent } from "../../services/content-security";
+
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
   type CopyMode = "xiaohongshu" | "douyin";
 
@@ -123,6 +124,7 @@ namespace XiaohongshuPage {
   Component({
     data: {
       content: "",
+      hasCustomContent: false,
       editContent: "",
       showEditTextarea: false,
       slides: [] as Slide[],
@@ -144,9 +146,11 @@ namespace XiaohongshuPage {
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
-        this.syncContent(
-          typeof storedContent === "string" ? storedContent : DEFAULT_CONTENT,
-        );
+        if (typeof storedContent === "string") {
+          this.loadStoredContent(storedContent);
+        } else {
+          this.syncContent(DEFAULT_CONTENT);
+        }
         this.loadRed3Font();
       },
       ready() {
@@ -156,14 +160,14 @@ namespace XiaohongshuPage {
       },
     },
     pageLifetimes: {
-      show() {
+      async show() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
 
         if (
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
-          this.syncContent(storedContent, this.data.activeIndex);
+          await this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
     },
@@ -178,6 +182,14 @@ namespace XiaohongshuPage {
           .catch((error) => {
             console.warn("加载 red3 字体失败，使用系统字体回退", error);
           });
+      },
+
+      async loadStoredContent(content: string, activeIndex = 0) {
+        if (content.trim() && !(await this.ensureSafeContent(content))) {
+          this.syncContent("");
+          return;
+        }
+        this.syncContent(content, activeIndex);
       },
 
       handleAction(event: WechatMiniprogram.TouchEvent) {
@@ -243,8 +255,11 @@ namespace XiaohongshuPage {
         });
       },
 
-      saveEditContent() {
-        this.syncContent(this.data.editContent.trim());
+      async saveEditContent() {
+        const content = this.data.editContent.trim();
+        if (!(await this.ensureSafeContent(content))) return;
+
+        this.syncContent(content);
         this.closeEditModal();
         wx.showToast({
           title: "已保存",
@@ -254,7 +269,7 @@ namespace XiaohongshuPage {
 
       handlePasteContent() {
         wx.getClipboardData({
-          success: (result) => {
+          success: async (result) => {
             const storedContent = wx.getStorageSync(STORAGE_KEY);
             const currentContent =
               typeof storedContent === "string"
@@ -275,6 +290,8 @@ namespace XiaohongshuPage {
               getContentSlides(nextContent).length - 1,
               0,
             );
+            if (!(await this.ensureSafeContent(nextContent))) return;
+
             this.syncContent(nextContent, nextActiveIndex);
             wx.setStorageSync(DOUYIN_STORAGE_KEY, nextContent);
             wx.showToast({
@@ -312,7 +329,9 @@ namespace XiaohongshuPage {
         });
       },
 
-      handleCopyContent(mode: CopyMode) {
+      async handleCopyContent(mode: CopyMode) {
+        if (!(await this.ensureSafeContent(this.data.content))) return;
+
         const text =
           mode === "xiaohongshu"
             ? getXiaohongshuCopyableContent(this.data.content)
@@ -339,6 +358,7 @@ namespace XiaohongshuPage {
 
       async handleSaveImages() {
         if (this.data.isGenerating) return;
+        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
         wx.showLoading({ title: "保存中" });
@@ -521,7 +541,8 @@ namespace XiaohongshuPage {
       },
 
       syncContent(content: string, activeIndex = 0) {
-        const slides = getContentSlides(content);
+        const hasCustomContent = Boolean(content.trim());
+        const slides = hasCustomContent ? getContentSlides(content) : [];
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(slides.length - 1, 0),
@@ -530,6 +551,7 @@ namespace XiaohongshuPage {
         this.setData(
           {
             content,
+            hasCustomContent,
             slides,
             renderedImageUrls: [],
             activeIndex: nextActiveIndex,
@@ -540,6 +562,27 @@ namespace XiaohongshuPage {
         );
 
         wx.setStorageSync(STORAGE_KEY, content);
+      },
+
+      async ensureSafeContent(content: string) {
+        if (!content.trim()) return true;
+
+        wx.showLoading({ title: "安全检测中", mask: true });
+        try {
+          await checkTextContent(content);
+          return true;
+        } catch (error) {
+          wx.showToast({
+            title:
+              error instanceof Error
+                ? error.message
+                : "内容安全检测失败",
+            icon: "none",
+          });
+          return false;
+        } finally {
+          wx.hideLoading();
+        }
       },
     },
   });
@@ -802,4 +845,3 @@ namespace XiaohongshuPage {
 
     return run;
   }
-}

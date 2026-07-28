@@ -78,6 +78,7 @@ import {
 } from "./lib/life-lists.mjs";
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
+import { wechatContentSecurity } from "./lib/wechat-content-security.mjs";
 import {
   addExerciseTask,
   claimExerciseMonth,
@@ -106,6 +107,11 @@ import {
 
 export function buildServer(options = {}) {
   const getSupabaseAdmin = () => options.supabase ?? getDefaultSupabaseAdmin();
+  const contentSecurity =
+    options.contentSecurity ??
+    (config.nodeEnv === "test"
+      ? { checkText: async () => {}, checkImage: async () => {} }
+      : wechatContentSecurity);
   const app = Fastify({
     logger: options.logger ?? config.nodeEnv !== "test",
     bodyLimit: config.maxUploadSizeMb * 1024 * 1024 + 1024 * 1024,
@@ -152,6 +158,7 @@ export function buildServer(options = {}) {
 
   app.post("/api/auth/avatar", { preHandler: profileCompletionAuthenticated }, async (request) => {
     const avatar = await readAvatarImage(request);
+    await contentSecurity.checkImage(avatar);
     const avatarUrl = await updateUserAvatar(
       getSupabaseAdmin(),
       request.auth.user.id,
@@ -171,6 +178,14 @@ export function buildServer(options = {}) {
   app.post("/api/auth/logout", { preHandler: profileCompletionAuthenticated }, async (request) => {
     await logoutSession(getSupabaseAdmin(), request);
     return { ok: true };
+  });
+
+  app.post("/api/content-security/text", { preHandler: authenticated }, async (request) => {
+    await contentSecurity.checkText(
+      request.auth.user.openid,
+      request.body?.content,
+    );
+    return { ok: true, data: { safe: true } };
   });
 
   app.get("/api/exercise", { preHandler: authenticated }, async (request) => ({
@@ -249,6 +264,7 @@ export function buildServer(options = {}) {
 
   app.post("/api/dishes", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
     const dish = await createDish(getSupabaseAdmin(), request.auth.user.id, fields, image);
     return reply.code(201).send({ ok: true, data: { dish } });
   });
@@ -282,6 +298,7 @@ export function buildServer(options = {}) {
 
   app.post("/api/dishes/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
     return {
       ok: true,
       data: {
@@ -819,6 +836,7 @@ export function buildServer(options = {}) {
 
   app.post("/api/wardrobe/items", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
     const item = await createWardrobeItem(
       getSupabaseAdmin(),
       request.auth.user.id,
@@ -860,6 +878,7 @@ export function buildServer(options = {}) {
 
   app.post("/api/wardrobe/items/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
     return {
       ok: true,
       data: {

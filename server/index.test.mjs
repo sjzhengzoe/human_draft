@@ -166,6 +166,36 @@ test("unknown API path returns a JSON 404", async () => {
   await app.close();
 });
 
+test("authenticated template text is checked before use", async () => {
+  const checked = [];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({ tables: authenticatedTables() }),
+    contentSecurity: {
+      async checkText(openId, content) {
+        checked.push({ openId, content });
+      },
+      async checkImage() {},
+    },
+  });
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/content-security/text",
+    headers: authHeaders,
+    payload: { content: "准备生成图片的文案" },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), {
+    ok: true,
+    data: { safe: true },
+  });
+  assert.deepEqual(checked, [
+    { openId: "test-openid", content: "准备生成图片的文案" },
+  ]);
+  await app.close();
+});
+
 test("media and dining detail routes load records by id", async (t) => {
   const media = {
     id: MEDIA_ID,
