@@ -15,63 +15,63 @@ import {
 
 const PET_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   full: [
-    "/assets/exercise/pets/happy/01.webp",
-    "/assets/exercise/pets/happy/02.webp",
-    "/assets/exercise/pets/happy/03.webp",
-    "/assets/exercise/pets/happy/04.webp",
-    "/assets/exercise/pets/happy/05.webp"
+    "/exercise/assets/pets/happy/01.webp",
+    "/exercise/assets/pets/happy/02.webp",
+    "/exercise/assets/pets/happy/03.webp",
+    "/exercise/assets/pets/happy/04.webp",
+    "/exercise/assets/pets/happy/05.webp"
   ],
   normal: [
-    "/assets/exercise/pets/normal/01.webp",
-    "/assets/exercise/pets/normal/02.webp",
-    "/assets/exercise/pets/normal/03.webp",
-    "/assets/exercise/pets/normal/04.webp",
-    "/assets/exercise/pets/normal/05.webp"
+    "/exercise/assets/pets/normal/01.webp",
+    "/exercise/assets/pets/normal/02.webp",
+    "/exercise/assets/pets/normal/03.webp",
+    "/exercise/assets/pets/normal/04.webp",
+    "/exercise/assets/pets/normal/05.webp"
   ],
   low: [
-    "/assets/exercise/pets/unhappy/01.webp",
-    "/assets/exercise/pets/unhappy/02.webp",
-    "/assets/exercise/pets/unhappy/03.webp",
-    "/assets/exercise/pets/unhappy/04.webp",
-    "/assets/exercise/pets/unhappy/05.webp"
+    "/exercise/assets/pets/unhappy/01.webp",
+    "/exercise/assets/pets/unhappy/02.webp",
+    "/exercise/assets/pets/unhappy/03.webp",
+    "/exercise/assets/pets/unhappy/04.webp",
+    "/exercise/assets/pets/unhappy/05.webp"
   ],
   empty: [
-    "/assets/exercise/pets/pitiful/01.webp",
-    "/assets/exercise/pets/pitiful/02.webp",
-    "/assets/exercise/pets/pitiful/03.webp",
-    "/assets/exercise/pets/pitiful/04.webp",
-    "/assets/exercise/pets/pitiful/05.webp"
+    "/exercise/assets/pets/pitiful/01.webp",
+    "/exercise/assets/pets/pitiful/02.webp",
+    "/exercise/assets/pets/pitiful/03.webp",
+    "/exercise/assets/pets/pitiful/04.webp",
+    "/exercise/assets/pets/pitiful/05.webp"
   ]
 }
 
 const BOWL_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   full: [
-    "/assets/exercise/bowls/happy/01.webp",
-    "/assets/exercise/bowls/happy/02.webp",
-    "/assets/exercise/bowls/happy/03.webp",
-    "/assets/exercise/bowls/happy/04.webp",
-    "/assets/exercise/bowls/happy/05.webp"
+    "/exercise/assets/bowls/happy/01.webp",
+    "/exercise/assets/bowls/happy/02.webp",
+    "/exercise/assets/bowls/happy/03.webp",
+    "/exercise/assets/bowls/happy/04.webp",
+    "/exercise/assets/bowls/happy/05.webp"
   ],
   normal: [
-    "/assets/exercise/bowls/normal/01.webp",
-    "/assets/exercise/bowls/normal/02.webp",
-    "/assets/exercise/bowls/normal/03.webp",
-    "/assets/exercise/bowls/normal/04.webp",
-    "/assets/exercise/bowls/normal/05.webp"
+    "/exercise/assets/bowls/normal/01.webp",
+    "/exercise/assets/bowls/normal/02.webp",
+    "/exercise/assets/bowls/normal/03.webp",
+    "/exercise/assets/bowls/normal/04.webp",
+    "/exercise/assets/bowls/normal/05.webp"
   ],
   low: [
-    "/assets/exercise/bowls/unhappy/01.webp",
-    "/assets/exercise/bowls/unhappy/02.webp",
-    "/assets/exercise/bowls/unhappy/03.webp",
-    "/assets/exercise/bowls/unhappy/04.webp",
-    "/assets/exercise/bowls/unhappy/05.webp"
+    "/exercise/assets/bowls/unhappy/01.webp",
+    "/exercise/assets/bowls/unhappy/02.webp",
+    "/exercise/assets/bowls/unhappy/03.webp",
+    "/exercise/assets/bowls/unhappy/04.webp",
+    "/exercise/assets/bowls/unhappy/05.webp"
   ],
   empty: [
-    "/assets/exercise/bowls/pitiful/01.webp",
-    "/assets/exercise/bowls/pitiful/02.webp",
-    "/assets/exercise/bowls/pitiful/03.webp",
-    "/assets/exercise/bowls/pitiful/04.webp",
-    "/assets/exercise/bowls/pitiful/05.webp"
+    "/exercise/assets/bowls/pitiful/01.webp",
+    "/exercise/assets/bowls/pitiful/02.webp",
+    "/exercise/assets/bowls/pitiful/03.webp",
+    "/exercise/assets/bowls/pitiful/04.webp",
+    "/exercise/assets/bowls/pitiful/05.webp"
   ]
 }
 
@@ -186,7 +186,7 @@ Page({
 
   handleSettings() {
     if (this.data.busy) return
-    wx.navigateTo({ url: "/pages/exercise/settings/index" })
+    wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },
 
   handleMonthlyClaim() {

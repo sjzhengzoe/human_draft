@@ -59,7 +59,7 @@ Component({
         icon: "dumbbell-white",
         title: "运动养宠",
         desc: "和小伙伴一起坚持运动",
-        path: "/pages/exercise/index",
+        path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
       },

@@ -12,8 +12,6 @@
     "pages/media/categories/index",
     "pages/media/category-edit/index",
     "pages/activities/index",
-    "pages/exercise/index",
-    "pages/exercise/settings/index",
     "pages/luggage/index",
     "pages/luggage/scenes/index",
     "pages/luggage/scene-edit/index",
@@ -29,6 +27,15 @@
     "pages/douyin2/index",
     "pages/editor/index",
     "pages/settings/index"
+  ],
+  "subPackages": [
+    {
+      "root": "exercise",
+      "pages": [
+        "pages/index",
+        "pages/settings/index"
+      ]
+    }
   ],
   "window": {
     "navigationBarTitleText": "Earth",
