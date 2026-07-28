@@ -44,6 +44,37 @@ const PET_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   ]
 }
 
+const BOWL_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
+  full: [
+    "/assets/exercise/bowls/happy/01.webp",
+    "/assets/exercise/bowls/happy/02.webp",
+    "/assets/exercise/bowls/happy/03.webp",
+    "/assets/exercise/bowls/happy/04.webp",
+    "/assets/exercise/bowls/happy/05.webp"
+  ],
+  normal: [
+    "/assets/exercise/bowls/normal/01.webp",
+    "/assets/exercise/bowls/normal/02.webp",
+    "/assets/exercise/bowls/normal/03.webp",
+    "/assets/exercise/bowls/normal/04.webp",
+    "/assets/exercise/bowls/normal/05.webp"
+  ],
+  low: [
+    "/assets/exercise/bowls/unhappy/01.webp",
+    "/assets/exercise/bowls/unhappy/02.webp",
+    "/assets/exercise/bowls/unhappy/03.webp",
+    "/assets/exercise/bowls/unhappy/04.webp",
+    "/assets/exercise/bowls/unhappy/05.webp"
+  ],
+  empty: [
+    "/assets/exercise/bowls/pitiful/01.webp",
+    "/assets/exercise/bowls/pitiful/02.webp",
+    "/assets/exercise/bowls/pitiful/03.webp",
+    "/assets/exercise/bowls/pitiful/04.webp",
+    "/assets/exercise/bowls/pitiful/05.webp"
+  ]
+}
+
 const PET_STATE_LABELS: Record<ExerciseBowlLevel, string> = {
   full: "高兴",
   normal: "一般",
@@ -51,23 +82,7 @@ const PET_STATE_LABELS: Record<ExerciseBowlLevel, string> = {
   empty: "可可怜怜"
 }
 
-const FOOD_LAYOUT = [
-  { id: 1, type: "kibble", x: 15, y: 28, rotate: -18 },
-  { id: 2, type: "freeze", x: 30, y: 58, rotate: 12 },
-  { id: 3, type: "meat", x: 45, y: 23, rotate: -6 },
-  { id: 4, type: "kibble", x: 61, y: 55, rotate: 20 },
-  { id: 5, type: "freeze", x: 76, y: 27, rotate: -14 },
-  { id: 6, type: "meat", x: 23, y: 12, rotate: 8 },
-  { id: 7, type: "kibble", x: 52, y: 66, rotate: -22 },
-  { id: 8, type: "freeze", x: 68, y: 8, rotate: 16 },
-  { id: 9, type: "meat", x: 37, y: 5, rotate: -12 },
-  { id: 10, type: "kibble", x: 83, y: 54, rotate: 5 },
-  { id: 11, type: "freeze", x: 8, y: 62, rotate: 18 },
-  { id: 12, type: "meat", x: 57, y: 31, rotate: -4 }
-]
-
-function pickPetImage(level: ExerciseBowlLevel, currentImage = "") {
-  const images = PET_IMAGES[level]
+function pickRandomImage(images: readonly string[], currentImage = "") {
   const candidates = images.length > 1
     ? images.filter((image) => image !== currentImage)
     : images
@@ -113,11 +128,7 @@ Page({
     bowlLabel: "没有",
     emotionLabel: PET_STATE_LABELS.empty,
     petImage: PET_IMAGES.empty[0],
-    foodHeight: 0,
-    foodTop: 91,
-    foodWidth: 0,
-    foodDepth: 0,
-    foodPieces: [] as typeof FOOD_LAYOUT,
+    bowlImage: BOWL_IMAGES.empty[0],
     claimPreviewText: "计算本月剩余任务"
   },
 
@@ -140,11 +151,6 @@ Page({
 
   applyDashboard(dashboard: ExerciseDashboard) {
     const bowlLevel = dashboard.cat.bowl_level
-    const foodHeight = Math.round(dashboard.cat.food_ratio * 100)
-    const foodWidth = foodHeight === 0 ? 0 : Math.round(112 + foodHeight * 0.58)
-    const foodDepth = foodHeight === 0 ? 0 : Math.round(18 + foodHeight * 0.2)
-    const foodTop = Math.round(93 - foodHeight * 0.17)
-    const kibbleCount = foodHeight >= 75 ? 12 : foodHeight >= 42 ? 8 : foodHeight > 0 ? 4 : 0
     this.setData({
       remainingMinutes: dashboard.month.remainingMinutes,
       todayPendingMinutes: dashboard.today.pending_minutes,
@@ -152,12 +158,8 @@ Page({
       claimed: dashboard.month.claimed,
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: PET_STATE_LABELS[bowlLevel],
-      petImage: pickPetImage(bowlLevel, this.data.petImage),
-      foodHeight,
-      foodTop,
-      foodWidth,
-      foodDepth,
-      foodPieces: FOOD_LAYOUT.slice(0, kibbleCount),
+      petImage: pickRandomImage(PET_IMAGES[bowlLevel], this.data.petImage),
+      bowlImage: pickRandomImage(BOWL_IMAGES[bowlLevel], this.data.bowlImage),
       claimPreviewText: `${dashboard.claim_preview.exercise_days} 天 · ${dashboard.claim_preview.minutes} 分钟`
     })
   },

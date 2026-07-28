@@ -57,8 +57,8 @@ Component({
       {
         key: "exercise",
         icon: "dumbbell-white",
-        title: "运动打卡",
-        desc: "运动投喂小伙伴",
+        title: "运动养宠",
+        desc: "和小伙伴一起坚持运动",
         path: "/pages/exercise/index",
         available: true,
         requiresLogin: true
