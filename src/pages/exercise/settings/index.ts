@@ -1,10 +1,15 @@
-import { getExerciseDashboard, saveExerciseSettings } from "../../../services/exercise"
+import {
+  getExerciseDashboard,
+  resetExerciseState,
+  saveExerciseSettings
+} from "../../../services/exercise"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
 
 Page({
   data: {
     loading: true,
     saving: false,
+    resetting: false,
     dailyMinutes: "30",
     monthlyRestDays: "4",
     previewMinutes: 0,
@@ -77,7 +82,7 @@ Page({
   },
 
   async handleSave() {
-    if (this.data.saving) return
+    if (this.data.saving || this.data.resetting) return
     const dailyMinutes = Number(this.data.dailyMinutes)
     const monthlyRestDays = Number(this.data.monthlyRestDays)
     if (!Number.isInteger(dailyMinutes) || dailyMinutes < 1 || dailyMinutes > 300) {
@@ -109,6 +114,40 @@ Page({
       }
     } finally {
       if (isAsyncPageActive(this)) this.setData({ saving: false })
+    }
+  },
+
+  handleReset() {
+    if (this.data.saving || this.data.resetting) return
+    wx.showModal({
+      title: "重置运动状态",
+      content: "将清空全部任务、完成记录和跨月余额。每日运动分钟数与每月休息天数会保留，本月可以重新领取任务。",
+      confirmText: "确认重置",
+      confirmColor: "#111111",
+      success: (result) => {
+        if (result.confirm) this.performReset()
+      }
+    })
+  },
+
+  async performReset() {
+    this.setData({ resetting: true })
+    try {
+      await resetExerciseState()
+      if (!isAsyncPageActive(this)) return
+      wx.showToast({ title: "状态已重置", icon: "success" })
+      setTimeout(() => {
+        if (isAsyncPageActive(this)) wx.navigateBack()
+      }, 450)
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "重置失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ resetting: false })
     }
   }
 })

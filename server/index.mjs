@@ -84,6 +84,7 @@ import {
   claimExerciseMonth,
   completeExerciseTasks,
   getExerciseDashboard,
+  resetExerciseState,
   saveExerciseSettings,
 } from "./lib/exercise.mjs";
 import {
@@ -192,6 +193,14 @@ export function buildServer(options = {}) {
       getSupabaseAdmin(),
       request.auth.user.id,
       request.body || {},
+    ),
+  }));
+
+  app.post("/api/exercise/reset", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await resetExerciseState(
+      getSupabaseAdmin(),
+      request.auth.user.id,
     ),
   }));
 

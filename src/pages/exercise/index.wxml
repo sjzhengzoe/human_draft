@@ -1,6 +1,6 @@
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在看看小猫…</view>
+  <view class="fullscreen-loading__text">正在看看它们…</view>
 </view>
 
 <view wx:else class="page">
@@ -15,18 +15,18 @@
             style="top: {{foodTop}}rpx; width: {{foodWidth}}rpx; height: {{foodDepth}}rpx;"
           >
             <view
-              wx:for="{{kibblePieces}}"
+              wx:for="{{foodPieces}}"
               wx:key="id"
-              class="bowl__kibble"
+              class="bowl__food-piece bowl__food-piece--{{item.type}}"
               style="left: {{item.x}}%; top: {{item.y}}%; transform: rotate({{item.rotate}}deg);"
             />
           </view>
         </view>
-        <view class="stage-label">猫碗 {{bowlLabel}}</view>
+        <view class="stage-label">食盆 {{bowlLabel}}</view>
       </view>
 
-      <view class="cat-zone">
-        <image class="cat-image" src="{{catImage}}" mode="aspectFit" />
+      <view class="pets-zone">
+        <image class="pet-pair-image" src="{{petImage}}" mode="aspectFit" />
         <view class="stage-label">{{emotionLabel}}</view>
       </view>
     </view>

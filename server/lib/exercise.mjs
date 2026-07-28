@@ -89,9 +89,9 @@ export function calculateCatState({
       foodRatio: 0,
       bowlLevel: "empty",
       bowlLabel: "没有",
-      emotion: "neutral",
-      emotionLabel: "平淡",
-      statusText: "领取任务后，小猫会等你投喂",
+      emotion: "pitiful",
+      emotionLabel: "可可怜怜",
+      statusText: "领取任务后，它们会等你投喂",
       futureBaseMinutes: 0,
       paceGapMinutes: 0,
     };
@@ -121,8 +121,8 @@ export function calculateCatState({
       bowlLevel: "full",
       bowlLabel: "很满",
       emotion: "happy",
-      emotionLabel: "开心",
-      statusText: paceGapMinutes === 0 ? "今天的进度很棒，小猫吃饱啦" : "进度充足，小猫很满足",
+      emotionLabel: "高兴",
+      statusText: paceGapMinutes === 0 ? "今天的进度很棒，它们吃饱啦" : "进度充足，它们很满足",
       futureBaseMinutes,
       paceGapMinutes,
     };
@@ -133,8 +133,8 @@ export function calculateCatState({
       bowlLevel: "normal",
       bowlLabel: "一般",
       emotion: "neutral",
-      emotionLabel: "平淡",
-      statusText: "完成今天的任务，猫碗就会变满",
+      emotionLabel: "一般",
+      statusText: "完成今天的任务，食盆就会变满",
       futureBaseMinutes,
       paceGapMinutes,
     };
@@ -144,9 +144,9 @@ export function calculateCatState({
       foodRatio,
       bowlLevel: "low",
       bowlLabel: "偏少",
-      emotion: "hungry",
-      emotionLabel: "肚子饿",
-      statusText: "进度有点落后，小猫在等你运动",
+      emotion: "unhappy",
+      emotionLabel: "不高兴",
+      statusText: "进度有点落后，它们在等你运动",
       futureBaseMinutes,
       paceGapMinutes,
     };
@@ -155,9 +155,9 @@ export function calculateCatState({
     foodRatio: 0,
     bowlLevel: "empty",
     bowlLabel: "没有",
-    emotion: "hungry",
-    emotionLabel: "肚子饿",
-    statusText: "猫碗空了，今天动一动吧",
+    emotion: "pitiful",
+    emotionLabel: "可可怜怜",
+    statusText: "食盆空了，今天动一动吧",
     futureBaseMinutes,
     paceGapMinutes,
   };
@@ -269,29 +269,29 @@ export function calculateExerciseRollup({
 
   let bowlLevel = "empty";
   let bowlLabel = "没有";
-  let emotion = totalMinutes === 0 && creditMinutes === 0 ? "neutral" : "hungry";
-  let emotionLabel = emotion === "neutral" ? "平淡" : "肚子饿";
+  let emotion = "pitiful";
+  let emotionLabel = "可可怜怜";
   let statusText = totalMinutes === 0
-    ? "领取任务后，小猫会等你投喂"
-    : "猫碗空了，今天动一动吧";
+    ? "领取任务后，它们会等你投喂"
+    : "食盆空了，今天动一动吧";
   if (foodRatio >= 0.9) {
     bowlLevel = "full";
     bowlLabel = "很满";
     emotion = "happy";
-    emotionLabel = "开心";
-    statusText = "今天的进度很棒，小猫吃饱啦";
+    emotionLabel = "高兴";
+    statusText = "今天的进度很棒，它们吃饱啦";
   } else if (foodRatio >= 0.42) {
     bowlLevel = "normal";
     bowlLabel = "一般";
     emotion = "neutral";
-    emotionLabel = "平淡";
-    statusText = "再完成一点，猫碗就会变满";
+    emotionLabel = "一般";
+    statusText = "再完成一点，食盆就会变满";
   } else if (foodRatio > 0.05) {
     bowlLevel = "low";
     bowlLabel = "偏少";
-    emotion = "hungry";
-    emotionLabel = "肚子饿";
-    statusText = "进度有点落后，小猫在等你运动";
+    emotion = "unhappy";
+    emotionLabel = "不高兴";
+    statusText = "进度有点落后，它们在等你运动";
   }
 
   return {
@@ -395,6 +395,14 @@ export async function saveExerciseSettings(supabase, userId, body, now = new Dat
     p_monthly_rest_days: monthlyRestDays,
   });
   throwSupabaseError(error, "保存运动设置失败。");
+  return getExerciseDashboard(supabase, userId, now);
+}
+
+export async function resetExerciseState(supabase, userId, now = new Date()) {
+  const { error } = await supabase.rpc("reset_exercise_state", {
+    p_user_id: userId,
+  });
+  throwSupabaseError(error, "重置运动状态失败。");
   return getExerciseDashboard(supabase, userId, now);
 }
 

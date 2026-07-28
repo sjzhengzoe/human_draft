@@ -27,7 +27,7 @@ test("monthly claim prorates configured rest days over the remaining month", () 
   assert.equal(claim.taskMinutes, 120);
 });
 
-test("claiming alone leaves the bowl empty, while completed minutes feed the cat", () => {
+test("claiming alone leaves the shared bowl empty, while completed minutes feed both pets", () => {
   const baseMonth = {
     base_task_minutes: 810,
     extra_task_minutes: 0,
@@ -43,7 +43,7 @@ test("claiming alone leaves the bowl empty, while completed minutes feed the cat
   });
   assert.equal(beforeExercise.foodRatio, 0);
   assert.equal(beforeExercise.bowlLevel, "empty");
-  assert.equal(beforeExercise.emotion, "hungry");
+  assert.equal(beforeExercise.emotion, "pitiful");
 
   const afterDaily = calculateCatState({
     month: { ...baseMonth, completed_minutes: 30 },
@@ -58,7 +58,7 @@ test("claiming alone leaves the bowl empty, while completed minutes feed the cat
     dailyMinutes: 30,
     today: "2026-07-01",
   });
-  assert.equal(withUnfinishedExtra.emotion, "hungry");
+  assert.equal(withUnfinishedExtra.emotion, "unhappy");
 
   const withFinishedExtra = calculateCatState({
     month: { ...baseMonth, extra_task_minutes: 60, completed_minutes: 90 },
@@ -69,7 +69,7 @@ test("claiming alone leaves the bowl empty, while completed minutes feed the cat
   assert.equal(withFinishedExtra.emotion, "happy");
 });
 
-test("completed and prepaid future minutes keep the cat happy", () => {
+test("completed and prepaid future minutes keep both pets happy", () => {
   const state = calculateCatState({
     month: {
       base_task_minutes: 810,
@@ -232,4 +232,19 @@ test("completion bucket migration preserves totals and separates daily from extr
     migration,
     /extra_completed_minutes = extra_completed_minutes \+ extra_actual/i,
   );
+});
+
+test("exercise reset migration clears only the user's state and preserves settings", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/202607280001_exercise_reset.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /create or replace function public\.reset_exercise_state/i);
+  assert.match(migration, /delete from public\.exercise_completion_events[\s\S]*?where user_id = p_user_id/i);
+  assert.match(migration, /delete from public\.exercise_daily_completions[\s\S]*?where user_id = p_user_id/i);
+  assert.match(migration, /delete from public\.exercise_months[\s\S]*?where user_id = p_user_id/i);
+  assert.match(migration, /update public\.exercise_profiles[\s\S]*?set credit_minutes = 0[\s\S]*?where user_id = p_user_id/i);
+  assert.doesNotMatch(migration, /delete from public\.exercise_profiles/i);
+  assert.match(migration, /grant execute on function public\.reset_exercise_state\(uuid\)[\s\S]*?to service_role/i);
 });

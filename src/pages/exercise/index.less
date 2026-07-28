@@ -74,13 +74,13 @@
 .pet-stage {
   display: grid;
   min-height: 370rpx;
-  grid-template-columns: 44% 56%;
+  grid-template-columns: 36% 64%;
   align-items: end;
-  padding: 14rpx 22rpx 24rpx;
+  padding: 14rpx 16rpx 24rpx;
 }
 
 .bowl-zone,
-.cat-zone {
+.pets-zone {
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -114,18 +114,38 @@
   transition: width .25s ease, height .25s ease, top .25s ease;
 }
 
-.bowl__kibble {
+.bowl__food-piece {
   position: absolute;
+}
+
+.bowl__food-piece--kibble {
   width: 12rpx;
-  height: 8rpx;
-  border-radius: 45%;
+  height: 9rpx;
+  border-radius: 48%;
   background: #9b5d28;
   box-shadow: inset 1rpx 1rpx 2rpx rgba(255, 221, 166, .42);
 }
 
-.cat-image {
-  width: 276rpx;
-  height: 276rpx;
+.bowl__food-piece--freeze {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 3rpx;
+  background: #e7c996;
+  box-shadow: inset 1rpx 1rpx 2rpx rgba(255, 248, 226, .55);
+}
+
+.bowl__food-piece--meat {
+  width: 15rpx;
+  height: 7rpx;
+  border-radius: 999rpx;
+  background: #a96542;
+  box-shadow: inset 1rpx 1rpx 2rpx rgba(248, 199, 164, .44);
+}
+
+.pet-pair-image {
+  width: 414rpx;
+  height: 300rpx;
+  margin-bottom: 6rpx;
 }
 
 .stage-label {

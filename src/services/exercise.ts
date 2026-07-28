@@ -16,6 +16,13 @@ export function saveExerciseSettings(input: {
   })
 }
 
+export function resetExerciseState(): Promise<ExerciseDashboard> {
+  return request<ExerciseDashboard>({
+    path: "/api/exercise/reset",
+    method: "POST"
+  })
+}
+
 export function claimExerciseMonth(): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({
     path: "/api/exercise/monthly-claim",

@@ -1,4 +1,4 @@
-export type ExerciseEmotion = "happy" | "hungry" | "neutral"
+export type ExerciseEmotion = "happy" | "neutral" | "unhappy" | "pitiful"
 export type ExerciseBowlLevel = "full" | "normal" | "low" | "empty"
 
 export type ExerciseDashboard = {

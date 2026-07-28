@@ -14,7 +14,7 @@
     <view class="field">
       <view class="field__main">
         <view class="field__label">每日运动分钟数</view>
-        <view class="field__hint">点击“今日任务完成”时减少的分钟数</view>
+        <view class="field__hint">完成任务时优先抵扣今日待完成分钟数</view>
       </view>
       <view class="number-input">
         <input type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
@@ -40,5 +40,23 @@
     <view class="preview-card__desc">剩余 {{calendarDays}} 天，计划运动 {{exerciseDays}} 天，休息 {{restDays}} 天</view>
   </view>
 
-  <button class="save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="handleSave">保存设置</button>
+  <button
+    class="save-button"
+    loading="{{saving}}"
+    disabled="{{saving || resetting}}"
+    bindtap="handleSave"
+  >保存设置</button>
+
+  <view class="reset-card">
+    <view class="reset-card__main">
+      <view class="reset-card__title">重置运动状态</view>
+      <view class="reset-card__desc">清空任务、完成记录和跨月余额，保留当前运动设置。</view>
+    </view>
+    <button
+      class="reset-button"
+      loading="{{resetting}}"
+      disabled="{{saving || resetting}}"
+      bindtap="handleReset"
+    >重置</button>
+  </view>
 </view>
