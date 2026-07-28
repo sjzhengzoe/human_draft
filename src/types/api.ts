@@ -16,6 +16,7 @@ export type AppUser = {
   avatar_url: string
   openid: string
   can_write: boolean
+  is_admin: boolean
   created_at: string
 }
 

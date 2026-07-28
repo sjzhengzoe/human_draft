@@ -16,6 +16,7 @@ const SOURCE_ID = "10000000-0000-4000-8000-000000000005";
 const TARGET_ID = "10000000-0000-4000-8000-000000000006";
 const SEASON_ID = "10000000-0000-4000-8000-000000000007";
 const EPISODE_ID = "10000000-0000-4000-8000-000000000008";
+const OTHER_USER_ID = "10000000-0000-4000-8000-000000000009";
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const rpcCalls = [];
@@ -40,7 +41,11 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
     }
 
     eq(field, value) {
-      this.rows = this.rows.filter((row) => row[field] === value);
+      this.rows = this.rows.filter((row) =>
+        field === "user_id"
+          ? (row[field] ?? USER_ID) === value
+          : row[field] === value
+      );
       return this;
     }
 
@@ -266,6 +271,48 @@ test("media list supports server-side pagination and fuzzy title search", async 
   });
 });
 
+test("personal modules never return another user's records", async (t) => {
+  const ownMedia = {
+    id: MEDIA_ID,
+    user_id: USER_ID,
+    title: "我的电影",
+    media_type: "电影",
+    watch_status: "completed",
+    platforms: ["腾讯视频"],
+    sort_order: 1000,
+  };
+  const otherMedia = {
+    ...ownMedia,
+    id: TARGET_ID,
+    user_id: OTHER_USER_ID,
+    title: "别人的电影",
+    sort_order: 2000,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: [ownMedia, otherMedia] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/media?media_type=%E7%94%B5%E5%BD%B1",
+    headers: authHeaders,
+  });
+  assert.equal(listResponse.statusCode, 200);
+  assert.deepEqual(listResponse.json().data.items, [ownMedia]);
+
+  const detailResponse = await app.inject({
+    method: "GET",
+    url: `/api/media/${TARGET_ID}`,
+    headers: authHeaders,
+  });
+  assert.equal(detailResponse.statusCode, 404);
+  assert.equal(detailResponse.json().error.code, "RECORD_NOT_FOUND");
+});
+
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {
   const episode = {
     id: EPISODE_ID,
@@ -355,7 +402,12 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
   assert.equal(createSeasonResponse.statusCode, 201);
   assert.deepEqual(supabase.rpcCalls.at(-1), {
     name: "create_media_season_with_episodes",
-    params: { p_media_entry_id: MEDIA_ID, p_name: "第二季", p_episode_count: 12 },
+    params: {
+      p_user_id: USER_ID,
+      p_media_entry_id: MEDIA_ID,
+      p_name: "第二季",
+      p_episode_count: 12,
+    },
   });
 
   const setCoverResponse = await app.inject({
@@ -589,6 +641,7 @@ test("media writes validate and normalize platforms before the create RPC", asyn
   assert.deepEqual(supabase.rpcCalls[0], {
     name: "create_media_entry_at_end",
     params: {
+      p_user_id: USER_ID,
       p_title: "合法平台条目",
       p_media_type: "电影",
       p_watch_status: "completed",
@@ -653,6 +706,7 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
     {
       name: "move_media_entry_to_type_at_end",
       params: {
+        p_user_id: USER_ID,
         p_entry_id: MEDIA_ID,
         p_title: "新标题",
         p_media_type: "动漫",
@@ -729,7 +783,11 @@ test("swap routes map only their expected SQLSTATE errors", async (t) => {
   });
   assert.deepEqual(successfulSupabase.rpcCalls[0], {
     name: "swap_dish_sort_orders",
-    params: { p_source_id: SOURCE_ID, p_target_id: TARGET_ID },
+    params: {
+      p_user_id: USER_ID,
+      p_source_id: SOURCE_ID,
+      p_target_id: TARGET_ID,
+    },
   });
 
   const dishNotFoundApp = buildServer({

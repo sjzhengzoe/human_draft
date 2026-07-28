@@ -13,6 +13,10 @@ export function getStoredSession(): AuthSession | null {
     return null
   }
   if (typeof stored.user.avatar_url !== "string") stored.user.avatar_url = ""
+  if (typeof stored.user.is_admin !== "boolean") {
+    stored.user.is_admin = stored.user.can_write === true
+  }
+  stored.user.can_write = true
   if (Date.parse(stored.expires_at) <= Date.now() + 60_000) {
     clearStoredSession()
     return null

@@ -42,7 +42,7 @@
 | --- | --- | --- |
 | `WECHAT_APP_ID` | 小程序 AppID | 已填写 |
 | `WECHAT_APP_SECRET` | 微信公众平台的 AppSecret | 待填写 |
-| `WECHAT_ALLOWED_OPENIDS` | 可修改菜单的微信 openid，多个用逗号分隔 | 首次登录后填写 |
+| `WECHAT_ALLOWED_OPENIDS` | 管理员微信 openid，多个用逗号分隔 | 首次登录后填写 |
 
 首次登录后，“我的 → 我的 OpenID”可以直接复制当前账号的 `openid`。将它填入白名单后重启 Node 服务，再退出并重新登录一次。
 
@@ -78,7 +78,7 @@ SUPABASE_URL=https://你的项目.supabase.co
 SUPABASE_SECRET_KEY=你的服务端 Secret key
 WECHAT_APP_ID=你的小程序 AppID
 WECHAT_APP_SECRET=你的小程序 AppSecret
-WECHAT_ALLOWED_OPENIDS=允许修改数据的openid，多个用逗号分隔
+WECHAT_ALLOWED_OPENIDS=管理员openid，多个用逗号分隔
 ```
 
 `SUPABASE_SECRET_KEY` 和 `WECHAT_APP_SECRET` 只能存在服务器上。systemd unit 已通过 `EnvironmentFile=/etc/human-draft.env` 读取它们。

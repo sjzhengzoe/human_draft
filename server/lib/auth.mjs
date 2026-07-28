@@ -175,6 +175,11 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
     user = data;
   }
 
+  const { error: defaultsError } = await supabase.rpc("ensure_user_defaults", {
+    p_user_id: user.id,
+  });
+  throwSupabaseError(defaultsError, "初始化个人数据失败。");
+
   const session = await createSession(supabase, user.id);
 
   return {
@@ -185,7 +190,8 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
       display_name: user.display_name,
       avatar_url: user.avatar_url,
       openid: openId,
-      can_write: canOpenIdWrite(openId),
+      can_write: true,
+      is_admin: canOpenIdWrite(openId),
       created_at: user.created_at,
     },
   };
@@ -220,7 +226,8 @@ export async function requireAuth(supabase, request, options = {}) {
       display_name: user.display_name,
       avatar_url: user.avatar_url,
       openid: user.wechat_openid,
-      can_write: canOpenIdWrite(user.wechat_openid),
+      can_write: true,
+      is_admin: canOpenIdWrite(user.wechat_openid),
       created_at: user.created_at,
     },
   };

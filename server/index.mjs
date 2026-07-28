@@ -7,7 +7,6 @@ import {
   loginWithWechatCode,
   logoutSession,
   requireAuth,
-  requireWriteAccess,
 } from "./lib/auth.mjs";
 import {
   createDish,
@@ -133,11 +132,6 @@ export function buildServer(options = {}) {
   const profileCompletionAuthenticated = async (request) => {
     await requireAuth(getSupabaseAdmin(), request, { allowIncompleteProfile: true });
   };
-  const writable = async (request) => {
-    await requireAuth(getSupabaseAdmin(), request);
-    requireWriteAccess(request);
-  };
-
   app.get("/api/health", async () => ({
     ok: true,
     service: "human-draft-server",
@@ -230,354 +224,512 @@ export function buildServer(options = {}) {
     ),
   }));
 
-  app.get("/api/categories", { preHandler: authenticated }, async () => ({
+  app.get("/api/categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listCategories(getSupabaseAdmin()) },
+    data: { items: await listCategories(getSupabaseAdmin(), request.auth.user.id) },
   }));
 
   app.get("/api/dishes", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await listDishes(getSupabaseAdmin(), request.query || {}),
+    data: await listDishes(getSupabaseAdmin(), request.auth.user.id, request.query || {}),
   }));
 
   app.get("/api/dishes/:id", { preHandler: authenticated }, async (request) => {
     const supabase = getSupabaseAdmin();
     return {
       ok: true,
-      data: { dish: toDishResponse(supabase, await getDish(supabase, request.params.id)) },
+      data: {
+        dish: toDishResponse(
+          supabase,
+          await getDish(supabase, request.auth.user.id, request.params.id),
+        ),
+      },
     };
   });
 
-  app.post("/api/dishes", { preHandler: writable }, async (request, reply) => {
+  app.post("/api/dishes", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request);
-    const dish = await createDish(getSupabaseAdmin(), fields, image);
+    const dish = await createDish(getSupabaseAdmin(), request.auth.user.id, fields, image);
     return reply.code(201).send({ ok: true, data: { dish } });
   });
 
-  app.put("/api/dishes/print-status", { preHandler: writable }, async (request) => ({
+  app.put("/api/dishes/print-status", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await updatePrintStatus(getSupabaseAdmin(), request.body || {}),
+    data: await updatePrintStatus(getSupabaseAdmin(), request.auth.user.id, request.body || {}),
   }));
 
-  app.put("/api/dishes/reorder", { preHandler: writable }, async (request) => ({
+  app.put("/api/dishes/reorder", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await reorderDishes(getSupabaseAdmin(), request.body || {}),
+    data: await reorderDishes(getSupabaseAdmin(), request.auth.user.id, request.body || {}),
   }));
 
-  app.put("/api/dishes/order/swap", { preHandler: writable }, async (request) => ({
+  app.put("/api/dishes/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await swapDishSortOrders(getSupabaseAdmin(), request.body || {}),
+    data: await swapDishSortOrders(getSupabaseAdmin(), request.auth.user.id, request.body || {}),
   }));
 
-  app.put("/api/dishes/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/dishes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { dish: await updateDish(getSupabaseAdmin(), request.params.id, request.body || {}) },
+    data: {
+      dish: await updateDish(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
   }));
 
-  app.post("/api/dishes/:id/image", { preHandler: writable }, async (request) => {
+  app.post("/api/dishes/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request);
     return {
       ok: true,
-      data: { dish: await replaceDishImage(getSupabaseAdmin(), request.params.id, image) },
+      data: {
+        dish: await replaceDishImage(
+          getSupabaseAdmin(),
+          request.auth.user.id,
+          request.params.id,
+          image,
+        ),
+      },
     };
   });
 
-  app.delete("/api/dishes/:id", { preHandler: writable }, async (request) => {
-    await deleteDish(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/dishes/:id", { preHandler: authenticated }, async (request) => {
+    await deleteDish(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
   app.get("/api/media", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await listMediaEntries(getSupabaseAdmin(), request.query || {}),
+    data: await listMediaEntries(getSupabaseAdmin(), request.auth.user.id, request.query || {}),
   }));
 
   app.get("/api/media-episodes/favorites", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listFavoriteMediaEpisodes(getSupabaseAdmin(), request.query || {}) },
+    data: {
+      items: await listFavoriteMediaEpisodes(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {},
+      ),
+    },
   }));
 
   app.get("/api/media-episodes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { item: await getMediaEpisode(getSupabaseAdmin(), request.params.id) },
+    data: {
+      item: await getMediaEpisode(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+    },
   }));
 
-  app.put("/api/media-episodes/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/media-episodes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateMediaEpisode(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.get("/api/media-categories", { preHandler: authenticated }, async () => ({
+  app.get("/api/media-categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listMediaCategories(getSupabaseAdmin()) },
+    data: { items: await listMediaCategories(getSupabaseAdmin(), request.auth.user.id) },
   }));
 
   app.get("/api/media-categories/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { item: await getMediaCategory(getSupabaseAdmin(), request.params.id) },
+    data: {
+      item: await getMediaCategory(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+    },
   }));
 
-  app.post("/api/media-categories", { preHandler: writable }, async (request, reply) => {
-    const item = await createMediaCategory(getSupabaseAdmin(), request.body || {});
+  app.post("/api/media-categories", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createMediaCategory(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/media-categories/order/swap", { preHandler: writable }, async (request) => ({
+  app.put("/api/media-categories/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await swapMediaCategorySortOrders(getSupabaseAdmin(), request.body || {}),
+    data: await swapMediaCategorySortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
   }));
 
-  app.put("/api/media-categories/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/media-categories/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { item: await updateMediaCategory(getSupabaseAdmin(), request.params.id, request.body || {}) },
+    data: {
+      item: await updateMediaCategory(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
   }));
 
-  app.delete("/api/media-categories/:id", { preHandler: writable }, async (request) => {
-    await deleteMediaCategory(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/media-categories/:id", { preHandler: authenticated }, async (request) => {
+    await deleteMediaCategory(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
   app.get("/api/media/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { item: await getMediaEntry(getSupabaseAdmin(), request.params.id) },
+    data: {
+      item: await getMediaEntry(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+    },
   }));
 
   app.get("/api/media/:id/seasons", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listMediaSeasons(getSupabaseAdmin(), request.params.id) },
+    data: {
+      items: await listMediaSeasons(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+      ),
+    },
   }));
 
-  app.post("/api/media/:id/seasons", { preHandler: writable }, async (request, reply) => {
+  app.post("/api/media/:id/seasons", { preHandler: authenticated }, async (request, reply) => {
     const item = await createMediaSeason(
       getSupabaseAdmin(),
+      request.auth.user.id,
       request.params.id,
       request.body || {},
     );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/media/:id/cover", { preHandler: writable }, async (request) => ({
+  app.put("/api/media/:id/cover", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await setMediaEntryCoverFromSeason(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.put("/api/media-seasons/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateMediaSeason(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/media-seasons/:id", { preHandler: writable }, async (request) => {
-    await deleteMediaSeason(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => {
+    await deleteMediaSeason(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
-  app.post("/api/media-seasons/:id/episodes", { preHandler: writable }, async (request, reply) => {
-    const item = await addNextMediaEpisode(getSupabaseAdmin(), request.params.id);
+  app.post("/api/media-seasons/:id/episodes", { preHandler: authenticated }, async (request, reply) => {
+    const item = await addNextMediaEpisode(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.post("/api/media", { preHandler: writable }, async (request, reply) => {
-    const item = await createMediaEntry(getSupabaseAdmin(), request.body || {});
+  app.post("/api/media", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createMediaEntry(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/media/reorder", { preHandler: writable }, async (request) => ({
+  app.put("/api/media/reorder", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await reorderMediaEntries(getSupabaseAdmin(), request.body || {}),
+    data: await reorderMediaEntries(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
   }));
 
-  app.put("/api/media/order/swap", { preHandler: writable }, async (request) => ({
+  app.put("/api/media/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await swapMediaEntrySortOrders(getSupabaseAdmin(), request.body || {}),
+    data: await swapMediaEntrySortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
   }));
 
-  app.put("/api/media/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/media/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateMediaEntry(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/media/:id", { preHandler: writable }, async (request) => {
-    await deleteMediaEntry(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/media/:id", { preHandler: authenticated }, async (request) => {
+    await deleteMediaEntry(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
   app.get("/api/activities", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listActivityItems(getSupabaseAdmin(), request.query || {}) },
+    data: {
+      items: await listActivityItems(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {},
+      ),
+    },
   }));
 
-  app.post("/api/activities", { preHandler: writable }, async (request, reply) => {
-    const item = await createActivityItem(getSupabaseAdmin(), request.body || {});
+  app.post("/api/activities", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createActivityItem(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/activities/order/swap", { preHandler: writable }, async (request) => ({
+  app.put("/api/activities/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await swapActivityItemSortOrders(getSupabaseAdmin(), request.body || {}),
+    data: await swapActivityItemSortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
   }));
 
-  app.put("/api/activities/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/activities/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateActivityItem(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/activities/:id", { preHandler: writable }, async (request) => {
-    await deleteActivityItem(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/activities/:id", { preHandler: authenticated }, async (request) => {
+    await deleteActivityItem(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
-  app.get("/api/luggage", { preHandler: authenticated }, async () => ({
+  app.get("/api/luggage", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listLuggageScenes(getSupabaseAdmin()) },
+    data: { items: await listLuggageScenes(getSupabaseAdmin(), request.auth.user.id) },
   }));
 
-  app.post("/api/luggage/scenes", { preHandler: writable }, async (request, reply) => {
-    const item = await createLuggageScene(getSupabaseAdmin(), request.body || {});
+  app.post("/api/luggage/scenes", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createLuggageScene(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/luggage/scenes/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateLuggageScene(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/luggage/scenes/:id", { preHandler: writable }, async (request) => {
-    await deleteLuggageScene(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => {
+    await deleteLuggageScene(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
-  app.post("/api/luggage/groups", { preHandler: writable }, async (request, reply) => {
-    const item = await createLuggageGroup(getSupabaseAdmin(), request.body || {});
+  app.post("/api/luggage/groups", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createLuggageGroup(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/luggage/groups/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/luggage/groups/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateLuggageGroup(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/luggage/groups/:id", { preHandler: writable }, async (request) => {
-    await deleteLuggageGroup(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/luggage/groups/:id", { preHandler: authenticated }, async (request) => {
+    await deleteLuggageGroup(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
-  app.put("/api/luggage/groups/order/swap", { preHandler: writable }, async (request) => {
-    await swapLuggageGroupSortOrders(getSupabaseAdmin(), request.body || {});
+  app.put("/api/luggage/groups/order/swap", { preHandler: authenticated }, async (request) => {
+    await swapLuggageGroupSortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return { ok: true, data: { swapped: true } };
   });
 
-  app.put("/api/luggage/groups/order/move", { preHandler: writable }, async (request) => {
-    await moveLuggageGroup(getSupabaseAdmin(), request.body || {});
+  app.put("/api/luggage/groups/order/move", { preHandler: authenticated }, async (request) => {
+    await moveLuggageGroup(getSupabaseAdmin(), request.auth.user.id, request.body || {});
     return { ok: true, data: { moved: true } };
   });
 
-  app.post("/api/luggage/items", { preHandler: writable }, async (request, reply) => {
-    const item = await createLuggageItem(getSupabaseAdmin(), request.body || {});
+  app.post("/api/luggage/items", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createLuggageItem(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/luggage/items/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/luggage/items/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateLuggageItem(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.put("/api/luggage/items/:id/move", { preHandler: writable }, async (request) => {
+  app.put("/api/luggage/items/:id/move", { preHandler: authenticated }, async (request) => {
     await moveLuggageItem(
       getSupabaseAdmin(),
+      request.auth.user.id,
       request.params.id,
       request.body || {},
     );
     return { ok: true, data: { moved: true } };
   });
 
-  app.delete("/api/luggage/items/:id", { preHandler: writable }, async (request) => {
-    await deleteLuggageItem(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/luggage/items/:id", { preHandler: authenticated }, async (request) => {
+    await deleteLuggageItem(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
   app.get("/api/dining", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listDiningPlaces(getSupabaseAdmin(), request.query || {}) },
+    data: {
+      items: await listDiningPlaces(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {},
+      ),
+    },
   }));
 
-  app.get("/api/dining-scenes", { preHandler: authenticated }, async () => ({ ok: true, data: { items: await listDiningScenes(getSupabaseAdmin()) } }));
-  app.get("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => ({ ok: true, data: { item: await getDiningScene(getSupabaseAdmin(), request.params.id) } }));
-  app.post("/api/dining-scenes", { preHandler: writable }, async (request, reply) => reply.code(201).send({ ok: true, data: { item: await createDiningScene(getSupabaseAdmin(), request.body || {}) } }));
-  app.put("/api/dining-scenes/order/swap", { preHandler: writable }, async (request) => ({ ok: true, data: await swapDiningSceneSortOrders(getSupabaseAdmin(), request.body || {}) }));
-  app.put("/api/dining-scenes/:id", { preHandler: writable }, async (request) => ({ ok: true, data: { item: await updateDiningScene(getSupabaseAdmin(), request.params.id, request.body || {}) } }));
-  app.delete("/api/dining-scenes/:id", { preHandler: writable }, async (request) => { await deleteDiningScene(getSupabaseAdmin(), request.params.id); return { ok: true, data: { deleted: true } }; });
+  app.get("/api/dining-scenes", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: { items: await listDiningScenes(getSupabaseAdmin(), request.auth.user.id) },
+  }));
+  app.get("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await getDiningScene(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+    },
+  }));
+  app.post("/api/dining-scenes", { preHandler: authenticated }, async (request, reply) => reply.code(201).send({
+    ok: true,
+    data: {
+      item: await createDiningScene(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.body || {},
+      ),
+    },
+  }));
+  app.put("/api/dining-scenes/order/swap", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await swapDiningSceneSortOrders(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
+  app.put("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await updateDiningScene(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
+  }));
+  app.delete("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => {
+    await deleteDiningScene(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
 
   app.get("/api/dining/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { item: await getDiningPlace(getSupabaseAdmin(), request.params.id) },
+    data: {
+      item: await getDiningPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+    },
   }));
 
-  app.post("/api/dining", { preHandler: writable }, async (request, reply) => {
-    const item = await createDiningPlace(getSupabaseAdmin(), request.body || {});
+  app.post("/api/dining", { preHandler: authenticated }, async (request, reply) => {
+    const item = await createDiningPlace(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/dining/:id", { preHandler: writable }, async (request) => ({
+  app.put("/api/dining/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await updateDiningPlace(
         getSupabaseAdmin(),
+        request.auth.user.id,
         request.params.id,
         request.body || {},
       ),
     },
   }));
 
-  app.delete("/api/dining/:id", { preHandler: writable }, async (request) => {
-    await deleteDiningPlace(getSupabaseAdmin(), request.params.id);
+  app.delete("/api/dining/:id", { preHandler: authenticated }, async (request) => {
+    await deleteDiningPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 

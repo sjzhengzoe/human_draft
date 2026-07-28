@@ -92,9 +92,9 @@ async function normalizeImage(buffer) {
   }
 }
 
-async function uploadImagePair(supabase, dishId, buffer) {
+async function uploadImagePair(supabase, userId, dishId, buffer) {
   const revision = randomUUID();
-  const basePath = `dishes/${dishId}/${revision}`;
+  const basePath = `users/${userId}/dishes/${dishId}/${revision}`;
   const imagePath = `${basePath}-original.png`;
   const thumbnailPath = `${basePath}-thumbnail.webp`;
   const { original, thumbnail } = await normalizeImage(buffer);
@@ -136,35 +136,38 @@ async function removeImages(supabase, paths) {
   if (error) console.error("删除 Storage 图片失败:", error);
 }
 
-async function assertCategoryExists(supabase, categoryId) {
+async function assertCategoryExists(supabase, userId, categoryId) {
   const { data, error } = await supabase
     .from("categories")
     .select("id, name")
     .eq("id", categoryId)
+    .eq("user_id", userId)
     .maybeSingle();
   throwSupabaseError(error, "读取分类失败。" );
   assertCondition(data, 400, "CATEGORY_NOT_FOUND", "所选分类不存在。" );
   return data;
 }
 
-export async function listCategories(supabase) {
+export async function listCategories(supabase, userId) {
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, sort_order, created_at")
+    .eq("user_id", userId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
   throwSupabaseError(error, "读取分类失败。" );
   return data;
 }
 
-export async function listDishes(supabase, query) {
+export async function listDishes(supabase, userId, query) {
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(query.page_size) || 30));
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   let request = supabase
     .from("dishes")
-    .select("*, categories(id, name)", { count: "exact" });
+    .select("*, categories(id, name)", { count: "exact" })
+    .eq("user_id", userId);
 
   if (query.category_id) request = request.eq("category_id", query.category_id);
   if (query.printed === "true") request = request.not("printed_at", "is", null);
@@ -197,30 +200,32 @@ export async function listDishes(supabase, query) {
   };
 }
 
-export async function getDish(supabase, dishId) {
+export async function getDish(supabase, userId, dishId) {
   const { data, error } = await supabase
     .from("dishes")
     .select("*, categories(id, name)")
     .eq("id", dishId)
+    .eq("user_id", userId)
     .maybeSingle();
   throwSupabaseError(error, "读取菜品失败。" );
   assertCondition(data, 404, "DISH_NOT_FOUND", "菜品不存在。" );
   return data;
 }
 
-export async function createDish(supabase, fields, image) {
+export async function createDish(supabase, userId, fields, image) {
   const name = fields.name?.trim();
   const categoryId = fields.category_id?.trim();
   assertCondition(name, 400, "DISH_NAME_REQUIRED", "请填写菜名。" );
   assertCondition(name.length <= 80, 400, "DISH_NAME_TOO_LONG", "菜名不能超过 80 个字符。" );
   assertCondition(categoryId, 400, "CATEGORY_REQUIRED", "请选择分类。" );
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
-  const category = await assertCategoryExists(supabase, categoryId);
+  const category = await assertCategoryExists(supabase, userId, categoryId);
 
   const dishId = randomUUID();
-  const paths = await uploadImagePair(supabase, dishId, image.buffer);
+  const paths = await uploadImagePair(supabase, userId, dishId, image.buffer);
   const { data, error } = await supabase
     .rpc("create_dish_at_end", {
+      p_user_id: userId,
       p_id: dishId,
       p_name: name,
       p_category_id: categoryId,
@@ -237,8 +242,8 @@ export async function createDish(supabase, fields, image) {
   return toDishResponse(supabase, { ...data, categories: category });
 }
 
-export async function updateDish(supabase, dishId, body) {
-  await getDish(supabase, dishId);
+export async function updateDish(supabase, userId, dishId, body) {
+  await getDish(supabase, userId, dishId);
   const changes = {};
 
   if (body.name !== undefined) {
@@ -248,7 +253,7 @@ export async function updateDish(supabase, dishId, body) {
   }
   if (body.category_id !== undefined) {
     assertCondition(typeof body.category_id === "string" && body.category_id, 400, "CATEGORY_REQUIRED", "请选择分类。" );
-    await assertCategoryExists(supabase, body.category_id);
+    await assertCategoryExists(supabase, userId, body.category_id);
     changes.category_id = body.category_id;
   }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
@@ -257,20 +262,22 @@ export async function updateDish(supabase, dishId, body) {
     .from("dishes")
     .update(changes)
     .eq("id", dishId)
+    .eq("user_id", userId)
     .select("*, categories(id, name)")
     .single();
   throwSupabaseError(error, "更新菜品失败。" );
   return toDishResponse(supabase, data);
 }
 
-export async function replaceDishImage(supabase, dishId, image) {
+export async function replaceDishImage(supabase, userId, dishId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
-  const dish = await getDish(supabase, dishId);
-  const paths = await uploadImagePair(supabase, dishId, image.buffer);
+  const dish = await getDish(supabase, userId, dishId);
+  const paths = await uploadImagePair(supabase, userId, dishId, image.buffer);
   const { data, error } = await supabase
     .from("dishes")
     .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
     .eq("id", dishId)
+    .eq("user_id", userId)
     .select("*, categories(id, name)")
     .single();
 
@@ -283,14 +290,18 @@ export async function replaceDishImage(supabase, dishId, image) {
   return toDishResponse(supabase, data);
 }
 
-export async function deleteDish(supabase, dishId) {
-  const dish = await getDish(supabase, dishId);
-  const { error } = await supabase.from("dishes").delete().eq("id", dishId);
+export async function deleteDish(supabase, userId, dishId) {
+  const dish = await getDish(supabase, userId, dishId);
+  const { error } = await supabase
+    .from("dishes")
+    .delete()
+    .eq("id", dishId)
+    .eq("user_id", userId);
   throwSupabaseError(error, "删除菜品失败。" );
   await removeImages(supabase, [dish.image_path, dish.thumbnail_path]);
 }
 
-export async function updatePrintStatus(supabase, body) {
+export async function updatePrintStatus(supabase, userId, body) {
   const ids = Array.isArray(body.ids) ? [...new Set(body.ids)] : [];
   assertCondition(
     ids.length > 0 && ids.length <= 100 && ids.every((id) => typeof id === "string"),
@@ -303,6 +314,7 @@ export async function updatePrintStatus(supabase, body) {
   const { data: existing, error: existingError } = await supabase
     .from("dishes")
     .select("id")
+    .eq("user_id", userId)
     .in("id", ids);
   throwSupabaseError(existingError, "检查菜品失败。" );
   assertCondition(existing.length === ids.length, 404, "DISH_NOT_FOUND", "部分菜品不存在。" );
@@ -310,6 +322,7 @@ export async function updatePrintStatus(supabase, body) {
   const { data, error } = await supabase
     .from("dishes")
     .update({ printed_at: body.printed ? new Date().toISOString() : null })
+    .eq("user_id", userId)
     .in("id", ids)
     .select("id");
   throwSupabaseError(error, "更新打印状态失败。" );
@@ -318,7 +331,7 @@ export async function updatePrintStatus(supabase, body) {
   return { updated: data.length };
 }
 
-export async function reorderDishes(supabase, body) {
+export async function reorderDishes(supabase, userId, body) {
   const ids = Array.isArray(body.ids) ? body.ids : [];
   assertCondition(
     ids.length > 0 && ids.length <= 500 && ids.every((id) => typeof id === "string"),
@@ -328,7 +341,10 @@ export async function reorderDishes(supabase, body) {
   );
   assertCondition(new Set(ids).size === ids.length, 400, "DUPLICATE_DISH_IDS", "排序列表包含重复菜品。" );
 
-  const { error } = await supabase.rpc("reorder_dishes", { p_dish_ids: ids });
+  const { error } = await supabase.rpc("reorder_dishes", {
+    p_user_id: userId,
+    p_dish_ids: ids,
+  });
   throwSupabaseError(error, "保存自定义排序失败。", {
     "22023": {
       statusCode: 400,
@@ -339,7 +355,7 @@ export async function reorderDishes(supabase, body) {
   return { updated: ids.length };
 }
 
-export async function swapDishSortOrders(supabase, body) {
+export async function swapDishSortOrders(supabase, userId, body) {
   const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
   const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
   assertCondition(
@@ -356,6 +372,7 @@ export async function swapDishSortOrders(supabase, body) {
   );
 
   const { error } = await supabase.rpc("swap_dish_sort_orders", {
+    p_user_id: userId,
     p_source_id: sourceId,
     p_target_id: targetId,
   });

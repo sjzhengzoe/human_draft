@@ -112,6 +112,10 @@ function createFakeSupabase(users = []) {
     from(table) {
       return new FakeQuery(state, table);
     },
+    async rpc(name) {
+      assert.equal(name, "ensure_user_defaults");
+      return { data: null, error: null };
+    },
     storage: {
       from(bucket) {
         return {

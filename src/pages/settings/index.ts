@@ -46,7 +46,7 @@ Component({
         displayName: user.display_name,
         avatarUrl: user.avatar_url,
         avatarInitial: user.display_name.trim().slice(0, 1) || "E",
-        isAdmin: user.can_write,
+        isAdmin: user.is_admin,
         openid: user.openid,
         openidLabel: shortOpenId(user.openid)
       })
