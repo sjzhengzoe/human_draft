@@ -15,63 +15,63 @@ import {
 
 const PET_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   full: [
-    "/exercise/assets/pets/happy/01.webp",
-    "/exercise/assets/pets/happy/02.webp",
-    "/exercise/assets/pets/happy/03.webp",
-    "/exercise/assets/pets/happy/04.webp",
-    "/exercise/assets/pets/happy/05.webp"
+    "/exercise/assets/pets/happy/01.png",
+    "/exercise/assets/pets/happy/02.png",
+    "/exercise/assets/pets/happy/03.png",
+    "/exercise/assets/pets/happy/04.png",
+    "/exercise/assets/pets/happy/05.png"
   ],
   normal: [
-    "/exercise/assets/pets/normal/01.webp",
-    "/exercise/assets/pets/normal/02.webp",
-    "/exercise/assets/pets/normal/03.webp",
-    "/exercise/assets/pets/normal/04.webp",
-    "/exercise/assets/pets/normal/05.webp"
+    "/exercise/assets/pets/normal/01.png",
+    "/exercise/assets/pets/normal/02.png",
+    "/exercise/assets/pets/normal/03.png",
+    "/exercise/assets/pets/normal/04.png",
+    "/exercise/assets/pets/normal/05.png"
   ],
   low: [
-    "/exercise/assets/pets/unhappy/01.webp",
-    "/exercise/assets/pets/unhappy/02.webp",
-    "/exercise/assets/pets/unhappy/03.webp",
-    "/exercise/assets/pets/unhappy/04.webp",
-    "/exercise/assets/pets/unhappy/05.webp"
+    "/exercise/assets/pets/unhappy/01.png",
+    "/exercise/assets/pets/unhappy/02.png",
+    "/exercise/assets/pets/unhappy/03.png",
+    "/exercise/assets/pets/unhappy/04.png",
+    "/exercise/assets/pets/unhappy/05.png"
   ],
   empty: [
-    "/exercise/assets/pets/pitiful/01.webp",
-    "/exercise/assets/pets/pitiful/02.webp",
-    "/exercise/assets/pets/pitiful/03.webp",
-    "/exercise/assets/pets/pitiful/04.webp",
-    "/exercise/assets/pets/pitiful/05.webp"
+    "/exercise/assets/pets/pitiful/01.png",
+    "/exercise/assets/pets/pitiful/02.png",
+    "/exercise/assets/pets/pitiful/03.png",
+    "/exercise/assets/pets/pitiful/04.png",
+    "/exercise/assets/pets/pitiful/05.png"
   ]
 }
 
 const BOWL_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   full: [
-    "/exercise/assets/bowls/happy/01.webp",
-    "/exercise/assets/bowls/happy/02.webp",
-    "/exercise/assets/bowls/happy/03.webp",
-    "/exercise/assets/bowls/happy/04.webp",
-    "/exercise/assets/bowls/happy/05.webp"
+    "/exercise/assets/bowls/happy/01.png",
+    "/exercise/assets/bowls/happy/02.png",
+    "/exercise/assets/bowls/happy/03.png",
+    "/exercise/assets/bowls/happy/04.png",
+    "/exercise/assets/bowls/happy/05.png"
   ],
   normal: [
-    "/exercise/assets/bowls/normal/01.webp",
-    "/exercise/assets/bowls/normal/02.webp",
-    "/exercise/assets/bowls/normal/03.webp",
-    "/exercise/assets/bowls/normal/04.webp",
-    "/exercise/assets/bowls/normal/05.webp"
+    "/exercise/assets/bowls/normal/01.png",
+    "/exercise/assets/bowls/normal/02.png",
+    "/exercise/assets/bowls/normal/03.png",
+    "/exercise/assets/bowls/normal/04.png",
+    "/exercise/assets/bowls/normal/05.png"
   ],
   low: [
-    "/exercise/assets/bowls/unhappy/01.webp",
-    "/exercise/assets/bowls/unhappy/02.webp",
-    "/exercise/assets/bowls/unhappy/03.webp",
-    "/exercise/assets/bowls/unhappy/04.webp",
-    "/exercise/assets/bowls/unhappy/05.webp"
+    "/exercise/assets/bowls/unhappy/01.png",
+    "/exercise/assets/bowls/unhappy/02.png",
+    "/exercise/assets/bowls/unhappy/03.png",
+    "/exercise/assets/bowls/unhappy/04.png",
+    "/exercise/assets/bowls/unhappy/05.png"
   ],
   empty: [
-    "/exercise/assets/bowls/pitiful/01.webp",
-    "/exercise/assets/bowls/pitiful/02.webp",
-    "/exercise/assets/bowls/pitiful/03.webp",
-    "/exercise/assets/bowls/pitiful/04.webp",
-    "/exercise/assets/bowls/pitiful/05.webp"
+    "/exercise/assets/bowls/pitiful/01.png",
+    "/exercise/assets/bowls/pitiful/02.png",
+    "/exercise/assets/bowls/pitiful/03.png",
+    "/exercise/assets/bowls/pitiful/04.png",
+    "/exercise/assets/bowls/pitiful/05.png"
   ]
 }
 

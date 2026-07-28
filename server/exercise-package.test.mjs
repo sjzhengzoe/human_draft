@@ -28,7 +28,7 @@ test("exercise pets and bowls are shipped in the exercise subpackage", async () 
     ),
   );
 
-  const imagePaths = [...pageSource.matchAll(/"(\/exercise\/assets\/[^"]+\.webp)"/g)]
+  const imagePaths = [...pageSource.matchAll(/"(\/exercise\/assets\/[^"]+\.png)"/g)]
     .map((match) => match[1]);
   assert.equal(imagePaths.length, 40);
   await Promise.all(
