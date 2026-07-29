@@ -83,6 +83,7 @@ import {
   addExerciseTask,
   claimExerciseMonth,
   completeExerciseTasks,
+  consumeExerciseRestDay,
   getExerciseDashboard,
   resetExerciseState,
   saveExerciseSettings,
@@ -216,6 +217,14 @@ export function buildServer(options = {}) {
   app.post("/api/exercise/monthly-claim", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await claimExerciseMonth(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+    ),
+  }));
+
+  app.post("/api/exercise/rest-day", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await consumeExerciseRestDay(
       getSupabaseAdmin(),
       request.auth.user.id,
     ),

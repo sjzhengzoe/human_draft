@@ -25,7 +25,7 @@
     <view class="field">
       <view class="field__main">
         <view class="field__label">每月休息天数</view>
-        <view class="field__hint">领取月任务时按剩余天数等比例折算</view>
+        <view class="field__hint">领取后可在需要休息的当天手动使用</view>
       </view>
       <view class="number-input">
         <input type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
@@ -37,7 +37,7 @@
   <view class="preview-card">
     <view class="preview-card__label">按当前设置，本月现在领取</view>
     <view class="preview-card__value">{{previewMinutes}}<text>分钟</text></view>
-    <view class="preview-card__desc">剩余 {{calendarDays}} 天，计划运动 {{exerciseDays}} 天，休息 {{restDays}} 天</view>
+    <view class="preview-card__desc">剩余 {{calendarDays}} 天均计入任务，可手动使用 {{restDays}} 个休息日</view>
   </view>
 
   <button

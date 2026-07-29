@@ -2,6 +2,7 @@ import {
   claimExerciseExtra,
   claimExerciseMonth,
   completeExercise,
+  consumeExerciseRestDay,
   getExerciseDashboard
 } from "../../services/exercise"
 import type { ExerciseBowlLevel, ExerciseDashboard } from "../../types/exercise"
@@ -125,6 +126,12 @@ Page({
     todayPendingMinutes: 0,
     todayExtraPendingMinutes: 0,
     claimed: false,
+    restDaysUsed: 0,
+    restDaysTotal: 0,
+    restDaysRemaining: 0,
+    restDayUsedToday: false,
+    restDayButtonText: "消耗休息日 0/0",
+    restDayDisabled: true,
     bowlLabel: "没有",
     emotionLabel: PET_STATE_LABELS.empty,
     petImage: PET_IMAGES.empty[0],
@@ -151,11 +158,28 @@ Page({
 
   applyDashboard(dashboard: ExerciseDashboard) {
     const bowlLevel = dashboard.cat.bowl_level
+    const restDays = dashboard.rest_days
+    let restDayButtonText = `消耗休息日 ${restDays.used}/${restDays.total}`
+    if (!dashboard.month.claimed) {
+      restDayButtonText = `领取月任务后可用休息日 0/${restDays.total}`
+    } else if (restDays.remaining === 0) {
+      restDayButtonText = `休息日已用完 ${restDays.used}/${restDays.total}`
+    } else if (restDays.used_today) {
+      restDayButtonText = `今日已使用休息日 ${restDays.used}/${restDays.total}`
+    }
     this.setData({
       remainingMinutes: dashboard.month.remainingMinutes,
       todayPendingMinutes: dashboard.today.pending_minutes,
       todayExtraPendingMinutes: dashboard.today.extra_pending_minutes,
       claimed: dashboard.month.claimed,
+      restDaysUsed: restDays.used,
+      restDaysTotal: restDays.total,
+      restDaysRemaining: restDays.remaining,
+      restDayUsedToday: restDays.used_today,
+      restDayButtonText,
+      restDayDisabled: !dashboard.month.claimed
+        || restDays.remaining === 0
+        || restDays.used_today,
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: PET_STATE_LABELS[bowlLevel],
       petImage: pickRandomImage(PET_IMAGES[bowlLevel], this.data.petImage),
@@ -193,12 +217,21 @@ Page({
     if (this.data.claimed || this.data.busy) return
     wx.showModal({
       title: "领取本月任务",
-      content: `将加入 ${this.data.claimPreviewText}。已按本月休息日设置折算，领取后本月不能重复领取。`,
+      content: `将加入 ${this.data.claimPreviewText}。休息日由你当天手动使用，领取后本月不能重复领取。`,
       confirmText: "领取",
       success: (result) => {
         if (result.confirm) this.runAction("monthly", () => claimExerciseMonth(), "本月任务已加入")
       }
     })
+  },
+
+  handleRestDay() {
+    if (this.data.restDayDisabled || this.data.busy) return
+    this.runAction(
+      "rest-day",
+      () => consumeExerciseRestDay(),
+      `休息日已使用，还剩 ${Math.max(0, this.data.restDaysRemaining - 1)} 次`
+    )
   },
 
   async handleExtraClaim() {

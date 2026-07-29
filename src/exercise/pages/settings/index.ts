@@ -14,7 +14,6 @@ Page({
     monthlyRestDays: "4",
     previewMinutes: 0,
     calendarDays: 0,
-    exerciseDays: 0,
     restDays: 0,
     daysInMonth: 31
   },
@@ -37,7 +36,6 @@ Page({
         monthlyRestDays: String(dashboard.profile.monthly_rest_days),
         previewMinutes: dashboard.claim_preview.minutes,
         calendarDays: dashboard.claim_preview.calendar_days,
-        exerciseDays: dashboard.claim_preview.exercise_days,
         restDays: dashboard.claim_preview.rest_days,
         daysInMonth: new Date(
           Number(dashboard.month.month_start.slice(0, 4)),
@@ -69,15 +67,15 @@ Page({
     const dailyMinutes = Number(this.data.dailyMinutes)
     const monthlyRestDays = Number(this.data.monthlyRestDays)
     if (!Number.isFinite(dailyMinutes) || !Number.isFinite(monthlyRestDays)) return
-    const restDays = Math.min(
-      this.data.calendarDays,
-      Math.round(monthlyRestDays * this.data.calendarDays / this.data.daysInMonth)
+    const proratedRestDays = Math.round(
+      monthlyRestDays * this.data.calendarDays / this.data.daysInMonth
     )
-    const exerciseDays = Math.max(0, this.data.calendarDays - restDays)
+    const restDays = monthlyRestDays === 0
+      ? 0
+      : Math.min(this.data.calendarDays, Math.max(1, proratedRestDays))
     this.setData({
       restDays,
-      exerciseDays,
-      previewMinutes: Math.max(0, exerciseDays * dailyMinutes)
+      previewMinutes: Math.max(0, this.data.calendarDays * dailyMinutes)
     })
   },
 

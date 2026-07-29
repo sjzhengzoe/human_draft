@@ -13,7 +13,7 @@ const USER_ID = "10000000-0000-4000-8000-000000000002";
 const JULY_FIRST_CHINA = new Date("2026-06-30T16:00:00.000Z");
 const JULY_TWENTY_SEVENTH_CHINA = new Date("2026-07-26T16:00:00.000Z");
 
-test("monthly claim prorates configured rest days over the remaining month", () => {
+test("monthly claim keeps every remaining day and makes rest days manually available", () => {
   const claim = calculateMonthlyClaim({
     dailyMinutes: 30,
     monthlyRestDays: 4,
@@ -22,9 +22,32 @@ test("monthly claim prorates configured rest days over the remaining month", () 
 
   assert.equal(claim.today, "2026-07-27");
   assert.equal(claim.remainingDays, 5);
-  assert.equal(claim.proratedRestDays, 1);
-  assert.equal(claim.plannedExerciseDays, 4);
-  assert.equal(claim.taskMinutes, 120);
+  assert.equal(claim.availableRestDays, 1);
+  assert.equal(claim.plannedExerciseDays, 5);
+  assert.equal(claim.taskMinutes, 150);
+});
+
+test("monthly claim keeps one rest day near month end when rest is configured", () => {
+  const claim = calculateMonthlyClaim({
+    dailyMinutes: 30,
+    monthlyRestDays: 4,
+    now: new Date("2026-07-28T16:00:00.000Z"),
+  });
+
+  assert.equal(claim.today, "2026-07-29");
+  assert.equal(claim.remainingDays, 3);
+  assert.equal(claim.availableRestDays, 1);
+  assert.equal(claim.taskMinutes, 90);
+});
+
+test("monthly claim does not invent a rest day when monthly rest is zero", () => {
+  const claim = calculateMonthlyClaim({
+    dailyMinutes: 30,
+    monthlyRestDays: 0,
+    now: new Date("2026-07-28T16:00:00.000Z"),
+  });
+
+  assert.equal(claim.availableRestDays, 0);
 });
 
 test("claiming alone leaves the shared bowl empty, while completed minutes feed both pets", () => {
@@ -174,15 +197,43 @@ test("dashboard reads every exercise table with the authenticated user scope", a
     },
   };
 
-  await getExerciseDashboard(supabase, USER_ID, JULY_FIRST_CHINA);
+  const dashboard = await getExerciseDashboard(supabase, USER_ID, JULY_FIRST_CHINA);
 
-  assert.equal(scopedTables.length, 2);
+  assert.equal(scopedTables.length, 3);
+  assert.deepEqual(dashboard.rest_days, {
+    used: 0,
+    total: 4,
+    remaining: 4,
+    used_today: false,
+  });
   for (const entry of scopedTables) {
     assert.ok(
       entry.filters.some(([field, value]) => field === "user_id" && value === USER_ID),
       `${entry.table} must be filtered by the authenticated user`,
     );
   }
+});
+
+test("manual rest-day migration tracks daily use and converts it into feeding progress", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202607290001_exercise_manual_rest_days.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(migration, /rest_days_total integer not null default 0/i);
+  assert.match(migration, /rest_days_used integer not null default 0/i);
+  assert.match(migration, /create table if not exists public\.exercise_rest_day_events/i);
+  assert.match(migration, /unique \(user_id, rest_date\)/i);
+  assert.match(migration, /create or replace function public\.consume_exercise_rest_day/i);
+  assert.match(migration, /set rest_days_used = rest_days_used \+ 1/i);
+  assert.match(migration, /available_minutes := public\.allocate_exercise_minutes/i);
+  assert.match(
+    migration,
+    /claim_exercise_month\([\s\S]*?p_rest_days_total integer/i,
+  );
 });
 
 test("rolling-credit migration records completions and carries surplus forward", async () => {

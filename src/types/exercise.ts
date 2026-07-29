@@ -31,6 +31,12 @@ export type ExerciseDashboard = {
     exercise_days: number
     rest_days: number
   }
+  rest_days: {
+    used: number
+    total: number
+    remaining: number
+    used_today: boolean
+  }
   cat: {
     food_ratio: number
     bowl_level: ExerciseBowlLevel

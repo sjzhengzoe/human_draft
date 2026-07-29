@@ -60,14 +60,16 @@ export function calculateMonthlyClaim({
   now = new Date(),
 }) {
   const context = monthContext(now);
-  const proratedRestDays = Math.min(
-    context.remainingDays,
-    Math.round((monthlyRestDays * context.remainingDays) / context.daysInMonth),
+  const proratedRestDays = Math.round(
+    (monthlyRestDays * context.remainingDays) / context.daysInMonth,
   );
-  const plannedExerciseDays = Math.max(0, context.remainingDays - proratedRestDays);
+  const availableRestDays = monthlyRestDays === 0
+    ? 0
+    : Math.min(context.remainingDays, Math.max(1, proratedRestDays));
+  const plannedExerciseDays = context.remainingDays;
   return {
     ...context,
-    proratedRestDays,
+    availableRestDays,
     plannedExerciseDays,
     taskMinutes: plannedExerciseDays * dailyMinutes,
   };
@@ -313,7 +315,7 @@ export function calculateExerciseRollup({
 
 export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   const context = monthContext(now);
-  const [profileResult, monthsResult] = await Promise.all([
+  const [profileResult, monthsResult, restDayResult] = await Promise.all([
     supabase
       .from("exercise_profiles")
       .select("*")
@@ -324,9 +326,16 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       .select("*")
       .eq("user_id", userId)
       .order("month_start", { ascending: true }),
+    supabase
+      .from("exercise_rest_day_events")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("rest_date", context.today)
+      .maybeSingle(),
   ]);
   throwSupabaseError(profileResult.error, "读取运动设置失败。");
   throwSupabaseError(monthsResult.error, "读取运动任务失败。");
+  throwSupabaseError(restDayResult.error, "读取休息日状态失败。");
 
   const profile = {
     daily_minutes: Number(profileResult.data?.daily_minutes || DEFAULT_DAILY_MINUTES),
@@ -347,6 +356,12 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
     creditMinutes: profile.credit_minutes,
     today: context.today,
   });
+  const restDaysUsed = Number(month?.rest_days_used || 0);
+  const restDaysTotal = Number(
+    month?.claimed_at
+      ? month?.rest_days_total || 0
+      : claimPreview.availableRestDays,
+  );
 
   return {
     profile,
@@ -372,7 +387,13 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       minutes: claimPreview.taskMinutes,
       calendar_days: claimPreview.remainingDays,
       exercise_days: claimPreview.plannedExerciseDays,
-      rest_days: claimPreview.proratedRestDays,
+      rest_days: claimPreview.availableRestDays,
+    },
+    rest_days: {
+      used: restDaysUsed,
+      total: restDaysTotal,
+      remaining: Math.max(0, restDaysTotal - restDaysUsed),
+      used_today: Boolean(restDayResult.data),
     },
     cat: {
       food_ratio: Number(rollup.foodRatio.toFixed(3)),
@@ -419,12 +440,40 @@ export async function claimExerciseMonth(supabase, userId, now = new Date()) {
     p_claim_date: claim.today,
     p_claim_end_date: claim.monthEnd,
     p_base_task_minutes: claim.taskMinutes,
+    p_rest_days_total: claim.availableRestDays,
   });
   throwSupabaseError(error, "领取本月任务失败。", {
     P0001: {
       statusCode: 409,
       code: "EXERCISE_MONTH_ALREADY_CLAIMED",
       message: "本月任务已经领取过了。",
+    },
+  });
+  return getExerciseDashboard(supabase, userId, now);
+}
+
+export async function consumeExerciseRestDay(supabase, userId, now = new Date()) {
+  const context = monthContext(now);
+  const { error } = await supabase.rpc("consume_exercise_rest_day", {
+    p_user_id: userId,
+    p_month_start: context.monthStart,
+    p_rest_date: context.today,
+  });
+  throwSupabaseError(error, "使用休息日失败。", {
+    P0002: {
+      statusCode: 409,
+      code: "EXERCISE_MONTH_NOT_CLAIMED",
+      message: "请先领取本月任务。",
+    },
+    P0003: {
+      statusCode: 409,
+      code: "EXERCISE_REST_DAY_ALREADY_USED_TODAY",
+      message: "今天已经使用过休息日了。",
+    },
+    P0004: {
+      statusCode: 409,
+      code: "EXERCISE_REST_DAYS_EXHAUSTED",
+      message: "本月休息日已经用完了。",
     },
   });
   return getExerciseDashboard(supabase, userId, now);

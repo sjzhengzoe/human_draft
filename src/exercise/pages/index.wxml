@@ -41,6 +41,17 @@
     </button>
   </view>
 
+  <view class="rest-day-card">
+    <button
+      class="task-button rest-day-button {{restDayDisabled ? 'task-button--disabled' : ''}}"
+      disabled="{{restDayDisabled || busy}}"
+      loading="{{busyAction === 'rest-day'}}"
+      bindtap="handleRestDay"
+    >
+      <view class="task-button__title">{{restDayButtonText}}</view>
+    </button>
+  </view>
+
   <view class="action-section">
     <view class="action-column">
       <button

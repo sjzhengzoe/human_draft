@@ -30,6 +30,13 @@ export function claimExerciseMonth(): Promise<ExerciseDashboard> {
   })
 }
 
+export function consumeExerciseRestDay(): Promise<ExerciseDashboard> {
+  return request<ExerciseDashboard>({
+    path: "/api/exercise/rest-day",
+    method: "POST"
+  })
+}
+
 export function claimExerciseExtra(minutes: number): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({
     path: "/api/exercise/extra-claim",
