@@ -4,7 +4,7 @@ import test from "node:test";
 
 const projectRoot = new URL("../", import.meta.url);
 
-test("exercise pets and bowls are shipped in the exercise subpackage", async () => {
+test("exercise pets and bowls are served remotely instead of shipped in the package", async () => {
   const appConfig = JSON.parse(
     await readFile(new URL("src/app.json", projectRoot), "utf8"),
   );
@@ -21,19 +21,20 @@ test("exercise pets and bowls are shipped in the exercise subpackage", async () 
     appConfig.subPackages.find((item) => item.root === "exercise")?.pages,
     ["pages/index", "pages/settings/index"],
   );
-  assert.equal(projectConfig.setting.ignoreUploadUnusedFiles, false);
-  assert.ok(
+  assert.equal(projectConfig.setting.ignoreUploadUnusedFiles, true);
+  assert.equal(
     projectConfig.packOptions.include.some(
       (item) => item.type === "folder" && item.value === "exercise/assets",
     ),
+    false,
   );
 
-  const imagePaths = [...pageSource.matchAll(/"(\/exercise\/assets\/[^"]+\.png)"/g)]
+  const imagePaths = [...pageSource.matchAll(/"(https:\/\/gufeifei\.cn\/exercise\/assets\/[^"]+\.png)"/g)]
     .map((match) => match[1]);
   assert.equal(imagePaths.length, 40);
   await Promise.all(
     imagePaths.map((imagePath) =>
-      access(new URL(`src${imagePath}`, projectRoot)),
+      access(new URL(`public${new URL(imagePath).pathname}`, projectRoot)),
     ),
   );
 });

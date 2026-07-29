@@ -14,11 +14,11 @@
     },
     "coverView": false,
     "postcss": false,
-    "minified": false,
+    "minified": true,
     "enhance": true,
     "showShadowRootInWxmlPanel": false,
     "packNpmRelationList": [],
-    "ignoreUploadUnusedFiles": false,
+    "ignoreUploadUnusedFiles": true,
     "compileHotReLoad": false,
     "skylineRenderEnable": true,
     "es6": true,
@@ -45,12 +45,7 @@
   "libVersion": "2.32.3",
   "packOptions": {
     "ignore": [],
-    "include": [
-      {
-        "value": "exercise/assets",
-        "type": "folder"
-      }
-    ]
+    "include": []
   },
   "appid": "wxf9409ef0e40bd802"
 }

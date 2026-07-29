@@ -1,5 +1,5 @@
-import type { ExerciseDashboard } from "../types/exercise"
-import { request } from "./request"
+import type { ExerciseDashboard } from "../../types/exercise"
+import { request } from "../../services/request"
 
 export function getExerciseDashboard(): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({ path: "/api/exercise" })

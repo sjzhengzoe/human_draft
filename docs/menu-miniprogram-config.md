@@ -60,6 +60,7 @@
 
 - request 合法域名：`https://gufeifei.cn`
 - uploadFile 合法域名：`https://gufeifei.cn`
+- downloadFile 合法域名：`https://gufeifei.cn`
 - downloadFile 合法域名：Supabase 项目的精确域名，例如 `https://xxxx.supabase.co`
 
 ## 4. 服务器环境

@@ -47,7 +47,7 @@ import { checkTextContent } from "../../services/content-security";
 
   const STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
   const DOUYIN_STORAGE_KEY = "DOUYIN_FORM_DATA_CONTENT";
-  const BACKGROUND_IMAGE = "/assets/background/theme_bg22.jpg";
+  const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;

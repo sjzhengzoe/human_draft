@@ -1,7 +1,7 @@
 var Douyin2Page;
 (function (Douyin2Page) {
   const STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
-  const BACKGROUND_IMAGE = "/assets/background/theme_bg22.jpg";
+  const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin2ExportCanvas";
   const BASE_CANVAS_WIDTH = 300;
   const BASE_CANVAS_HEIGHT = 400;

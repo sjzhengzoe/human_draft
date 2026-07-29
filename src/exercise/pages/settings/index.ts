@@ -2,7 +2,7 @@ import {
   getExerciseDashboard,
   resetExerciseState,
   saveExerciseSettings
-} from "../../../services/exercise"
+} from "../../services/exercise"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
 
 Page({
