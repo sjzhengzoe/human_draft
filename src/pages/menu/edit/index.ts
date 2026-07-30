@@ -24,6 +24,14 @@ type MealPeriodOption = {
   selected: boolean
 }
 
+type CropImageApi = (options: {
+  src: string
+  cropScale: "1:1"
+  success?: (result: { tempFilePath: string }) => void
+  fail?: (result: { errMsg?: string }) => void
+  complete?: () => void
+}) => void
+
 const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
   { key: "breakfast", label: "早餐", selected: false },
   { key: "lunch", label: "午餐", selected: true },
@@ -45,6 +53,7 @@ Page({
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
+    selectingImage: false,
     loading: true,
     saving: false,
     deleting: false,
@@ -197,7 +206,24 @@ Page({
   },
 
   handleChooseImage() {
-    if (this.data.loading || this.data.saving || this.data.deleting) return
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage
+    ) return
+
+    const cropImage = (wx as typeof wx & { cropImage?: CropImageApi }).cropImage
+    if (!cropImage) {
+      wx.showModal({
+        title: "暂不支持裁剪",
+        content: "当前微信版本过低，请更新微信后再选择图片。",
+        showCancel: false
+      })
+      return
+    }
+
+    this.setData({ selectingImage: true })
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
@@ -205,13 +231,42 @@ Page({
       success: (result) => {
         if (!isAsyncPageActive(this)) return
         const file = result.tempFiles[0]
-        if (file?.tempFilePath) this.setData({ selectedImagePath: file.tempFilePath })
+        if (!file?.tempFilePath) {
+          this.setData({ selectingImage: false })
+          return
+        }
+
+        cropImage({
+          src: file.tempFilePath,
+          cropScale: "1:1",
+          success: (cropResult) => {
+            if (!isAsyncPageActive(this)) return
+            if (cropResult.tempFilePath) {
+              this.setData({ selectedImagePath: cropResult.tempFilePath })
+            }
+          },
+          fail: (cropResult) => {
+            if (!isAsyncPageActive(this) || cropResult.errMsg?.includes("cancel")) return
+            wx.showToast({ title: "图片裁剪失败，请重试", icon: "none" })
+          },
+          complete: () => {
+            if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
+          }
+        })
+      },
+      fail: () => {
+        if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
       }
     })
   },
 
   async handleSave() {
-    if (this.data.loading || this.data.saving || this.data.deleting) return
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage
+    ) return
     const name = this.data.name.trim()
     const category = this.data.categories[this.data.categoryIndex]
     const outsideCategory = this.data.outsideCategories[this.data.outsideCategoryIndex]
