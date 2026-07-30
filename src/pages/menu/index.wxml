@@ -107,8 +107,6 @@
               ? (item.outside_category && item.outside_category.name ? item.outside_category.name : '未分类')
               : (item.category && item.category.name ? item.category.name : '未分类')}}
           </view>
-          <view wx:if="{{item.record_type === 'outside' && item.recommendedLabel}}" class="dish-card__recommended">推荐：{{item.recommendedLabel}}</view>
-          <view wx:elif="{{item.record_type === 'outside'}}" class="dish-card__recommended dish-card__recommended--empty">还没有推荐菜品</view>
           <view wx:if="{{item.mealPeriodTags.length}}" class="dish-card__meals">
             <view
               wx:for="{{item.mealPeriodTags}}"

@@ -34,7 +34,6 @@ type MealPeriodTag = {
 type MenuDish = Dish & {
   mealPeriodTags: MealPeriodTag[]
   recordTypeLabel: string
-  recommendedLabel: string
 }
 
 const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
@@ -51,7 +50,6 @@ function toMenuDish(dish: Dish): MenuDish {
   return {
     ...dish,
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
-    recommendedLabel: dish.recommended_items.join("、"),
     mealPeriodTags: mealPeriods
       .filter((key) => Boolean(MEAL_PERIOD_LABELS[key]))
       .map((key) => ({
