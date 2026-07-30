@@ -56,6 +56,7 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
+  gap: 24rpx;
   margin-top: 18rpx;
   padding: 14rpx 4rpx;
 }
@@ -70,6 +71,8 @@
   font-size: 23rpx;
 }
 
+.menu-toolbar__action--featured { color: #191713; font-weight: 650; }
+.menu-toolbar__action--active { color: #111; font-weight: 600; }
 .menu-toolbar__action:active { opacity: .5; }
 
 .icon-add-button {
@@ -102,6 +105,8 @@
 .dish-card__body { display: flex; min-width: 0; padding: 20rpx; flex: 1; flex-direction: column; }
 .dish-card__name { overflow: hidden; color: #191919; font-size: 30rpx; font-weight: 650; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .dish-card__category { align-self: flex-start; margin-top: 12rpx; padding: 7rpx 13rpx; border-radius: 8rpx; background: #f2f2f2; color: #555; font-size: 21rpx; line-height: 1; }
+.dish-card__meals { display: flex; flex-wrap: nowrap; align-items: center; gap: 8rpx; margin-top: 10rpx; }
+.dish-card__meal { display: flex; width: 34rpx; height: 34rpx; box-sizing: border-box; flex: 0 0 34rpx; align-items: center; justify-content: center; border: 1rpx solid #d8d8d8; border-radius: 50%; background: #fff; color: #333; font-size: 18rpx; font-weight: 700; line-height: 1; }
 .sort-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8rpx; margin-top: auto; padding-top: 12rpx; }
 .sort-action { display: flex; width: 48rpx; height: 48rpx; align-items: center; justify-content: center; color: #666; }
 .sort-action--disabled { opacity: .2; pointer-events: none; }

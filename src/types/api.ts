@@ -33,6 +33,8 @@ export type Category = {
   created_at: string
 }
 
+export type MealPeriod = "breakfast" | "lunch" | "dinner"
+
 export type Dish = {
   id: string
   name: string
@@ -42,6 +44,7 @@ export type Dish = {
   thumbnail_path: string | null
   image_url: string
   thumbnail_url: string
+  meal_periods: MealPeriod[]
   printed_at: string | null
   sort_order: number
   created_at: string

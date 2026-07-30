@@ -49,6 +49,13 @@
       </view>
     </view>
 
+    <view wx:if="{{canReorder}}" class="sort-toolbar">
+      <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
+        <app-icon name="settings-2" size="22" />
+        <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
+      </view>
+    </view>
+
     <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view wx:if="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
@@ -80,7 +87,7 @@
             </view>
           </view>
           <view wx:else class="attribute-empty">暂未填写尺寸</view>
-          <view wx:if="{{canReorder}}" class="sort-actions">
+          <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
             <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
             <view class="sort-action {{index === items.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
           </view>
@@ -90,5 +97,5 @@
     <view class="bottom-space" />
     </scroll-view>
   </view>
-  <operation-loading visible="{{ordering}}" text="正在调整顺序…" />
+  <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 </view>

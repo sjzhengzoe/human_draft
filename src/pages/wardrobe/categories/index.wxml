@@ -21,6 +21,13 @@
     </view>
   </view>
 
+  <view wx:if="{{categories.length > 1}}" class="sort-toolbar">
+    <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
+      <app-icon name="settings-2" size="22" />
+      <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
+    </view>
+  </view>
+
   <view wx:if="{{errorMessage}}" class="state">
     <view>{{errorMessage}}</view>
     <button class="retry-button" bindtap="handleRetry">重试</button>
@@ -33,7 +40,7 @@
         <view class="category-card__name">{{item.name}}</view>
         <view class="category-card__fields">{{item.fieldSummary}}</view>
       </view>
-      <view class="category-card__sort">
+      <view wx:if="{{sortEditing}}" class="category-card__sort">
         <view
           class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}"
           data-index="{{index}}"
@@ -50,4 +57,5 @@
       <view class="category-card__arrow"><app-icon name="chevron-right" size="28" /></view>
     </view>
   </view>
+  <operation-loading visible="{{moving}}" text="正在保存排序…" />
 </view>

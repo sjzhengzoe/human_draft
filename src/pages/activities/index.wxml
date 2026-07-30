@@ -48,7 +48,7 @@
     </scroll-view>
   </view>
 
-  <operation-loading visible="{{ordering}}" text="正在调整顺序…" />
+  <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 
   <view wx:if="{{showEditor}}" class="modal" bindtap="closeEditor">
     <view class="modal-card" catchtap="noop">

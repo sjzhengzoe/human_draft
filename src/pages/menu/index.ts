@@ -4,7 +4,7 @@ import {
   listDishes,
   reorderDishSortOrders
 } from "../../services/menu"
-import type { Category, Dish } from "../../types/api"
+import type { Category, Dish, MealPeriod } from "../../types/api"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -22,6 +22,38 @@ let dragRects: SortableRect[] = []
 let dragItemIds: string[] = []
 let suppressDishTapUntil = 0
 let dragInsertAfter = false
+let sortOriginalIds: string[] = []
+
+type MealPeriodTag = {
+  key: MealPeriod
+  label: string
+}
+
+type MenuDish = Dish & {
+  mealPeriodTags: MealPeriodTag[]
+}
+
+const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
+  breakfast: "早",
+  lunch: "午",
+  dinner: "晚"
+}
+
+function toMenuDish(dish: Dish): MenuDish {
+  const mealPeriods =
+    Array.isArray(dish.meal_periods) && dish.meal_periods.length > 0
+      ? dish.meal_periods
+      : []
+  return {
+    ...dish,
+    mealPeriodTags: mealPeriods
+      .filter((key) => Boolean(MEAL_PERIOD_LABELS[key]))
+      .map((key) => ({
+        key,
+        label: MEAL_PERIOD_LABELS[key]
+      }))
+  }
+}
 
 function resetDragSession(): void {
   dragSourceIndex = -1
@@ -31,13 +63,18 @@ function resetDragSession(): void {
   dragInsertAfter = false
 }
 
+function hasSameDishOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
+
 Page({
   data: {
     categories: [] as Category[],
-    dishes: [] as Dish[],
+    dishes: [] as MenuDish[],
     activeCategoryId: "",
     canWrite: false,
     canReorder: false,
+    sortEditing: false,
     draggingIndex: -1,
     dragTargetIndex: -1,
     dragInsertAfter: false,
@@ -61,6 +98,7 @@ Page({
   onUnload() {
     deactivateAsyncPage(this)
     resetDragSession()
+    sortOriginalIds = []
   },
 
   async refreshData() {
@@ -85,7 +123,7 @@ Page({
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
         categories,
-        dishes,
+        dishes: dishes.map(toMenuDish),
         canWrite: session.user.can_write,
         canReorder: session.user.can_write,
         draggingIndex: -1,
@@ -105,13 +143,56 @@ Page({
 
   handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     if (id === this.data.activeCategoryId) return
-    this.setData({ activeCategoryId: id }, () => this.refreshData())
+    this.setData({ activeCategoryId: id, sortEditing: false }, () => this.refreshData())
+  },
+
+  async handleSortEditingToggle() {
+    if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
+    if (!this.data.sortEditing) {
+      sortOriginalIds = this.data.dishes.map((dish) => dish.id)
+      this.setData({ sortEditing: true })
+      return
+    }
+
+    const dishIds = this.data.dishes.map((dish) => dish.id)
+    if (hasSameDishOrder(sortOriginalIds, dishIds)) {
+      sortOriginalIds = []
+      this.setData({ sortEditing: false })
+      return
+    }
+
+    this.setData({ ordering: true })
+    try {
+      await reorderDishSortOrders(dishIds)
+      if (!isAsyncPageActive(this)) return
+      sortOriginalIds = []
+      this.setData({ sortEditing: false })
+      wx.showToast({ title: "排序已保存", icon: "success" })
+      await this.refreshData()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
   },
 
   handleAddTap() {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     if (!this.data.canWrite) {
       wx.showToast({ title: "当前账号只有查看权限", icon: "none" })
       return
@@ -121,12 +202,26 @@ Page({
 
   handlePrintTap() {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/menu/print/index" })
+  },
+
+  handleDayPlanTap() {
+    if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
+    wx.navigateTo({ url: "/pages/menu/day-plan/index" })
   },
 
   handleDishTap(event: WechatMiniprogram.TouchEvent) {
     if (
       !this.data.canWrite ||
+      this.data.sortEditing ||
       this.data.sorting ||
       this.data.contentLoading ||
       Date.now() < suppressDishTapUntil
@@ -135,31 +230,27 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
   },
 
-  async handleMove(event: WechatMiniprogram.TouchEvent) {
+  handleMove(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
     const targetIndex = index + direction
-    if (!this.data.canReorder || this.data.ordering || targetIndex < 0 || targetIndex >= this.data.dishes.length) return
-    this.setData({ ordering: true })
+    if (
+      !this.data.canReorder ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= this.data.dishes.length
+    ) return
     const dishes = [...this.data.dishes]
     const [dish] = dishes.splice(index, 1)
     dishes.splice(targetIndex, 0, dish)
     this.setData({ dishes })
-    try {
-      await reorderDishSortOrders(dishes.map((item) => item.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) {
-        await this.refreshData()
-        if (isAsyncPageActive(this)) this.setData({ ordering: false })
-      }
-    }
   },
 
   handleDragStart(event: WechatMiniprogram.TouchEvent) {
     if (
       !this.data.canReorder ||
+      !this.data.sortEditing ||
       this.data.sorting ||
       this.data.loading ||
       this.data.contentLoading
@@ -218,7 +309,7 @@ Page({
     this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
   },
 
-  async handleDragEnd() {
+  handleDragEnd() {
     const source = dragSourceIndex
     const target = dragTargetIndex
     const sourceId = dragItemIds[source] || ""
@@ -248,22 +339,7 @@ Page({
     const [sourceDish] = dishes.splice(currentSourceIndex, 1)
     const nextTargetIndex = dishes.findIndex((dish) => dish.id === targetId)
     dishes.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceDish)
-    this.setData({ dishes })
-
-    try {
-      await reorderDishSortOrders(dishes.map((dish) => dish.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "排序保存失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (!isAsyncPageActive(this)) return
-      await this.refreshData()
-      if (isAsyncPageActive(this)) this.setData({ sorting: false })
-    }
+    this.setData({ dishes, sorting: false })
   },
 
   handleRetry() {

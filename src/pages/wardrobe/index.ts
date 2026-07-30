@@ -28,6 +28,11 @@ let dragRects: SortableRect[] = []
 let dragItemIds: string[] = []
 let suppressItemTapUntil = 0
 let dragInsertAfter = false
+let wardrobeSortOriginalIds: string[] = []
+
+function hasSameWardrobeOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
 
 function resetDragSession(): void {
   dragSourceIndex = -1
@@ -59,6 +64,7 @@ Page({
     totalCategoryCount: 0,
     monthlyItemCount: 0,
     canReorder: false,
+    sortEditing: false,
     draggingIndex: -1,
     dragTargetIndex: -1,
     dragInsertAfter: false,
@@ -76,12 +82,15 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    wardrobeSortOriginalIds = []
+    if (this.data.sortEditing) this.setData({ sortEditing: false })
     this.refreshData()
   },
 
   onUnload() {
     deactivateAsyncPage(this)
     resetDragSession()
+    wardrobeSortOriginalIds = []
   },
 
   async refreshData() {
@@ -134,6 +143,10 @@ Page({
 
   handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     if (id === this.data.activeCategoryId) return
     this.setData({ activeCategoryId: id }, () => this.refreshData())
@@ -141,16 +154,28 @@ Page({
 
   handleManageCategories() {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/wardrobe/categories/index" })
   },
 
   handleAddCategory() {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/wardrobe/category-edit/index" })
   },
 
   handleAddItem() {
     if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     if (!this.data.categories.length) {
       wx.showModal({
         title: "先创建分类",
@@ -173,6 +198,7 @@ Page({
   handleItemTap(event: WechatMiniprogram.TouchEvent) {
     if (
       this.data.sorting ||
+      this.data.sortEditing ||
       this.data.contentLoading ||
       Date.now() < suppressItemTapUntil
     ) return
@@ -180,31 +206,60 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/wardrobe/item-edit/index?id=${id}` })
   },
 
-  async handleMove(event: WechatMiniprogram.TouchEvent) {
+  async handleSortEditingToggle() {
+    if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
+    if (!this.data.sortEditing) {
+      wardrobeSortOriginalIds = this.data.items.map((item) => item.id)
+      this.setData({ sortEditing: true })
+      return
+    }
+    const itemIds = this.data.items.map((item) => item.id)
+    if (hasSameWardrobeOrder(wardrobeSortOriginalIds, itemIds)) {
+      wardrobeSortOriginalIds = []
+      this.setData({ sortEditing: false })
+      return
+    }
+    this.setData({ ordering: true })
+    try {
+      await reorderWardrobeItemSortOrders(itemIds)
+      if (!isAsyncPageActive(this)) return
+      wardrobeSortOriginalIds = []
+      this.setData({ sortEditing: false })
+      wx.showToast({ title: "排序已保存", icon: "success" })
+      await this.refreshData()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
+  },
+
+  handleMove(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
     const targetIndex = index + direction
-    if (!this.data.canReorder || this.data.ordering || targetIndex < 0 || targetIndex >= this.data.items.length) return
-    this.setData({ ordering: true })
+    if (
+      !this.data.canReorder ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= this.data.items.length
+    ) return
     const items = [...this.data.items]
     const [item] = items.splice(index, 1)
     items.splice(targetIndex, 0, item)
     this.setData({ items })
-    try {
-      await reorderWardrobeItemSortOrders(items.map((entry) => entry.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) {
-        await this.refreshData()
-        if (isAsyncPageActive(this)) this.setData({ ordering: false })
-      }
-    }
   },
 
   handleDragStart(event: WechatMiniprogram.TouchEvent) {
     if (
       !this.data.canReorder ||
+      !this.data.sortEditing ||
       this.data.sorting ||
       this.data.loading ||
       this.data.contentLoading
@@ -262,7 +317,7 @@ Page({
     this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
   },
 
-  async handleDragEnd() {
+  handleDragEnd() {
     const source = dragSourceIndex
     const target = dragTargetIndex
     const sourceId = dragItemIds[source] || ""
@@ -286,22 +341,7 @@ Page({
     const [sourceItem] = items.splice(sourceIndex, 1)
     const nextTargetIndex = items.findIndex((item) => item.id === targetId)
     items.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceItem)
-    this.setData({ items })
-
-    try {
-      await reorderWardrobeItemSortOrders(items.map((item) => item.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "排序保存失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (!isAsyncPageActive(this)) return
-      await this.refreshData()
-      if (isAsyncPageActive(this)) this.setData({ sorting: false })
-    }
+    this.setData({ items, sorting: false })
   },
 
   handleRetry() {

@@ -6,6 +6,34 @@ import { throwSupabaseError } from "./supabase.mjs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "dinner"]);
+const DEFAULT_MEAL_PERIODS = ["lunch", "dinner"];
+
+function normalizeMealPeriods(value, useDefault = false) {
+  let periods = value;
+
+  if (typeof periods === "string") {
+    try {
+      periods = JSON.parse(periods);
+    } catch (_error) {
+      periods = periods.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+  }
+
+  if (periods === undefined && useDefault) return [...DEFAULT_MEAL_PERIODS];
+
+  assertCondition(
+    Array.isArray(periods)
+      && periods.length >= 1
+      && periods.length <= 3
+      && periods.every((period) => typeof period === "string" && ALLOWED_MEAL_PERIODS.has(period))
+      && new Set(periods).size === periods.length,
+    400,
+    "INVALID_MEAL_PERIODS",
+    "请至少选择一个有效餐次。",
+  );
+  return periods;
+}
 
 function publicUrlFor(supabase, path) {
   if (!path) return "";
@@ -22,6 +50,9 @@ export function toDishResponse(supabase, dish) {
     thumbnail_path: dish.thumbnail_path,
     image_url: publicUrlFor(supabase, dish.image_path),
     thumbnail_url: publicUrlFor(supabase, dish.thumbnail_path || dish.image_path),
+    meal_periods: Array.isArray(dish.meal_periods)
+      ? dish.meal_periods
+      : [...DEFAULT_MEAL_PERIODS],
     printed_at: dish.printed_at,
     sort_order: dish.sort_order,
     created_at: dish.created_at,
@@ -219,6 +250,7 @@ export async function createDish(supabase, userId, fields, image) {
   assertCondition(name.length <= 80, 400, "DISH_NAME_TOO_LONG", "菜名不能超过 80 个字符。" );
   assertCondition(categoryId, 400, "CATEGORY_REQUIRED", "请选择分类。" );
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
+  const mealPeriods = normalizeMealPeriods(fields.meal_periods, true);
   const category = await assertCategoryExists(supabase, userId, categoryId);
 
   const dishId = randomUUID();
@@ -231,6 +263,7 @@ export async function createDish(supabase, userId, fields, image) {
       p_category_id: categoryId,
       p_image_path: paths.imagePath,
       p_thumbnail_path: paths.thumbnailPath,
+      p_meal_periods: mealPeriods,
     })
     .single();
 
@@ -255,6 +288,9 @@ export async function updateDish(supabase, userId, dishId, body) {
     assertCondition(typeof body.category_id === "string" && body.category_id, 400, "CATEGORY_REQUIRED", "请选择分类。" );
     await assertCategoryExists(supabase, userId, body.category_id);
     changes.category_id = body.category_id;
+  }
+  if (body.meal_periods !== undefined) {
+    changes.meal_periods = normalizeMealPeriods(body.meal_periods);
   }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
 

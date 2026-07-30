@@ -92,6 +92,15 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
   const supabase = {
     rpcCalls,
+    storage: {
+      from(bucket) {
+        return {
+          getPublicUrl(path) {
+            return { data: { publicUrl: `https://example.test/${bucket}/${path || ""}` } };
+          },
+        };
+      },
+    },
     from(table) {
       return new Query(table);
     },
@@ -928,6 +937,65 @@ test("reorder routes map invalid database order lists to HTTP 400", async (t) =>
   });
   assert.equal(mediaResponse.statusCode, 400);
   assert.equal(mediaResponse.json().error.code, "INVALID_MEDIA_ORDER");
+});
+
+test("dish meal periods accept free combinations and reject invalid values", async (t) => {
+  const dish = {
+    id: SOURCE_ID,
+    user_id: USER_ID,
+    name: "番茄炒鸡蛋",
+    category_id: TARGET_ID,
+    categories: { id: TARGET_ID, name: "半荤" },
+    image_path: "dish.png",
+    thumbnail_path: "dish-thumb.webp",
+    meal_periods: ["lunch", "dinner"],
+    printed_at: null,
+    sort_order: 1000,
+    created_at: "2026-07-30T00:00:00.000Z",
+    updated_at: "2026-07-30T00:00:00.000Z",
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ dishes: [dish] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const validResponse = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: { meal_periods: ["breakfast", "lunch", "dinner"] },
+  });
+  assert.equal(validResponse.statusCode, 200);
+  assert.deepEqual(validResponse.json().data.dish.meal_periods, [
+    "breakfast",
+    "lunch",
+    "dinner",
+  ]);
+
+  const invalidResponse = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: { meal_periods: ["breakfast", "brunch"] },
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_MEAL_PERIODS");
+});
+
+test("dish meal-period migration defaults existing dishes to lunch and dinner", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202607300001_dish_meal_periods.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /default array\['lunch', 'dinner'\]::text\[\]/i);
+  assert.match(migration, /cardinality\(meal_periods\) between 1 and 3/i);
+  assert.match(migration, /p_meal_periods text\[\]/i);
 });
 
 test("required media-platform migration backfills pending sources and rejects empty arrays", async () => {

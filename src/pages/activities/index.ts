@@ -16,6 +16,11 @@ import {
 } from "../../utils/async-page"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
+let activitySortOriginalIds: string[] = []
+
+function hasSameActivityOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
 
 Page({
   data: {
@@ -38,11 +43,14 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    activitySortOriginalIds = []
+    if (this.data.sortEditing) this.setData({ sortEditing: false })
     this.loadItems()
   },
 
   onUnload() {
     deactivateAsyncPage(this)
+    activitySortOriginalIds = []
   },
 
   async loadItems() {
@@ -70,20 +78,68 @@ Page({
 
   handleTypeTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.saving || this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const type = event.currentTarget.dataset.type as ActivityType
     if (!type || type === this.data.activeType) return
     this.setData({ activeType: type, sortEditing: false }, () => this.loadItems())
   },
 
-  handleSortEditingToggle() {
+  async handleSortEditingToggle() {
     if (!this.data.canWrite || this.data.contentLoading || this.data.ordering) return
-    this.setData({ sortEditing: !this.data.sortEditing })
+    if (!this.data.sortEditing) {
+      activitySortOriginalIds = this.data.items.map((item) => item.id)
+      this.setData({ sortEditing: true })
+      return
+    }
+
+    const desiredIds = this.data.items.map((item) => item.id)
+    if (hasSameActivityOrder(activitySortOriginalIds, desiredIds)) {
+      activitySortOriginalIds = []
+      this.setData({ sortEditing: false })
+      return
+    }
+
+    const workingIds = [...activitySortOriginalIds]
+    this.setData({ ordering: true })
+    try {
+      for (let index = 0; index < desiredIds.length; index += 1) {
+        if (workingIds[index] === desiredIds[index]) continue
+        const targetIndex = workingIds.indexOf(desiredIds[index])
+        if (targetIndex < 0) throw new Error("活动排序数据已变化，请重新加载")
+        await swapActivityItemSortOrders(workingIds[index], workingIds[targetIndex])
+        const currentId = workingIds[index]
+        workingIds[index] = workingIds[targetIndex]
+        workingIds[targetIndex] = currentId
+        activitySortOriginalIds = [...workingIds]
+      }
+      if (!isAsyncPageActive(this)) return
+      activitySortOriginalIds = []
+      this.setData({ sortEditing: false })
+      wx.showToast({ title: "排序已保存", icon: "success" })
+      await this.loadItems()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
   },
 
   noop() {},
 
   handleAdd() {
     if (!this.data.canWrite || this.data.loading || this.data.contentLoading || this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     this.setData({
       showEditor: true,
       editingId: "",
@@ -94,6 +150,10 @@ Page({
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canWrite || this.data.loading || this.data.contentLoading || this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
@@ -141,6 +201,10 @@ Page({
 
   handleDelete(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canWrite || this.data.saving || this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     if (!id) return
     this.setData({ deleting: true })
@@ -175,8 +239,13 @@ Page({
     })
   },
 
-  async handleMove(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.ordering || this.data.contentLoading) return
+  handleMove(event: WechatMiniprogram.TouchEvent) {
+    if (
+      !this.data.canWrite ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      this.data.contentLoading
+    ) return
     const index = Number(event.currentTarget.dataset.index)
     const targetIndex = index + Number(event.currentTarget.dataset.direction)
     const source = this.data.items[index]
@@ -185,16 +254,6 @@ Page({
     const items = [...this.data.items]
     items[index] = target
     items[targetIndex] = source
-    this.setData({ items, ordering: true })
-    try {
-      await swapActivityItemSortOrders(source.id, target.id)
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) {
-        this.setData({ ordering: false })
-        await this.loadItems()
-      }
-    }
+    this.setData({ items })
   }
 })

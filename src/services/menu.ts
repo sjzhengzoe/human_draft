@@ -1,4 +1,4 @@
-import type { Category, Dish, DishListParams } from "../types/api"
+import type { Category, Dish, DishListParams, MealPeriod } from "../types/api"
 import { request, upload } from "./request"
 
 function toQuery(params: DishListParams): string {
@@ -33,18 +33,23 @@ export async function createDish(input: {
   name: string
   categoryId: string
   imagePath: string
+  mealPeriods: MealPeriod[]
 }): Promise<Dish> {
   const data = await upload<{ dish: Dish }>({
     path: "/api/dishes",
     filePath: input.imagePath,
-    formData: { name: input.name, category_id: input.categoryId }
+    formData: {
+      name: input.name,
+      category_id: input.categoryId,
+      meal_periods: JSON.stringify(input.mealPeriods)
+    }
   })
   return data.dish
 }
 
 export async function updateDish(
   id: string,
-  changes: { name?: string; category_id?: string }
+  changes: { name?: string; category_id?: string; meal_periods?: MealPeriod[] }
 ): Promise<Dish> {
   const data = await request<{ dish: Dish }>({
     path: `/api/dishes/${id}`,

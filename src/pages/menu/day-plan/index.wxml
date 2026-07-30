@@ -1,0 +1,80 @@
+<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在准备今天的菜单…</view>
+</view>
+
+<view wx:else class="page">
+  <view class="plan-header">
+    <view class="plan-header__eyebrow">{{todayLabel}}</view>
+    <view class="plan-header__title">今天吃什么</view>
+    <view class="plan-header__description">点一下喜欢的菜将它锁定，再随机时会为你保留</view>
+    <view class="plan-actions">
+      <button class="plan-action plan-action--secondary" bindtap="handleResetLocks">全部解锁</button>
+      <button class="plan-action plan-action--primary" bindtap="handleRandomize">随机一下</button>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="state-card">
+    <view class="state-card__title">暂时没能打开菜单</view>
+    <view class="state-card__description">{{errorMessage}}</view>
+    <button class="retry-button" bindtap="handleRetry">重试</button>
+  </view>
+
+  <view wx:elif="{{dishes.length === 0}}" class="state-card">
+    <view class="state-card__title">菜单里还没有菜品</view>
+    <view class="state-card__description">先添加一些菜品，再来随机安排一日三餐。</view>
+  </view>
+
+  <view wx:else class="meal-list">
+    <view
+      wx:for="{{meals}}"
+      wx:key="key"
+      wx:for-item="meal"
+      wx:for-index="mealIndex"
+      class="meal-section meal-section--{{meal.key}}"
+    >
+      <view class="meal-section__header">
+        <view>
+          <view class="meal-section__title">{{meal.label}}</view>
+          <view class="meal-section__english">{{meal.englishLabel}}</view>
+        </view>
+        <view wx:if="{{meal.availableCount < 3}}" class="meal-section__notice">
+          {{meal.availableCount === 0 ? '暂无适用菜品' : '可选菜品不足 3 道'}}
+        </view>
+      </view>
+
+      <view class="meal-grid">
+        <view
+          wx:for="{{meal.slots}}"
+          wx:key="key"
+          wx:for-item="slot"
+          wx:for-index="slotIndex"
+          class="meal-slot {{slot.locked ? 'meal-slot--locked' : ''}} {{!slot.dish ? 'meal-slot--empty' : ''}}"
+          data-meal-index="{{mealIndex}}"
+          data-slot-index="{{slotIndex}}"
+          bindtap="handleSlotTap"
+          role="button"
+          aria-label="{{slot.dish ? slot.dish.name : '暂无菜品'}}{{slot.locked ? '，已锁定' : ''}}"
+        >
+          <view class="meal-slot__image-wrap">
+            <image
+              wx:if="{{slot.dish}}"
+              class="meal-slot__image"
+              src="{{slot.dish.thumbnail_url || slot.dish.image_url}}"
+              mode="aspectFit"
+              lazy-load
+            />
+            <view wx:else class="meal-slot__placeholder">
+              <view class="meal-slot__placeholder-mark">·</view>
+              <view>等待补充</view>
+            </view>
+            <view wx:if="{{slot.locked}}" class="meal-slot__lock">已锁</view>
+          </view>
+          <view class="meal-slot__name">{{slot.dish ? slot.dish.name : '暂无推荐'}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="plan-footer">今日菜单仅供灵感参考，喜欢的才留下。</view>
+</view>

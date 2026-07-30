@@ -11,7 +11,7 @@ import {
   updateLuggageGroup,
   updateLuggageItem
 } from "../../services/life-lists"
-import type { LuggageScene } from "../../types/life-lists"
+import type { LuggageItem, LuggageScene } from "../../types/life-lists"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -36,6 +36,69 @@ let groupDragTargetIndex = -1
 let groupDragIds: string[] = []
 let groupDragRects: SortableRect[] = []
 let groupDragInsertAfter = false
+
+type LuggageOrderSnapshot = {
+  groupIds: string[]
+  itemIdsByGroup: Record<string, string[]>
+}
+
+let luggageSortOriginalOrder: LuggageOrderSnapshot | null = null
+
+function captureLuggageOrder(scene: LuggageScene): LuggageOrderSnapshot {
+  return {
+    groupIds: scene.groups.map((group) => group.id),
+    itemIdsByGroup: Object.fromEntries(
+      scene.groups.map((group) => [
+        group.id,
+        group.items.map((item) => item.id)
+      ])
+    )
+  }
+}
+
+function cloneLuggageOrder(order: LuggageOrderSnapshot): LuggageOrderSnapshot {
+  return {
+    groupIds: [...order.groupIds],
+    itemIdsByGroup: Object.fromEntries(
+      Object.entries(order.itemIdsByGroup).map(([groupId, itemIds]) => [
+        groupId,
+        [...itemIds]
+      ])
+    )
+  }
+}
+
+function hasSameLuggageOrder(
+  left: LuggageOrderSnapshot,
+  right: LuggageOrderSnapshot
+): boolean {
+  if (
+    left.groupIds.length !== right.groupIds.length ||
+    !left.groupIds.every((id, index) => id === right.groupIds[index])
+  ) return false
+  return right.groupIds.every((groupId) => {
+    const leftItems = left.itemIdsByGroup[groupId] || []
+    const rightItems = right.itemIdsByGroup[groupId] || []
+    return (
+      leftItems.length === rightItems.length &&
+      leftItems.every((id, index) => id === rightItems[index])
+    )
+  })
+}
+
+function cloneLuggageScene(scene: LuggageScene): LuggageScene {
+  return {
+    ...scene,
+    groups: scene.groups.map((group) => ({
+      ...group,
+      items: group.items.map((item) => ({ ...item }))
+    }))
+  }
+}
+
+function replaceScene(scenes: LuggageScene[], nextScene: LuggageScene): LuggageScene[] {
+  return scenes.map((scene) => scene.id === nextScene.id ? nextScene : scene)
+}
 
 function resetDragSession(): void {
   dragSourceId = ""
@@ -121,6 +184,8 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    luggageSortOriginalOrder = null
+    if (this.data.sortEditing) this.setData({ sortEditing: false })
     this.loadScenes()
   },
 
@@ -128,6 +193,7 @@ Page({
     deactivateAsyncPage(this)
     resetDragSession()
     resetGroupDragSession()
+    luggageSortOriginalOrder = null
   },
 
   async loadScenes() {
@@ -167,6 +233,10 @@ Page({
 
   handleSceneTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting || this.data.groupSorting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     const activeScene = this.data.scenes.find((scene) => scene.id === id) || null
     const counts = getSceneCounts(activeScene)
@@ -179,25 +249,108 @@ Page({
     })
   },
 
-  handleSortEditingToggle() {
+  async handleSortEditingToggle() {
     if (!this.data.canWrite || this.data.ordering) return
-    this.setData({ sortEditing: !this.data.sortEditing })
+    const scene = this.data.activeScene
+    if (!scene) return
+    if (!this.data.sortEditing) {
+      luggageSortOriginalOrder = captureLuggageOrder(scene)
+      this.setData({ sortEditing: true })
+      return
+    }
+
+    const desiredOrder = captureLuggageOrder(scene)
+    if (
+      !luggageSortOriginalOrder ||
+      hasSameLuggageOrder(luggageSortOriginalOrder, desiredOrder)
+    ) {
+      luggageSortOriginalOrder = null
+      this.setData({ sortEditing: false })
+      return
+    }
+
+    const workingOrder = cloneLuggageOrder(luggageSortOriginalOrder)
+    this.setData({ ordering: true })
+    try {
+      for (let index = 0; index < desiredOrder.groupIds.length; index += 1) {
+        const desiredGroupId = desiredOrder.groupIds[index]
+        if (workingOrder.groupIds[index] === desiredGroupId) continue
+        const currentIndex = workingOrder.groupIds.indexOf(desiredGroupId)
+        const targetGroupId = workingOrder.groupIds[index]
+        if (currentIndex < 0 || !targetGroupId) {
+          throw new Error("行李分组排序数据已变化，请重新加载")
+        }
+        await moveLuggageGroup(desiredGroupId, targetGroupId, false)
+        workingOrder.groupIds.splice(currentIndex, 1)
+        workingOrder.groupIds.splice(index, 0, desiredGroupId)
+        luggageSortOriginalOrder = cloneLuggageOrder(workingOrder)
+      }
+
+      for (const groupId of desiredOrder.groupIds) {
+        const desiredItemIds = desiredOrder.itemIdsByGroup[groupId] || []
+        for (let index = 0; index < desiredItemIds.length; index += 1) {
+          const desiredItemId = desiredItemIds[index]
+          const targetItems = workingOrder.itemIdsByGroup[groupId] || []
+          if (targetItems[index] === desiredItemId) continue
+          const sourceGroupId = Object.keys(workingOrder.itemIdsByGroup)
+            .find((id) => workingOrder.itemIdsByGroup[id].includes(desiredItemId))
+          if (!sourceGroupId) {
+            throw new Error("行李物品排序数据已变化，请重新加载")
+          }
+          const targetItemId = targetItems[index] || ""
+          await moveLuggageItem(desiredItemId, groupId, targetItemId, false)
+          const sourceItems = workingOrder.itemIdsByGroup[sourceGroupId]
+          sourceItems.splice(sourceItems.indexOf(desiredItemId), 1)
+          const nextTargetItems = workingOrder.itemIdsByGroup[groupId] || []
+          nextTargetItems.splice(index, 0, desiredItemId)
+          workingOrder.itemIdsByGroup[groupId] = nextTargetItems
+          luggageSortOriginalOrder = cloneLuggageOrder(workingOrder)
+        }
+      }
+
+      if (!isAsyncPageActive(this)) return
+      luggageSortOriginalOrder = null
+      this.setData({ sortEditing: false })
+      wx.showToast({ title: "排序已保存", icon: "success" })
+      await this.loadScenes()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
   },
 
   handleAddScene() {
     if (!this.data.canWrite || this.data.savingScene) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/luggage/scenes/index" })
   },
 
   handleRenameScene() {
     const scene = this.data.activeScene
     if (!scene || !this.data.canWrite || this.data.editing) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: `/pages/luggage/scene-edit/index?id=${scene.id}` })
   },
 
   handleDeleteScene() {
     const scene = this.data.activeScene
     if (!scene || !this.data.canWrite || this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.showModal({
       title: "删除场景",
       content: `将同时删除“${scene.name}”下的全部层级和物品。`,
@@ -223,6 +376,10 @@ Page({
   async handleAddGroup() {
     const scene = this.data.activeScene
     if (!scene || !this.data.canWrite || this.data.savingGroup) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const name = await promptText("新增携带层级", "例如：更加精致")
     if (!name || !isAsyncPageActive(this)) return
     this.setData({ savingGroup: true })
@@ -238,43 +395,64 @@ Page({
     }
   },
 
-  async handleGroupMove(event: WechatMiniprogram.TouchEvent) {
+  handleGroupMove(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
-    const groups = this.data.activeScene?.groups || []
+    const scene = this.data.activeScene
+    const groups = scene?.groups || []
     const targetIndex = index + direction
-    if (!this.data.canWrite || this.data.ordering || targetIndex < 0 || targetIndex >= groups.length) return
-    this.setData({ ordering: true })
-    try {
-      await moveLuggageGroup(groups[index].id, groups[targetIndex].id, direction > 0)
-      if (isAsyncPageActive(this)) await this.loadScenes()
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ ordering: false })
-    }
+    if (
+      !scene ||
+      !this.data.canWrite ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= groups.length
+    ) return
+    const nextGroups = [...groups]
+    const [group] = nextGroups.splice(index, 1)
+    nextGroups.splice(targetIndex, 0, group)
+    const nextScene = { ...scene, groups: nextGroups }
+    this.setData({
+      activeScene: nextScene,
+      scenes: replaceScene(this.data.scenes, nextScene)
+    })
   },
 
-  async handleItemMove(event: WechatMiniprogram.TouchEvent) {
+  handleItemMove(event: WechatMiniprogram.TouchEvent) {
     const groupId = String(event.currentTarget.dataset.groupId || "")
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
-    const items = this.data.activeScene?.groups.find((group) => group.id === groupId)?.items || []
+    const scene = this.data.activeScene
+    const items = scene?.groups.find((group) => group.id === groupId)?.items || []
     const targetIndex = index + direction
-    if (!this.data.canWrite || this.data.ordering || targetIndex < 0 || targetIndex >= items.length) return
-    this.setData({ ordering: true })
-    try {
-      await moveLuggageItem(items[index].id, groupId, items[targetIndex].id, direction > 0)
-      if (isAsyncPageActive(this)) await this.loadScenes()
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ ordering: false })
-    }
+    if (
+      !scene ||
+      !this.data.canWrite ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= items.length
+    ) return
+    const nextScene = cloneLuggageScene(scene)
+    const nextItems = nextScene.groups.find((group) => group.id === groupId)?.items
+    if (!nextItems) return
+    const [item] = nextItems.splice(index, 1)
+    nextItems.splice(targetIndex, 0, item)
+    this.setData({
+      activeScene: nextScene,
+      scenes: replaceScene(this.data.scenes, nextScene)
+    })
   },
 
   handleGroupDragStart(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.sorting || this.data.groupSorting || this.data.contentLoading) return
+    if (
+      !this.data.canWrite ||
+      !this.data.sortEditing ||
+      this.data.sorting ||
+      this.data.groupSorting ||
+      this.data.contentLoading
+    ) return
     const index = Number(event.currentTarget.dataset.index)
     const groups = this.data.activeScene?.groups || []
     if (!Number.isInteger(index) || index < 0 || index >= groups.length) return
@@ -320,7 +498,7 @@ Page({
     this.setData({ groupSorting: false, draggingGroupIndex: -1, dragTargetGroupIndex: -1, groupDragInsertAfter: false, dragGhostVisible: false })
   },
 
-  async handleGroupDragEnd() {
+  handleGroupDragEnd() {
     const sourceId = groupDragIds[groupDragSourceIndex] || ""
     const targetId = groupDragIds[groupDragTargetIndex] || ""
     const insertAfter = groupDragInsertAfter
@@ -330,21 +508,35 @@ Page({
       this.setData({ groupSorting: false })
       return
     }
-    try {
-      await moveLuggageGroup(sourceId, targetId, insertAfter)
-      if (isAsyncPageActive(this)) await this.loadScenes()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-        await this.loadScenes()
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ groupSorting: false })
+    const scene = this.data.activeScene
+    if (!scene) {
+      this.setData({ groupSorting: false })
+      return
     }
+    const groups = [...scene.groups]
+    const sourceIndex = groups.findIndex((group) => group.id === sourceId)
+    const targetIndex = groups.findIndex((group) => group.id === targetId)
+    if (sourceIndex < 0 || targetIndex < 0) {
+      this.setData({ groupSorting: false })
+      return
+    }
+    const [group] = groups.splice(sourceIndex, 1)
+    const nextTargetIndex = groups.findIndex((entry) => entry.id === targetId)
+    groups.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, group)
+    const nextScene = { ...scene, groups }
+    this.setData({
+      activeScene: nextScene,
+      scenes: replaceScene(this.data.scenes, nextScene),
+      groupSorting: false
+    })
   },
 
   async handleRenameGroup(event: WechatMiniprogram.TouchEvent) {
     if (this.data.editing) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     const name = String(event.currentTarget.dataset.name || "")
     const nextName = await promptText("修改层级名", "输入层级名称", name)
@@ -362,6 +554,10 @@ Page({
 
   handleDeleteGroup(event: WechatMiniprogram.TouchEvent) {
     if (this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     wx.showModal({
       title: "删除携带层级",
@@ -386,6 +582,10 @@ Page({
   async handleAddItem(event: WechatMiniprogram.TouchEvent) {
     const groupId = String(event.currentTarget.dataset.groupId || "")
     if (this.data.savingItem) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const name = await promptText("新增物品", "例如：身份证")
     if (!name || !isAsyncPageActive(this)) return
     this.setData({ savingItem: true })
@@ -403,6 +603,10 @@ Page({
 
   async handleRenameItem(event: WechatMiniprogram.TouchEvent) {
     if (this.data.editing) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     const name = String(event.currentTarget.dataset.name || "")
     const nextName = await promptText("修改物品", "输入物品名称", name)
@@ -419,12 +623,22 @@ Page({
   },
 
   handleItemTap(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.sorting || Date.now() < suppressItemTapUntil) return
+    if (
+      !this.data.canWrite ||
+      this.data.sortEditing ||
+      this.data.sorting ||
+      Date.now() < suppressItemTapUntil
+    ) return
     this.handleRenameItem(event)
   },
 
   handleDragStart(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.sorting || this.data.contentLoading) return
+    if (
+      !this.data.canWrite ||
+      !this.data.sortEditing ||
+      this.data.sorting ||
+      this.data.contentLoading
+    ) return
     const id = String(event.currentTarget.dataset.id || "")
     const groupId = String(event.currentTarget.dataset.groupId || "")
     if (!id || !groupId) return
@@ -497,7 +711,7 @@ Page({
     this.setData({ sorting: false, draggingItemId: "", dragTargetItemId: "", dragTargetGroupId: "", dragGhostVisible: false })
   },
 
-  async handleDragEnd() {
+  handleDragEnd() {
     const sourceId = dragSourceId
     const sourceGroupId = dragSourceGroupId
     const targetGroupId = dragTargetGroupId
@@ -510,22 +724,49 @@ Page({
       this.setData({ sorting: false })
       return
     }
-    try {
-      await moveLuggageItem(sourceId, targetGroupId, targetItemId, insertAfter)
-      if (!isAsyncPageActive(this)) return
-      await this.loadScenes()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "移动失败", icon: "none" })
-        await this.loadScenes()
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ sorting: false })
+    const scene = this.data.activeScene
+    if (!scene) {
+      this.setData({ sorting: false })
+      return
     }
+    const nextScene = cloneLuggageScene(scene)
+    let movedItem: LuggageItem | null = null
+    for (const group of nextScene.groups) {
+      const sourceIndex = group.items.findIndex((item) => item.id === sourceId)
+      if (sourceIndex >= 0) {
+        const removedItems = group.items.splice(sourceIndex, 1)
+        movedItem = removedItems[0] || null
+        break
+      }
+    }
+    const targetGroup = nextScene.groups.find((group) => group.id === targetGroupId)
+    if (!movedItem || !targetGroup) {
+      this.setData({ sorting: false })
+      return
+    }
+    const targetIndex = targetItemId
+      ? targetGroup.items.findIndex((item) => item.id === targetItemId)
+      : targetGroup.items.length
+    const insertIndex = targetIndex < 0
+      ? targetGroup.items.length
+      : targetIndex + (insertAfter ? 1 : 0)
+    targetGroup.items.splice(insertIndex, 0, {
+      ...movedItem,
+      group_id: targetGroupId
+    })
+    this.setData({
+      activeScene: nextScene,
+      scenes: replaceScene(this.data.scenes, nextScene),
+      sorting: false
+    })
   },
 
   handleDeleteItem(event: WechatMiniprogram.TouchEvent) {
     if (this.data.deleting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const id = String(event.currentTarget.dataset.id || "")
     wx.showModal({
       title: "删除物品",

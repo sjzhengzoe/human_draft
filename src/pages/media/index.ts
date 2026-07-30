@@ -37,6 +37,7 @@ type MediaListSnapshot = {
   hasMore: boolean
   canWrite: boolean
   canReorder: boolean
+  sortEditing: boolean
 }
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
@@ -50,6 +51,11 @@ let suppressEditTapUntil = 0
 let dragInsertAfter = false
 let savedPageScrollTop = 0
 let mediaListSnapshot: MediaListSnapshot | null = null
+let mediaSortOriginalIds: string[] = []
+
+function hasSameMediaOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
 
 function snapshotMediaList(data: MediaListSnapshot): void {
   mediaListSnapshot = {
@@ -83,6 +89,7 @@ Page({
     loadingMore: false,
     canWrite: false,
     canReorder: false,
+    sortEditing: false,
     draggingIndex: -1,
     dragTargetIndex: -1,
     dragInsertAfter: false,
@@ -113,6 +120,8 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    mediaSortOriginalIds = []
+    if (this.data.sortEditing) this.setData({ sortEditing: false })
     this.loadItems()
   },
 
@@ -120,6 +129,7 @@ Page({
     if (this.data.hasLoaded) snapshotMediaList(this.data)
     deactivateAsyncPage(this)
     resetDragSession()
+    mediaSortOriginalIds = []
     savedPageScrollTop = 0
   },
 
@@ -132,6 +142,7 @@ Page({
       this.data.hasMore &&
       !this.data.contentLoading &&
       !this.data.loadingMore &&
+      !this.data.sortEditing &&
       !this.data.sorting
     ) {
       this.loadItems({ append: true })
@@ -236,6 +247,10 @@ Page({
 
   handleTypeTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const type = event.currentTarget.dataset.type as MediaType
     if (!type || type === this.data.activeType) return
     this.setData({
@@ -248,6 +263,10 @@ Page({
 
   handleStatusTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     const status = event.currentTarget.dataset.status as StatusFilter
     if (!status || status === this.data.statusFilter) return
     this.setData({ statusFilter: status }, () => this.loadItems({ reset: true }))
@@ -259,6 +278,10 @@ Page({
 
   handleSearch() {
     if (this.data.sorting) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     savedPageScrollTop = 0
     this.setData({ appliedKeyword: this.data.keyword.trim() }, () => {
       wx.pageScrollTo({ scrollTop: 0, duration: 0 })
@@ -268,6 +291,10 @@ Page({
 
   handleAdd() {
     if (!this.data.canWrite || this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.removeStorageSync("MEDIA_EDIT_ITEM")
     wx.navigateTo({
       url: `/pages/media/edit/index?mediaType=${encodeURIComponent(this.data.activeType)}`
@@ -276,11 +303,16 @@ Page({
 
   handleManageCategories() {
     if (!this.data.canWrite || this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/media/categories/index" })
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting || Date.now() < suppressEditTapUntil) return
+    if (this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
@@ -294,7 +326,7 @@ Page({
   },
 
   async handleToggleRevisitable(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.sorting) return
+    if (!this.data.canWrite || this.data.sortEditing || this.data.sorting) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
@@ -318,31 +350,60 @@ Page({
     }
   },
 
-  async handleMove(event: WechatMiniprogram.TouchEvent) {
+  async handleSortEditingToggle() {
+    if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
+    if (!this.data.sortEditing) {
+      mediaSortOriginalIds = this.data.items.map((item) => item.id)
+      this.setData({ sortEditing: true })
+      return
+    }
+    const itemIds = this.data.items.map((item) => item.id)
+    if (hasSameMediaOrder(mediaSortOriginalIds, itemIds)) {
+      mediaSortOriginalIds = []
+      this.setData({ sortEditing: false })
+      return
+    }
+    this.setData({ ordering: true })
+    try {
+      await reorderMediaEntrySortOrders(this.data.activeType, itemIds)
+      if (!isAsyncPageActive(this)) return
+      mediaSortOriginalIds = []
+      this.setData({ sortEditing: false })
+      wx.showToast({ title: "排序已保存", icon: "success" })
+      await this.loadItems()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
+  },
+
+  handleMove(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
     const targetIndex = index + direction
-    if (!this.data.canReorder || this.data.ordering || targetIndex < 0 || targetIndex >= this.data.items.length) return
-    this.setData({ ordering: true })
+    if (
+      !this.data.canReorder ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= this.data.items.length
+    ) return
     const items = [...this.data.items]
     const [item] = items.splice(index, 1)
     items.splice(targetIndex, 0, item)
     this.setData({ items })
-    try {
-      await reorderMediaEntrySortOrders(this.data.activeType, items.map((entry) => entry.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-    } finally {
-      if (isAsyncPageActive(this)) {
-        await this.loadItems()
-        if (isAsyncPageActive(this)) this.setData({ ordering: false })
-      }
-    }
   },
 
   handleDragStart(event: WechatMiniprogram.TouchEvent) {
     if (
       !this.data.canReorder ||
+      !this.data.sortEditing ||
       this.data.sorting ||
       this.data.loading ||
       this.data.contentLoading
@@ -400,7 +461,7 @@ Page({
     this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
   },
 
-  async handleDragEnd() {
+  handleDragEnd() {
     const source = dragSourceIndex
     const target = dragTargetIndex
     const sourceId = dragItemIds[source] || ""
@@ -430,17 +491,6 @@ Page({
     const [sourceItem] = items.splice(currentSourceIndex, 1)
     const nextTargetIndex = items.findIndex((item) => item.id === targetId)
     items.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceItem)
-    this.setData({ items })
-    try {
-      await reorderMediaEntrySortOrders(this.data.activeType, items.map((item) => item.id))
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "排序失败", icon: "none" })
-      }
-    } finally {
-      if (!isAsyncPageActive(this)) return
-      await this.loadItems()
-      if (isAsyncPageActive(this)) this.setData({ sorting: false })
-    }
+    this.setData({ items, sorting: false })
   }
 })

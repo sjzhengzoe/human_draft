@@ -151,7 +151,7 @@
 
   <operation-loading
     visible="{{ordering || savingItem || savingGroup || savingScene || editing || deleting}}"
-    text="{{deleting ? deletingLabel : editing ? editingLabel : savingItem ? '正在添加物品…' : savingGroup ? '正在添加分组…' : savingScene ? '正在添加场景…' : '正在调整顺序…'}}"
+    text="{{deleting ? deletingLabel : editing ? editingLabel : savingItem ? '正在添加物品…' : savingGroup ? '正在添加分组…' : savingScene ? '正在添加场景…' : '正在保存排序…'}}"
   />
 
 </view>

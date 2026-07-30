@@ -52,6 +52,23 @@
         </view>
       </picker>
     </view>
+
+    <view class="field meal-period-field">
+      <view class="field__label">适用餐次</view>
+      <view class="meal-period-options">
+        <view
+          wx:for="{{mealOptions}}"
+          wx:key="key"
+          class="meal-period-option {{item.selected ? 'meal-period-option--selected' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="handleMealPeriodTap"
+          role="button"
+          aria-label="{{item.label}}{{item.selected ? '，已选择' : '，未选择'}}"
+        >
+          <view class="meal-period-option__label">{{item.label}}</view>
+        </view>
+      </view>
+    </view>
   </view>
 
   <view class="footer-actions">

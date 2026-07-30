@@ -7,7 +7,7 @@ import {
   replaceDishImage,
   updateDish
 } from "../../../services/menu"
-import type { Category } from "../../../types/api"
+import type { Category, MealPeriod } from "../../../types/api"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -16,6 +16,18 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 
+type MealPeriodOption = {
+  key: MealPeriod
+  label: string
+  selected: boolean
+}
+
+const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
+  { key: "breakfast", label: "早餐", selected: false },
+  { key: "lunch", label: "午餐", selected: true },
+  { key: "dinner", label: "晚餐", selected: true }
+]
+
 Page({
   data: {
     dishId: "",
@@ -23,6 +35,7 @@ Page({
     categoryNames: [] as string[],
     categoryIndex: 0,
     name: "",
+    mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
     loading: true,
@@ -68,6 +81,10 @@ Page({
           categoryNames: categories.map((category) => category.name),
           categoryIndex,
           name: dish.name,
+          mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({
+            ...option,
+            selected: dish.meal_periods.includes(option.key)
+          })),
           currentImageUrl: dish.image_url,
           canWrite: true
         })
@@ -102,6 +119,18 @@ Page({
     this.setData({ categoryIndex: Number(event.detail.value) })
   },
 
+  handleMealPeriodTap(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || "") as MealPeriod
+    const mealOptions = this.data.mealOptions.map((option) =>
+      option.key === key ? { ...option, selected: !option.selected } : option
+    )
+    if (!mealOptions.some((option) => option.selected)) {
+      wx.showToast({ title: "请至少保留一个餐次", icon: "none" })
+      return
+    }
+    this.setData({ mealOptions })
+  },
+
   handleChooseImage() {
     if (this.data.loading || this.data.saving || this.data.deleting) return
     wx.chooseMedia({
@@ -120,12 +149,19 @@ Page({
     if (this.data.loading || this.data.saving || this.data.deleting) return
     const name = this.data.name.trim()
     const category = this.data.categories[this.data.categoryIndex]
+    const mealPeriods = this.data.mealOptions
+      .filter((option) => option.selected)
+      .map((option) => option.key)
     if (!name) {
       wx.showToast({ title: "请填写菜名", icon: "none" })
       return
     }
     if (!category) {
       wx.showToast({ title: "请选择分类", icon: "none" })
+      return
+    }
+    if (mealPeriods.length === 0) {
+      wx.showToast({ title: "请至少选择一个餐次", icon: "none" })
       return
     }
     if (!this.data.dishId && !this.data.selectedImagePath) {
@@ -139,7 +175,8 @@ Page({
       if (this.data.dishId) {
         await updateDish(this.data.dishId, {
           name,
-          category_id: category.id
+          category_id: category.id,
+          meal_periods: mealPeriods
         })
         if (this.data.selectedImagePath) {
           await replaceDishImage(this.data.dishId, this.data.selectedImagePath)
@@ -148,7 +185,8 @@ Page({
         await createDish({
           name,
           categoryId: category.id,
-          imagePath: this.data.selectedImagePath
+          imagePath: this.data.selectedImagePath,
+          mealPeriods
         })
       }
       if (!isAsyncPageActive(this)) return
