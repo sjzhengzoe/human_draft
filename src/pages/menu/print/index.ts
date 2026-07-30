@@ -292,6 +292,7 @@ Page({
         listCategories(),
         listDishes({
           category_id: activeCategoryId || undefined,
+          record_type: "home",
           printed:
             activePrintStatus === "all"
               ? undefined

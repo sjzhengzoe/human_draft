@@ -7,7 +7,9 @@ import {
   replaceDishImage,
   updateDish
 } from "../../../services/menu"
-import type { Category, MealPeriod } from "../../../types/api"
+import { listDiningScenes } from "../../../services/life-lists"
+import type { Category, MealPeriod, MenuRecordType } from "../../../types/api"
+import type { DiningScene } from "../../../types/life-lists"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -34,7 +36,12 @@ Page({
     categories: [] as Category[],
     categoryNames: [] as string[],
     categoryIndex: 0,
+    outsideCategories: [] as DiningScene[],
+    outsideCategoryNames: [] as string[],
+    outsideCategoryIndex: 0,
+    recordType: "home" as MenuRecordType,
     name: "",
+    recommendedText: "",
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
@@ -48,7 +55,7 @@ Page({
     activateAsyncPage(this)
     const dishId = query.id || ""
     this.setData({ dishId })
-    wx.setNavigationBarTitle({ title: dishId ? "编辑菜品" : "新增菜品" })
+    this.updatePageTitle("home")
     this.loadData()
   },
 
@@ -67,7 +74,10 @@ Page({
         return
       }
 
-      const categories = await listCategories()
+      const [categories, outsideCategories] = await Promise.all([
+        listCategories(),
+        listDiningScenes()
+      ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
       if (this.data.dishId) {
         const dish = await getDish(this.data.dishId)
@@ -76,11 +86,20 @@ Page({
           0,
           categories.findIndex((category) => category.id === dish.category_id)
         )
+        const outsideCategoryIndex = Math.max(
+          0,
+          outsideCategories.findIndex((category) => category.id === dish.outside_category_id)
+        )
         this.setData({
           categories,
           categoryNames: categories.map((category) => category.name),
           categoryIndex,
+          outsideCategories,
+          outsideCategoryNames: outsideCategories.map((category) => category.name),
+          outsideCategoryIndex,
+          recordType: dish.record_type,
           name: dish.name,
+          recommendedText: dish.recommended_items.join("\n"),
           mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({
             ...option,
             selected: dish.meal_periods.includes(option.key)
@@ -88,11 +107,15 @@ Page({
           currentImageUrl: dish.image_url,
           canWrite: true
         })
+        this.updatePageTitle(dish.record_type)
       } else {
         this.setData({
           categories,
           categoryNames: categories.map((category) => category.name),
           categoryIndex: 0,
+          outsideCategories,
+          outsideCategoryNames: outsideCategories.map((category) => category.name),
+          outsideCategoryIndex: 0,
           canWrite: true
         })
       }
@@ -115,8 +138,50 @@ Page({
     this.setData({ name: event.detail.value })
   },
 
+  handleRecommendedInput(event: WechatMiniprogram.Input) {
+    this.setData({ recommendedText: event.detail.value })
+  },
+
+  updatePageTitle(recordType: MenuRecordType) {
+    const action = this.data.dishId ? "编辑" : "新增"
+    wx.setNavigationBarTitle({
+      title: recordType === "outside" ? `${action}外食店铺` : `${action}居家菜品`
+    })
+  },
+
+  handleRecordTypeTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.loading || this.data.saving || this.data.deleting) return
+    const recordType = String(event.currentTarget.dataset.type || "") as MenuRecordType
+    if (!["home", "outside"].includes(recordType) || recordType === this.data.recordType) return
+
+    const applyType = () => {
+      this.setData({ recordType })
+      this.updatePageTitle(recordType)
+    }
+
+    if (!this.data.dishId) {
+      applyType()
+      return
+    }
+
+    wx.showModal({
+      title: "切换记录类型",
+      content: recordType === "outside"
+        ? "切换为外食后，原来的居家分类将不再使用。"
+        : "切换为在家后，原来的推荐菜品将不再使用。",
+      confirmText: "继续切换",
+      success: (result) => {
+        if (result.confirm && isAsyncPageActive(this)) applyType()
+      }
+    })
+  },
+
   handleCategoryChange(event: WechatMiniprogram.PickerChange) {
     this.setData({ categoryIndex: Number(event.detail.value) })
+  },
+
+  handleOutsideCategoryChange(event: WechatMiniprogram.PickerChange) {
+    this.setData({ outsideCategoryIndex: Number(event.detail.value) })
   },
 
   handleMealPeriodTap(event: WechatMiniprogram.TouchEvent) {
@@ -149,15 +214,25 @@ Page({
     if (this.data.loading || this.data.saving || this.data.deleting) return
     const name = this.data.name.trim()
     const category = this.data.categories[this.data.categoryIndex]
+    const outsideCategory = this.data.outsideCategories[this.data.outsideCategoryIndex]
+    const recordType = this.data.recordType
     const mealPeriods = this.data.mealOptions
       .filter((option) => option.selected)
       .map((option) => option.key)
+    const recommendedItems = this.data.recommendedText
+      .split(/[\n，,、]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
     if (!name) {
-      wx.showToast({ title: "请填写菜名", icon: "none" })
+      wx.showToast({ title: recordType === "outside" ? "请填写店铺名" : "请填写菜名", icon: "none" })
       return
     }
-    if (!category) {
+    if (recordType === "home" && !category) {
       wx.showToast({ title: "请选择分类", icon: "none" })
+      return
+    }
+    if (recordType === "outside" && !outsideCategory) {
+      wx.showToast({ title: "请选择外食分类", icon: "none" })
       return
     }
     if (mealPeriods.length === 0) {
@@ -175,8 +250,11 @@ Page({
       if (this.data.dishId) {
         await updateDish(this.data.dishId, {
           name,
-          category_id: category.id,
-          meal_periods: mealPeriods
+          record_type: recordType,
+          category_id: recordType === "home" ? category.id : null,
+          outside_category_id: recordType === "outside" ? outsideCategory.id : null,
+          meal_periods: mealPeriods,
+          recommended_items: recordType === "outside" ? recommendedItems : []
         })
         if (this.data.selectedImagePath) {
           await replaceDishImage(this.data.dishId, this.data.selectedImagePath)
@@ -184,9 +262,12 @@ Page({
       } else {
         await createDish({
           name,
-          categoryId: category.id,
+          recordType,
+          categoryId: recordType === "home" ? category.id : undefined,
+          outsideCategoryId: recordType === "outside" ? outsideCategory.id : undefined,
           imagePath: this.data.selectedImagePath,
-          mealPeriods
+          mealPeriods,
+          recommendedItems: recordType === "outside" ? recommendedItems : []
         })
       }
       if (!isAsyncPageActive(this)) return
@@ -211,7 +292,7 @@ Page({
     const dishId = this.data.dishId
     this.setData({ deleting: true })
     wx.showModal({
-      title: "删除菜品",
+      title: this.data.recordType === "outside" ? "删除店铺" : "删除菜品",
       content: "删除后图片也会从云端移除，无法恢复。",
       confirmText: "删除",
       confirmColor: "#c9342f",

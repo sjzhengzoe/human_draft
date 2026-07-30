@@ -34,12 +34,17 @@ export type Category = {
 }
 
 export type MealPeriod = "breakfast" | "lunch" | "dinner"
+export type MenuRecordType = "home" | "outside"
 
 export type Dish = {
   id: string
   name: string
-  category_id: string
+  record_type: MenuRecordType
+  category_id: string | null
   category: Pick<Category, "id" | "name"> | null
+  outside_category_id: string | null
+  outside_category: Pick<Category, "id" | "name"> | null
+  recommended_items: string[]
   image_path: string
   thumbnail_path: string | null
   image_url: string
@@ -55,6 +60,8 @@ export type DishSort = "created_desc" | "created_asc" | "custom"
 
 export type DishListParams = {
   category_id?: string
+  outside_category_id?: string
+  record_type?: MenuRecordType
   printed?: boolean
   sort?: DishSort
   page?: number

@@ -998,6 +998,83 @@ test("dish meal-period migration defaults existing dishes to lunch and dinner", 
   assert.match(migration, /p_meal_periods text\[\]/i);
 });
 
+test("menu records can switch from a home dish to an outside store", async (t) => {
+  const dish = {
+    id: SOURCE_ID,
+    user_id: USER_ID,
+    name: "番茄炒鸡蛋",
+    record_type: "home",
+    category_id: TARGET_ID,
+    categories: { id: TARGET_ID, name: "半荤" },
+    recommended_items: [],
+    image_path: "dish.png",
+    thumbnail_path: "dish-thumb.webp",
+    meal_periods: ["lunch", "dinner"],
+    printed_at: null,
+    sort_order: 1000,
+    created_at: "2026-07-30T00:00:00.000Z",
+    updated_at: "2026-07-30T00:00:00.000Z",
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        dishes: [dish],
+        categories: [{ id: TARGET_ID, user_id: USER_ID, name: "半荤" }],
+        dining_scenes: [{ id: DINING_ID, user_id: USER_ID, name: "日常" }],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: {
+      name: "海底捞",
+      record_type: "outside",
+      category_id: null,
+      outside_category_id: DINING_ID,
+      recommended_items: ["番茄锅", "虾滑"],
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.dish.name, "海底捞");
+  assert.equal(response.json().data.dish.record_type, "outside");
+  assert.equal(response.json().data.dish.category_id, null);
+  assert.equal(response.json().data.dish.outside_category_id, DINING_ID);
+  assert.deepEqual(response.json().data.dish.recommended_items, ["番茄锅", "虾滑"]);
+});
+
+test("unified menu migration preserves stores as outside records", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202607300002_unified_menu_records.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /record_type in \('home', 'outside'\)/i);
+  assert.match(migration, /from public\.dining_places as place/i);
+  assert.match(migration, /outside_record\.menu_items/i);
+  assert.match(migration, /source_dining_place_id/i);
+});
+
+test("outside menu category migration keeps each store in its previous scene", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202607300003_outside_menu_categories.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /set outside_category_id = place\.scene_id/i);
+  assert.match(migration, /references public\.dining_scenes\(id, user_id\)/i);
+  assert.match(migration, /p_outside_category_id uuid/i);
+});
+
 test("required media-platform migration backfills pending sources and rejects empty arrays", async () => {
   const migration = await readFile(
     new URL("../supabase/migrations/202607130001_required_media_platforms.sql", import.meta.url),

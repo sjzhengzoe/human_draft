@@ -1,4 +1,10 @@
-import type { Category, Dish, DishListParams, MealPeriod } from "../types/api"
+import type {
+  Category,
+  Dish,
+  DishListParams,
+  MealPeriod,
+  MenuRecordType
+} from "../types/api"
 import { request, upload } from "./request"
 
 function toQuery(params: DishListParams): string {
@@ -31,17 +37,23 @@ export async function getDish(id: string): Promise<Dish> {
 
 export async function createDish(input: {
   name: string
-  categoryId: string
+  recordType: MenuRecordType
+  categoryId?: string
+  outsideCategoryId?: string
   imagePath: string
   mealPeriods: MealPeriod[]
+  recommendedItems?: string[]
 }): Promise<Dish> {
   const data = await upload<{ dish: Dish }>({
     path: "/api/dishes",
     filePath: input.imagePath,
     formData: {
       name: input.name,
-      category_id: input.categoryId,
-      meal_periods: JSON.stringify(input.mealPeriods)
+      record_type: input.recordType,
+      category_id: input.categoryId || "",
+      outside_category_id: input.outsideCategoryId || "",
+      meal_periods: JSON.stringify(input.mealPeriods),
+      recommended_items: JSON.stringify(input.recommendedItems || [])
     }
   })
   return data.dish
@@ -49,7 +61,14 @@ export async function createDish(input: {
 
 export async function updateDish(
   id: string,
-  changes: { name?: string; category_id?: string; meal_periods?: MealPeriod[] }
+  changes: {
+    name?: string
+    record_type?: MenuRecordType
+    category_id?: string | null
+    outside_category_id?: string | null
+    meal_periods?: MealPeriod[]
+    recommended_items?: string[]
+  }
 ): Promise<Dish> {
   const data = await request<{ dish: Dish }>({
     path: `/api/dishes/${id}`,

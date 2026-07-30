@@ -7,6 +7,7 @@ import { throwSupabaseError } from "./supabase.mjs";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "dinner"]);
+const ALLOWED_RECORD_TYPES = new Set(["home", "outside"]);
 const DEFAULT_MEAL_PERIODS = ["lunch", "dinner"];
 
 function normalizeMealPeriods(value, useDefault = false) {
@@ -35,6 +36,37 @@ function normalizeMealPeriods(value, useDefault = false) {
   return periods;
 }
 
+function normalizeRecordType(value, useDefault = false) {
+  const recordType = typeof value === "string" ? value.trim() : value;
+  if ((recordType === undefined || recordType === "") && useDefault) return "home";
+  assertCondition(
+    typeof recordType === "string" && ALLOWED_RECORD_TYPES.has(recordType),
+    400,
+    "INVALID_RECORD_TYPE",
+    "请选择在家或外食。",
+  );
+  return recordType;
+}
+
+function normalizeRecommendedItems(value, useDefault = false) {
+  let items = value;
+  if (typeof items === "string") {
+    try {
+      items = JSON.parse(items);
+    } catch (_error) {
+      items = items.split(/[\n，,、]/);
+    }
+  }
+  if (items === undefined && useDefault) return [];
+  assertCondition(
+    Array.isArray(items) && items.length <= 50 && items.every((item) => typeof item === "string"),
+    400,
+    "INVALID_RECOMMENDED_ITEMS",
+    "推荐菜品格式无效。",
+  );
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
 function publicUrlFor(supabase, path) {
   if (!path) return "";
   return supabase.storage.from(config.dishBucket).getPublicUrl(path).data.publicUrl;
@@ -44,8 +76,12 @@ export function toDishResponse(supabase, dish) {
   return {
     id: dish.id,
     name: dish.name,
+    record_type: ALLOWED_RECORD_TYPES.has(dish.record_type) ? dish.record_type : "home",
     category_id: dish.category_id,
     category: dish.categories || null,
+    outside_category_id: dish.outside_category_id || null,
+    outside_category: dish.outside_category || null,
+    recommended_items: Array.isArray(dish.recommended_items) ? dish.recommended_items : [],
     image_path: dish.image_path,
     thumbnail_path: dish.thumbnail_path,
     image_url: publicUrlFor(supabase, dish.image_path),
@@ -179,6 +215,18 @@ async function assertCategoryExists(supabase, userId, categoryId) {
   return data;
 }
 
+async function assertOutsideCategoryExists(supabase, userId, categoryId) {
+  const { data, error } = await supabase
+    .from("dining_scenes")
+    .select("id, name")
+    .eq("id", categoryId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  throwSupabaseError(error, "读取外食分类失败。" );
+  assertCondition(data, 400, "OUTSIDE_CATEGORY_NOT_FOUND", "所选外食分类不存在。" );
+  return data;
+}
+
 export async function listCategories(supabase, userId) {
   const { data, error } = await supabase
     .from("categories")
@@ -197,10 +245,20 @@ export async function listDishes(supabase, userId, query) {
   const to = from + pageSize - 1;
   let request = supabase
     .from("dishes")
-    .select("*, categories(id, name)", { count: "exact" })
+    .select(
+      "*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)",
+      { count: "exact" },
+    )
     .eq("user_id", userId);
 
   if (query.category_id) request = request.eq("category_id", query.category_id);
+  if (query.outside_category_id) {
+    request = request.eq("outside_category_id", query.outside_category_id);
+  }
+  if (query.record_type) {
+    const recordType = normalizeRecordType(query.record_type);
+    request = request.eq("record_type", recordType);
+  }
   if (query.printed === "true") request = request.not("printed_at", "is", null);
   if (query.printed === "false") request = request.is("printed_at", null);
 
@@ -234,7 +292,7 @@ export async function listDishes(supabase, userId, query) {
 export async function getDish(supabase, userId, dishId) {
   const { data, error } = await supabase
     .from("dishes")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
     .eq("id", dishId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -245,13 +303,34 @@ export async function getDish(supabase, userId, dishId) {
 
 export async function createDish(supabase, userId, fields, image) {
   const name = fields.name?.trim();
-  const categoryId = fields.category_id?.trim();
-  assertCondition(name, 400, "DISH_NAME_REQUIRED", "请填写菜名。" );
-  assertCondition(name.length <= 80, 400, "DISH_NAME_TOO_LONG", "菜名不能超过 80 个字符。" );
-  assertCondition(categoryId, 400, "CATEGORY_REQUIRED", "请选择分类。" );
-  assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
+  const recordType = normalizeRecordType(fields.record_type, true);
+  const categoryId = fields.category_id?.trim() || null;
+  const outsideCategoryId = fields.outside_category_id?.trim() || null;
+  assertCondition(name, 400, "DISH_NAME_REQUIRED", recordType === "outside" ? "请填写店铺名。" : "请填写菜名。" );
+  assertCondition(name.length <= 120, 400, "DISH_NAME_TOO_LONG", "名称不能超过 120 个字符。" );
+  assertCondition(
+    recordType === "outside" || categoryId,
+    400,
+    "CATEGORY_REQUIRED",
+    "请选择分类。",
+  );
+  assertCondition(
+    recordType === "home" || outsideCategoryId,
+    400,
+    "OUTSIDE_CATEGORY_REQUIRED",
+    "请选择外食分类。",
+  );
+  assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择图片。" );
   const mealPeriods = normalizeMealPeriods(fields.meal_periods, true);
-  const category = await assertCategoryExists(supabase, userId, categoryId);
+  const recommendedItems = recordType === "outside"
+    ? normalizeRecommendedItems(fields.recommended_items, true)
+    : [];
+  const category = recordType === "home" && categoryId
+    ? await assertCategoryExists(supabase, userId, categoryId)
+    : null;
+  const outsideCategory = recordType === "outside" && outsideCategoryId
+    ? await assertOutsideCategoryExists(supabase, userId, outsideCategoryId)
+    : null;
 
   const dishId = randomUUID();
   const paths = await uploadImagePair(supabase, userId, dishId, image.buffer);
@@ -260,10 +339,13 @@ export async function createDish(supabase, userId, fields, image) {
       p_user_id: userId,
       p_id: dishId,
       p_name: name,
+      p_record_type: recordType,
       p_category_id: categoryId,
+      p_outside_category_id: outsideCategoryId,
       p_image_path: paths.imagePath,
       p_thumbnail_path: paths.thumbnailPath,
       p_meal_periods: mealPeriods,
+      p_recommended_items: recommendedItems,
     })
     .single();
 
@@ -272,22 +354,63 @@ export async function createDish(supabase, userId, fields, image) {
     throwSupabaseError(error, "创建菜品失败。" );
   }
 
-  return toDishResponse(supabase, { ...data, categories: category });
+  return toDishResponse(supabase, {
+    ...data,
+    categories: category,
+    outside_category: outsideCategory,
+  });
 }
 
 export async function updateDish(supabase, userId, dishId, body) {
-  await getDish(supabase, userId, dishId);
+  const existing = await getDish(supabase, userId, dishId);
   const changes = {};
+  const existingRecordType = normalizeRecordType(existing.record_type, true);
+  const recordType = body.record_type === undefined
+    ? existingRecordType
+    : normalizeRecordType(body.record_type);
 
   if (body.name !== undefined) {
-    assertCondition(typeof body.name === "string" && body.name.trim(), 400, "DISH_NAME_REQUIRED", "请填写菜名。" );
-    assertCondition(body.name.trim().length <= 80, 400, "DISH_NAME_TOO_LONG", "菜名不能超过 80 个字符。" );
+    assertCondition(
+      typeof body.name === "string" && body.name.trim(),
+      400,
+      "DISH_NAME_REQUIRED",
+      recordType === "outside" ? "请填写店铺名。" : "请填写菜名。",
+    );
+    assertCondition(body.name.trim().length <= 120, 400, "DISH_NAME_TOO_LONG", "名称不能超过 120 个字符。" );
     changes.name = body.name.trim();
   }
-  if (body.category_id !== undefined) {
-    assertCondition(typeof body.category_id === "string" && body.category_id, 400, "CATEGORY_REQUIRED", "请选择分类。" );
-    await assertCategoryExists(supabase, userId, body.category_id);
-    changes.category_id = body.category_id;
+  if (body.record_type !== undefined) {
+    changes.record_type = recordType;
+  }
+  if (recordType === "home") {
+    const categoryId = body.category_id === undefined ? existing.category_id : body.category_id;
+    assertCondition(typeof categoryId === "string" && categoryId, 400, "CATEGORY_REQUIRED", "请选择分类。" );
+    if (body.category_id !== undefined || existingRecordType === "outside") {
+      await assertCategoryExists(supabase, userId, categoryId);
+      changes.category_id = categoryId;
+    }
+    if (existingRecordType === "outside" || body.recommended_items !== undefined) {
+      changes.recommended_items = [];
+    }
+    if (existing.outside_category_id !== null) changes.outside_category_id = null;
+  } else {
+    const outsideCategoryId = body.outside_category_id === undefined
+      ? existing.outside_category_id
+      : body.outside_category_id;
+    assertCondition(
+      typeof outsideCategoryId === "string" && outsideCategoryId,
+      400,
+      "OUTSIDE_CATEGORY_REQUIRED",
+      "请选择外食分类。",
+    );
+    if (body.outside_category_id !== undefined || existingRecordType === "home") {
+      await assertOutsideCategoryExists(supabase, userId, outsideCategoryId);
+      changes.outside_category_id = outsideCategoryId;
+    }
+    if (existing.category_id !== null) changes.category_id = null;
+    if (body.recommended_items !== undefined) {
+      changes.recommended_items = normalizeRecommendedItems(body.recommended_items);
+    }
   }
   if (body.meal_periods !== undefined) {
     changes.meal_periods = normalizeMealPeriods(body.meal_periods);
@@ -299,7 +422,7 @@ export async function updateDish(supabase, userId, dishId, body) {
     .update(changes)
     .eq("id", dishId)
     .eq("user_id", userId)
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
     .single();
   throwSupabaseError(error, "更新菜品失败。" );
   return toDishResponse(supabase, data);
@@ -314,7 +437,7 @@ export async function replaceDishImage(supabase, userId, dishId, image) {
     .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
     .eq("id", dishId)
     .eq("user_id", userId)
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
     .single();
 
   if (error) {

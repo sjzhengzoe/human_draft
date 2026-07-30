@@ -6,16 +6,35 @@
 <view wx:else class="page">
   <scroll-view class="side-tabs" scroll-y enhanced show-scrollbar="{{false}}">
     <view
-      class="side-tab {{activeCategoryId === '' ? 'side-tab--active' : ''}}"
-      data-id=""
-      bindtap="handleCategoryTap"
+      class="side-tab {{activeFilter === 'all' ? 'side-tab--active' : ''}}"
+      data-filter="all"
+      bindtap="handleFilterTap"
     >全部</view>
+    <view class="side-tabs__divider" />
+    <view
+      class="side-tab side-tab--section {{activeFilter === 'outside' ? 'side-tab--active' : ''}}"
+      data-filter="outside"
+      bindtap="handleFilterTap"
+    >外食</view>
+    <view
+      wx:for="{{outsideCategories}}"
+      wx:key="id"
+      class="side-tab {{activeFilter === 'outside:' + item.id ? 'side-tab--active' : ''}}"
+      data-filter="outside:{{item.id}}"
+      bindtap="handleFilterTap"
+    >{{item.name}}</view>
+    <view class="side-tabs__divider" />
+    <view
+      class="side-tab side-tab--section {{activeFilter === 'home' ? 'side-tab--active' : ''}}"
+      data-filter="home"
+      bindtap="handleFilterTap"
+    >在家</view>
     <view
       wx:for="{{categories}}"
       wx:key="id"
-      class="side-tab {{activeCategoryId === item.id ? 'side-tab--active' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="handleCategoryTap"
+      class="side-tab {{activeFilter === 'home:' + item.id ? 'side-tab--active' : ''}}"
+      data-filter="home:{{item.id}}"
+      bindtap="handleFilterTap"
     >{{item.name}}</view>
   </scroll-view>
 
@@ -30,11 +49,11 @@
       <view class="app-overview__stats">
         <view class="app-overview__stat">
           <view class="app-overview__value">{{dishes.length}}</view>
-          <view class="app-overview__label">当前菜品</view>
+          <view class="app-overview__label">当前选项</view>
         </view>
         <view class="app-overview__stat">
           <view class="app-overview__value">{{categories.length}}</view>
-          <view class="app-overview__label">分类</view>
+          <view class="app-overview__label">居家分类</view>
         </view>
       </view>
     </view>
@@ -75,11 +94,21 @@
         bindtap="handleDishTap"
       >
         <view class="dish-card__image-wrap">
-          <image class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
+          <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
+          <view wx:else class="dish-card__image-empty">暂无图片</view>
         </view>
         <view class="dish-card__body">
-          <view class="dish-card__name">{{item.name}}</view>
-          <view class="dish-card__category">{{item.category && item.category.name ? item.category.name : '未分类'}}</view>
+          <view class="dish-card__title-row">
+            <view class="dish-card__name">{{item.name}}</view>
+            <view class="dish-card__type">{{item.recordTypeLabel}}</view>
+          </view>
+          <view class="dish-card__category">
+            {{item.record_type === 'outside'
+              ? (item.outside_category && item.outside_category.name ? item.outside_category.name : '未分类')
+              : (item.category && item.category.name ? item.category.name : '未分类')}}
+          </view>
+          <view wx:if="{{item.record_type === 'outside' && item.recommendedLabel}}" class="dish-card__recommended">推荐：{{item.recommendedLabel}}</view>
+          <view wx:elif="{{item.record_type === 'outside'}}" class="dish-card__recommended dish-card__recommended--empty">还没有推荐菜品</view>
           <view wx:if="{{item.mealPeriodTags.length}}" class="dish-card__meals">
             <view
               wx:for="{{item.mealPeriodTags}}"

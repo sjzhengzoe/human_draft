@@ -24,7 +24,8 @@ var Douyin2Page;
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_BOLD_FONT = `bold ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_MAX_CHARS_PER_LINE = 20;
+  const CANVAS_MAX_CHARS_PER_LINE = 19;
+  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 16;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
@@ -442,7 +443,9 @@ var Douyin2Page;
       const isNextSpacer = !!nextParagraph && nextParagraph.isSpacer;
       const lines = wrapParts(
         paragraph.parts,
-        paragraph.isTitle ? 17 : CANVAS_MAX_CHARS_PER_LINE,
+        paragraph.isTitle
+          ? CANVAS_TITLE_MAX_CHARS_PER_LINE
+          : CANVAS_MAX_CHARS_PER_LINE,
       );
       layout.push({
         type: "text",

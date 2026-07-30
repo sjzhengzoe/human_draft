@@ -199,7 +199,7 @@ Page({
       meal.slots.some((slot) => slot.locked)
     )
     if (!hasLockedDish) {
-      wx.showToast({ title: "还没有锁定菜品", icon: "none" })
+      wx.showToast({ title: "还没有锁定选项", icon: "none" })
       return
     }
 
@@ -214,14 +214,14 @@ Page({
 
   handleRandomize() {
     if (this.data.dishes.length === 0) {
-      wx.showToast({ title: "暂无可随机的菜品", icon: "none" })
+      wx.showToast({ title: "暂无可随机的选项", icon: "none" })
       return
     }
     const hasUnlockedSlot = this.data.meals.some((meal) =>
       meal.slots.some((slot) => !slot.locked)
     )
     if (!hasUnlockedSlot) {
-      wx.showToast({ title: "所有菜品都已锁定", icon: "none" })
+      wx.showToast({ title: "所有选项都已锁定", icon: "none" })
       return
     }
     this.setData({

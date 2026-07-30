@@ -4,7 +4,9 @@ import {
   listDishes,
   reorderDishSortOrders
 } from "../../services/menu"
+import { listDiningScenes } from "../../services/life-lists"
 import type { Category, Dish, MealPeriod } from "../../types/api"
+import type { DiningScene } from "../../types/life-lists"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -31,6 +33,8 @@ type MealPeriodTag = {
 
 type MenuDish = Dish & {
   mealPeriodTags: MealPeriodTag[]
+  recordTypeLabel: string
+  recommendedLabel: string
 }
 
 const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
@@ -46,6 +50,8 @@ function toMenuDish(dish: Dish): MenuDish {
       : []
   return {
     ...dish,
+    recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
+    recommendedLabel: dish.recommended_items.join("、"),
     mealPeriodTags: mealPeriods
       .filter((key) => Boolean(MEAL_PERIOD_LABELS[key]))
       .map((key) => ({
@@ -70,8 +76,9 @@ function hasSameDishOrder(left: string[], right: string[]): boolean {
 Page({
   data: {
     categories: [] as Category[],
+    outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
-    activeCategoryId: "",
+    activeFilter: "all",
     canWrite: false,
     canReorder: false,
     sortEditing: false,
@@ -103,7 +110,18 @@ Page({
 
   async refreshData() {
     const generation = beginAsyncPageRequest(this)
-    const activeCategoryId = this.data.activeCategoryId
+    const activeFilter = this.data.activeFilter
+    const homeCategoryId = activeFilter.startsWith("home:")
+      ? activeFilter.slice("home:".length)
+      : ""
+    const outsideCategoryId = activeFilter.startsWith("outside:")
+      ? activeFilter.slice("outside:".length)
+      : ""
+    const recordType = activeFilter === "home" || homeCategoryId
+      ? "home"
+      : activeFilter === "outside" || outsideCategoryId
+        ? "outside"
+        : undefined
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
       loading: showInitialLoading,
@@ -112,10 +130,13 @@ Page({
     })
     try {
       const session = await ensureLogin()
-      const [categories, dishes] = await Promise.all([
+      const [categories, outsideCategories, dishes] = await Promise.all([
         listCategories(),
+        listDiningScenes(),
         listDishes({
-          category_id: activeCategoryId || undefined,
+          category_id: homeCategoryId || undefined,
+          outside_category_id: outsideCategoryId || undefined,
+          record_type: recordType,
           sort: "custom",
           page_size: 100
         })
@@ -123,6 +144,7 @@ Page({
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
         categories,
+        outsideCategories,
         dishes: dishes.map(toMenuDish),
         canWrite: session.user.can_write,
         canReorder: session.user.can_write,
@@ -141,15 +163,15 @@ Page({
     }
   },
 
-  handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
+  handleFilterTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    const id = String(event.currentTarget.dataset.id || "")
-    if (id === this.data.activeCategoryId) return
-    this.setData({ activeCategoryId: id, sortEditing: false }, () => this.refreshData())
+    const filter = String(event.currentTarget.dataset.filter || "all")
+    if (filter === this.data.activeFilter) return
+    this.setData({ activeFilter: filter, sortEditing: false }, () => this.refreshData())
   },
 
   async handleSortEditingToggle() {

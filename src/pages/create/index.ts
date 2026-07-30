@@ -73,15 +73,6 @@ Component({
         requiresLogin: true
       },
       {
-        key: "dining",
-        icon: "utensils-crossed-white",
-        title: "用餐清单",
-        desc: "收藏用餐店铺",
-        path: "/pages/dining/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
         key: "wardrobe",
         icon: "shirt-white",
         title: "我的衣橱",
