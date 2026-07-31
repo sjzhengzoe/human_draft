@@ -7,35 +7,6 @@ type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
 }
 
 const TEXT_CARD_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE"
-const HOME_FONT_FAMILY = "HumanDraftLanting"
-const HOME_FONT_URL =
-  "https://gufeifei.cn/fonts/FZLTHProGlobal-Regular.woff2?v=20260731"
-
-let homeFontPromise: Promise<void> | undefined
-
-function ensureHomeFontLoaded(): Promise<void> {
-  if (homeFontPromise) return homeFontPromise
-
-  homeFontPromise = new Promise<void>((resolve, reject) => {
-    wx.loadFontFace({
-      family: HOME_FONT_FAMILY,
-      source: `url("${HOME_FONT_URL}")`,
-      desc: {
-        style: "normal",
-        weight: "normal"
-      },
-      global: true,
-      scopes: ["webview", "native"],
-      success: () => resolve(),
-      fail: (error) => {
-        homeFontPromise = undefined
-        reject(error)
-      }
-    })
-  })
-
-  return homeFontPromise
-}
 
 Component({
   data: {
@@ -114,7 +85,6 @@ Component({
   lifetimes: {
     ready() {
       const page = this as CreatePageInstance
-      void ensureHomeFontLoaded().catch(() => undefined)
       page.hasRendered = true
       hideGlobalLoading()
     }
