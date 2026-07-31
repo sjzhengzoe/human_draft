@@ -4,7 +4,7 @@ Component({
     tabs: [
       {
         pagePath: "/pages/create/index",
-        text: "创作",
+        text: "首页",
         icon: "layout-grid"
       },
       {

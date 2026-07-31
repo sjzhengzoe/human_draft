@@ -1,4 +1,17 @@
 <view class="page">
+  <view class="template-switch" aria-label="选择图文模板">
+    <view
+      class="template-switch__item template-switch__item--active"
+      data-template="xiaohongshu"
+      bindtap="handleTemplateChange"
+    >小红书图文</view>
+    <view
+      class="template-switch__item"
+      data-template="douyin2"
+      bindtap="handleTemplateChange"
+    >抖音短句</view>
+  </view>
+
   <view wx:if="{{!hasCustomContent}}" class="card-swiper card-slide">
     <view class="card-item card-item--loading">
       <view class="card-loading">
@@ -37,20 +50,11 @@
     {{activeIndex + 1}} / {{slides.length}}
   </view>
 
-  <view class="action-bar" aria-label="小红书操作">
-    <view
-      wx:for="{{actions}}"
-      wx:key="key"
-      class="action-bar__item {{isGenerating ? 'action-bar__item--disabled' : ''}}"
-      hover-class="action-bar__item--hover"
-      hover-stay-time="80"
-      data-key="{{item.key}}"
-      bindtap="handleAction"
-    >
-      <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="30" /></view>
-      <view class="action-bar__label">{{item.label}}</view>
-    </view>
-  </view>
+  <text-card-action-bar
+    disabled="{{isGenerating}}"
+    label="小红书图文操作"
+    bind:action="handleAction"
+  />
 
   <canvas
     type="2d"

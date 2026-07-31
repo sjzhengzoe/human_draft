@@ -29,7 +29,7 @@
     <view class="header">
       <view class="header__topline">
         <view class="header__title-group">
-          <view class="header__title">我的衣橱</view>
+          <view class="header__title">衣橱尺寸</view>
         </view>
         <button class="header__add" bindtap="handleAddItem"><app-icon name="plus-white" size="22" /><text>新增</text></button>
       </view>

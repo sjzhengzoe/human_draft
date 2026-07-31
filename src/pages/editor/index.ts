@@ -9,12 +9,12 @@ type EditorConfig = {
 
 const EDITOR_CONFIG: Record<EditorSource, EditorConfig> = {
   xiaohongshu: {
-    title: "小红书文案",
-    storageKey: "XIAOHONGSHU_FORM_DATA_CONTENT"
+    title: "编辑文案",
+    storageKey: "TEXT_CARD_CONTENT"
   },
   douyin2: {
-    title: "抖音文案",
-    storageKey: "DOUYIN2_FORM_DATA_CONTENT"
+    title: "编辑文案",
+    storageKey: "TEXT_CARD_CONTENT"
   }
 }
 

@@ -1,37 +1,49 @@
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 36rpx 24rpx calc(112rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 24rpx calc(112rpx + env(safe-area-inset-bottom));
   background: #f7f7f7;
 }
 
-.hero {
-  min-height: 184rpx;
+.feature-section + .feature-section {
+  margin-top: 42rpx;
+}
+
+.feature-section__title {
+  margin-bottom: 16rpx;
+  color: #777772;
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  line-height: 1.4;
 }
 
 .feature-list {
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
-  margin-top: 22rpx;
 }
 
 .feature-item {
-  position: relative;
   display: flex;
   width: calc((100% - 16rpx) / 2);
-  min-height: 218rpx;
+  min-height: 132rpx;
   box-sizing: border-box;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 24rpx;
+  align-items: center;
+  gap: 18rpx;
+  padding: 22rpx;
   border: 1rpx solid #e4e4e4;
   border-radius: 18rpx;
   background: #ffffff;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.018);
+}
+
+.feature-item--featured {
+  width: 100%;
 }
 
 .feature-item--hover {
-  background: #f7f7f7;
+  background: #f1f1f1;
 }
 
 .feature-item--disabled {
@@ -43,45 +55,20 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 64rpx;
-  height: 64rpx;
+  width: 58rpx;
+  height: 58rpx;
   border: 1rpx solid #111111;
-  border-radius: 15rpx;
+  border-radius: 14rpx;
   background: #111111;
   color: #ffffff;
-  font-size: 28rpx;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.feature-item__main {
-  width: 100%;
-  min-width: 0;
-  margin-top: 20rpx;
 }
 
 .feature-item__title {
+  min-width: 0;
+  flex: 1;
   color: #111111;
-  font-size: 28rpx;
+  font-size: 27rpx;
   font-weight: 600;
   line-height: 1.4;
-}
-
-.feature-item__desc {
-  overflow: hidden;
-  margin-top: 6rpx;
-  color: #666666;
-  font-size: 22rpx;
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.feature-item__arrow {
-  position: absolute;
-  top: 25rpx;
-  right: 23rpx;
-  color: #aaaaa5;
-  font-size: 34rpx;
-  line-height: 1;
+  word-break: keep-all;
 }

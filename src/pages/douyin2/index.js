@@ -1,6 +1,8 @@
 var Douyin2Page;
 (function (Douyin2Page) {
-  const STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
+  const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const LEGACY_STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
+  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin2ExportCanvas";
   const BASE_CANVAS_WIDTH = 300;
@@ -56,7 +58,9 @@ var Douyin2Page;
   let renderChain = Promise.resolve();
   Component({
     data: {
+      activeTemplate: "douyin2",
       content: "",
+      hasCustomContent: false,
       editContent: "",
       showEditTextarea: false,
       pages: [],
@@ -66,18 +70,20 @@ var Douyin2Page;
       isGenerating: false,
       isRenderingCards: false,
       canvasReady: false,
-      actions: [
-        { key: "paste", label: "粘贴" },
-        { key: "copy", label: "复制" },
-        { key: "edit", label: "编辑" },
-        { key: "export", label: "导出" },
-      ],
     },
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
+        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
+        const initialContent =
+          typeof storedContent === "string"
+            ? storedContent
+            : typeof legacyContent === "string"
+              ? legacyContent
+              : DEFAULT_CONTENT;
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin2");
         this.syncContent(
-          typeof storedContent === "string" ? storedContent : DEFAULT_CONTENT,
+          initialContent,
         );
         this.loadDouyin2Font();
       },
@@ -99,6 +105,12 @@ var Douyin2Page;
       },
     },
     methods: {
+      handleTemplateChange(event) {
+        const template = event.currentTarget.dataset.template;
+        if (template !== "xiaohongshu") return;
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
+        wx.redirectTo({ url: "/pages/xiaohongshu/index" });
+      },
       loadDouyin2Font() {
         ensureDouyin2FontLoaded()
           .then(() => {
@@ -110,7 +122,7 @@ var Douyin2Page;
       },
       handleAction(event) {
         if (this.data.isGenerating) return;
-        const key = event.currentTarget.dataset.key;
+        const key = event.detail.key;
         if (key === "paste") {
           this.handlePasteContent();
           return;
@@ -121,6 +133,10 @@ var Douyin2Page;
         }
         if (key === "edit") {
           this.openEditModal();
+          return;
+        }
+        if (key === "clear") {
+          this.clearContent();
           return;
         }
         if (key === "export") {
@@ -152,6 +168,13 @@ var Douyin2Page;
       clearEditContent() {
         this.setData({
           editContent: "",
+        });
+      },
+      clearContent() {
+        this.syncContent("");
+        wx.showToast({
+          title: "已清空",
+          icon: "success",
         });
       },
       saveEditContent() {
@@ -322,7 +345,8 @@ var Douyin2Page;
         });
       },
       syncContent(content, activeIndex = 0) {
-        const pages = getPages(content);
+        const hasCustomContent = Boolean(content.trim());
+        const pages = hasCustomContent ? getPages(content) : [];
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
@@ -330,6 +354,7 @@ var Douyin2Page;
         this.setData(
           {
             content,
+            hasCustomContent,
             pages,
             renderedImageUrls: [],
             activeIndex: nextActiveIndex,
@@ -404,7 +429,8 @@ var Douyin2Page;
     return slides.map((item) => item.join("\n").trim()).filter(Boolean);
   }
   function isPageBreakLine(line) {
-    return line.trim().startsWith("［");
+    const text = line.trim();
+    return text.startsWith("［") || /^(?:0\d|1\d)$/.test(text);
   }
   function trimEmptyLines(lines) {
     const result = [...lines];

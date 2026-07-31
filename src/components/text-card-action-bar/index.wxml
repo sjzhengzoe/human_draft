@@ -1,0 +1,14 @@
+<view class="action-bar" aria-label="{{label}}">
+  <view
+    wx:for="{{actions}}"
+    wx:key="key"
+    class="action-bar__item {{disabled ? 'action-bar__item--disabled' : ''}}"
+    hover-class="action-bar__item--hover"
+    hover-stay-time="80"
+    data-key="{{item.key}}"
+    bindtap="handleActionTap"
+  >
+    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="30" /></view>
+    <view class="action-bar__label">{{item.label}}</view>
+  </view>
+</view>

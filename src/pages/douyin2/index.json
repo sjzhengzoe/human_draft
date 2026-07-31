@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "抖音模板"
+  "navigationBarTitleText": "图文创作",
+  "usingComponents": {
+    "text-card-action-bar": "/components/text-card-action-bar/index"
+  }
 }

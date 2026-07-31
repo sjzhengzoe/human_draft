@@ -1,6 +1,6 @@
 import { checkTextContent } from "../../services/content-security";
 
-  type ActionKey = "paste" | "copy" | "edit" | "export";
+  type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
 
   type TextPart = {
     text: string;
@@ -48,7 +48,9 @@ import { checkTextContent } from "../../services/content-security";
     measureText: (text: string) => { width: number };
   };
 
-  const STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
+  const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const LEGACY_STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
+  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin2ExportCanvas";
   const BASE_CANVAS_WIDTH = 300;
@@ -106,6 +108,7 @@ import { checkTextContent } from "../../services/content-security";
 
   Component({
     data: {
+      activeTemplate: "douyin2",
       content: "",
       hasCustomContent: false,
       editContent: "",
@@ -117,18 +120,22 @@ import { checkTextContent } from "../../services/content-security";
       isGenerating: false,
       isRenderingCards: false,
       canvasReady: false,
-      actions: [
-        { key: "paste", label: "粘贴", icon: "clipboard-paste" },
-        { key: "copy", label: "复制", icon: "copy" },
-        { key: "edit", label: "编辑", icon: "pencil" },
-        { key: "export", label: "导出", icon: "download" },
-      ],
     },
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
-        if (typeof storedContent === "string") {
-          this.loadStoredContent(storedContent);
+        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
+        const initialContent =
+          typeof storedContent === "string"
+            ? storedContent
+            : typeof legacyContent === "string"
+              ? legacyContent
+              : undefined;
+
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin2");
+
+        if (typeof initialContent === "string") {
+          this.loadStoredContent(initialContent);
         } else {
           this.syncContent(DEFAULT_CONTENT);
         }
@@ -153,6 +160,14 @@ import { checkTextContent } from "../../services/content-security";
       },
     },
     methods: {
+      handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+        const template = event.currentTarget.dataset.template;
+        if (template !== "xiaohongshu") return;
+
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
+        wx.redirectTo({ url: "/pages/xiaohongshu/index" });
+      },
+
       loadDouyin2Font() {
         ensureDouyin2FontLoaded()
           .then(() => {
@@ -171,10 +186,12 @@ import { checkTextContent } from "../../services/content-security";
         this.syncContent(content, activeIndex);
       },
 
-      handleAction(event: WechatMiniprogram.TouchEvent) {
+      handleAction(
+        event: WechatMiniprogram.CustomEvent<{ key?: ActionKey }>,
+      ) {
         if (this.data.isGenerating) return;
 
-        const key = event.currentTarget.dataset.key as ActionKey | undefined;
+        const key = event.detail.key;
 
         if (key === "paste") {
           this.handlePasteContent();
@@ -188,6 +205,11 @@ import { checkTextContent } from "../../services/content-security";
 
         if (key === "edit") {
           this.openEditModal();
+          return;
+        }
+
+        if (key === "clear") {
+          this.clearContent();
           return;
         }
 
@@ -226,6 +248,14 @@ import { checkTextContent } from "../../services/content-security";
       clearEditContent() {
         this.setData({
           editContent: "",
+        });
+      },
+
+      clearContent() {
+        this.syncContent("");
+        wx.showToast({
+          title: "已清空",
+          icon: "success",
         });
       },
 
@@ -558,7 +588,8 @@ import { checkTextContent } from "../../services/content-security";
   }
 
   function isPageBreakLine(line: string) {
-    return line.trim().startsWith("［");
+    const text = line.trim();
+    return text.startsWith("［") || /^(?:0\d|1\d)$/.test(text);
   }
 
   function trimEmptyLines(lines: string[]) {

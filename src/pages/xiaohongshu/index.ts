@@ -45,8 +45,9 @@ import { checkTextContent } from "../../services/content-security";
     measureText: (text: string) => { width: number };
   };
 
-  const STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
-  const DOUYIN_STORAGE_KEY = "DOUYIN_FORM_DATA_CONTENT";
+  const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
+  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
   const BASE_CANVAS_WIDTH = 1080;
@@ -123,6 +124,7 @@ import { checkTextContent } from "../../services/content-security";
 
   Component({
     data: {
+      activeTemplate: "xiaohongshu",
       content: "",
       hasCustomContent: false,
       editContent: "",
@@ -135,19 +137,22 @@ import { checkTextContent } from "../../services/content-security";
       isRenderingCards: false,
       canvasReady: false,
       fontLoaded: false,
-      actions: [
-        { key: "paste", label: "粘贴", icon: "clipboard-paste" },
-        { key: "copy", label: "复制", icon: "copy" },
-        { key: "edit", label: "编辑", icon: "pencil" },
-        { key: "clear", label: "清空", icon: "eraser" },
-        { key: "export", label: "导出", icon: "download" },
-      ],
     },
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
-        if (typeof storedContent === "string") {
-          this.loadStoredContent(storedContent);
+        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
+        const initialContent =
+          typeof storedContent === "string"
+            ? storedContent
+            : typeof legacyContent === "string"
+              ? legacyContent
+              : undefined;
+
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "xiaohongshu");
+
+        if (typeof initialContent === "string") {
+          this.loadStoredContent(initialContent);
         } else {
           this.syncContent(DEFAULT_CONTENT);
         }
@@ -172,6 +177,14 @@ import { checkTextContent } from "../../services/content-security";
       },
     },
     methods: {
+      handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+        const template = event.currentTarget.dataset.template;
+        if (template !== "douyin2") return;
+
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
+        wx.redirectTo({ url: "/pages/douyin2/index" });
+      },
+
       loadRed3Font() {
         ensureRed3FontLoaded()
           .then(() => {
@@ -192,10 +205,12 @@ import { checkTextContent } from "../../services/content-security";
         this.syncContent(content, activeIndex);
       },
 
-      handleAction(event: WechatMiniprogram.TouchEvent) {
+      handleAction(
+        event: WechatMiniprogram.CustomEvent<{ key?: ActionKey }>,
+      ) {
         if (this.data.isGenerating) return;
 
-        const key = event.currentTarget.dataset.key as ActionKey | undefined;
+        const key = event.detail.key;
 
         if (key === "paste") {
           this.handlePasteContent();
@@ -293,7 +308,6 @@ import { checkTextContent } from "../../services/content-security";
             if (!(await this.ensureSafeContent(nextContent))) return;
 
             this.syncContent(nextContent, nextActiveIndex);
-            wx.setStorageSync(DOUYIN_STORAGE_KEY, nextContent);
             wx.showToast({
               title: `已追加 ${nextOrder}`,
               icon: "success",
@@ -311,7 +325,6 @@ import { checkTextContent } from "../../services/content-security";
       clearContent() {
         this.syncContent("");
         wx.setStorageSync(STORAGE_KEY, "");
-        wx.removeStorageSync(DOUYIN_STORAGE_KEY);
         wx.showToast({
           title: "已清空",
           icon: "success",
@@ -671,7 +684,11 @@ import { checkTextContent } from "../../services/content-security";
       (result, line) => {
         const currentSlide = result[result.length - 1];
 
-        if (/^(?:0\d|1\d)$/.test(line.trim()) && currentSlide.some(Boolean)) {
+        if (
+          (/^(?:0\d|1\d)$/.test(line.trim()) ||
+            line.trim().startsWith("［")) &&
+          currentSlide.some(Boolean)
+        ) {
           result.push([]);
         }
 
@@ -687,8 +704,14 @@ import { checkTextContent } from "../../services/content-security";
   }
 
   function createSlide(text: string, index: number): Slide {
-    const order = getFirstLine(text) || String(index + 1).padStart(2, "0");
-    const paragraphs = getParagraphLines(removeFirstLine(text));
+    const firstLine = getFirstLine(text) || "";
+    const hasOrderLine = /^(?:0\d|1\d)$/.test(firstLine);
+    const order = hasOrderLine
+      ? firstLine
+      : String(index + 1).padStart(2, "0");
+    const paragraphs = getParagraphLines(
+      hasOrderLine ? removeFirstLine(text) : text,
+    );
 
     return {
       order,

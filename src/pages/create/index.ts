@@ -6,80 +6,79 @@ type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
   hasRendered?: boolean
 }
 
+const TEXT_CARD_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE"
+
 Component({
   data: {
-    featureItems: [
+    featureGroups: [
       {
-        key: "xiaohongshu",
-        icon: "notebook-pen-white",
-        title: "小红书模板",
-        desc: "生成图文卡片",
-        path: "/pages/xiaohongshu/index",
-        available: true,
-        requiresLogin: false
+        key: "creation",
+        title: "创作工具",
+        items: [
+          {
+            key: "text-card",
+            icon: "notebook-pen-white",
+            title: "图文创作",
+            path: "/pages/xiaohongshu/index",
+            featured: true,
+            available: true,
+            requiresLogin: false
+          }
+        ]
       },
       {
-        key: "douyin2",
-        icon: "video-white",
-        title: "抖音模板",
-        desc: "生成短句卡片",
-        path: "/pages/douyin2/index",
-        available: true,
-        requiresLogin: false
-      },
-      {
-        key: "menu",
-        icon: "cooking-pot-white",
-        title: "我的菜单",
-        desc: "管理日常菜品",
-        path: "/pages/menu/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "media",
-        icon: "clapperboard-white",
-        title: "影视清单",
-        desc: "记录观影进度",
-        path: "/pages/media/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "activities",
-        icon: "sparkles-white",
-        title: "活动清单",
-        desc: "收藏活动灵感",
-        path: "/pages/activities/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "exercise",
-        icon: "dumbbell-white",
-        title: "运动养宠",
-        desc: "和小伙伴一起坚持运动",
-        path: "/exercise/pages/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "luggage",
-        icon: "luggage-white",
-        title: "行李清单",
-        desc: "整理出行物品",
-        path: "/pages/luggage/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "wardrobe",
-        icon: "shirt-white",
-        title: "我的衣橱",
-        desc: "记录衣物尺寸",
-        path: "/pages/wardrobe/index",
-        available: true,
-        requiresLogin: true
+        key: "life",
+        title: "生活管理",
+        items: [
+          {
+            key: "menu",
+            icon: "cooking-pot-white",
+            title: "日常菜单",
+            path: "/pages/menu/index",
+            available: true,
+            requiresLogin: true
+          },
+          {
+            key: "media",
+            icon: "clapperboard-white",
+            title: "影视清单",
+            path: "/pages/media/index",
+            available: true,
+            requiresLogin: true
+          },
+          {
+            key: "activities",
+            icon: "sparkles-white",
+            title: "活动清单",
+            path: "/pages/activities/index",
+            available: true,
+            requiresLogin: true
+          },
+          {
+            key: "exercise",
+            icon: "dumbbell-white",
+            title: "运动养宠",
+            path: "/exercise/pages/index",
+            available: true,
+            requiresLogin: true
+          },
+          {
+            key: "luggage",
+            icon: "luggage-white",
+            title: "行李清单",
+            path: "/pages/luggage/index",
+            available: true,
+            requiresLogin: true
+          },
+          {
+            key: "wardrobe",
+            icon: "shirt-white",
+            title: "衣橱尺寸",
+            path: "/pages/wardrobe/index",
+            available: true,
+            requiresLogin: true
+          }
+        ]
       }
     ]
   },
@@ -108,7 +107,7 @@ Component({
   },
   methods: {
     handleFeatureTap(event: WechatMiniprogram.TouchEvent) {
-      const { path, available, title, requiresLogin } = event.currentTarget.dataset
+      const { key, path, available, title, requiresLogin } = event.currentTarget.dataset
       const isAvailable = available === true || available === "true"
       const needsLogin = requiresLogin === true || requiresLogin === "true"
 
@@ -133,9 +132,13 @@ Component({
         return
       }
 
-      wx.navigateTo({
-        url: String(path)
-      })
+      const lastTemplate = wx.getStorageSync(TEXT_CARD_TEMPLATE_STORAGE_KEY)
+      const nextPath =
+        key === "text-card" && lastTemplate === "douyin2"
+          ? "/pages/douyin2/index"
+          : String(path)
+
+      wx.navigateTo({ url: nextPath })
     }
   }
 })
