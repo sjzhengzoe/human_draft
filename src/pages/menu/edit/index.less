@@ -1,11 +1,11 @@
-.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx 24rpx calc(42rpx + env(safe-area-inset-bottom)); background: var(--ui-page-background); }
+.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx var(--ui-page-gutter) calc(42rpx + env(safe-area-inset-bottom)); background: var(--ui-page-background); }
 .loading-state { padding: 180rpx 30rpx; color: #888; font-size: var(--ui-font-size-base); text-align: center; }
-.record-type-card { margin-bottom: 18rpx; padding: 24rpx 28rpx; border: 1rpx solid var(--ui-border); border-radius: 18rpx; background: var(--ui-surface); }
+.record-type-card { margin-bottom: 18rpx; padding: 24rpx 28rpx; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface); }
 .record-type-card__label { margin-bottom: 14rpx; color: #777; font-size: 23rpx; }
 .record-type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12rpx; }
 .record-type-option { display: flex; height: 70rpx; box-sizing: border-box; align-items: center; justify-content: center; border: 1rpx solid #dedede; border-radius: 12rpx; background: var(--ui-surface); color: #666; font-size: var(--ui-font-size-base); font-weight: 650; }
 .record-type-option--selected { border-color: #24231f; background: #24231f; color: #fff; }
-.form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: 18rpx; background: var(--ui-surface); }
+.form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface); }
 .image-field { position: relative; display: flex; height: 440rpx; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1rpx solid var(--ui-border); background: var(--ui-subtle-background); }
 .image-field__preview { width: 440rpx; height: 440rpx; background: var(--ui-page-background); }
 .image-field__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; font-size: var(--ui-font-size-base); }

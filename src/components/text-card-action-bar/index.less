@@ -1,15 +1,15 @@
 .action-bar {
   position: fixed;
-  right: 24rpx;
+  right: var(--ui-page-gutter);
   bottom: calc(24rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
+  left: var(--ui-page-gutter);
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10rpx;
   padding: 14rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.035);
 }
@@ -22,7 +22,7 @@
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 22rpx;
+  border-radius: 16rpx;
   background: var(--ui-surface);
   color: #111111;
   text-align: center;

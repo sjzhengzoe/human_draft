@@ -47,7 +47,7 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 32rpx 24rpx 0;
+  padding: 32rpx var(--ui-page-gutter-compact) 0;
 }
 
 .menu-overview { min-height: 206rpx; flex: 0 0 auto; }
@@ -101,7 +101,7 @@
 
 
 .dish-list { display: flex; flex-direction: column; gap: 18rpx; }
-.dish-card { display: flex; min-height: 190rpx; overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: 16rpx; background: var(--ui-surface); transition: opacity .16s ease, box-shadow .16s ease, transform .16s ease; }
+.dish-card { display: flex; min-height: 190rpx; overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface); transition: opacity .16s ease, box-shadow .16s ease, transform .16s ease; }
 .dish-card__image-wrap { flex: 0 0 190rpx; width: 190rpx; height: 190rpx; background: var(--ui-page-background); }
 .dish-card__image { width: 100%; height: 100%; }
 .dish-card__image-empty { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; color: #aaa; font-size: var(--ui-font-size-base); }

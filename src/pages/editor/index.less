@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 24rpx calc(136rpx + env(safe-area-inset-bottom));
+  padding: 24rpx var(--ui-page-gutter) calc(136rpx + env(safe-area-inset-bottom));
   background: var(--ui-page-background);
 }
 
@@ -12,7 +12,7 @@
   box-sizing: border-box;
   padding: 28rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   color: #111111;
   font-size: var(--ui-font-size-base);
@@ -21,14 +21,14 @@
 
 .editor-actions {
   position: fixed;
-  right: 24rpx;
+  right: var(--ui-page-gutter);
   bottom: calc(24rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
+  left: var(--ui-page-gutter);
   display: flex;
   gap: 16rpx;
   padding: 14rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.035);
 }

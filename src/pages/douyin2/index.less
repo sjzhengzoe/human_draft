@@ -2,7 +2,7 @@
   position: relative;
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 32rpx 24rpx 176rpx;
+  padding: 32rpx var(--ui-page-gutter) 176rpx;
   background: var(--ui-page-background);
   overflow: hidden;
 }
@@ -48,10 +48,10 @@
 
 .card-item {
   width: 642rpx;
-  max-width: calc(100vw - 48rpx);
+  max-width: calc(100vw - 64rpx);
   overflow: hidden;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
 }
 
@@ -126,7 +126,7 @@
   box-sizing: border-box;
   padding: 32rpx 28rpx 28rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 28rpx;
+  border-radius: var(--ui-radius-modal);
   background: var(--ui-surface);
   box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -168,7 +168,7 @@
   margin: 0;
   padding: 0 28rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 8rpx;
+  border-radius: 16rpx;
   background: var(--ui-surface);
   color: #111111;
   font-size: var(--ui-font-size-base);
@@ -184,7 +184,7 @@
   box-sizing: border-box;
   padding: 24rpx;
   border: 1rpx solid #dcdcdc;
-  border-radius: 8rpx;
+  border-radius: 16rpx;
   background: var(--ui-surface);
   color: #111111;
   font-size: var(--ui-font-size-base);
@@ -207,7 +207,7 @@
   height: 80rpx;
   margin: 0;
   border: 0;
-  border-radius: 8rpx;
+  border-radius: 16rpx;
   background: #111111;
   color: #ffffff;
   font-size: var(--ui-font-size-base);

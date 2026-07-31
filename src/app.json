@@ -42,6 +42,7 @@
   },
   "usingComponents": {
     "app-icon": "/components/app-icon/index",
+    "app-dialog": "/components/app-dialog/index",
     "custom-navigation": "/components/custom-navigation/index",
     "operation-loading": "/components/operation-loading/index"
   },

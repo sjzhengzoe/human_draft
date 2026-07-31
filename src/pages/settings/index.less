@@ -2,7 +2,7 @@
   position: relative;
   min-height: calc(100vh - var(--app-navigation-height));
   box-sizing: border-box;
-  padding: 36rpx 24rpx calc(112rpx + env(safe-area-inset-bottom));
+  padding: 36rpx var(--ui-page-gutter) calc(112rpx + env(safe-area-inset-bottom));
   overflow: hidden;
   background: var(--ui-page-background);
 }
@@ -27,7 +27,7 @@
   padding: 32rpx 34rpx;
   overflow: hidden;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
   box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.03);
 }
@@ -91,7 +91,7 @@
 .settings-list {
   overflow: hidden;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.02);
 }
@@ -156,13 +156,13 @@
 
 .module-settings-content {
   box-sizing: border-box;
-  padding: 28rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  padding: 28rpx var(--ui-page-gutter) calc(48rpx + env(safe-area-inset-bottom));
 }
 
 .module-settings-list {
   overflow: hidden;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.025);
 }

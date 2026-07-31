@@ -1,0 +1,14 @@
+<view wx:if="{{visible}}" class="app-dialog" catchtouchmove="noop">
+  <view class="app-dialog__panel">
+    <view wx:if="{{title}}" class="app-dialog__header">
+      <view wx:if="{{title}}" class="app-dialog__title">{{title}}</view>
+    </view>
+    <view class="app-dialog__body {{title ? '' : 'app-dialog__body--without-title'}}">
+      <view wx:if="{{content}}" class="app-dialog__content">{{content}}</view>
+    </view>
+    <view class="app-dialog__actions">
+      <button class="app-dialog__button app-dialog__button--cancel" bindtap="handleCancel">{{cancelText}}</button>
+      <button class="app-dialog__button app-dialog__button--confirm" bindtap="handleConfirm">{{confirmText}}</button>
+    </view>
+  </view>
+</view>

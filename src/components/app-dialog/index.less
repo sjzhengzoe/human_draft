@@ -1,0 +1,98 @@
+.app-dialog {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx var(--ui-dialog-gutter);
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.app-dialog__panel {
+  display: flex;
+  width: 100%;
+  min-height: 420rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--ui-radius-modal);
+  background: var(--ui-surface);
+  box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.16);
+}
+
+.app-dialog__header {
+  flex: none;
+  padding: 48rpx 48rpx 0;
+  text-align: center;
+}
+
+.app-dialog__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24rpx 48rpx 40rpx;
+  text-align: center;
+}
+
+.app-dialog__body--without-title {
+  justify-content: center;
+  padding-top: 42rpx;
+}
+
+.app-dialog__title {
+  color: #171a16;
+  font-size: 32rpx;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.app-dialog__content {
+  width: 100%;
+  max-width: 440rpx;
+  box-sizing: border-box;
+  margin: 0 auto;
+  color: #777777;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.6;
+}
+
+.app-dialog__actions {
+  display: flex;
+  flex: none;
+  gap: 16rpx;
+  padding: 0 40rpx 44rpx;
+}
+
+.app-dialog__button {
+  display: flex;
+  height: 76rpx;
+  min-width: 0;
+  box-sizing: border-box;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 16rpx;
+  border-radius: 38rpx;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.app-dialog__button::after {
+  border: 0;
+}
+
+.app-dialog__button--cancel {
+  background: var(--ui-subtle-background);
+  color: #555555;
+}
+
+.app-dialog__button--confirm {
+  background: #20241f;
+  color: #ffffff;
+}

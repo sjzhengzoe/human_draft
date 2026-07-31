@@ -74,7 +74,7 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 32rpx 24rpx 0;
+  padding: 32rpx var(--ui-page-gutter-compact) 0;
 }
 .list-scroll { min-height: 0; flex: 1; }
 .sort-toolbar { display: flex; flex: 0 0 auto; justify-content: flex-end; padding: 14rpx 4rpx; }
@@ -87,7 +87,7 @@
   box-sizing: border-box;
   padding: 22rpx 24rpx 20rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 16rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   flex: 0 0 auto;
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
@@ -237,7 +237,7 @@
   min-height: 224rpx;
   overflow: hidden;
   border: 2rpx solid transparent;
-  border-radius: 18rpx;
+  border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.035);
   transition: opacity 0.16s, border-color 0.16s;

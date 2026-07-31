@@ -9,9 +9,16 @@ type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
 
 const TEXT_CARD_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE"
 
+function setCreateTabBarMasked(page: CreatePageInstance, masked: boolean) {
+  const tabBar = page.getTabBar && page.getTabBar()
+  if (tabBar) tabBar.setData({ masked })
+}
+
 Component({
   data: {
-    featureGroups: getVisibleHomeFeatureGroups()
+    featureGroups: getVisibleHomeFeatureGroups(),
+    loginDialogVisible: false,
+    loginDialogContent: ""
   },
   lifetimes: {
     ready() {
@@ -28,7 +35,8 @@ Component({
       if (tabBar) {
         tabBar.setData({
           selected: 0,
-          hidden: false
+          hidden: false,
+          masked: false
         })
       }
 
@@ -54,14 +62,10 @@ Component({
       }
 
       if (needsLogin && !getCurrentUser()) {
-        wx.showModal({
-          title: "登录后使用",
-          content: `${title || "该功能"}需要登录后保存个人内容。你可以先体验图文生成工具，或现在登录。`,
-          confirmText: "去登录",
-          cancelText: "暂不登录",
-          success: (result) => {
-            if (result.confirm) wx.navigateTo({ url: "/pages/login/index" })
-          }
+        setCreateTabBarMasked(this as CreatePageInstance, true)
+        this.setData({
+          loginDialogVisible: true,
+          loginDialogContent: `登录后即可使用「${title || "该功能"}」，并保存相关内容。`
         })
         return
       }
@@ -73,6 +77,15 @@ Component({
           : String(path)
 
       wx.navigateTo({ url: nextPath })
+    },
+    handleLoginDialogCancel() {
+      setCreateTabBarMasked(this as CreatePageInstance, false)
+      this.setData({ loginDialogVisible: false })
+    },
+    handleLoginDialogConfirm() {
+      setCreateTabBarMasked(this as CreatePageInstance, false)
+      this.setData({ loginDialogVisible: false })
+      wx.navigateTo({ url: "/pages/login/index" })
     }
   }
 })

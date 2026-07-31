@@ -2,6 +2,7 @@ Component({
   data: {
     selected: 0,
     hidden: false,
+    masked: false,
     tabs: [
       {
         pagePath: "/pages/create/index",
@@ -16,6 +17,7 @@ Component({
     ]
   },
   methods: {
+    noop() {},
     handleSwitch(event) {
       const index = Number(event.currentTarget.dataset.index)
       const tab = this.data.tabs[index]

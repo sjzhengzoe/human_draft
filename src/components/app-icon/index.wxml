@@ -1,5 +1,5 @@
 <image
-  class="app-icon"
+  class="app-icon {{inverse ? 'app-icon--inverse' : ''}}"
   style="width: {{size}}rpx; height: {{size}}rpx;"
   src="/assets/icons/lucide/{{name}}.svg"
   mode="aspectFit"

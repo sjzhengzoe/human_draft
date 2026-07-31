@@ -6,14 +6,14 @@
 .side-tab--active::before { position: absolute; top: 24rpx; bottom: 24rpx; left: 0; width: 6rpx; border-radius: 0 6rpx 6rpx 0; background: var(--ui-surface); content: ""; }
 .side-tabs__edit { display: flex; min-height: 96rpx; flex: 0 0 auto; align-items: center; justify-content: center; padding: 12rpx 8rpx calc(12rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid var(--ui-border); }
 .side-tabs__edit-button { display: flex; width: 56rpx; height: 56rpx; align-items: center; justify-content: center; }
-.content { display: flex; min-width: 0; height: 100%; box-sizing: border-box; flex: 1; flex-direction: column; padding: 34rpx 24rpx 0; overflow: hidden; }
+.content { display: flex; min-width: 0; height: 100%; box-sizing: border-box; flex: 1; flex-direction: column; padding: 34rpx var(--ui-page-gutter-compact) 0; overflow: hidden; }
 .place-scroll { min-height: 0; flex: 1; box-sizing: border-box; padding-bottom: 54rpx; }
 .dining-overview { min-height: 206rpx; flex: 0 0 auto; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: 20rpx; }
 .icon-add-button { display: flex; flex: 0 0 64rpx !important; width: 64rpx !important; min-width: 64rpx !important; max-width: 64rpx !important; height: 64rpx !important; box-sizing: border-box !important; margin: 0 !important; padding: 0 !important; align-items: center; justify-content: center; border-radius: 999rpx !important; background: #111; color: #fff; font-size: 38rpx; font-weight: 300; line-height: 1; }
 .icon-add-button::after { border: 0; }
 .place-list { display: flex; flex-direction: column; gap: 16rpx; margin-top: 22rpx; }
-.place-card { padding: 24rpx; border: 1rpx solid var(--ui-border); border-radius: 15rpx; background: var(--ui-surface); }
+.place-card { padding: 24rpx; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface); }
 .place-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16rpx; }
 .place-name { flex: 1; color: #171717; font-size: 30rpx; font-weight: 600; line-height: 1.4; }
 .mode-tags { display: flex; justify-content: flex-end; gap: 8rpx; margin-top: 18rpx; }

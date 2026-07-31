@@ -3,7 +3,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 999;
+  z-index: 100;
   display: flex;
   height: calc(98rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
@@ -45,4 +45,11 @@
   font-size: 20rpx;
   font-weight: 500;
   line-height: 1.25;
+}
+
+.tabbar__mask {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.48);
 }

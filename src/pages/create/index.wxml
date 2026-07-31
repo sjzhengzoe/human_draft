@@ -26,11 +26,21 @@
           data-requires-login="{{item.requiresLogin}}"
           bindtap="handleFeatureTap"
         >
-          <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="23" /></view>
+          <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
           <view class="feature-item__title">{{item.title}}</view>
           <view class="feature-item__arrow">›</view>
         </view>
       </view>
     </view>
   </view>
+
+  <app-dialog
+    visible="{{loginDialogVisible}}"
+    title="登录后使用"
+    content="{{loginDialogContent}}"
+    cancel-text="暂不登录"
+    confirm-text="去登录"
+    bindcancel="handleLoginDialogCancel"
+    bindconfirm="handleLoginDialogConfirm"
+  />
 </view>
