@@ -1,28 +1,28 @@
 .action-bar {
   position: fixed;
   right: var(--ui-page-gutter);
-  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
   left: var(--ui-page-gutter);
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10rpx;
-  padding: 14rpx;
+  padding: 12rpx;
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.035);
+  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.045);
 }
 
 .action-bar__item {
   display: flex;
-  height: 96rpx;
+  height: 88rpx;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 16rpx;
+  border-radius: 14rpx;
   background: var(--ui-surface);
   color: #111111;
   text-align: center;
@@ -38,11 +38,11 @@
 
 .action-bar__icon {
   display: flex;
-  width: 30rpx;
-  height: 30rpx;
+  width: 28rpx;
+  height: 28rpx;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14rpx;
+  margin-bottom: 10rpx;
 }
 
 .action-bar__label {

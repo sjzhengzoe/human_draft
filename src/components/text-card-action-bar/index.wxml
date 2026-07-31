@@ -8,7 +8,7 @@
     data-key="{{item.key}}"
     bindtap="handleActionTap"
   >
-    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="30" /></view>
+    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="28" /></view>
     <view class="action-bar__label">{{item.label}}</view>
   </view>
 </view>
