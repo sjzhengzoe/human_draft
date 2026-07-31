@@ -1,9 +1,11 @@
+<custom-navigation title="行李场景" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载场景…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="overview">
     <view class="overview__topline">
       <view class="overview__title">管理行李场景</view>

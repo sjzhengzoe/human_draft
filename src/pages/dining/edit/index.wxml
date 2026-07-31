@@ -1,9 +1,11 @@
+<custom-navigation title="店铺" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载店铺资料…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="record-overview">
     <view class="record-overview__title">{{id ? '编辑店铺' : '新增店铺'}}</view>
     <view class="record-overview__stats">

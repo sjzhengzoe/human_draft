@@ -1,9 +1,11 @@
+<custom-navigation title="运动设置" background="#ffffff" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在读取设置…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="intro-card">
     <view class="intro-card__eyebrow">EXERCISE PLAN</view>
     <view class="intro-card__title">设置适合你的节奏</view>

@@ -8,9 +8,9 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10rpx;
   padding: 14rpx;
-  border: 1rpx solid #e8e8e8;
+  border: 1rpx solid var(--ui-border);
   border-radius: 16rpx;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--ui-surface);
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.035);
 }
 
@@ -23,13 +23,13 @@
   padding: 0;
   border: 0;
   border-radius: 22rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   color: #111111;
   text-align: center;
 }
 
 .action-bar__item--hover {
-  background: #f0f0f0;
+  background: var(--ui-subtle-background);
 }
 
 .action-bar__item--disabled {
@@ -46,7 +46,7 @@
 }
 
 .action-bar__label {
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 500;
-  line-height: 1;
+  line-height: normal;
 }

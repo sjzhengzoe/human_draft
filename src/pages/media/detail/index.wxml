@@ -1,9 +1,11 @@
+<custom-navigation title="作品详情" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载作品详情…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view wx:if="{{errorMessage}}" class="state">{{errorMessage}}</view>
   <block wx:elif="{{entry}}">
     <view class="detail-card">

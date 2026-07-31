@@ -1,9 +1,11 @@
+<custom-navigation title="选四张打印" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载菜单…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="app-overview print-intro">
     <view class="app-overview__title">四张打印</view>
     <view class="app-overview__stats">

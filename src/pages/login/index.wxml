@@ -1,7 +1,16 @@
+<custom-navigation title="登录" background="#ffffff" />
+
 <view class="page">
   <view class="login-card">
-    <view class="login-mark">E</view>
-    <view class="login-title">登录 Earth</view>
+    <view class="login-mark">
+      <image
+        class="login-logo"
+        src="/assets/brand/human-draft-logo-mark.png"
+        mode="aspectFit"
+        aria-label="人类草稿"
+      />
+    </view>
+    <view class="login-title">人类草稿</view>
     <view wx:if="{{errorMessage}}" class="error-message welcome-error">{{errorMessage}}</view>
     <button
       class="primary-button"

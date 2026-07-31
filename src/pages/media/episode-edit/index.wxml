@@ -1,9 +1,11 @@
+<custom-navigation title="单集记录" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载单集记录…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <form class="episode-form" bindsubmit="handleSave">
     <view class="episode-overview">
     <view class="episode-overview__title">{{mediaTitle || '单集记录'}}</view>

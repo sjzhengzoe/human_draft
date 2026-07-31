@@ -1,9 +1,11 @@
+<custom-navigation title="一日三餐" background="#ffffff" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在准备今天的菜单…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="plan-header">
     <view class="plan-header__eyebrow">{{todayLabel}}</view>
     <view class="plan-header__title">今天吃什么</view>

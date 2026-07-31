@@ -1,9 +1,11 @@
+<custom-navigation title="我的衣橱" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在整理衣橱…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <view class="sidebar">
     <scroll-view class="side-tabs" scroll-y enhanced show-scrollbar="{{false}}">
       <view

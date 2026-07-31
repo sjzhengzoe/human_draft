@@ -1,9 +1,11 @@
+<custom-navigation title="运动养宠" background="#ffffff" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在看看它们…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="pet-card">
     <view class="pet-stage">
       <view class="bowl-zone">

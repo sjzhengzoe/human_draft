@@ -36,11 +36,13 @@
   ],
   "window": {
     "navigationBarTitleText": "Earth",
+    "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#ffffff"
   },
   "usingComponents": {
     "app-icon": "/components/app-icon/index",
+    "custom-navigation": "/components/custom-navigation/index",
     "operation-loading": "/components/operation-loading/index"
   },
   "tabBar": {

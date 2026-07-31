@@ -2,13 +2,13 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 28rpx calc(48rpx + env(safe-area-inset-bottom));
-  background: #f7f7f7;
+  background: var(--ui-page-background);
 }
 
 .state {
   padding: 160rpx 0;
   color: #888883;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   text-align: center;
 }
 
@@ -16,7 +16,7 @@
 .size-card {
   padding: 28rpx;
   border-radius: 20rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .image-field {
@@ -27,7 +27,7 @@
   margin: 0 auto;
   overflow: hidden;
   border-radius: 18rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
 }
 
 .image-field__preview {
@@ -43,7 +43,7 @@
   align-items: center;
   justify-content: center;
   color: #92928c;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .image-field__plus {
@@ -84,9 +84,9 @@
   padding: 0 22rpx;
   border: 1rpx solid #dedede;
   border-radius: 14rpx;
-  background: #fafafa;
+  background: var(--ui-page-background);
   color: #111111;
-  font-size: 27rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .field__picker {
@@ -120,7 +120,7 @@
 .size-empty {
   padding: 64rpx 0 32rpx;
   color: #aaa9a4;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   text-align: center;
 }
 
@@ -138,7 +138,7 @@
 .size-field__input {
   width: 100%;
   margin-top: 10rpx;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .footer-actions {
@@ -159,9 +159,9 @@
   justify-content: center;
   gap: 9rpx;
   border-radius: 46rpx;
-  font-size: 29rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
-  line-height: 1;
+  line-height: normal;
 }
 
 .save-button {

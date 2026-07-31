@@ -1,4 +1,6 @@
-<view class="page">
+<custom-navigation title="编辑文案" />
+
+<view class="page page--with-navigation">
   <textarea
     class="editor-textarea"
     value="{{content}}"

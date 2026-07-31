@@ -1,9 +1,11 @@
+<custom-navigation title="活动清单" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载活动…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <view class="side-tabs">
     <view wx:for="{{activityTypes}}" wx:key="*this" class="side-tab {{activeType === item ? 'side-tab--active' : ''}}" data-type="{{item}}" bindtap="handleTypeTap">{{item}}</view>
   </view>

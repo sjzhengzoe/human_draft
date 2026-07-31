@@ -1,40 +1,35 @@
-<view class="page">
-  <view class="hero">
-    <view class="hero__logo">
-      <image
-        class="hero__image"
-        src="/assets/brand/human-draft-logo-mark.png"
-        mode="aspectFit"
-        aria-hidden="true"
-      />
-    </view>
+<view class="create-screen">
+  <view class="create-navigation">
+    <custom-navigation title="人类草稿" show-back="{{false}}" background="#ffffff" />
   </view>
 
-  <view
-    wx:for="{{featureGroups}}"
-    wx:key="key"
-    wx:for-item="group"
-    class="feature-section"
-  >
-    <view class="feature-section__title">{{group.title}}</view>
-    <view class="feature-list">
-      <view
-        wx:for="{{group.items}}"
-        wx:key="key"
-        wx:for-item="item"
-        class="feature-item {{item.featured ? 'feature-item--featured' : ''}} {{item.available ? '' : 'feature-item--disabled'}}"
-        hover-class="feature-item--hover"
-        hover-stay-time="80"
-        data-key="{{item.key}}"
-        data-title="{{item.title}}"
-        data-path="{{item.path}}"
-        data-available="{{item.available}}"
-        data-requires-login="{{item.requiresLogin}}"
-        bindtap="handleFeatureTap"
-      >
-        <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="23" /></view>
-        <view class="feature-item__title">{{item.title}}</view>
-        <view class="feature-item__arrow">›</view>
+  <view class="page">
+    <view
+      wx:for="{{featureGroups}}"
+      wx:key="key"
+      wx:for-item="group"
+      class="feature-section"
+    >
+      <view class="feature-section__title">{{group.title}}</view>
+      <view class="feature-list">
+        <view
+          wx:for="{{group.items}}"
+          wx:key="key"
+          wx:for-item="item"
+          class="feature-item {{item.featured ? 'feature-item--featured' : ''}} {{item.available ? '' : 'feature-item--disabled'}}"
+          hover-class="feature-item--hover"
+          hover-stay-time="80"
+          data-key="{{item.key}}"
+          data-title="{{item.title}}"
+          data-path="{{item.path}}"
+          data-available="{{item.available}}"
+          data-requires-login="{{item.requiresLogin}}"
+          bindtap="handleFeatureTap"
+        >
+          <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="23" /></view>
+          <view class="feature-item__title">{{item.title}}</view>
+          <view class="feature-item__arrow">›</view>
+        </view>
       </view>
     </view>
   </view>

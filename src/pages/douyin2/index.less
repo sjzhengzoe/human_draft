@@ -3,7 +3,7 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 32rpx 24rpx 176rpx;
-  background: #f7f7f7;
+  background: var(--ui-page-background);
   overflow: hidden;
 }
 
@@ -23,13 +23,13 @@
   justify-content: center;
   border-radius: 12rpx;
   color: #777772;
-  font-size: 24rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 500;
-  line-height: 1;
+  line-height: normal;
 }
 
 .template-switch__item--active {
-  background: #ffffff;
+  background: var(--ui-surface);
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
   color: #111111;
   font-weight: 600;
@@ -50,9 +50,9 @@
   width: 642rpx;
   max-width: calc(100vw - 48rpx);
   overflow: hidden;
-  border: 1rpx solid #e8e8e8;
+  border: 1rpx solid var(--ui-border);
   border-radius: 16rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .card-image {
@@ -73,7 +73,7 @@
   align-items: center;
   justify-content: center;
   padding: 48rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .card-loading__title {
@@ -86,7 +86,7 @@
 .card-loading__desc {
   margin-top: 12rpx;
   color: #666666;
-  font-size: 24rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.5;
   text-align: center;
 }
@@ -97,9 +97,9 @@
   margin: 20rpx auto 0;
   box-sizing: border-box;
   padding: 8rpx 18rpx;
-  border: 1rpx solid #e8e8e8;
+  border: 1rpx solid var(--ui-border);
   border-radius: 999rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   color: #666666;
   font-size: 24rpx;
   line-height: 1.4;
@@ -115,7 +115,7 @@
   justify-content: center;
   box-sizing: border-box;
   padding: 48rpx 32rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .edit-modal__content {
@@ -125,9 +125,9 @@
   max-height: 70vh;
   box-sizing: border-box;
   padding: 32rpx 28rpx 28rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--ui-border);
   border-radius: 28rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
@@ -167,11 +167,11 @@
   min-width: 140rpx;
   margin: 0;
   padding: 0 28rpx;
-  border: 1rpx solid #e8e8e8;
+  border: 1rpx solid var(--ui-border);
   border-radius: 8rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   color: #111111;
-  font-size: 28rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: normal;
 }
@@ -185,9 +185,9 @@
   padding: 24rpx;
   border: 1rpx solid #dcdcdc;
   border-radius: 8rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   color: #111111;
-  font-size: 28rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.6;
 }
 
@@ -210,7 +210,7 @@
   border-radius: 8rpx;
   background: #111111;
   color: #ffffff;
-  font-size: 30rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: normal;
 }

@@ -1,6 +1,7 @@
 Component({
   data: {
     selected: 0,
+    hidden: false,
     tabs: [
       {
         pagePath: "/pages/create/index",

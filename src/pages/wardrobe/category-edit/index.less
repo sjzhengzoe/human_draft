@@ -2,13 +2,13 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 28rpx calc(48rpx + env(safe-area-inset-bottom));
-  background: #f7f7f7;
+  background: var(--ui-page-background);
 }
 
 .state {
   padding: 160rpx 0;
   color: #888883;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   text-align: center;
 }
 
@@ -16,7 +16,7 @@
 .attribute-section {
   padding: 28rpx;
   border-radius: 20rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .field__label {
@@ -33,9 +33,9 @@
   padding: 0 22rpx;
   border: 1rpx solid #dedede;
   border-radius: 14rpx;
-  background: #fafafa;
+  background: var(--ui-page-background);
   color: #111111;
-  font-size: 27rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .preset-section {
@@ -57,9 +57,9 @@
   gap: 6rpx;
   padding: 0 22rpx;
   border-radius: 999rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
   color: #333330;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .preset-button--muted {
@@ -101,13 +101,13 @@
   border-radius: 999rpx;
   background: #111111;
   color: #ffffff;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .attribute-empty {
   padding: 60rpx 0 30rpx;
   color: #aaa9a4;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   text-align: center;
 }
 
@@ -143,9 +143,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 10rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
   color: #444440;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .tool--disabled {
@@ -175,9 +175,9 @@
   justify-content: center;
   gap: 9rpx;
   border-radius: 46rpx;
-  font-size: 29rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
-  line-height: 1;
+  line-height: normal;
 }
 
 .save-button {

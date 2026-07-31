@@ -1,9 +1,11 @@
+<custom-navigation title="编辑影视分类" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载分类…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="record-overview">
     <view class="record-overview__title">{{categoryId ? '编辑分类' : '新增分类'}}</view>
     <view class="record-overview__stats">

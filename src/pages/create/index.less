@@ -1,35 +1,30 @@
+.create-screen {
+  display: flex;
+  height: 100vh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.create-navigation {
+  flex: none;
+}
+
 .page {
-  min-height: 100vh;
+  position: relative;
+  min-height: 0;
   box-sizing: border-box;
+  flex: 1;
   padding: 22rpx 24rpx calc(112rpx + env(safe-area-inset-bottom));
-  background: #f7f7f7;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--ui-page-background);
 }
 
-.hero {
-  display: flex;
-  min-height: 118rpx;
-  align-items: center;
-  padding: 0 4rpx 24rpx;
-}
-
-.hero__logo {
-  display: flex;
-  width: 102rpx;
-  height: 102rpx;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  margin-left: -12rpx;
-  border: 1rpx solid #e7e7e4;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 8rpx 22rpx rgba(0, 0, 0, 0.035);
-}
-
-.hero__image {
-  display: block;
-  width: 74rpx;
-  height: 74rpx;
+.feature-section {
+  position: relative;
+  z-index: 1;
 }
 
 .feature-section + .feature-section {
@@ -37,11 +32,10 @@
 }
 
 .feature-section__title {
-  margin: 0 7rpx 14rpx;
-  color: #888883;
-  font-size: 21rpx;
-  font-weight: 400;
-  letter-spacing: 1.2rpx;
+  margin: 0 8rpx 14rpx;
+  color: #686868;
+  font-size: 23rpx;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -61,10 +55,10 @@
   gap: 14rpx;
   padding: 20rpx;
   overflow: hidden;
-  border: 1rpx solid #e7e7e4;
+  border: 1rpx solid var(--ui-border);
   border-radius: 17rpx;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 5rpx 16rpx rgba(0, 0, 0, 0.018);
+  background: var(--ui-surface);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.025);
 }
 
 .feature-item--featured {
@@ -74,7 +68,7 @@
 }
 
 .feature-item--hover {
-  background: #f0f0ee;
+  background: var(--ui-subtle-background);
 }
 
 .feature-item--disabled {
@@ -88,10 +82,10 @@
   justify-content: center;
   width: 46rpx;
   height: 46rpx;
-  border: 1rpx solid #ececea;
+  border: 1rpx solid var(--ui-border);
   border-radius: 14rpx;
-  background: #f3f3f1;
-  color: #62625d;
+  background: var(--ui-subtle-background);
+  color: #626262;
   box-shadow: none;
 }
 
@@ -99,7 +93,7 @@
   min-width: 0;
   flex: 1;
   color: #111111;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: 1.4;
   word-break: keep-all;
@@ -111,7 +105,7 @@
 
 .feature-item__arrow {
   flex: none;
-  color: #b6b6b1;
+  color: #aaaaaa;
   font-size: 32rpx;
   font-weight: 300;
   line-height: 1;

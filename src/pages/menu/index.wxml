@@ -1,9 +1,11 @@
+<custom-navigation title="饮食清单" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载菜单…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <scroll-view class="side-tabs" scroll-y enhanced show-scrollbar="{{false}}">
     <view
       class="side-tab {{activeFilter === 'all' ? 'side-tab--active' : ''}}"

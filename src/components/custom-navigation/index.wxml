@@ -1,0 +1,22 @@
+<view
+  class="custom-navigation"
+  style="height: {{totalNavigationHeight}}px; background: {{background}};"
+>
+  <view
+    class="custom-navigation__bar"
+    style="height: {{totalNavigationHeight}}px; padding-top: {{statusBarHeight}}px; background: {{background}};"
+  >
+    <view class="custom-navigation__content" style="height: {{navigationBarHeight}}px;">
+      <view
+        wx:if="{{showBack}}"
+        class="custom-navigation__back"
+        role="button"
+        aria-label="返回"
+        bindtap="handleBack"
+      >
+        <view class="custom-navigation__back-glyph">‹</view>
+      </view>
+      <view wx:if="{{title}}" class="custom-navigation__title">{{title}}</view>
+    </view>
+  </view>
+</view>

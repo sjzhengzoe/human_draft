@@ -1,7 +1,7 @@
 .page {
   display: flex;
-  height: 100vh;
-  background: #f7f7f7;
+  height: 100%;
+  background: var(--ui-page-background);
   overflow: hidden;
 }
 
@@ -10,8 +10,8 @@
   width: 144rpx;
   flex: 0 0 144rpx;
   flex-direction: column;
-  border-right: 1rpx solid #ececec;
-  background: #ffffff;
+  border-right: 1rpx solid var(--ui-border);
+  background: var(--ui-surface);
 }
 
 .side-tabs {
@@ -27,8 +27,8 @@
   align-items: center;
   justify-content: center;
   padding: 12rpx 8rpx calc(12rpx + env(safe-area-inset-bottom));
-  border-top: 1rpx solid #e8e8e8;
-  background: #ffffff;
+  border-top: 1rpx solid var(--ui-border);
+  background: var(--ui-surface);
   color: #555555;
 }
 
@@ -44,13 +44,13 @@
   justify-content: center;
   padding: 18rpx 12rpx;
   color: #777772;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.3;
   text-align: center;
 }
 
 .side-tab--active {
-  background: #f7f7f7;
+  background: var(--ui-page-background);
   color: #111111;
   font-weight: 650;
 }
@@ -69,7 +69,7 @@
 .content {
   display: flex;
   min-width: 0;
-  height: 100vh;
+  height: 100%;
   flex: 1;
   flex-direction: column;
   overflow: hidden;
@@ -78,7 +78,7 @@
 }
 .list-scroll { min-height: 0; flex: 1; }
 .sort-toolbar { display: flex; flex: 0 0 auto; justify-content: flex-end; padding: 14rpx 4rpx; }
-.sort-toolbar__action { display: flex; min-height: 48rpx; align-items: center; gap: 7rpx; color: #555; font-size: 23rpx; }
+.sort-toolbar__action { display: flex; min-height: 48rpx; align-items: center; gap: 7rpx; color: #555; font-size: var(--ui-font-size-base); }
 .sort-toolbar__action--active { color: #111; font-weight: 600; }
 .sort-toolbar__action:active { opacity: .5; }
 
@@ -86,9 +86,9 @@
   min-height: 226rpx;
   box-sizing: border-box;
   padding: 22rpx 24rpx 20rpx;
-  border: 1rpx solid #ececec;
+  border: 1rpx solid var(--ui-border);
   border-radius: 16rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   flex: 0 0 auto;
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
 }
@@ -132,9 +132,9 @@
   border-radius: 999rpx !important;
   background: #111111;
   color: #ffffff;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
-  line-height: 1;
+  line-height: normal;
 }
 
 .header__add::after,
@@ -147,7 +147,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 16rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #efefef;
+  border-top: 1rpx solid var(--ui-border);
 }
 
 .header-stat {
@@ -162,7 +162,7 @@
   bottom: 6rpx;
   left: 0;
   width: 1rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
   content: "";
 }
 
@@ -187,20 +187,24 @@
 .state-block {
   padding: 120rpx 16rpx;
   color: #888883;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.6;
   text-align: center;
 }
 
 .retry-button {
+  display: flex;
   width: auto;
+  min-height: 64rpx;
+  align-items: center;
+  justify-content: center;
   margin: 24rpx auto 0;
   padding: 0 28rpx;
   border-radius: 999rpx;
   background: #111111;
   color: #ffffff;
-  font-size: 24rpx;
-  line-height: 64rpx;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
 }
 
 .empty-state {
@@ -217,7 +221,7 @@
 .empty-state__desc {
   margin-top: 12rpx;
   color: #aaa9a4;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.5;
 }
 
@@ -234,7 +238,7 @@
   overflow: hidden;
   border: 2rpx solid transparent;
   border-radius: 18rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.035);
   transition: opacity 0.16s, border-color 0.16s;
 }
@@ -277,7 +281,7 @@
 .item-card__category {
   padding: 5rpx 10rpx;
   border-radius: 999rpx;
-  background: #f0f0f0;
+  background: var(--ui-subtle-background);
   color: #777772;
   font-size: 19rpx;
   white-space: nowrap;
@@ -307,7 +311,7 @@
   min-width: 0;
   overflow: hidden;
   color: #333330;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -316,7 +320,7 @@
 .attribute-empty {
   margin-top: 20rpx;
   color: #adada8;
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
 }
 .sort-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8rpx; margin-top: 12rpx; }
 .sort-action { display: flex; width: 48rpx; height: 48rpx; align-items: center; justify-content: center; color: #666; }

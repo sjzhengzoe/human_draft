@@ -2,11 +2,8 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 28rpx calc(38rpx + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(circle at 92% 4%, rgba(227, 195, 139, .2), transparent 24%),
-    radial-gradient(circle at 5% 48%, rgba(184, 207, 181, .16), transparent 22%),
-    #f7f3eb;
-  color: #292722;
+  background: var(--ui-page-background);
+  color: #292929;
 }
 
 .plan-header {
@@ -55,9 +52,9 @@
   margin: 0 !important;
   padding: 0 !important;
   border-radius: 999rpx;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 650;
-  line-height: 1;
+  line-height: normal;
 }
 
 .plan-action::after,
@@ -122,7 +119,7 @@
   font-size: 16rpx;
   font-weight: 700;
   letter-spacing: 2rpx;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .meal-section__notice {
@@ -142,7 +139,7 @@
   overflow: hidden;
   border: 2rpx solid transparent;
   border-radius: 18rpx;
-  background: #fff;
+  background: var(--ui-surface);
   box-shadow: 0 5rpx 16rpx rgba(64, 54, 40, .055);
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
@@ -179,7 +176,7 @@
   color: #fff;
   font-size: 16rpx;
   font-weight: 700;
-  line-height: 1;
+  line-height: normal;
   box-shadow: 0 4rpx 12rpx rgba(44, 37, 29, .16);
 }
 
@@ -193,7 +190,7 @@
   color: #fff;
   font-size: 16rpx;
   font-weight: 700;
-  line-height: 1;
+  line-height: normal;
   box-shadow: 0 4rpx 12rpx rgba(44, 37, 29, .13);
 }
 
@@ -209,7 +206,7 @@
   justify-content: center;
   padding: 11rpx 9rpx 12rpx;
   color: #39352f;
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.35;
   text-align: center;
@@ -266,17 +263,20 @@
 .state-card__description {
   margin-top: 14rpx;
   color: #9b9287;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.55;
 }
 
 .retry-button {
+  display: flex;
   width: 180rpx;
   height: 66rpx;
+  align-items: center;
+  justify-content: center;
   margin-top: 26rpx;
   border-radius: 999rpx;
   background: #343027;
   color: #fff;
-  font-size: 22rpx;
-  line-height: 66rpx;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
 }

@@ -1,9 +1,11 @@
+<custom-navigation title="影视记录" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载影视记录…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <view class="side-tabs">
     <scroll-view class="side-tabs__list" scroll-y enhanced show-scrollbar="{{false}}">
       <view

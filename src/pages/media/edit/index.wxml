@@ -1,9 +1,11 @@
+<custom-navigation title="影视条目" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载影视资料…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="record-overview">
     <view class="record-overview__title">{{id ? '编辑影视' : '新增影视'}}</view>
     <view class="record-overview__stats">

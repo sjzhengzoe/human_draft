@@ -12,9 +12,25 @@ navigator {
 
 page {
   --ui-font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ui-font-size-base: 25rpx;
+  --ui-page-background: #f5f5f5;
+  --ui-surface: #ffffff;
+  --ui-border: #e5e5e5;
+  --ui-subtle-background: #eeeeee;
+  --ui-hover-background: #f1f1f1;
+  --app-navigation-height: calc(env(safe-area-inset-top) + 88rpx);
   min-height: 100vh;
-  background: #ffffff;
+  background: var(--ui-page-background);
   color: #111111;
+  font-size: var(--ui-font-size-base);
+}
+
+.page--fixed {
+  height: calc(100vh - var(--app-navigation-height)) !important;
+}
+
+.page--with-navigation {
+  min-height: calc(100vh - var(--app-navigation-height)) !important;
 }
 
 .fullscreen-loading {
@@ -28,14 +44,14 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: var(--ui-surface);
 }
 
 .fullscreen-loading__spinner {
   width: 48rpx;
   height: 48rpx;
   box-sizing: border-box;
-  border: 4rpx solid #e8e8e8;
+  border: 4rpx solid var(--ui-border);
   border-top-color: #111111;
   border-radius: 50%;
   animation: fullscreen-loading-spin 0.75s linear infinite;
@@ -44,7 +60,7 @@ page {
 .fullscreen-loading__text {
   margin-top: 24rpx;
   color: #999994;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.4;
 }
 
@@ -66,7 +82,7 @@ page {
   width: 36rpx;
   height: 36rpx;
   box-sizing: border-box;
-  border: 3rpx solid #e8e8e8;
+  border: 3rpx solid var(--ui-border);
   border-top-color: #111111;
   border-radius: 50%;
   animation: fullscreen-loading-spin 0.75s linear infinite;
@@ -75,7 +91,7 @@ page {
 .content-loading__text {
   margin-top: 18rpx;
   color: #999994;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.4;
 }
 
@@ -83,9 +99,9 @@ page {
   min-height: 176rpx;
   box-sizing: border-box;
   padding: 24rpx;
-  border: 1rpx solid #ececec;
+  border: 1rpx solid var(--ui-border);
   border-radius: 16rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
 }
 
@@ -102,7 +118,7 @@ page {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 20rpx;
   padding-top: 18rpx;
-  border-top: 1rpx solid #efefef;
+  border-top: 1rpx solid var(--ui-border);
 }
 
 .record-overview__stat {
@@ -117,7 +133,7 @@ page {
   bottom: 5rpx;
   left: 0;
   width: 1rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
   content: "";
 }
 
@@ -145,9 +161,9 @@ page {
 .app-overview {
   box-sizing: border-box;
   padding: 22rpx 24rpx 20rpx;
-  border: 1rpx solid #ececec;
+  border: 1rpx solid var(--ui-border);
   border-radius: 16rpx;
-  background: #ffffff;
+  background: var(--ui-surface);
   box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
 }
 
@@ -181,8 +197,8 @@ page {
   gap: 5rpx;
   margin-top: 5rpx;
   color: #8d8d87;
-  font-size: 21rpx;
-  line-height: 1;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
 }
 
 .app-overview__link-arrow {
@@ -206,9 +222,9 @@ page {
   border-radius: 999rpx !important;
   background: #111111;
   color: #ffffff;
-  font-size: 22rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
-  line-height: 1;
+  line-height: normal;
 }
 
 .app-overview__action::after {
@@ -219,7 +235,7 @@ page {
   display: flex;
   margin-top: 16rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #efefef;
+  border-top: 1rpx solid var(--ui-border);
 }
 
 .app-overview__stat {
@@ -235,7 +251,7 @@ page {
   bottom: 6rpx;
   left: 0;
   width: 1rpx;
-  background: #eeeeee;
+  background: var(--ui-subtle-background);
   content: "";
 }
 

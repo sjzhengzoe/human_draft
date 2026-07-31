@@ -1,9 +1,11 @@
+<custom-navigation title="行李清单" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载行李清单…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <view class="scene-tabs">
     <scroll-view class="scene-tabs__list" scroll-y enhanced show-scrollbar="{{false}}">
       <view wx:for="{{scenes}}" wx:key="id" class="scene-tab {{activeSceneId === item.id ? 'scene-tab--active' : ''}}" data-id="{{item.id}}" bindtap="handleSceneTap">{{item.name}}</view>

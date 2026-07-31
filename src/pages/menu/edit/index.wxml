@@ -1,9 +1,11 @@
+<custom-navigation title="菜单记录" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载菜品…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
   <view class="record-overview">
     <view class="record-overview__title">{{dishId ? '编辑' : '新增'}}{{recordType === 'outside' ? '外食店铺' : '居家菜品'}}</view>
     <view class="record-overview__stats">

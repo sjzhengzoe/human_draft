@@ -1,9 +1,11 @@
+<custom-navigation title="衣物" />
+
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载衣物…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--with-navigation">
     <view class="record-overview">
       <view class="record-overview__title">{{itemId ? '编辑衣物' : '新增衣物'}}</view>
       <view class="record-overview__stats">

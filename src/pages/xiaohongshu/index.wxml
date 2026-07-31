@@ -1,4 +1,6 @@
-<view class="page">
+<custom-navigation title="图文创作" />
+
+<view class="page page--with-navigation">
   <view class="template-switch" aria-label="选择图文模板">
     <view
       class="template-switch__item template-switch__item--active"

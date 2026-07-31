@@ -1,9 +1,11 @@
+<custom-navigation title="用餐清单" />
+
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载店铺…</view>
 </view>
 
-<view wx:else class="page">
+<view wx:else class="page page--fixed">
   <view class="side-tabs">
     <scroll-view class="side-tabs__list" scroll-y enhanced show-scrollbar="{{false}}">
       <view wx:for="{{scenes}}" wx:key="id" class="side-tab {{activeSceneId === item.id ? 'side-tab--active' : ''}}" data-id="{{item.id}}" bindtap="handleSceneTap">{{item.name}}</view>

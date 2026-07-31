@@ -1,23 +1,23 @@
-.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx 24rpx 48rpx; background: #f7f7f7; }
-.loading-state { padding: 180rpx 30rpx; color: #888; font-size: 27rpx; text-align: center; }
-.form-card { overflow: hidden; border: 1rpx solid #e2e2e2; border-radius: 16rpx; background: #fff; }
-.field { padding: 26rpx 28rpx; border-bottom: 1rpx solid #ededed; }
+.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx 24rpx 48rpx; background: var(--ui-page-background); }
+.loading-state { padding: 180rpx 30rpx; color: #888; font-size: var(--ui-font-size-base); text-align: center; }
+.form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: 16rpx; background: var(--ui-surface); }
+.field { padding: 26rpx 28rpx; border-bottom: 1rpx solid var(--ui-border); }
 .field:last-child { border-bottom: 0; }
 .field--switch { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; }
 .field-label { margin-bottom: 14rpx; color: #777; font-size: 23rpx; }
 .field-label--primary { margin-bottom: 6rpx; color: #222; font-size: 27rpx; }
 .field-help { color: #999; font-size: 21rpx; }
 .platform-help { margin: -4rpx 0 16rpx; line-height: 1.5; }
-.field-input { height: 58rpx; color: #111; font-size: 30rpx; }
-.picker-value { display: flex; align-items: center; justify-content: space-between; min-height: 58rpx; color: #111; font-size: 29rpx; }
-.picker-value > text { color: #111; font-size: 29rpx; }
+.field-input { height: 58rpx; color: #111; font-size: var(--ui-font-size-base); }
+.picker-value { display: flex; align-items: center; justify-content: space-between; min-height: 58rpx; color: #111; font-size: var(--ui-font-size-base); }
+.picker-value > text { color: #111; font-size: var(--ui-font-size-base); }
 .status-options { display: flex; gap: 12rpx; }
-.status-option { flex: 1; padding: 15rpx 8rpx; border-radius: 10rpx; background: #efefef; color: #666; font-size: 24rpx; text-align: center; }
+.status-option { flex: 1; padding: 15rpx 8rpx; border-radius: 10rpx; background: #efefef; color: #666; font-size: var(--ui-font-size-base); text-align: center; }
 .status-option--active { background: #111; color: #fff; }
 .platform-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18rpx 10rpx; }
-.platform-option { display: flex; align-items: center; color: #333; font-size: 25rpx; }
+.platform-option { display: flex; align-items: center; color: #333; font-size: var(--ui-font-size-base); }
 .platform-option checkbox { transform: scale(.8); }
-.save-button, .delete-button { display: flex; height: 92rpx; box-sizing: border-box; padding: 0; align-items: center; justify-content: center; gap: 9rpx; border-radius: 46rpx; font-size: 29rpx; line-height: 1; }
+.save-button, .delete-button { display: flex; height: 92rpx; box-sizing: border-box; padding: 0; align-items: center; justify-content: center; gap: 9rpx; border-radius: 46rpx; font-size: var(--ui-font-size-base); line-height: normal; }
 .save-button::after, .delete-button::after { border: 0; }
 .save-button { margin-top: 28rpx; background: #111; color: #fff; }
 .delete-button { margin-top: 14rpx; background: transparent; color: #bd332e; }

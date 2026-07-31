@@ -1,5 +1,6 @@
 import { getCurrentUser } from "../../services/auth"
 import { hideGlobalLoading } from "../../services/loading"
+import { getVisibleHomeFeatureGroups } from "../../utils/home-modules"
 
 type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
@@ -10,77 +11,7 @@ const TEXT_CARD_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE"
 
 Component({
   data: {
-    featureGroups: [
-      {
-        key: "creation",
-        title: "创作",
-        items: [
-          {
-            key: "text-card",
-            icon: "notebook-pen",
-            title: "图文创作",
-            path: "/pages/xiaohongshu/index",
-            featured: true,
-            available: true,
-            requiresLogin: false
-          }
-        ]
-      },
-      {
-        key: "life",
-        title: "生活",
-        items: [
-          {
-            key: "menu",
-            icon: "cooking-pot",
-            title: "饮食清单",
-            path: "/pages/menu/index",
-            available: true,
-            requiresLogin: true
-          },
-          {
-            key: "media",
-            icon: "clapperboard",
-            title: "影视记录",
-            path: "/pages/media/index",
-            available: true,
-            requiresLogin: true
-          },
-          {
-            key: "activities",
-            icon: "sparkles",
-            title: "活动清单",
-            path: "/pages/activities/index",
-            available: true,
-            requiresLogin: true
-          },
-          {
-            key: "exercise",
-            icon: "dumbbell",
-            title: "运动养宠",
-            path: "/exercise/pages/index",
-            available: true,
-            requiresLogin: true
-          },
-          {
-            key: "luggage",
-            icon: "luggage",
-            title: "行李清单",
-            path: "/pages/luggage/index",
-            available: true,
-            requiresLogin: true
-          },
-          {
-            key: "wardrobe",
-            icon: "shirt",
-            title: "我的衣橱",
-            path: "/pages/wardrobe/index",
-            available: true,
-            requiresLogin: true
-          }
-        ]
-      }
-    ]
+    featureGroups: getVisibleHomeFeatureGroups()
   },
   lifetimes: {
     ready() {
@@ -96,9 +27,12 @@ Component({
 
       if (tabBar) {
         tabBar.setData({
-          selected: 0
+          selected: 0,
+          hidden: false
         })
       }
+
+      this.setData({ featureGroups: getVisibleHomeFeatureGroups() })
 
       if (page.hasRendered) {
         wx.nextTick(() => hideGlobalLoading())

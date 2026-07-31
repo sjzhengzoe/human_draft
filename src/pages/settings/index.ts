@@ -1,4 +1,18 @@
 import { getCurrentUser, logout } from "../../services/auth"
+import {
+  getHomeModuleSettingGroups,
+  setHomeModuleVisible
+} from "../../utils/home-modules"
+
+type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
+  getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
+}
+
+function setTabBarHidden(instance: WechatMiniprogram.Component.TrivialInstance, hidden: boolean) {
+  const page = instance as SettingsPageInstance
+  const tabBar = page.getTabBar && page.getTabBar()
+  if (tabBar) tabBar.setData({ hidden })
+}
 
 function shortOpenId(openid: string): string {
   if (openid.length <= 14) return openid
@@ -8,8 +22,9 @@ function shortOpenId(openid: string): string {
 Component({
   data: {
     ready: false,
+    showModuleSettings: false,
+    moduleGroups: getHomeModuleSettingGroups(),
     loggedIn: false,
-    icpNumber: "粤ICP备2025373031号",
     displayName: "",
     avatarUrl: "",
     avatarInitial: "E",
@@ -19,11 +34,9 @@ Component({
   },
   pageLifetimes: {
     show() {
-      const page = this as WechatMiniprogram.Component.TrivialInstance & {
-        getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
-      }
+      const page = this as SettingsPageInstance
       const tabBar = page.getTabBar && page.getTabBar()
-      if (tabBar) tabBar.setData({ selected: 1 })
+      if (tabBar) tabBar.setData({ selected: 1, hidden: this.data.showModuleSettings })
 
       const user = getCurrentUser()
       if (!user) {
@@ -82,17 +95,33 @@ Component({
         success: () => wx.showToast({ title: "OpenID 已复制", icon: "success" })
       })
     },
-    handleAboutTap() {
-      const icpNumber = this.data.icpNumber
-      wx.showModal({
-        title: "关于",
-        content: `Earth\n${icpNumber}`,
-        confirmText: "复制",
-        cancelText: "关闭",
-        success: (result) => {
-          if (result.confirm) wx.setClipboardData({ data: icpNumber })
-        }
+    handleModuleSettingsTap() {
+      this.refreshModuleSettings()
+      this.setData({ showModuleSettings: true })
+      setTabBarHidden(this, true)
+    },
+    handleModuleSettingsBack() {
+      this.setData({ showModuleSettings: false })
+      setTabBarHidden(this, false)
+    },
+    refreshModuleSettings() {
+      this.setData({
+        moduleGroups: getHomeModuleSettingGroups()
       })
+    },
+    handleModuleVisibleChange(
+      event: WechatMiniprogram.SwitchChange<WechatMiniprogram.IAnyObject, { key?: string }>
+    ) {
+      const key = String(event.currentTarget.dataset.key || "")
+      if (!key) return
+      const updated = setHomeModuleVisible(key, event.detail.value)
+      if (!updated) {
+        wx.showToast({
+          title: "至少保留一个首页模块",
+          icon: "none"
+        })
+      }
+      this.refreshModuleSettings()
     }
   }
 })
