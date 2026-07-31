@@ -6,7 +6,7 @@
     data-index="{{index}}"
     bindtap="handleSwitch"
   >
-    <view class="tabbar__icon"><app-icon name="{{item.icon}}" size="32" /></view>
+    <view class="tabbar__icon"><app-icon name="{{item.icon}}" size="36" /></view>
     <view class="tabbar__text">{{item.text}}</view>
   </view>
 </view>

@@ -247,7 +247,7 @@ export async function listMediaEntries(supabase, userId, query) {
   }
 
   const { data, error, count } = await request.range(from, to);
-  throwSupabaseError(error, "读取影视清单失败。");
+  throwSupabaseError(error, "读取影视记录失败。");
   return {
     items: data,
     pagination: {

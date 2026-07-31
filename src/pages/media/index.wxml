@@ -1,6 +1,6 @@
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在加载影视清单…</view>
+  <view class="fullscreen-loading__text">正在加载影视记录…</view>
 </view>
 
 <view wx:else class="page">
@@ -23,7 +23,7 @@
     <view class="app-overview media-overview">
       <view class="app-overview__topline">
         <view class="app-overview__title-group">
-          <view class="app-overview__title">{{activeType || '影视清单'}}</view>
+          <view class="app-overview__title">{{activeType || '影视记录'}}</view>
         </view>
         <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAdd"><app-icon name="plus-white" size="22" /><text>新增</text></button>
       </view>

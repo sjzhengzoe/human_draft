@@ -5,7 +5,7 @@ Component({
       {
         pagePath: "/pages/create/index",
         text: "首页",
-        icon: "layout-grid"
+        icon: "house"
       },
       {
         pagePath: "/pages/settings/index",

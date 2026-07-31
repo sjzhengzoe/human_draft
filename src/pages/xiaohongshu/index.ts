@@ -165,14 +165,14 @@ import { checkTextContent } from "../../services/content-security";
       },
     },
     pageLifetimes: {
-      async show() {
+      show() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
 
         if (
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
-          await this.loadStoredContent(storedContent, this.data.activeIndex);
+          this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
     },
@@ -197,11 +197,7 @@ import { checkTextContent } from "../../services/content-security";
           });
       },
 
-      async loadStoredContent(content: string, activeIndex = 0) {
-        if (content.trim() && !(await this.ensureSafeContent(content))) {
-          this.syncContent("");
-          return;
-        }
+      loadStoredContent(content: string, activeIndex = 0) {
         this.syncContent(content, activeIndex);
       },
 

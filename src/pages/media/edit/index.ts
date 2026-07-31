@@ -78,7 +78,7 @@ Page({
       if (!mediaTypes.length) {
         wx.showModal({
           title: "请先创建分类",
-          content: "影视清单还没有可用分类。",
+          content: "影视记录还没有可用分类。",
           showCancel: false,
           success: () => isAsyncPageActive(this) && wx.navigateBack()
         })

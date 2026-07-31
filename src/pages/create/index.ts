@@ -7,17 +7,46 @@ type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
 }
 
 const TEXT_CARD_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE"
+const HOME_FONT_FAMILY = "HumanDraftLanting"
+const HOME_FONT_URL =
+  "https://gufeifei.cn/fonts/FZLTHProGlobal-Regular.woff2?v=20260731"
+
+let homeFontPromise: Promise<void> | undefined
+
+function ensureHomeFontLoaded(): Promise<void> {
+  if (homeFontPromise) return homeFontPromise
+
+  homeFontPromise = new Promise<void>((resolve, reject) => {
+    wx.loadFontFace({
+      family: HOME_FONT_FAMILY,
+      source: `url("${HOME_FONT_URL}")`,
+      desc: {
+        style: "normal",
+        weight: "normal"
+      },
+      global: true,
+      scopes: ["webview", "native"],
+      success: () => resolve(),
+      fail: (error) => {
+        homeFontPromise = undefined
+        reject(error)
+      }
+    })
+  })
+
+  return homeFontPromise
+}
 
 Component({
   data: {
     featureGroups: [
       {
         key: "creation",
-        title: "创作工具",
+        title: "创作",
         items: [
           {
             key: "text-card",
-            icon: "notebook-pen-white",
+            icon: "notebook-pen",
             title: "图文创作",
             path: "/pages/xiaohongshu/index",
             featured: true,
@@ -28,27 +57,27 @@ Component({
       },
       {
         key: "life",
-        title: "生活管理",
+        title: "生活",
         items: [
           {
             key: "menu",
-            icon: "cooking-pot-white",
-            title: "日常菜单",
+            icon: "cooking-pot",
+            title: "饮食清单",
             path: "/pages/menu/index",
             available: true,
             requiresLogin: true
           },
           {
             key: "media",
-            icon: "clapperboard-white",
-            title: "影视清单",
+            icon: "clapperboard",
+            title: "影视记录",
             path: "/pages/media/index",
             available: true,
             requiresLogin: true
           },
           {
             key: "activities",
-            icon: "sparkles-white",
+            icon: "sparkles",
             title: "活动清单",
             path: "/pages/activities/index",
             available: true,
@@ -56,7 +85,7 @@ Component({
           },
           {
             key: "exercise",
-            icon: "dumbbell-white",
+            icon: "dumbbell",
             title: "运动养宠",
             path: "/exercise/pages/index",
             available: true,
@@ -64,7 +93,7 @@ Component({
           },
           {
             key: "luggage",
-            icon: "luggage-white",
+            icon: "luggage",
             title: "行李清单",
             path: "/pages/luggage/index",
             available: true,
@@ -72,8 +101,8 @@ Component({
           },
           {
             key: "wardrobe",
-            icon: "shirt-white",
-            title: "衣橱尺寸",
+            icon: "shirt",
+            title: "我的衣橱",
             path: "/pages/wardrobe/index",
             available: true,
             requiresLogin: true
@@ -85,6 +114,7 @@ Component({
   lifetimes: {
     ready() {
       const page = this as CreatePageInstance
+      void ensureHomeFontLoaded().catch(() => undefined)
       page.hasRendered = true
       hideGlobalLoading()
     }

@@ -5,9 +5,9 @@
   left: 0;
   z-index: 999;
   display: flex;
-  height: calc(82rpx + env(safe-area-inset-bottom));
+  height: calc(98rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
-  padding: 6rpx 72rpx calc(6rpx + env(safe-area-inset-bottom));
+  padding: 12rpx 72rpx calc(8rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid #eeeeee;
   background: rgba(255, 255, 255, 0.98);
 }
@@ -28,11 +28,11 @@
 
 .tabbar__icon {
   display: flex;
-  width: 34rpx;
-  height: 31rpx;
+  width: 38rpx;
+  height: 36rpx;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8rpx;
+  margin-bottom: 7rpx;
   opacity: 0.56;
 }
 
@@ -41,7 +41,7 @@
 }
 
 .tabbar__text {
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 500;
-  line-height: 1.15;
+  line-height: 1.25;
 }
