@@ -59,7 +59,7 @@ type TouchPoint = {
   clientY: number
 }
 
-const VIEWPORT_RPX = 520
+const VIEWPORT_RPX = 420
 const CANVAS_ID = "imageCropperCanvas"
 const cropStates = new WeakMap<object, CropState>()
 const cropGestures = new WeakMap<object, CropGesture>()
