@@ -2,10 +2,13 @@
   <view
     wx:for="{{actions}}"
     wx:key="key"
-    class="action-bar__item {{disabled ? 'action-bar__item--disabled' : ''}}"
-    hover-class="action-bar__item--hover"
+    class="action-bar__item {{item.disabled ? 'action-bar__item--disabled' : ''}}"
+    hover-class="{{item.disabled ? 'none' : 'action-bar__item--hover'}}"
     hover-stay-time="80"
     data-key="{{item.key}}"
+    role="button"
+    aria-label="{{item.label}}"
+    aria-disabled="{{item.disabled}}"
     bindtap="handleActionTap"
   >
     <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="28" /></view>

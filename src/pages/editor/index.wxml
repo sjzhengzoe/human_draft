@@ -1,22 +1,40 @@
-<custom-navigation title="编辑文案" />
+<custom-navigation
+  title="编辑文案"
+  custom-back="{{true}}"
+  bind:back="handleBack"
+/>
 
 <view class="page page--with-navigation">
   <textarea
-    wx:if="{{fontReady}}"
     class="editor-textarea"
     value="{{content}}"
     maxlength="{{20000}}"
     auto-height="{{false}}"
     cursor-spacing="160"
-    adjust-position="{{false}}"
+    adjust-position="{{true}}"
     show-confirm-bar="{{false}}"
-    placeholder="输入文案"
+    placeholder="输入文案，格式说明见下方"
+    aria-label="图文创作文案"
     bindinput="handleInput"
   />
-  <view wx:else class="editor-font-loading">正在加载编辑框</view>
+
+  <view class="editor-meta">
+    <text class="editor-meta__hint">{{formatHint}}</text>
+    <text class="editor-meta__count">{{characterCount}} / 20000</text>
+  </view>
 
   <view class="editor-actions">
-    <button class="btn-primary" bindtap="saveContent">保存</button>
-    <button class="btn-secondary" bindtap="clearContent">清空</button>
+    <button class="btn-primary" disabled="{{saving}}" bindtap="saveContent">{{saving ? '保存中' : '保存'}}</button>
+    <button class="btn-secondary" disabled="{{saving || !content}}" bindtap="clearContent">清空</button>
   </view>
 </view>
+
+<app-dialog
+  visible="{{showLeaveDialog}}"
+  title="放弃本次修改？"
+  content="尚未保存的内容将不会应用到图文卡片。"
+  cancel-text="继续编辑"
+  confirm-text="放弃修改"
+  bind:cancel="cancelLeave"
+  bind:confirm="confirmLeave"
+/>

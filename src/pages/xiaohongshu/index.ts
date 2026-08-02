@@ -31,6 +31,16 @@ import { checkTextContent } from "../../services/content-security";
     height: number;
   };
 
+  type ClearSnapshot = {
+    content: string;
+    activeIndex: number;
+  };
+
+  type SyncContentOptions = {
+    isExample?: boolean;
+    persist?: boolean;
+  };
+
   type Canvas2DNode = {
     width: number;
     height: number;
@@ -110,6 +120,7 @@ import { checkTextContent } from "../../services/content-security";
   const XIAOHONGSHU_TAGS =
     "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
+  const CLEAR_UNDO_DURATION = 5000;
   const DEFAULT_CONTENT = `#感性的人类/WAIT 
 01
 即使是不同的 AI
@@ -162,23 +173,24 @@ import { checkTextContent } from "../../services/content-security";
   const combinedFontPromises = new Map<string, Promise<void>>();
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
+  let clearUndoSnapshot: ClearSnapshot | undefined;
+  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
 
   Component({
     data: {
-      activeTemplate: "xiaohongshu",
       content: "",
       hasCustomContent: false,
-      editContent: "",
-      showEditTextarea: false,
+      isExampleContent: false,
       slides: [] as Slide[],
       renderedImageUrls: [] as string[],
       previewCount: 0,
       activeIndex: 0,
-      showEditModal: false,
       isGenerating: false,
       isRenderingCards: false,
+      renderError: false,
+      renderErrorMessage: "生成失败，请重试",
+      showClearUndo: false,
       canvasReady: false,
-      fontLoaded: false,
     },
     lifetimes: {
       attached() {
@@ -196,7 +208,10 @@ import { checkTextContent } from "../../services/content-security";
         if (typeof initialContent === "string") {
           this.loadStoredContent(initialContent);
         } else {
-          this.syncContent(DEFAULT_CONTENT);
+          this.syncContent(DEFAULT_CONTENT, 0, {
+            isExample: true,
+            persist: false,
+          });
         }
         this.loadRed3Font();
       },
@@ -204,6 +219,11 @@ import { checkTextContent } from "../../services/content-security";
         this.setData({ canvasReady: true }, () => {
           this.refreshRenderedImages();
         });
+      },
+      detached() {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoTimer = undefined;
+        clearUndoSnapshot = undefined;
       },
     },
     pageLifetimes: {
@@ -214,6 +234,7 @@ import { checkTextContent } from "../../services/content-security";
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
+          this.finalizeClearUndo();
           this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
@@ -223,6 +244,7 @@ import { checkTextContent } from "../../services/content-security";
         const template = event.currentTarget.dataset.template;
         if (template !== "douyin2" && template !== "douyin3") return;
 
+        this.finalizeClearUndo();
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
       },
@@ -230,15 +252,13 @@ import { checkTextContent } from "../../services/content-security";
       loadRed3Font() {
         ensureRed3FontLoaded()
           .then(() => {
-            this.setData({ fontLoaded: true }, () => {
-              if (
-                this.data.canvasReady &&
-                !this.data.isRenderingCards &&
-                !this.data.renderedImageUrls.length
-              ) {
-                this.refreshRenderedImages();
-              }
-            });
+            if (
+              this.data.canvasReady &&
+              !this.data.isRenderingCards &&
+              !this.data.renderedImageUrls.length
+            ) {
+              this.refreshRenderedImages();
+            }
           })
           .catch((error) => {
             console.warn("加载 red3 字体失败，使用系统字体回退", error);
@@ -293,47 +313,12 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      closeEditModal() {
-        this.setData({
-          showEditModal: false,
-          showEditTextarea: false,
-        });
-      },
-
-      noop() {},
-
-      handleEditInput(event: WechatMiniprogram.Input) {
-        this.setData({
-          editContent: event.detail.value,
-        });
-      },
-
-      clearEditContent() {
-        this.setData({
-          editContent: "",
-        });
-      },
-
-      async saveEditContent() {
-        const content = this.data.editContent.trim();
-        if (!(await this.ensureSafeContent(content))) return;
-
-        this.syncContent(content);
-        this.closeEditModal();
-        wx.showToast({
-          title: "已保存",
-          icon: "success",
-        });
-      },
-
       handlePasteContent() {
         wx.getClipboardData({
           success: async (result) => {
-            const storedContent = wx.getStorageSync(STORAGE_KEY);
-            const currentContent =
-              typeof storedContent === "string"
-                ? storedContent
-                : this.data.content;
+            const currentContent = this.data.hasCustomContent
+              ? this.data.content
+              : "";
             const nextOrder = getNextSlideOrder(currentContent);
             const pastedEntry = createPastedEntry(result.data, nextOrder);
             if (!pastedEntry) {
@@ -351,6 +336,7 @@ import { checkTextContent } from "../../services/content-security";
             );
             if (!(await this.ensureSafeContent(nextContent))) return;
 
+            this.finalizeClearUndo();
             this.syncContent(nextContent, nextActiveIndex);
             wx.showToast({
               title: `已追加 ${nextOrder}`,
@@ -367,15 +353,39 @@ import { checkTextContent } from "../../services/content-security";
       },
 
       clearContent() {
+        if (!this.data.hasCustomContent) return;
+
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoSnapshot = {
+          content: this.data.content,
+          activeIndex: this.data.activeIndex,
+        };
         this.syncContent("");
-        wx.setStorageSync(STORAGE_KEY, "");
-        wx.showToast({
-          title: "已清空",
-          icon: "success",
-        });
+        this.setData({ showClearUndo: true });
+        clearUndoTimer = setTimeout(() => {
+          this.finalizeClearUndo();
+        }, CLEAR_UNDO_DURATION);
+      },
+
+      handleUndoClear() {
+        if (!clearUndoSnapshot) return;
+
+        const snapshot = clearUndoSnapshot;
+        this.finalizeClearUndo();
+        this.syncContent(snapshot.content, snapshot.activeIndex);
+      },
+
+      finalizeClearUndo() {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoTimer = undefined;
+        clearUndoSnapshot = undefined;
+        if (this.data.showClearUndo) {
+          this.setData({ showClearUndo: false });
+        }
       },
 
       openCopyModePicker() {
+        if (!this.data.hasCustomContent) return;
         wx.showActionSheet({
           itemList: ["复制小红书", "复制抖音版"],
           success: (result) => {
@@ -415,6 +425,7 @@ import { checkTextContent } from "../../services/content-security";
 
       async handleSaveImages() {
         if (this.data.isGenerating) return;
+        if (!this.data.hasCustomContent) return;
         if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
@@ -457,7 +468,11 @@ import { checkTextContent } from "../../services/content-security";
         if (!this.data.canvasReady || !this.data.slides.length) return;
 
         const requestId = ++renderRequestId;
-        this.setData({ isRenderingCards: true });
+        this.setData({
+          isRenderingCards: true,
+          renderError: false,
+          renderErrorMessage: "生成失败，请重试",
+        });
 
         try {
           const urls = await this.renderSlidesToImages();
@@ -465,16 +480,26 @@ import { checkTextContent } from "../../services/content-security";
 
           this.setData({
             renderedImageUrls: urls,
+            renderError: false,
           });
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
+            this.setData({
+              renderError: true,
+              renderErrorMessage: getRenderErrorMessage(error),
+            });
           }
         } finally {
           if (requestId === renderRequestId) {
             this.setData({ isRenderingCards: false });
           }
         }
+      },
+
+      retryPreview() {
+        if (this.data.isRenderingCards) return;
+        this.refreshRenderedImages();
       },
 
       renderSlidesToImages(): Promise<string[]> {
@@ -491,8 +516,10 @@ import { checkTextContent } from "../../services/content-security";
 
           const urls: string[] = [];
 
-          for (const slide of this.data.slides) {
-            urls.push(await this.generateSlideImage(slide));
+          if (!this.data.slides.length) return urls;
+
+          for (const [index, slide] of this.data.slides.entries()) {
+            urls.push(await this.generateSlideImage(slide, index));
           }
 
           for (const fontOption of COMBINED_FONT_OPTIONS) {
@@ -514,7 +541,7 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      async generateSlideImage(slide: Slide): Promise<string> {
+      async generateSlideImage(slide: Slide, slideIndex: number): Promise<string> {
         const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
 
@@ -537,6 +564,9 @@ import { checkTextContent } from "../../services/content-security";
             .flatMap((line) => wrapLine(line, ctx, CANVAS_TEXT_MAX_WIDTH)),
         );
         const textBlockHeight = getCanvasTextBlockHeight(paragraphLines);
+        if (textBlockHeight > CANVAS_HEIGHT - CANVAS_SAFE_Y * 2) {
+          throw new Error(`第 ${slideIndex + 1} 页内容过长，请精简后重试`);
+        }
         const textTop = Math.max(
           CANVAS_SAFE_Y,
           Math.round((CANVAS_HEIGHT - textBlockHeight) / 2),
@@ -591,6 +621,9 @@ import { checkTextContent } from "../../services/content-security";
           fontSize,
           ctx,
         );
+        if (layout.height > CANVAS_HEIGHT - SECOND_THEME_SAFE_Y * 2) {
+          throw new Error("合并版内容过长，请减少卡片或精简文案");
+        }
         const textTop = Math.max(
           SECOND_THEME_SAFE_Y,
           Math.round((CANVAS_HEIGHT - layout.height) / 2),
@@ -639,9 +672,14 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      syncContent(content: string, activeIndex = 0) {
-        const hasCustomContent = Boolean(content.trim());
-        const slides = hasCustomContent ? getContentSlides(content) : [];
+      syncContent(
+        content: string,
+        activeIndex = 0,
+        options: SyncContentOptions = {},
+      ) {
+        const isExampleContent = Boolean(options.isExample && content.trim());
+        const hasCustomContent = Boolean(content.trim()) && !isExampleContent;
+        const slides = content.trim() ? getContentSlides(content) : [];
         const previewCount = slides.length
           ? slides.length + COMBINED_FONT_OPTIONS.length
           : 0;
@@ -649,13 +687,18 @@ import { checkTextContent } from "../../services/content-security";
           Math.max(activeIndex, 0),
           Math.max(previewCount - 1, 0),
         );
+        renderRequestId += 1;
 
         this.setData(
           {
             content,
             hasCustomContent,
+            isExampleContent,
             slides,
             renderedImageUrls: [],
+            isRenderingCards: false,
+            renderError: false,
+            renderErrorMessage: "生成失败，请重试",
             previewCount,
             activeIndex: nextActiveIndex,
           },
@@ -664,7 +707,9 @@ import { checkTextContent } from "../../services/content-security";
           },
         );
 
-        wx.setStorageSync(STORAGE_KEY, content);
+        if (options.persist !== false) {
+          wx.setStorageSync(STORAGE_KEY, content);
+        }
       },
 
       async ensureSafeContent(content: string) {
@@ -775,7 +820,7 @@ import { checkTextContent } from "../../services/content-security";
         const currentSlide = result[result.length - 1];
 
         if (
-          (/^(?:0\d|1\d)$/.test(line.trim()) ||
+          (/^\d{2}$/.test(line.trim()) ||
             line.trim().startsWith("［")) &&
           currentSlide.some(Boolean)
         ) {
@@ -795,7 +840,7 @@ import { checkTextContent } from "../../services/content-security";
 
   function createSlide(text: string, index: number): Slide {
     const firstLine = getFirstLine(text) || "";
-    const hasOrderLine = /^(?:0\d|1\d)$/.test(firstLine);
+    const hasOrderLine = /^\d{2}$/.test(firstLine);
     const order = hasOrderLine
       ? firstLine
       : String(index + 1).padStart(2, "0");
@@ -824,6 +869,16 @@ import { checkTextContent } from "../../services/content-security";
 
   function normalizeText(text: string) {
     return text.replace(/\r\n/g, "\n");
+  }
+
+  function getRenderErrorMessage(error: unknown) {
+    if (
+      error instanceof Error &&
+      /^(第 \d+ 页内容过长|合并版内容过长)/.test(error.message)
+    ) {
+      return error.message;
+    }
+    return "生成失败，请重试";
   }
 
   function getFirstLine(text: string) {

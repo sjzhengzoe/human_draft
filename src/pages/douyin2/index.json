@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "图文创作",
   "usingComponents": {
-    "text-card-action-bar": "/components/text-card-action-bar/index"
+    "text-card-action-bar": "/components/text-card-action-bar/index",
+    "text-card-undo-bar": "/components/text-card-undo-bar/index"
   }
 }

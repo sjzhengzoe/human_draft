@@ -13,6 +13,26 @@ import { checkTextContent } from "../../services/content-security";
     isSpacer: boolean;
   };
 
+  type ClearSnapshot = {
+    content: string;
+    activeIndex: number;
+    imagePaths: string[];
+  };
+
+  type SyncContentOptions = {
+    isExample?: boolean;
+    persist?: boolean;
+    preferredImagePaths?: string[];
+  };
+
+  type StoredImageBindings = {
+    version: 2;
+    bindings: Array<{
+      pageKey: string;
+      path: string;
+    }>;
+  };
+
   type CanvasImage = {
     width: number;
     height: number;
@@ -117,6 +137,7 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_BOLD_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
+  const CLEAR_UNDO_DURATION = 5000;
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
 那些惴惴不安的未来
@@ -145,22 +166,25 @@ import { checkTextContent } from "../../services/content-security";
   let douyin3FontPromise: Promise<void> | undefined;
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
+  let clearUndoSnapshot: ClearSnapshot | undefined;
+  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
 
   Component({
     data: {
-      activeTemplate: "douyin3",
       content: "",
       hasCustomContent: false,
-      editContent: "",
-      showEditTextarea: false,
+      isExampleContent: false,
       pages: [] as Paragraph[][],
       renderedImageUrls: [] as string[],
       activeIndex: 0,
-      showEditModal: false,
       isGenerating: false,
       isRenderingCards: false,
+      renderError: false,
+      renderErrorMessage: "生成失败，请重试",
+      showClearUndo: false,
       canvasReady: false,
       selectedImagePaths: [] as string[],
+      pageKeys: [] as string[],
       selectingImage: false,
       selectingImageIndex: -1,
       showCropModal: false,
@@ -171,9 +195,7 @@ import { checkTextContent } from "../../services/content-security";
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
         const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
-        const storedImagePaths = getStoredImagePaths(
-          wx.getStorageSync(LOCAL_IMAGES_STORAGE_KEY),
-        );
+        const storedImageValue = wx.getStorageSync(LOCAL_IMAGES_STORAGE_KEY);
         const initialContent =
           typeof storedContent === "string"
             ? storedContent
@@ -182,12 +204,24 @@ import { checkTextContent } from "../../services/content-security";
               : undefined;
 
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin3");
-        this.setData({ selectedImagePaths: storedImagePaths });
 
         if (typeof initialContent === "string") {
-          this.loadStoredContent(initialContent);
+          const pageKeys = createPageKeys(
+            getContentSlides(initialContent).filter((source) =>
+              getParagraphs(source).some((paragraph) => !paragraph.isSpacer),
+            ),
+          );
+          this.syncContent(initialContent, 0, {
+            preferredImagePaths: getStoredImagePaths(
+              storedImageValue,
+              pageKeys,
+            ),
+          });
         } else {
-          this.syncContent(DEFAULT_CONTENT);
+          this.syncContent(DEFAULT_CONTENT, 0, {
+            isExample: true,
+            persist: false,
+          });
         }
         this.loadDouyin3Font();
       },
@@ -195,6 +229,14 @@ import { checkTextContent } from "../../services/content-security";
         this.setData({ canvasReady: true }, () => {
           this.refreshRenderedImages();
         });
+      },
+      detached() {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        if (clearUndoSnapshot) {
+          clearUndoSnapshot.imagePaths.filter(Boolean).forEach(removeLocalImageFile);
+        }
+        clearUndoTimer = undefined;
+        clearUndoSnapshot = undefined;
       },
     },
     pageLifetimes: {
@@ -205,6 +247,7 @@ import { checkTextContent } from "../../services/content-security";
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
+          this.finalizeClearUndo();
           this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
@@ -214,6 +257,7 @@ import { checkTextContent } from "../../services/content-security";
         const template = event.currentTarget.dataset.template;
         if (template !== "xiaohongshu" && template !== "douyin2") return;
 
+        this.finalizeClearUndo();
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
       },
@@ -331,7 +375,7 @@ import { checkTextContent } from "../../services/content-security";
           const selectedImagePaths = [...this.data.selectedImagePaths];
           const previousFilePath = selectedImagePaths[targetIndex] || "";
           selectedImagePaths[targetIndex] = savedFilePath;
-          persistLocalImagePaths(selectedImagePaths);
+          persistLocalImagePaths(selectedImagePaths, this.data.pageKeys);
           this.setData({
             selectedImagePaths,
             showCropModal: false,
@@ -366,52 +410,54 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      closeEditModal() {
-        this.setData({
-          showEditModal: false,
-          showEditTextarea: false,
-        });
-      },
-
-      noop() {},
-
-      handleEditInput(event: WechatMiniprogram.Input) {
-        this.setData({
-          editContent: event.detail.value,
-        });
-      },
-
-      clearEditContent() {
-        this.setData({
-          editContent: "",
-        });
-      },
-
       clearContent() {
+        if (!this.data.hasCustomContent) return;
+
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoSnapshot = {
+          content: this.data.content,
+          activeIndex: this.data.activeIndex,
+          imagePaths: [...this.data.selectedImagePaths],
+        };
         this.syncContent("");
-        wx.showToast({
-          title: "已清空",
-          icon: "success",
+        this.setData({ showClearUndo: true });
+        clearUndoTimer = setTimeout(() => {
+          this.finalizeClearUndo();
+        }, CLEAR_UNDO_DURATION);
+      },
+
+      handleUndoClear() {
+        if (!clearUndoSnapshot) return;
+
+        const snapshot = clearUndoSnapshot;
+        this.finalizeClearUndo(false);
+        this.syncContent(snapshot.content, snapshot.activeIndex, {
+          preferredImagePaths: snapshot.imagePaths,
         });
       },
 
-      async saveEditContent() {
-        const content = this.data.editContent.trim();
-        if (!(await this.ensureSafeContent(content))) return;
+      finalizeClearUndo(removeImages = true) {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoTimer = undefined;
 
-        this.syncContent(content);
-        this.closeEditModal();
-        wx.showToast({
-          title: "已保存",
-          icon: "success",
-        });
+        if (removeImages && clearUndoSnapshot) {
+          const activePaths = new Set(this.data.selectedImagePaths.filter(Boolean));
+          clearUndoSnapshot.imagePaths
+            .filter((path) => path && !activePaths.has(path))
+            .forEach(removeLocalImageFile);
+        }
+
+        clearUndoSnapshot = undefined;
+        if (this.data.showClearUndo) {
+          this.setData({ showClearUndo: false });
+        }
       },
 
       handlePasteContent() {
         wx.getClipboardData({
           success: async (result) => {
-            const content = result.data.trim();
-            if (!content) {
+            const pastedContent = result.data.trim();
+            if (!pastedContent) {
               wx.showToast({
                 title: "剪贴板为空",
                 icon: "none",
@@ -419,11 +465,16 @@ import { checkTextContent } from "../../services/content-security";
               return;
             }
 
+            const currentContent = this.data.hasCustomContent
+              ? this.data.content
+              : "";
+            const content = appendPastedContent(currentContent, pastedContent);
             if (!(await this.ensureSafeContent(content))) return;
 
+            this.finalizeClearUndo();
             this.syncContent(content);
             wx.showToast({
-              title: "已粘贴",
+              title: currentContent ? "已追加" : "已粘贴",
               icon: "success",
             });
           },
@@ -437,6 +488,7 @@ import { checkTextContent } from "../../services/content-security";
       },
 
       async handleCopyContent() {
+        if (!this.data.hasCustomContent) return;
         if (!(await this.ensureSafeContent(this.data.content))) return;
 
         const text = getCopyableContent(this.data.content);
@@ -461,6 +513,7 @@ import { checkTextContent } from "../../services/content-security";
 
       async handleSaveImages() {
         if (this.data.isGenerating) return;
+        if (!this.data.hasCustomContent) return;
         if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
@@ -505,7 +558,11 @@ import { checkTextContent } from "../../services/content-security";
         if (!this.data.canvasReady || !this.data.pages.length) return;
 
         const requestId = ++renderRequestId;
-        this.setData({ isRenderingCards: true });
+        this.setData({
+          isRenderingCards: true,
+          renderError: false,
+          renderErrorMessage: "生成失败，请重试",
+        });
 
         try {
           const urls = await this.renderPagesToImages();
@@ -513,16 +570,26 @@ import { checkTextContent } from "../../services/content-security";
 
           this.setData({
             renderedImageUrls: urls,
+            renderError: false,
           });
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
+            this.setData({
+              renderError: true,
+              renderErrorMessage: getRenderErrorMessage(error),
+            });
           }
         } finally {
           if (requestId === renderRequestId) {
             this.setData({ isRenderingCards: false });
           }
         }
+      },
+
+      retryPreview() {
+        if (this.data.isRenderingCards) return;
+        this.refreshRenderedImages();
       },
 
       renderPagesToImages(circleImagePaths: string[] = []): Promise<string[]> {
@@ -621,28 +688,64 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      syncContent(content: string, activeIndex = 0) {
-        const hasCustomContent = Boolean(content.trim());
-        const pages = hasCustomContent ? getPages(content) : [];
-        const previousImagePaths = [...this.data.selectedImagePaths];
-        const selectedImagePaths = pages.map(
-          (_, index) => this.data.selectedImagePaths[index] || "",
+      syncContent(
+        content: string,
+        activeIndex = 0,
+        options: SyncContentOptions = {},
+      ) {
+        const isExampleContent = Boolean(options.isExample && content.trim());
+        const hasCustomContent = Boolean(content.trim()) && !isExampleContent;
+        const pageEntries = (content.trim() ? getContentSlides(content) : [])
+          .map((source) => ({ source, page: getParagraphs(source) }))
+          .filter((entry) =>
+            entry.page.some((paragraph) => !paragraph.isSpacer),
+          );
+        const pages = pageEntries.map((entry) => entry.page);
+        const pageKeys = createPageKeys(
+          pageEntries.map((entry) => entry.source),
         );
-        const removedImagePaths = previousImagePaths.filter(
-          (path) => path && !selectedImagePaths.includes(path),
+        const previousBindings = new Map(
+          this.data.pageKeys.map((pageKey, index) => [
+            pageKey,
+            this.data.selectedImagePaths[index] || "",
+          ]),
         );
+        const nextPageKeySet = new Set(pageKeys);
+        const selectedImagePaths = pages.map((_, index) => {
+          if (options.preferredImagePaths) {
+            return options.preferredImagePaths[index] || "";
+          }
+
+          const matchedPath = previousBindings.get(pageKeys[index]);
+          if (matchedPath) return matchedPath;
+
+          const previousPageKey = this.data.pageKeys[index];
+          const canKeepEditedPageImage =
+            pages.length === this.data.pageKeys.length &&
+            previousPageKey &&
+            !nextPageKeySet.has(previousPageKey);
+          return canKeepEditedPageImage
+            ? this.data.selectedImagePaths[index] || ""
+            : "";
+        });
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
         );
+        renderRequestId += 1;
 
         this.setData(
           {
             content,
             hasCustomContent,
+            isExampleContent,
             pages,
+            pageKeys,
             selectedImagePaths,
             renderedImageUrls: [],
+            isRenderingCards: false,
+            renderError: false,
+            renderErrorMessage: "生成失败，请重试",
             activeIndex: nextActiveIndex,
           },
           () => {
@@ -650,9 +753,10 @@ import { checkTextContent } from "../../services/content-security";
           },
         );
 
-        wx.setStorageSync(STORAGE_KEY, content);
-        persistLocalImagePaths(selectedImagePaths);
-        removedImagePaths.forEach(removeLocalImageFile);
+        if (options.persist !== false) {
+          wx.setStorageSync(STORAGE_KEY, content);
+          persistLocalImagePaths(selectedImagePaths, pageKeys);
+        }
       },
 
       async ensureSafeContent(content: string) {
@@ -697,12 +801,6 @@ import { checkTextContent } from "../../services/content-security";
     if (!bodyLines.length) return DOUYIN_TAGS;
 
     return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
-  }
-
-  function getPages(content: string) {
-    return getContentSlides(content)
-      .map((slide) => getParagraphs(slide))
-      .filter((page) => page.some((paragraph) => !paragraph.isSpacer));
   }
 
   function getParagraphs(text: string) {
@@ -757,7 +855,47 @@ import { checkTextContent } from "../../services/content-security";
 
   function isPageBreakLine(line: string) {
     const text = line.trim();
-    return text.startsWith("［") || /^(?:0\d|1\d)$/.test(text);
+    return text.startsWith("［") || /^\d{2}$/.test(text);
+  }
+
+  function appendPastedContent(currentContent: string, pastedContent: string) {
+    const current = currentContent.trim();
+    const pasted = pastedContent.trim();
+    if (!current) return pasted;
+
+    const firstPastedLine = normalizeText(pasted)
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean);
+    if (firstPastedLine && isPageBreakLine(firstPastedLine)) {
+      return `${current}\n\n${pasted}`;
+    }
+
+    const nextPage = getContentSlides(current).length + 1;
+    const pageTitle =
+      nextPage <= 99 ? String(nextPage).padStart(2, "0") : `［第 ${nextPage} 页］`;
+    return `${current}\n\n${pageTitle}\n${pasted}`;
+  }
+
+  function createPageKeys(slides: string[]) {
+    const occurrences = new Map<string, number>();
+
+    return slides.map((slide, index) => {
+      const lines = normalizeText(slide)
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const firstLine = lines[0] || `页面 ${index + 1}`;
+      const identity = /^\d{2}$/.test(firstLine)
+        ? lines[1] || firstLine
+        : firstLine.startsWith("［")
+          ? `${firstLine}|${lines[1] || ""}`
+          : firstLine;
+      const normalizedIdentity = identity.replace(/\s+/g, " ").slice(0, 120);
+      const occurrence = (occurrences.get(normalizedIdentity) || 0) + 1;
+      occurrences.set(normalizedIdentity, occurrence);
+      return `${normalizedIdentity}::${occurrence}`;
+    });
   }
 
   function trimEmptyLines(lines: string[]) {
@@ -776,6 +914,10 @@ import { checkTextContent } from "../../services/content-security";
 
   function normalizeText(text: string) {
     return text.replace(/\r\n/g, "\n").replace(/\u2800/g, " ");
+  }
+
+  function getRenderErrorMessage(_error: unknown) {
+    return "生成失败，请重试";
   }
 
   function parseEmphasis(text: string) {
@@ -1083,17 +1225,47 @@ import { checkTextContent } from "../../services/content-security";
     });
   }
 
-  function getStoredImagePaths(value: unknown) {
-    if (!Array.isArray(value)) return [];
-    return value.map((item) => (typeof item === "string" ? item : ""));
+  function getStoredImagePaths(value: unknown, pageKeys: string[]) {
+    if (Array.isArray(value)) {
+      return pageKeys.map((_, index) =>
+        typeof value[index] === "string" ? value[index] : "",
+      );
+    }
+
+    if (!isStoredImageBindings(value)) return pageKeys.map(() => "");
+    const pathByPageKey = new Map(
+      value.bindings.map((binding) => [binding.pageKey, binding.path]),
+    );
+    return pageKeys.map((pageKey) => pathByPageKey.get(pageKey) || "");
   }
 
-  function persistLocalImagePaths(paths: string[]) {
-    if (paths.some(Boolean)) {
-      wx.setStorageSync(LOCAL_IMAGES_STORAGE_KEY, paths);
+  function persistLocalImagePaths(paths: string[], pageKeys: string[]) {
+    const bindings = paths.flatMap((path, index) => {
+      const pageKey = pageKeys[index];
+      return path && pageKey ? [{ pageKey, path }] : [];
+    });
+
+    if (bindings.length) {
+      const value: StoredImageBindings = { version: 2, bindings };
+      wx.setStorageSync(LOCAL_IMAGES_STORAGE_KEY, value);
       return;
     }
     wx.removeStorageSync(LOCAL_IMAGES_STORAGE_KEY);
+  }
+
+  function isStoredImageBindings(value: unknown): value is StoredImageBindings {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Partial<StoredImageBindings>;
+    return (
+      candidate.version === 2 &&
+      Array.isArray(candidate.bindings) &&
+      candidate.bindings.every(
+        (binding) =>
+          Boolean(binding) &&
+          typeof binding.pageKey === "string" &&
+          typeof binding.path === "string",
+      )
+    );
   }
 
   function saveLocalImageFile(tempFilePath: string) {

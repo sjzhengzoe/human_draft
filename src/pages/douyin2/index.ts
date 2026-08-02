@@ -13,6 +13,16 @@ import { checkTextContent } from "../../services/content-security";
     isSpacer: boolean;
   };
 
+  type ClearSnapshot = {
+    content: string;
+    activeIndex: number;
+  };
+
+  type SyncContentOptions = {
+    isExample?: boolean;
+    persist?: boolean;
+  };
+
   type Canvas2DNode = {
     width: number;
     height: number;
@@ -77,6 +87,7 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_MAX_CHARS_PER_LINE = 21;
   const CANVAS_TITLE_MAX_CHARS_PER_LINE = 18;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
+  const CLEAR_UNDO_DURATION = 5000;
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
 那些惴惴不安的未来
@@ -105,20 +116,22 @@ import { checkTextContent } from "../../services/content-security";
   let douyin2FontPromise: Promise<void> | undefined;
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
+  let clearUndoSnapshot: ClearSnapshot | undefined;
+  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
 
   Component({
     data: {
-      activeTemplate: "douyin2",
       content: "",
       hasCustomContent: false,
-      editContent: "",
-      showEditTextarea: false,
+      isExampleContent: false,
       pages: [] as Paragraph[][],
       renderedImageUrls: [] as string[],
       activeIndex: 0,
-      showEditModal: false,
       isGenerating: false,
       isRenderingCards: false,
+      renderError: false,
+      renderErrorMessage: "生成失败，请重试",
+      showClearUndo: false,
       canvasReady: false,
     },
     lifetimes: {
@@ -137,7 +150,10 @@ import { checkTextContent } from "../../services/content-security";
         if (typeof initialContent === "string") {
           this.loadStoredContent(initialContent);
         } else {
-          this.syncContent(DEFAULT_CONTENT);
+          this.syncContent(DEFAULT_CONTENT, 0, {
+            isExample: true,
+            persist: false,
+          });
         }
         this.loadDouyin2Font();
       },
@@ -145,6 +161,11 @@ import { checkTextContent } from "../../services/content-security";
         this.setData({ canvasReady: true }, () => {
           this.refreshRenderedImages();
         });
+      },
+      detached() {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoTimer = undefined;
+        clearUndoSnapshot = undefined;
       },
     },
     pageLifetimes: {
@@ -155,6 +176,7 @@ import { checkTextContent } from "../../services/content-security";
           typeof storedContent === "string" &&
           storedContent !== this.data.content
         ) {
+          this.finalizeClearUndo();
           this.loadStoredContent(storedContent, this.data.activeIndex);
         }
       },
@@ -164,6 +186,7 @@ import { checkTextContent } from "../../services/content-security";
         const template = event.currentTarget.dataset.template;
         if (template !== "xiaohongshu" && template !== "douyin3") return;
 
+        this.finalizeClearUndo();
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
       },
@@ -226,52 +249,43 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      closeEditModal() {
-        this.setData({
-          showEditModal: false,
-          showEditTextarea: false,
-        });
-      },
-
-      noop() {},
-
-      handleEditInput(event: WechatMiniprogram.Input) {
-        this.setData({
-          editContent: event.detail.value,
-        });
-      },
-
-      clearEditContent() {
-        this.setData({
-          editContent: "",
-        });
-      },
-
       clearContent() {
+        if (!this.data.hasCustomContent) return;
+
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoSnapshot = {
+          content: this.data.content,
+          activeIndex: this.data.activeIndex,
+        };
         this.syncContent("");
-        wx.showToast({
-          title: "已清空",
-          icon: "success",
-        });
+        this.setData({ showClearUndo: true });
+        clearUndoTimer = setTimeout(() => {
+          this.finalizeClearUndo();
+        }, CLEAR_UNDO_DURATION);
       },
 
-      async saveEditContent() {
-        const content = this.data.editContent.trim();
-        if (!(await this.ensureSafeContent(content))) return;
+      handleUndoClear() {
+        if (!clearUndoSnapshot) return;
 
-        this.syncContent(content);
-        this.closeEditModal();
-        wx.showToast({
-          title: "已保存",
-          icon: "success",
-        });
+        const snapshot = clearUndoSnapshot;
+        this.finalizeClearUndo();
+        this.syncContent(snapshot.content, snapshot.activeIndex);
+      },
+
+      finalizeClearUndo() {
+        if (clearUndoTimer) clearTimeout(clearUndoTimer);
+        clearUndoTimer = undefined;
+        clearUndoSnapshot = undefined;
+        if (this.data.showClearUndo) {
+          this.setData({ showClearUndo: false });
+        }
       },
 
       handlePasteContent() {
         wx.getClipboardData({
           success: async (result) => {
-            const content = result.data.trim();
-            if (!content) {
+            const pastedContent = result.data.trim();
+            if (!pastedContent) {
               wx.showToast({
                 title: "剪贴板为空",
                 icon: "none",
@@ -279,11 +293,16 @@ import { checkTextContent } from "../../services/content-security";
               return;
             }
 
+            const currentContent = this.data.hasCustomContent
+              ? this.data.content
+              : "";
+            const content = appendPastedContent(currentContent, pastedContent);
             if (!(await this.ensureSafeContent(content))) return;
 
+            this.finalizeClearUndo();
             this.syncContent(content);
             wx.showToast({
-              title: "已粘贴",
+              title: currentContent ? "已追加" : "已粘贴",
               icon: "success",
             });
           },
@@ -297,6 +316,7 @@ import { checkTextContent } from "../../services/content-security";
       },
 
       async handleCopyContent() {
+        if (!this.data.hasCustomContent) return;
         if (!(await this.ensureSafeContent(this.data.content))) return;
 
         const text = getCopyableContent(this.data.content);
@@ -321,6 +341,7 @@ import { checkTextContent } from "../../services/content-security";
 
       async handleSaveImages() {
         if (this.data.isGenerating) return;
+        if (!this.data.hasCustomContent) return;
         if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
@@ -363,7 +384,11 @@ import { checkTextContent } from "../../services/content-security";
         if (!this.data.canvasReady || !this.data.pages.length) return;
 
         const requestId = ++renderRequestId;
-        this.setData({ isRenderingCards: true });
+        this.setData({
+          isRenderingCards: true,
+          renderError: false,
+          renderErrorMessage: "生成失败，请重试",
+        });
 
         try {
           const urls = await this.renderPagesToImages();
@@ -371,16 +396,26 @@ import { checkTextContent } from "../../services/content-security";
 
           this.setData({
             renderedImageUrls: urls,
+            renderError: false,
           });
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
+            this.setData({
+              renderError: true,
+              renderErrorMessage: getRenderErrorMessage(error),
+            });
           }
         } finally {
           if (requestId === renderRequestId) {
             this.setData({ isRenderingCards: false });
           }
         }
+      },
+
+      retryPreview() {
+        if (this.data.isRenderingCards) return;
+        this.refreshRenderedImages();
       },
 
       renderPagesToImages(): Promise<string[]> {
@@ -395,15 +430,15 @@ import { checkTextContent } from "../../services/content-security";
 
           const urls: string[] = [];
 
-          for (const page of pages) {
-            urls.push(await this.generatePageImage(page));
+          for (const [index, page] of pages.entries()) {
+            urls.push(await this.generatePageImage(page, index));
           }
 
           return urls;
         });
       },
 
-      async generatePageImage(page: Paragraph[]): Promise<string> {
+      async generatePageImage(page: Paragraph[], pageIndex: number): Promise<string> {
         const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
         const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
@@ -420,6 +455,9 @@ import { checkTextContent } from "../../services/content-security";
         ctx.textAlign = "left";
 
         const layout = createPageLayout(page);
+        if (getLayoutHeight(layout) > CANVAS_HEIGHT - CANVAS_SAFE_Y * 2) {
+          throw new Error(`第 ${pageIndex + 1} 页内容过长，请精简后重试`);
+        }
         const textTop = Math.max(
           CANVAS_SAFE_Y,
           Math.round((CANVAS_HEIGHT - getLayoutHeight(layout)) / 2),
@@ -459,20 +497,30 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
-      syncContent(content: string, activeIndex = 0) {
-        const hasCustomContent = Boolean(content.trim());
-        const pages = hasCustomContent ? getPages(content) : [];
+      syncContent(
+        content: string,
+        activeIndex = 0,
+        options: SyncContentOptions = {},
+      ) {
+        const isExampleContent = Boolean(options.isExample && content.trim());
+        const hasCustomContent = Boolean(content.trim()) && !isExampleContent;
+        const pages = content.trim() ? getPages(content) : [];
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
         );
+        renderRequestId += 1;
 
         this.setData(
           {
             content,
             hasCustomContent,
+            isExampleContent,
             pages,
             renderedImageUrls: [],
+            isRenderingCards: false,
+            renderError: false,
+            renderErrorMessage: "生成失败，请重试",
             activeIndex: nextActiveIndex,
           },
           () => {
@@ -480,7 +528,9 @@ import { checkTextContent } from "../../services/content-security";
           },
         );
 
-        wx.setStorageSync(STORAGE_KEY, content);
+        if (options.persist !== false) {
+          wx.setStorageSync(STORAGE_KEY, content);
+        }
       },
 
       async ensureSafeContent(content: string) {
@@ -585,7 +635,26 @@ import { checkTextContent } from "../../services/content-security";
 
   function isPageBreakLine(line: string) {
     const text = line.trim();
-    return text.startsWith("［") || /^(?:0\d|1\d)$/.test(text);
+    return text.startsWith("［") || /^\d{2}$/.test(text);
+  }
+
+  function appendPastedContent(currentContent: string, pastedContent: string) {
+    const current = currentContent.trim();
+    const pasted = pastedContent.trim();
+    if (!current) return pasted;
+
+    const firstPastedLine = normalizeText(pasted)
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean);
+    if (firstPastedLine && isPageBreakLine(firstPastedLine)) {
+      return `${current}\n\n${pasted}`;
+    }
+
+    const nextPage = getContentSlides(current).length + 1;
+    const pageTitle =
+      nextPage <= 99 ? String(nextPage).padStart(2, "0") : `［第 ${nextPage} 页］`;
+    return `${current}\n\n${pageTitle}\n${pasted}`;
   }
 
   function trimEmptyLines(lines: string[]) {
@@ -604,6 +673,16 @@ import { checkTextContent } from "../../services/content-security";
 
   function normalizeText(text: string) {
     return text.replace(/\r\n/g, "\n");
+  }
+
+  function getRenderErrorMessage(error: unknown) {
+    if (
+      error instanceof Error &&
+      /^第 \d+ 页内容过长/.test(error.message)
+    ) {
+      return error.message;
+    }
+    return "生成失败，请重试";
   }
 
   function parseEmphasis(text: string) {

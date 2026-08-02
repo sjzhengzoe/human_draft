@@ -1,0 +1,40 @@
+.undo-bar {
+  position: fixed;
+  right: var(--ui-page-gutter);
+  bottom: calc(154rpx + env(safe-area-inset-bottom));
+  left: var(--ui-page-gutter);
+  z-index: 22;
+  display: flex;
+  min-height: 76rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18rpx 0 24rpx;
+  border-radius: 18rpx;
+  background: #20241f;
+  box-shadow: 0 10rpx 26rpx rgba(0, 0, 0, 0.14);
+  color: #ffffff;
+}
+
+.undo-bar__message {
+  font-size: var(--ui-font-size-base);
+  line-height: 1.4;
+}
+
+.undo-bar__action {
+  min-width: 104rpx;
+  height: 60rpx;
+  margin: 0;
+  padding: 0 20rpx;
+  border: 0;
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 60rpx;
+}
+
+.undo-bar__action::after {
+  border: 0;
+}

@@ -29,21 +29,25 @@ page {
   line-height: 1.65;
 }
 
-.editor-font-loading {
+.editor-meta {
   display: flex;
-  width: 100%;
-  height: 480rpx;
-  min-height: 360rpx;
-  max-height: 48vh;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  border: 1rpx solid var(--ui-border);
-  border-radius: var(--ui-radius-card);
-  background: var(--ui-surface);
-  color: #999999;
-  font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: var(--ui-font-size-base);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  margin-top: 16rpx;
+  padding: 0 4rpx;
+  color: #888884;
+  font-size: 22rpx;
+  line-height: 1.55;
+}
+
+.editor-meta__hint {
+  flex: 1;
+}
+
+.editor-meta__count {
+  flex: none;
+  white-space: nowrap;
 }
 
 .editor-actions {
@@ -72,6 +76,12 @@ page {
   font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: normal;
+}
+
+.btn-primary[disabled],
+.btn-secondary[disabled] {
+  color: #b5b5b1;
+  opacity: 0.72;
 }
 
 .btn-primary::after,

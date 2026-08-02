@@ -4,30 +4,41 @@
   </view>
 
 <view class="page">
-  <view class="template-switch" aria-label="选择图文模板">
+  <view class="template-switch" role="tablist" aria-label="选择图文模板">
     <view
       class="template-switch__item"
+      role="tab"
+      aria-selected="false"
       data-template="xiaohongshu"
       bindtap="handleTemplateChange"
-    >模板一</view>
+    >图文分卡</view>
     <view
       class="template-switch__item"
+      role="tab"
+      aria-selected="false"
       data-template="douyin2"
       bindtap="handleTemplateChange"
-    >模板二</view>
+    >文字短句</view>
     <view
       class="template-switch__item template-switch__item--active"
+      role="tab"
+      aria-selected="true"
       data-template="douyin3"
       bindtap="handleTemplateChange"
-    >模板三</view>
+    >图文头像</view>
   </view>
 
-  <view wx:if="{{!hasCustomContent}}" class="card-swiper card-slide">
+  <view wx:if="{{isExampleContent}}" class="example-notice">
+    <text class="example-notice__title">当前是默认文案</text>
+    <text class="example-notice__desc">请编辑文案后再导出</text>
+  </view>
+
+  <view wx:if="{{!hasCustomContent && !isExampleContent}}" class="card-swiper card-slide">
     <view class="card-item card-item--empty">
       <view class="card-loading card-empty-state">
         <view class="card-empty-state__mark"><app-icon name="pencil" size="32" inverse="{{true}}" /></view>
-        <view class="card-loading__title">开始创作短句</view>
-        <view class="card-loading__desc">从底部选择“粘贴”或“编辑”，生成你的短句卡片</view>
+        <view class="card-loading__title">开始创作图文</view>
+        <view class="card-loading__desc">从底部选择“粘贴”或“编辑”，生成带头像的图文卡片</view>
       </view>
     </view>
   </view>
@@ -45,6 +56,7 @@
       <view class="card-item">
         <image class="card-image" src="{{item}}" mode="widthFix" show-menu-by-longpress />
         <view
+          wx:if="{{!isExampleContent}}"
           class="circle-image-picker {{selectedImagePaths[index] ? 'circle-image-picker--selected' : ''}} {{selectingImage && selectingImageIndex === index ? 'circle-image-picker--loading' : ''}}"
           data-index="{{index}}"
           role="button"
@@ -65,7 +77,17 @@
       </view>
     </swiper-item>
 
-    <swiper-item wx:if="{{!renderedImageUrls.length}}" class="card-slide">
+    <swiper-item wx:if="{{!renderedImageUrls.length && renderError}}" class="card-slide">
+      <view class="card-item card-item--preview-loading">
+        <view class="card-loading">
+          <view class="card-loading__title">{{renderErrorMessage}}</view>
+          <view class="card-loading__desc">文案和图片不会丢失，可以重新生成预览</view>
+          <button class="card-loading__retry" bindtap="retryPreview">重新生成</button>
+        </view>
+      </view>
+    </swiper-item>
+
+    <swiper-item wx:elif="{{!renderedImageUrls.length}}" class="card-slide">
       <view class="card-item card-item--preview-loading">
         <view class="card-loading">
           <view class="card-loading__title">正在生成短句卡片</view>
@@ -80,9 +102,17 @@
   </view>
 
   <text-card-action-bar
-    disabled="{{isGenerating}}"
+    disabled="{{isGenerating || selectingImage}}"
+    has-content="{{hasCustomContent}}"
+    export-ready="{{hasCustomContent && !isRenderingCards && !renderError && renderedImageUrls.length === pages.length}}"
     label="抖音短句操作"
     bind:action="handleAction"
+  />
+
+  <text-card-undo-bar
+    visible="{{showClearUndo}}"
+    message="内容已清空"
+    bind:undo="handleUndoClear"
   />
 
   <canvas
