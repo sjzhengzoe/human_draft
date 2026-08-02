@@ -13,6 +13,7 @@
     "pages/media/categories/index",
     "pages/media/category-edit/index",
     "pages/key-moments/index",
+    "pages/chat-topics/index",
     "pages/activities/index",
     "pages/luggage/index",
     "pages/luggage/scenes/index",

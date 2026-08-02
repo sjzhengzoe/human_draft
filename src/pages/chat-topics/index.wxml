@@ -1,0 +1,127 @@
+<custom-navigation title="聊天话题" />
+
+<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在准备话题…</view>
+</view>
+
+<view wx:else class="page page--fixed">
+  <view class="topic-tabs">
+    <view class="topic-tab {{activeTab === 'official' ? 'topic-tab--active' : ''}}" data-tab="official" bindtap="handleTabTap">官方话题</view>
+    <view class="topic-tab {{activeTab === 'mine' ? 'topic-tab--active' : ''}}" data-tab="mine" bindtap="handleTabTap">我的话题</view>
+  </view>
+
+  <scroll-view class="topic-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{activeTab === 'official'}}" class="topic-content">
+      <view class="section-heading">
+        <view>
+          <view class="section-heading__title">今天聊什么</view>
+          <view class="section-heading__hint">随机看看，也可以收进自己的话题库</view>
+        </view>
+        <button class="random-button" bindtap="handleRandom">
+          <app-icon name="sparkles-white" size="22" />
+          <text>换一组</text>
+        </button>
+      </view>
+
+      <view wx:if="{{contentLoading}}" class="content-loading">
+        <view class="content-loading__spinner" />
+        <view class="content-loading__text">正在加载…</view>
+      </view>
+      <view wx:elif="{{randomItems.length === 0}}" class="empty-state">暂时还没有官方话题</view>
+      <view wx:else class="random-list">
+        <view
+          wx:for="{{randomItems}}"
+          wx:key="id"
+          class="random-card {{item.is_added ? 'random-card--added' : ''}}"
+          hover-class="random-card--hover"
+          data-id="{{item.id}}"
+          bindtap="handleAddOfficial"
+        >
+          <view class="random-card__number">0{{index + 1}}</view>
+          <view class="random-card__content">{{item.content}}</view>
+          <view class="random-card__action">
+            <view wx:if="{{addingOfficialId === item.id}}" class="mini-spinner" />
+            <text wx:else>{{item.is_added ? '已加入' : '+ 加入我的话题'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="topic-content">
+      <view class="section-heading">
+        <view>
+          <view class="section-heading__title">我的话题</view>
+          <view class="section-heading__hint">{{myItems.length}} 个随时可以聊的话题</view>
+        </view>
+        <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddMine">
+          <app-icon name="plus-white" size="21" />
+          <text>新增</text>
+        </button>
+      </view>
+
+      <view wx:if="{{contentLoading}}" class="content-loading">
+        <view class="content-loading__spinner" />
+        <view class="content-loading__text">正在加载…</view>
+      </view>
+      <view wx:elif="{{myItems.length === 0}}" class="empty-state">
+        <view class="empty-state__title">还没有自己的话题</view>
+        <view class="empty-state__hint">从官方话题加入，或新增一个</view>
+      </view>
+      <view wx:else class="my-topic-list">
+        <view wx:for="{{myItems}}" wx:key="id" class="my-topic-card">
+          <view class="my-topic-card__main">
+            <view class="my-topic-card__tag">{{item.official_topic_id ? '官方收录' : '自建'}}</view>
+            <view class="my-topic-card__content">{{item.content}}</view>
+          </view>
+          <view wx:if="{{canWrite}}" class="my-topic-card__actions">
+            <view class="icon-button" role="button" aria-label="编辑话题" data-id="{{item.id}}" bindtap="handleEditMine">
+              <app-icon name="pencil" size="25" />
+            </view>
+            <view class="icon-button" role="button" aria-label="删除话题" data-id="{{item.id}}" bindtap="handleDeleteMine">
+              <app-icon name="trash-2-danger" size="25" />
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="scroll-safe-area" />
+  </scroll-view>
+
+  <app-dialog
+    wx:if="{{showEditor}}"
+    visible="{{true}}"
+    title="{{editingId ? '编辑话题' : '新增话题'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="topic-editor">
+      <textarea
+        class="topic-editor__input"
+        value="{{editorContent}}"
+        maxlength="120"
+        placeholder="写下一个想聊的话题…"
+        focus
+        bindinput="handleEditorInput"
+      />
+      <view class="topic-editor__count">{{editorContent.length}} / 120</view>
+    </view>
+    <view slot="actions" class="dialog-actions">
+      <button class="dialog-button dialog-button--cancel" disabled="{{saving}}" bindtap="closeEditor">取消</button>
+      <button class="dialog-button dialog-button--confirm" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{showDeleteConfirm}}"
+    visible="{{true}}"
+    title="删除话题"
+    content="删除后无法恢复，确定删除这个话题吗？"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="handleDeleteCancel"
+    bindconfirm="handleDeleteConfirm"
+  />
+
+  <operation-loading visible="{{deleting}}" text="正在删除…" />
+</view>

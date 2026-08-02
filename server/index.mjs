@@ -114,6 +114,13 @@ import {
   replaceKeyMomentImage,
   updateKeyMoment,
 } from "./lib/key-moments.mjs";
+import {
+  addOfficialChatTopic,
+  createUserChatTopic,
+  deleteUserChatTopic,
+  listChatTopics,
+  updateUserChatTopic,
+} from "./lib/chat-topics.mjs";
 
 export function buildServer(options = {}) {
   const getSupabaseAdmin = () => options.supabase ?? getDefaultSupabaseAdmin();
@@ -843,6 +850,60 @@ export function buildServer(options = {}) {
 
   app.delete("/api/key-moments/:id", { preHandler: authenticated }, async (request) => {
     await deleteKeyMoment(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
+
+  app.get("/api/chat-topics", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await listChatTopics(getSupabaseAdmin(), request.auth.user.id),
+  }));
+
+  app.post("/api/chat-topics/mine", { preHandler: authenticated }, async (request, reply) => {
+    const content = request.body?.content;
+    if (typeof content === "string" && content.trim()) {
+      await contentSecurity.checkText(request.auth.user.openid, content.trim());
+    }
+    const item = await createUserChatTopic(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    );
+    return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.post("/api/chat-topics/mine/from-official", { preHandler: authenticated }, async (request, reply) => {
+    const result = await addOfficialChatTopic(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body?.official_topic_id,
+    );
+    return reply.code(result.created ? 201 : 200).send({ ok: true, data: result });
+  });
+
+  app.put("/api/chat-topics/mine/:id", { preHandler: authenticated }, async (request) => {
+    const content = request.body?.content;
+    if (typeof content === "string" && content.trim()) {
+      await contentSecurity.checkText(request.auth.user.openid, content.trim());
+    }
+    return {
+      ok: true,
+      data: {
+        item: await updateUserChatTopic(
+          getSupabaseAdmin(),
+          request.auth.user.id,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
+
+  app.delete("/api/chat-topics/mine/:id", { preHandler: authenticated }, async (request) => {
+    await deleteUserChatTopic(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
     return { ok: true, data: { deleted: true } };
   });
 

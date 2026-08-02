@@ -225,6 +225,65 @@ test("authenticated template text is checked before use", async () => {
   await app.close();
 });
 
+test("chat topics list official examples and only the authenticated user's topics", async (t) => {
+  const officialTopic = {
+    id: "20000000-0000-4000-8000-000000000001",
+    content: "最近有什么小事，让你觉得生活很可爱？",
+    sort_order: 1000,
+    is_active: true,
+  };
+  const mine = {
+    id: "30000000-0000-4000-8000-000000000001",
+    user_id: USER_ID,
+    official_topic_id: officialTopic.id,
+    content: officialTopic.content,
+  };
+  const anotherUsersTopic = {
+    id: "30000000-0000-4000-8000-000000000002",
+    user_id: OTHER_USER_ID,
+    official_topic_id: null,
+    content: "不应返回的话题",
+  };
+  const checked = [];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        official_chat_topics: [officialTopic],
+        user_chat_topics: [mine, anotherUsersTopic],
+      }),
+    }),
+    contentSecurity: {
+      async checkText(openId, content) {
+        checked.push({ openId, content });
+      },
+      async checkImage() {},
+    },
+  });
+  t.after(() => app.close());
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/chat-topics",
+    headers: authHeaders,
+  });
+  assert.equal(listResponse.statusCode, 200);
+  assert.equal(listResponse.json().data.official_items.length, 1);
+  assert.deepEqual(listResponse.json().data.my_items, [mine]);
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/chat-topics/mine",
+    headers: authHeaders,
+    payload: { content: "  最近最想分享的事情是什么？  " },
+  });
+  assert.equal(createResponse.statusCode, 201);
+  assert.equal(createResponse.json().data.item.content, "最近最想分享的事情是什么？");
+  assert.deepEqual(checked, [
+    { openId: "test-openid", content: "最近最想分享的事情是什么？" },
+  ]);
+});
+
 test("media and dining detail routes load records by id", async (t) => {
   const media = {
     id: MEDIA_ID,

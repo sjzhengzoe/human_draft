@@ -81,6 +81,14 @@ const HOME_FEATURE_GROUPS = [
         path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
+      },
+      {
+        key: "chat-topics",
+        icon: "messages-square",
+        title: "聊天话题",
+        path: "/pages/chat-topics/index",
+        available: true,
+        requiresLogin: true
       }
     ]
   }
