@@ -11,12 +11,12 @@
       bindtap="handleTemplateChange"
     >模板一</view>
     <view
-      class="template-switch__item template-switch__item--active"
+      class="template-switch__item"
       data-template="douyin2"
       bindtap="handleTemplateChange"
     >模板二</view>
     <view
-      class="template-switch__item"
+      class="template-switch__item template-switch__item--active"
       data-template="douyin3"
       bindtap="handleTemplateChange"
     >模板三</view>
@@ -44,6 +44,24 @@
     <swiper-item wx:for="{{renderedImageUrls}}" wx:key="*this" class="card-slide">
       <view class="card-item">
         <image class="card-image" src="{{item}}" mode="widthFix" show-menu-by-longpress />
+        <view
+          class="circle-image-picker {{selectedImagePaths[index] ? 'circle-image-picker--selected' : ''}} {{selectingImage && selectingImageIndex === index ? 'circle-image-picker--loading' : ''}}"
+          data-index="{{index}}"
+          role="button"
+          aria-label="{{selectedImagePaths[index] ? '更换圆形图片' : '添加圆形图片'}}"
+          catchtap="handleChooseCircleImage"
+        >
+          <image
+            wx:if="{{selectedImagePaths[index]}}"
+            class="circle-image-picker__image"
+            src="{{selectedImagePaths[index]}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="circle-image-picker__placeholder">
+            <app-icon name="image-plus" size="32" />
+          </view>
+          <view wx:if="{{selectingImage && selectingImageIndex === index}}" class="circle-image-picker__mask">处理中</view>
+        </view>
       </view>
     </swiper-item>
 
@@ -69,9 +87,20 @@
 
   <canvas
     type="2d"
-    id="douyin2ExportCanvas"
+    id="douyin3ExportCanvas"
     class="export-canvas"
     style="width: 1px; height: 1px;"
   />
+
 </view>
 </view>
+
+<image-cropper
+  wx:if="{{showCropModal}}"
+  src="{{cropSourcePath}}"
+  shape="circle"
+  title="裁剪圆形图片"
+  bind:cancel="handleCropCancel"
+  bind:confirm="handleCropConfirm"
+  bind:error="handleCropError"
+/>

@@ -13,15 +13,19 @@ import { checkTextContent } from "../../services/content-security";
     isSpacer: boolean;
   };
 
+  type CanvasImage = {
+    width: number;
+    height: number;
+    src: string;
+    onload: (() => void) | null;
+    onerror: ((error: unknown) => void) | null;
+  };
+
   type Canvas2DNode = {
     width: number;
     height: number;
     getContext: (contextId: "2d") => Canvas2DContext;
-    createImage: () => {
-      src: string;
-      onload: (() => void) | null;
-      onerror: ((error: unknown) => void) | null;
-    };
+    createImage: () => CanvasImage;
   };
 
   type Canvas2DContext = {
@@ -36,37 +40,72 @@ import { checkTextContent } from "../../services/content-security";
       | "ideographic"
       | "bottom";
     clearRect: (x: number, y: number, width: number, height: number) => void;
-    drawImage: (
-      image: unknown,
+    drawImage: {
+      (
+        image: unknown,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+      ): void;
+      (
+        image: unknown,
+        sourceX: number,
+        sourceY: number,
+        sourceWidth: number,
+        sourceHeight: number,
+        destinationX: number,
+        destinationY: number,
+        destinationWidth: number,
+        destinationHeight: number,
+      ): void;
+    };
+    fillRect: (x: number, y: number, width: number, height: number) => void;
+    fillText: (text: string, x: number, y: number) => void;
+    measureText: (text: string) => { width: number };
+    save: () => void;
+    restore: () => void;
+    beginPath: () => void;
+    arc: (
+      x: number,
+      y: number,
+      radius: number,
+      startAngle: number,
+      endAngle: number,
+    ) => void;
+    clip: () => void;
+    getImageData?: (
       x: number,
       y: number,
       width: number,
       height: number,
-    ) => void;
-    fillRect: (x: number, y: number, width: number, height: number) => void;
-    fillText: (text: string, x: number, y: number) => void;
-    measureText: (text: string) => { width: number };
+    ) => { data: Uint8ClampedArray };
   };
 
   const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const LOCAL_IMAGES_STORAGE_KEY = "DOUYIN3_LOCAL_IMAGE_PATHS";
   const LEGACY_STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
-  const CANVAS_ID = "douyin2ExportCanvas";
+  const CANVAS_ID = "douyin3ExportCanvas";
   const BASE_CANVAS_WIDTH = 300;
-  const BASE_CANVAS_HEIGHT = 400;
   const CANVAS_WIDTH = 2160;
   const CANVAS_SCALE = CANVAS_WIDTH / BASE_CANVAS_WIDTH;
-  const CANVAS_HEIGHT = Math.round(BASE_CANVAS_HEIGHT * CANVAS_SCALE);
   const CANVAS_PADDING_LEFT = scaleCanvasValue(22);
   const CANVAS_SAFE_Y = scaleCanvasValue(38);
-  const CANVAS_BODY_FONT_SIZE = scaleCanvasValue(12);
-  const CANVAS_TITLE_FONT_SIZE = scaleCanvasValue(14);
-  const CANVAS_BODY_LINE_HEIGHT = scaleCanvasValue(12 * 1.72);
-  const CANVAS_TITLE_LINE_HEIGHT = scaleCanvasValue(14 * 1.5);
+  const TEMPLATE_ONE_FONT_SIZE = (40 / 1080) * BASE_CANVAS_WIDTH;
+  const TEMPLATE_ONE_LINE_HEIGHT = (62 / 1080) * BASE_CANVAS_WIDTH;
+  const CANVAS_BODY_FONT_SIZE = scaleCanvasValue(TEMPLATE_ONE_FONT_SIZE);
+  const CANVAS_TITLE_FONT_SIZE = CANVAS_BODY_FONT_SIZE;
+  const CANVAS_BODY_LINE_HEIGHT = scaleCanvasValue(TEMPLATE_ONE_LINE_HEIGHT);
+  const CANVAS_TITLE_LINE_HEIGHT = CANVAS_BODY_LINE_HEIGHT;
   const CANVAS_SPACER_HEIGHT = scaleCanvasValue(13);
   const CANVAS_TITLE_BOTTOM_GAP = scaleCanvasValue(9);
   const CANVAS_TITLE_NEXT_GAP = scaleCanvasValue(20);
+  const CANVAS_TEXT_TOP = scaleCanvasValue(238);
+  const CANVAS_BOTTOM_SAFE = scaleCanvasValue(44);
+  const CIRCLE_IMAGE_SIZE = scaleCanvasValue(140);
+  const CIRCLE_IMAGE_TOP = scaleCanvasValue(44);
   const DOUYIN2_FONT_FAMILY = "FangzhengBoyaFangkansong";
   const DOUYIN2_FONT_URL =
     "https://gufeifei.cn/fonts/fangzhengboyafangkansong.woff2?v=20260705";
@@ -74,8 +113,8 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_BOLD_FONT = `bold ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_MAX_CHARS_PER_LINE = 21;
-  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 18;
+  const CANVAS_MAX_CHARS_PER_LINE = 23;
+  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 23;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
@@ -108,7 +147,7 @@ import { checkTextContent } from "../../services/content-security";
 
   Component({
     data: {
-      activeTemplate: "douyin2",
+      activeTemplate: "douyin3",
       content: "",
       hasCustomContent: false,
       editContent: "",
@@ -120,11 +159,20 @@ import { checkTextContent } from "../../services/content-security";
       isGenerating: false,
       isRenderingCards: false,
       canvasReady: false,
+      selectedImagePaths: [] as string[],
+      selectingImage: false,
+      selectingImageIndex: -1,
+      showCropModal: false,
+      cropSourcePath: "",
+      cropTargetIndex: -1,
     },
     lifetimes: {
       attached() {
         const storedContent = wx.getStorageSync(STORAGE_KEY);
         const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
+        const storedImagePaths = getStoredImagePaths(
+          wx.getStorageSync(LOCAL_IMAGES_STORAGE_KEY),
+        );
         const initialContent =
           typeof storedContent === "string"
             ? storedContent
@@ -132,7 +180,8 @@ import { checkTextContent } from "../../services/content-security";
               ? legacyContent
               : undefined;
 
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin2");
+        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin3");
+        this.setData({ selectedImagePaths: storedImagePaths });
 
         if (typeof initialContent === "string") {
           this.loadStoredContent(initialContent);
@@ -162,7 +211,7 @@ import { checkTextContent } from "../../services/content-security";
     methods: {
       handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
         const template = event.currentTarget.dataset.template;
-        if (template !== "xiaohongshu" && template !== "douyin3") return;
+        if (template !== "xiaohongshu" && template !== "douyin2") return;
 
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
@@ -220,9 +269,99 @@ import { checkTextContent } from "../../services/content-security";
         });
       },
 
+      handleChooseCircleImage(event: WechatMiniprogram.TouchEvent) {
+        if (this.data.selectingImage || this.data.isGenerating) return;
+
+        const targetIndex = Number(event.currentTarget.dataset.index);
+        if (!Number.isInteger(targetIndex) || targetIndex < 0) return;
+
+        this.setData({
+          selectingImage: true,
+          selectingImageIndex: targetIndex,
+        });
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ["image"],
+          sourceType: ["album", "camera"],
+          success: (result) => {
+            const imagePath = result.tempFiles[0]?.tempFilePath;
+            if (!imagePath) {
+              this.setData({
+                selectingImage: false,
+                selectingImageIndex: -1,
+              });
+              return;
+            }
+
+            this.setData({
+              selectingImage: false,
+              selectingImageIndex: -1,
+              showCropModal: true,
+              cropSourcePath: imagePath,
+              cropTargetIndex: targetIndex,
+            });
+          },
+          fail: () => {
+            this.setData({
+              selectingImage: false,
+              selectingImageIndex: -1,
+            });
+          },
+        });
+      },
+
+      handleCropCancel() {
+        this.setData({
+          showCropModal: false,
+          cropSourcePath: "",
+          cropTargetIndex: -1,
+        });
+      },
+
+      async handleCropConfirm(
+        event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>,
+      ) {
+        const tempFilePath = event.detail.tempFilePath;
+        const targetIndex = this.data.cropTargetIndex;
+        if (!tempFilePath || targetIndex < 0) return;
+
+        try {
+          const savedFilePath = await saveLocalImageFile(tempFilePath);
+          const selectedImagePaths = [...this.data.selectedImagePaths];
+          const previousFilePath = selectedImagePaths[targetIndex] || "";
+          selectedImagePaths[targetIndex] = savedFilePath;
+          persistLocalImagePaths(selectedImagePaths);
+          this.setData({
+            selectedImagePaths,
+            showCropModal: false,
+            cropSourcePath: "",
+            cropTargetIndex: -1,
+          });
+
+          if (previousFilePath && previousFilePath !== savedFilePath) {
+            removeLocalImageFile(previousFilePath);
+          }
+        } catch (error) {
+          console.error("保存本地裁剪图片失败", error);
+          wx.showToast({
+            title: "图片本地保存失败，请重试",
+            icon: "none",
+          });
+        }
+      },
+
+      handleCropError(
+        event: WechatMiniprogram.CustomEvent<{ message?: string }>,
+      ) {
+        wx.showToast({
+          title: event.detail.message || "图片裁剪失败，请重试",
+          icon: "none",
+        });
+      },
+
       openEditModal() {
         wx.navigateTo({
-          url: "/pages/editor/index?source=douyin2",
+          url: "/pages/editor/index?source=douyin3",
         });
       },
 
@@ -327,7 +466,9 @@ import { checkTextContent } from "../../services/content-security";
         wx.showLoading({ title: "保存中" });
 
         try {
-          const urls = await this.renderPagesToImages();
+          const urls = await this.renderPagesToImages(
+            this.data.selectedImagePaths,
+          );
           if (!urls.length) {
             wx.hideLoading();
             wx.showToast({
@@ -383,7 +524,7 @@ import { checkTextContent } from "../../services/content-security";
         }
       },
 
-      renderPagesToImages(): Promise<string[]> {
+      renderPagesToImages(circleImagePaths: string[] = []): Promise<string[]> {
         const pages = this.data.pages;
 
         return enqueueRender(async () => {
@@ -395,36 +536,49 @@ import { checkTextContent } from "../../services/content-security";
 
           const urls: string[] = [];
 
-          for (const page of pages) {
-            urls.push(await this.generatePageImage(page));
+          for (const [index, page] of pages.entries()) {
+            urls.push(
+              await this.generatePageImage(
+                page,
+                circleImagePaths[index] || "",
+              ),
+            );
           }
 
           return urls;
         });
       },
 
-      async generatePageImage(page: Paragraph[]): Promise<string> {
+      async generatePageImage(
+        page: Paragraph[],
+        circleImagePath = "",
+      ): Promise<string> {
         const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
         const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
+        const circleImage = circleImagePath
+          ? await loadCanvasImage(canvas, circleImagePath)
+          : undefined;
+        const layout = createPageLayout(page);
 
         canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+        canvas.height = Math.ceil(
+          Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) * 2,
+        );
+        const canvasHeight = getCanvasHeight(ctx, layout);
 
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = canvasHeight;
+
+        ctx.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
+        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, canvasHeight);
         ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
         ctx.fillStyle = "#000000";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
 
-        const layout = createPageLayout(page);
-        const textTop = Math.max(
-          CANVAS_SAFE_Y,
-          Math.round((CANVAS_HEIGHT - getLayoutHeight(layout)) / 2),
-        );
-        let y = textTop;
+        let y = Math.max(CANVAS_SAFE_Y, CANVAS_TEXT_TOP);
 
         layout.forEach((item) => {
           if (item.type === "spacer") {
@@ -440,20 +594,28 @@ import { checkTextContent } from "../../services/content-security";
           y += item.afterGap;
         });
 
-        return canvasToTempFilePath(canvas);
+        if (circleImage) {
+          drawCircleImage(ctx, circleImage);
+        }
+
+        return canvasToTempFilePath(canvas, canvasHeight);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
+        return this.getCanvasNode(CANVAS_ID);
+      },
+
+      getCanvasNode(canvasId: string): Promise<Canvas2DNode> {
         return new Promise((resolve, reject) => {
           this.createSelectorQuery()
-            .select(`#${CANVAS_ID}`)
+            .select(`#${canvasId}`)
             .node((result) => {
               if (result && result.node) {
                 resolve(result.node as Canvas2DNode);
                 return;
               }
 
-              reject(new Error("未找到导出 canvas"));
+              reject(new Error(`未找到 canvas：${canvasId}`));
             })
             .exec();
         });
@@ -462,6 +624,13 @@ import { checkTextContent } from "../../services/content-security";
       syncContent(content: string, activeIndex = 0) {
         const hasCustomContent = Boolean(content.trim());
         const pages = hasCustomContent ? getPages(content) : [];
+        const previousImagePaths = [...this.data.selectedImagePaths];
+        const selectedImagePaths = pages.map(
+          (_, index) => this.data.selectedImagePaths[index] || "",
+        );
+        const removedImagePaths = previousImagePaths.filter(
+          (path) => path && !selectedImagePaths.includes(path),
+        );
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
@@ -472,6 +641,7 @@ import { checkTextContent } from "../../services/content-security";
             content,
             hasCustomContent,
             pages,
+            selectedImagePaths,
             renderedImageUrls: [],
             activeIndex: nextActiveIndex,
           },
@@ -481,6 +651,8 @@ import { checkTextContent } from "../../services/content-security";
         );
 
         wx.setStorageSync(STORAGE_KEY, content);
+        persistLocalImagePaths(selectedImagePaths);
+        removedImagePaths.forEach(removeLocalImageFile);
       },
 
       async ensureSafeContent(content: string) {
@@ -603,7 +775,7 @@ import { checkTextContent } from "../../services/content-security";
   }
 
   function normalizeText(text: string) {
-    return text.replace(/\r\n/g, "\n");
+    return text.replace(/\r\n/g, "\n").replace(/\u2800/g, " ");
   }
 
   function parseEmphasis(text: string) {
@@ -704,14 +876,79 @@ import { checkTextContent } from "../../services/content-security";
     return lines.length ? lines : [{ parts }];
   }
 
-  function getLayoutHeight(layout: LayoutItem[]) {
-    return layout.reduce((total, item) => {
+  function getCanvasHeight(ctx: Canvas2DContext, layout: LayoutItem[]) {
+    let y = CANVAS_TEXT_TOP;
+    let lastLine:
+      | {
+          line: LayoutLine;
+          item: Extract<LayoutItem, { type: "text" }>;
+          y: number;
+        }
+      | undefined;
+
+    layout.forEach((item) => {
       if (item.type === "spacer") {
-        return total + item.height;
+        y += item.height;
+        return;
       }
 
-      return total + item.lines.length * item.lineHeight + item.afterGap;
-    }, 0);
+      item.lines.forEach((line) => {
+        lastLine = { line, item, y };
+        y += item.lineHeight;
+      });
+
+      y += item.afterGap;
+    });
+
+    if (!lastLine) {
+      return Math.ceil(CANVAS_TEXT_TOP + CANVAS_BOTTOM_SAFE);
+    }
+
+    const inkHeight = measureLineInkHeight(ctx, lastLine.line, lastLine.item);
+    return Math.ceil(lastLine.y + inkHeight + CANVAS_BOTTOM_SAFE);
+  }
+
+  function measureLineInkHeight(
+    ctx: Canvas2DContext,
+    line: LayoutLine,
+    item: Extract<LayoutItem, { type: "text" }>,
+  ) {
+    const fallbackHeight = item.isTitle
+      ? CANVAS_TITLE_FONT_SIZE
+      : CANVAS_BODY_FONT_SIZE;
+    if (!ctx.getImageData) return fallbackHeight;
+
+    const measurementHeight = Math.ceil(
+      Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) * 2,
+    );
+
+    try {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, measurementHeight);
+      ctx.fillStyle = "#000000";
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      drawPartsLine(ctx, line.parts, CANVAS_PADDING_LEFT, 0, item);
+
+      const pixels = ctx.getImageData(
+        0,
+        0,
+        CANVAS_WIDTH,
+        measurementHeight,
+      ).data;
+
+      for (let row = measurementHeight - 1; row >= 0; row -= 1) {
+        const rowStart = row * CANVAS_WIDTH * 4;
+        const rowEnd = rowStart + CANVAS_WIDTH * 4;
+
+        for (let offset = rowStart + 3; offset < rowEnd; offset += 4) {
+          if (pixels[offset] > 0) return row + 1;
+        }
+      }
+    } catch (error) {
+      console.warn("测量文字可见范围失败，使用字号回退", error);
+    }
+
+    return fallbackHeight;
   }
 
   function drawPartsLine(
@@ -748,6 +985,19 @@ import { checkTextContent } from "../../services/content-security";
     });
   }
 
+  function drawCircleImage(ctx: Canvas2DContext, image: CanvasImage) {
+    const x = (CANVAS_WIDTH - CIRCLE_IMAGE_SIZE) / 2;
+    const y = CIRCLE_IMAGE_TOP;
+    const radius = CIRCLE_IMAGE_SIZE / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + radius, y + radius, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(image, x, y, CIRCLE_IMAGE_SIZE, CIRCLE_IMAGE_SIZE);
+    ctx.restore();
+  }
+
   function scaleCanvasValue(value: number) {
     return Math.round(value * CANVAS_SCALE);
   }
@@ -762,8 +1012,40 @@ import { checkTextContent } from "../../services/content-security";
     });
   }
 
+  function getStoredImagePaths(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => (typeof item === "string" ? item : ""));
+  }
+
+  function persistLocalImagePaths(paths: string[]) {
+    if (paths.some(Boolean)) {
+      wx.setStorageSync(LOCAL_IMAGES_STORAGE_KEY, paths);
+      return;
+    }
+    wx.removeStorageSync(LOCAL_IMAGES_STORAGE_KEY);
+  }
+
+  function saveLocalImageFile(tempFilePath: string) {
+    return new Promise<string>((resolve, reject) => {
+      wx.saveFile({
+        tempFilePath,
+        success: (result) => resolve(result.savedFilePath),
+        fail: reject,
+      });
+    });
+  }
+
+  function removeLocalImageFile(filePath: string) {
+    wx.removeSavedFile({
+      filePath,
+      fail: (error) => {
+        console.warn("删除模板三本地图片失败", error);
+      },
+    });
+  }
+
   function loadCanvasImage(canvas: Canvas2DNode, src: string) {
-    return new Promise<unknown>((resolve, reject) => {
+    return new Promise<CanvasImage>((resolve, reject) => {
       const image = canvas.createImage();
 
       image.onload = () => resolve(image);
@@ -772,14 +1054,14 @@ import { checkTextContent } from "../../services/content-security";
     });
   }
 
-  function canvasToTempFilePath(canvas: Canvas2DNode) {
+  function canvasToTempFilePath(canvas: Canvas2DNode, canvasHeight: number) {
     return new Promise<string>((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas,
         width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
+        height: canvasHeight,
         destWidth: CANVAS_WIDTH,
-        destHeight: CANVAS_HEIGHT,
+        destHeight: canvasHeight,
         fileType: "png",
         success: (result) => resolve(result.tempFilePath),
         fail: reject,

@@ -217,10 +217,10 @@ import { checkTextContent } from "../../services/content-security";
     methods: {
       handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
         const template = event.currentTarget.dataset.template;
-        if (template !== "douyin2") return;
+        if (template !== "douyin2" && template !== "douyin3") return;
 
         wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
-        wx.redirectTo({ url: "/pages/douyin2/index" });
+        wx.redirectTo({ url: `/pages/${template}/index` });
       },
 
       loadRed3Font() {

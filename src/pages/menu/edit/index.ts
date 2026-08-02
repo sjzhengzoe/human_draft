@@ -24,14 +24,6 @@ type MealPeriodOption = {
   selected: boolean
 }
 
-type CropImageApi = (options: {
-  src: string
-  cropScale: "1:1"
-  success?: (result: { tempFilePath: string }) => void
-  fail?: (result: { errMsg?: string }) => void
-  complete?: () => void
-}) => void
-
 const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
   { key: "breakfast", label: "早餐", selected: false },
   { key: "lunch", label: "午餐", selected: true },
@@ -54,6 +46,8 @@ Page({
     currentImageUrl: "",
     selectedImagePath: "",
     selectingImage: false,
+    showImageCropper: false,
+    cropSourcePath: "",
     loading: true,
     saving: false,
     deleting: false,
@@ -213,16 +207,6 @@ Page({
       this.data.selectingImage
     ) return
 
-    const cropImage = (wx as typeof wx & { cropImage?: CropImageApi }).cropImage
-    if (!cropImage) {
-      wx.showModal({
-        title: "暂不支持裁剪",
-        content: "当前微信版本过低，请更新微信后再选择图片。",
-        showCancel: false
-      })
-      return
-    }
-
     this.setData({ selectingImage: true })
     wx.chooseMedia({
       count: 1,
@@ -236,27 +220,44 @@ Page({
           return
         }
 
-        cropImage({
-          src: file.tempFilePath,
-          cropScale: "1:1",
-          success: (cropResult) => {
-            if (!isAsyncPageActive(this)) return
-            if (cropResult.tempFilePath) {
-              this.setData({ selectedImagePath: cropResult.tempFilePath })
-            }
-          },
-          fail: (cropResult) => {
-            if (!isAsyncPageActive(this) || cropResult.errMsg?.includes("cancel")) return
-            wx.showToast({ title: "图片裁剪失败，请重试", icon: "none" })
-          },
-          complete: () => {
-            if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
-          }
+        this.setData({
+          selectingImage: false,
+          showImageCropper: true,
+          cropSourcePath: file.tempFilePath
         })
       },
       fail: () => {
         if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
       }
+    })
+  },
+
+  handleImageCropCancel() {
+    this.setData({
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
+  },
+
+  handleImageCropConfirm(
+    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+  ) {
+    const tempFilePath = event.detail.tempFilePath
+    if (!tempFilePath) return
+
+    this.setData({
+      selectedImagePath: tempFilePath,
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
+  },
+
+  handleImageCropError(
+    event: WechatMiniprogram.CustomEvent<{ message?: string }>
+  ) {
+    wx.showToast({
+      title: event.detail.message || "图片裁剪失败，请重试",
+      icon: "none"
     })
   },
 

@@ -1,0 +1,36 @@
+<app-dialog
+  visible="{{true}}"
+  title="{{title}}"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body">
+    <view
+      class="crop-stage"
+      catchtouchstart="handleTouchStart"
+      catchtouchmove="handleTouchMove"
+      catchtouchend="handleTouchEnd"
+      catchtouchcancel="handleTouchEnd"
+    >
+      <image
+        class="crop-stage__image"
+        src="{{src}}"
+        mode="scaleToFill"
+        style="width: {{displayWidth}}px; height: {{displayHeight}}px; transform: translate3d({{offsetX}}px, {{offsetY}}px, 0);"
+      />
+      <view class="crop-stage__guide crop-stage__guide--{{shape}}" />
+    </view>
+    <view class="crop-modal__hint">单指拖动，双指缩放</view>
+  </view>
+  <view slot="actions" class="crop-modal__actions">
+    <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing}}" bindtap="handleCancel">取消</button>
+    <button class="crop-modal__button crop-modal__button--primary" loading="{{processing}}" disabled="{{processing || !ready}}" bindtap="handleConfirm">使用图片</button>
+  </view>
+</app-dialog>
+
+<canvas
+  type="2d"
+  id="imageCropperCanvas"
+  class="crop-canvas"
+  style="width: 1px; height: 1px;"
+/>

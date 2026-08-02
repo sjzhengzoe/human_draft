@@ -120,3 +120,13 @@
     </button>
   </view>
 </view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="square"
+  title="裁剪图片"
+  bind:cancel="handleImageCropCancel"
+  bind:confirm="handleImageCropConfirm"
+  bind:error="handleImageCropError"
+/>

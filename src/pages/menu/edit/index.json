@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "菜单记录"
+  "navigationBarTitleText": "菜单记录",
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index"
+  }
 }

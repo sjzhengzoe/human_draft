@@ -1,0 +1,87 @@
+.crop-stage {
+  position: relative;
+  width: 600rpx;
+  height: 600rpx;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 20rpx;
+  background: #111111;
+  touch-action: none;
+}
+
+.crop-stage__image {
+  position: absolute;
+  top: 40rpx;
+  left: 40rpx;
+  display: block;
+  max-width: none;
+  transform-origin: 0 0;
+}
+
+.crop-stage__guide {
+  position: absolute;
+  z-index: 2;
+  inset: 40rpx;
+  box-sizing: border-box;
+  border: 3rpx solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 999rpx rgba(0, 0, 0, 0.52);
+  pointer-events: none;
+}
+
+.crop-stage__guide--circle {
+  border-radius: 50%;
+}
+
+.crop-stage__guide--square {
+  border-radius: 16rpx;
+}
+
+.crop-modal__hint {
+  margin-top: 24rpx;
+  color: #777777;
+  font-size: 24rpx;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.crop-modal__actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.crop-modal__button {
+  display: flex;
+  height: 84rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 42rpx;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.crop-modal__button::after {
+  border: 0;
+}
+
+.crop-modal__button--secondary {
+  border: 1rpx solid var(--ui-border);
+  background: #ffffff;
+  color: #111111;
+}
+
+.crop-modal__button--primary {
+  border: 0;
+  background: #111111;
+  color: #ffffff;
+}
+
+.crop-canvas {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  pointer-events: none;
+}

@@ -15,6 +15,11 @@
       data-template="douyin2"
       bindtap="handleTemplateChange"
     >模板二</view>
+    <view
+      class="template-switch__item"
+      data-template="douyin3"
+      bindtap="handleTemplateChange"
+    >模板三</view>
   </view>
 
   <view wx:if="{{!hasCustomContent}}" class="card-swiper card-slide">

@@ -3,12 +3,16 @@
     <view wx:if="{{title}}" class="app-dialog__header">
       <view wx:if="{{title}}" class="app-dialog__title">{{title}}</view>
     </view>
-    <view class="app-dialog__body {{title ? '' : 'app-dialog__body--without-title'}}">
-      <view wx:if="{{content}}" class="app-dialog__content">{{content}}</view>
+    <view class="app-dialog__body {{title ? '' : 'app-dialog__body--without-title'}} {{customBody ? 'app-dialog__body--custom' : ''}}">
+      <slot wx:if="{{customBody}}" name="body" />
+      <view wx:else-if="{{content}}" class="app-dialog__content">{{content}}</view>
     </view>
-    <view class="app-dialog__actions">
-      <button class="app-dialog__button app-dialog__button--cancel" bindtap="handleCancel">{{cancelText}}</button>
-      <button class="app-dialog__button app-dialog__button--confirm" bindtap="handleConfirm">{{confirmText}}</button>
+    <view class="app-dialog__actions {{customActions ? 'app-dialog__actions--custom' : ''}}">
+      <slot wx:if="{{customActions}}" name="actions" />
+      <block wx:else>
+        <button class="app-dialog__button app-dialog__button--cancel" bindtap="handleCancel">{{cancelText}}</button>
+        <button class="app-dialog__button app-dialog__button--confirm" bindtap="handleConfirm">{{confirmText}}</button>
+      </block>
     </view>
   </view>
 </view>

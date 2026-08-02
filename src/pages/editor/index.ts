@@ -1,6 +1,6 @@
 import { checkTextContent } from "../../services/content-security"
 
-type EditorSource = "xiaohongshu" | "douyin2"
+type EditorSource = "xiaohongshu" | "douyin2" | "douyin3"
 
 type EditorConfig = {
   title: string
@@ -15,11 +15,17 @@ const EDITOR_CONFIG: Record<EditorSource, EditorConfig> = {
   douyin2: {
     title: "编辑文案",
     storageKey: "TEXT_CARD_CONTENT"
+  },
+  douyin3: {
+    title: "编辑文案",
+    storageKey: "TEXT_CARD_CONTENT"
   }
 }
 
 function normalizeSource(source: string | undefined): EditorSource {
-  return source === "douyin2" ? "douyin2" : "xiaohongshu"
+  return source === "douyin2" || source === "douyin3"
+    ? source
+    : "xiaohongshu"
 }
 
 Page({

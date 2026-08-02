@@ -1,0 +1,345 @@
+.creation-screen {
+  display: flex;
+  height: 100vh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.creation-navigation {
+  flex: none;
+}
+
+.page {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  box-sizing: border-box;
+  flex: 1;
+  flex-direction: column;
+  padding: 48rpx var(--ui-page-gutter) calc(160rpx + env(safe-area-inset-bottom));
+  background: var(--ui-page-background);
+  overflow: hidden;
+}
+
+.template-switch {
+  display: flex;
+  flex: none;
+  margin-bottom: 20rpx;
+  padding: 6rpx;
+  border-radius: 18rpx;
+  background: #e9e9e9;
+}
+
+.template-switch__item {
+  display: flex;
+  height: 68rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  color: #777772;
+  font-size: var(--ui-font-size-base);
+  font-weight: 500;
+  line-height: normal;
+}
+
+.template-switch__item--active {
+  background: var(--ui-surface);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  color: #111111;
+  font-weight: 600;
+}
+
+.card-swiper {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  flex: 1;
+}
+
+.card-slide {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-item {
+  position: relative;
+  width: 600rpx;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--ui-surface);
+  box-shadow: none;
+}
+
+.card-image {
+  display: block;
+  width: 100%;
+}
+
+.card-item--empty {
+  display: flex;
+  height: auto;
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 480rpx;
+}
+
+.card-item--preview-loading {
+  min-height: 720rpx;
+}
+
+.circle-image-picker {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 50%;
+  display: flex;
+  width: 46.667%;
+  height: 0;
+  box-sizing: content-box;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  margin-top: 14.667%;
+  padding-bottom: 46.667%;
+  background: #f2f2f2;
+  transform: translateX(-50%);
+}
+
+.circle-image-picker__image,
+.circle-image-picker__placeholder,
+.circle-image-picker__mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.circle-image-picker__image {
+  display: block;
+  border-radius: 50%;
+  transform: scale(1.005);
+}
+
+.circle-image-picker__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f2f2;
+}
+
+.circle-image-picker__mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 17, 17, 0.58);
+  color: #ffffff;
+  font-size: 20rpx;
+  line-height: 1;
+}
+
+.circle-image-picker--loading {
+  pointer-events: none;
+}
+
+.card-loading {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  background: var(--ui-surface);
+}
+
+.card-empty-state__mark {
+  display: flex;
+  width: 64rpx;
+  height: 64rpx;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24rpx;
+  border-radius: 18rpx;
+  background: #20241f;
+}
+
+.card-loading__title {
+  color: #111111;
+  font-size: 28rpx;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.card-loading__desc {
+  max-width: 420rpx;
+  margin-top: 14rpx;
+  color: #777777;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.page-count {
+  flex: none;
+  width: 112rpx;
+  min-width: 84rpx;
+  margin: 20rpx auto 0;
+  box-sizing: border-box;
+  padding: 8rpx 18rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: 999rpx;
+  background: var(--ui-surface);
+  color: #666666;
+  font-size: 24rpx;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (max-height: 700px) {
+  .page {
+    padding-top: 48rpx;
+    padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
+  }
+
+  .template-switch {
+    margin-bottom: 16rpx;
+  }
+
+  .template-switch__item {
+    height: 60rpx;
+  }
+
+  .card-item--empty {
+    height: auto;
+    min-height: 400rpx;
+  }
+}
+
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 48rpx 32rpx;
+  background: var(--ui-surface);
+}
+
+.edit-modal__content {
+  position: relative;
+  z-index: 101;
+  width: 100%;
+  max-height: 70vh;
+  box-sizing: border-box;
+  padding: 32rpx 28rpx 28rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-modal);
+  background: var(--ui-surface);
+  box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.edit-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 18rpx;
+}
+
+.edit-modal__title {
+  color: #111111;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.btn-text::after,
+.btn-primary::after {
+  border: 0;
+}
+
+.form-action-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.btn-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 80rpx;
+  min-width: 140rpx;
+  margin: 0;
+  padding: 0 28rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: 16rpx;
+  background: var(--ui-surface);
+  color: #111111;
+  font-size: var(--ui-font-size-base);
+  font-weight: 500;
+  line-height: normal;
+}
+
+.form-textarea {
+  width: 100%;
+  height: 34vh;
+  min-height: 320rpx;
+  max-height: 460rpx;
+  box-sizing: border-box;
+  padding: 24rpx;
+  border: 1rpx solid #dcdcdc;
+  border-radius: 16rpx;
+  background: var(--ui-surface);
+  color: #111111;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.6;
+}
+
+.form-textarea--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999999;
+}
+
+.btn-primary {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 80rpx;
+  margin: 0;
+  border: 0;
+  border-radius: 16rpx;
+  background: #111111;
+  color: #ffffff;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.export-canvas {
+  position: fixed;
+  left: -10000px;
+  top: -10000px;
+  pointer-events: none;
+}

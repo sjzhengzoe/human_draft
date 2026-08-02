@@ -1,4 +1,7 @@
 Component({
+  options: {
+    multipleSlots: true
+  },
   properties: {
     visible: {
       type: Boolean,
@@ -19,6 +22,14 @@ Component({
     confirmText: {
       type: String,
       value: "确定"
+    },
+    customBody: {
+      type: Boolean,
+      value: false
+    },
+    customActions: {
+      type: Boolean,
+      value: false
     }
   },
   methods: {

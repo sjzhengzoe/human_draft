@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "图文创作",
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index",
+    "text-card-action-bar": "/components/text-card-action-bar/index"
+  }
+}
