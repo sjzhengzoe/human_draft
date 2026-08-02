@@ -14,10 +14,15 @@ import { checkTextContent } from "../../services/content-security";
     fontSize: number;
   };
 
+  type CanvasTextLine = {
+    text: string;
+    justify: boolean;
+  };
+
   type CombinedLayout = {
     sections: Array<{
       order: string;
-      lines: string[];
+      lines: CanvasTextLine[];
     }>;
     font: string;
     lineHeight: number;
@@ -86,7 +91,6 @@ import { checkTextContent } from "../../services/content-security";
   const SECOND_THEME_SCALE = CANVAS_WIDTH / SECOND_THEME_BASE_WIDTH;
   const SECOND_THEME_PADDING_LEFT = scaleSecondThemeValue(22);
   const SECOND_THEME_PADDING_RIGHT = scaleSecondThemeValue(26);
-  const SECOND_THEME_EXTRA_RIGHT_CHAR_GAP = 2;
   const SECOND_THEME_SAFE_Y = scaleSecondThemeValue(38);
   const SECOND_THEME_BODY_FONT_SIZE = scaleCanvasValue(34);
   const SECOND_THEME_BODY_LINE_HEIGHT = CANVAS_LINE_HEIGHT;
@@ -544,7 +548,13 @@ import { checkTextContent } from "../../services/content-security";
         paragraphLines.forEach((lines) => {
           lines.forEach((line) => {
             if (y <= CANVAS_HEIGHT - CANVAS_SAFE_Y) {
-              ctx.fillText(line, CANVAS_TEXT_X, y);
+              drawCanvasTextLine(
+                ctx,
+                line,
+                CANVAS_TEXT_X,
+                y,
+                CANVAS_TEXT_MAX_WIDTH,
+              );
             }
             y += CANVAS_LINE_HEIGHT;
           });
@@ -575,7 +585,12 @@ import { checkTextContent } from "../../services/content-security";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
 
-        const layout = createCombinedLayout(slides, fontFamily, fontSize);
+        const layout = createCombinedLayout(
+          slides,
+          fontFamily,
+          fontSize,
+          ctx,
+        );
         const textTop = Math.max(
           SECOND_THEME_SAFE_Y,
           Math.round((CANVAS_HEIGHT - layout.height) / 2),
@@ -588,7 +603,15 @@ import { checkTextContent } from "../../services/content-security";
           y += layout.lineHeight + layout.orderBottomGap;
 
           section.lines.forEach((line) => {
-            ctx.fillText(line, SECOND_THEME_PADDING_LEFT, y);
+            drawCanvasTextLine(
+              ctx,
+              line,
+              SECOND_THEME_PADDING_LEFT,
+              y,
+              CANVAS_WIDTH -
+                SECOND_THEME_PADDING_LEFT -
+                SECOND_THEME_PADDING_RIGHT,
+            );
             y += layout.lineHeight;
           });
 
@@ -829,39 +852,76 @@ import { checkTextContent } from "../../services/content-security";
     ctx: Canvas2DContext,
     maxWidth: number,
   ) {
-    const result: string[] = [];
+    const result: CanvasTextLine[] = [];
     let current = "";
+    let currentWidth = 0;
 
     Array.from(line).forEach((char) => {
-      const next = `${current}${char}`;
+      const charWidth = ctx.measureText(char).width;
 
-      if (current && ctx.measureText(next).width > maxWidth) {
-        result.push(current);
+      if (current && currentWidth + charWidth > maxWidth) {
+        result.push({ text: current, justify: true });
         current = char;
+        currentWidth = charWidth;
       } else {
-        current = next;
+        current += char;
+        currentWidth += charWidth;
       }
     });
 
     if (current) {
-      result.push(current);
+      result.push({ text: current, justify: false });
     }
 
-    return result.length ? result : [line];
+    return result.length ? result : [{ text: line, justify: false }];
+  }
+
+  function drawCanvasTextLine(
+    ctx: Canvas2DContext,
+    line: CanvasTextLine,
+    x: number,
+    y: number,
+    maxWidth: number,
+  ) {
+    const characters = Array.from(line.text);
+    if (!line.justify || characters.length < 2) {
+      ctx.fillText(line.text, x, y);
+      return;
+    }
+
+    const naturalWidth = characters.reduce(
+      (total, character) => total + ctx.measureText(character).width,
+      0,
+    );
+    const letterSpacing = Math.max(
+      0,
+      (maxWidth - naturalWidth) / (characters.length - 1),
+    );
+    let currentX = x;
+
+    characters.forEach((character, index) => {
+      ctx.fillText(character, currentX, y);
+      currentX += ctx.measureText(character).width;
+      if (index < characters.length - 1) {
+        currentX += letterSpacing;
+      }
+    });
   }
 
   function createCombinedLayout(
     slides: Slide[],
     fontFamily: string,
     fontSize: number,
+    ctx: Canvas2DContext,
   ) {
-    return buildCombinedLayout(slides, fontFamily, fontSize);
+    return buildCombinedLayout(slides, fontFamily, fontSize, ctx);
   }
 
   function buildCombinedLayout(
     slides: Slide[],
     fontFamily: string,
     fontSize: number,
+    ctx: Canvas2DContext,
   ): CombinedLayout {
     const lineHeight = SECOND_THEME_BODY_LINE_HEIGHT;
     const orderBottomGap = SECOND_THEME_ORDER_BOTTOM_GAP;
@@ -870,14 +930,14 @@ import { checkTextContent } from "../../services/content-security";
       CANVAS_WIDTH -
       SECOND_THEME_PADDING_LEFT -
       SECOND_THEME_PADDING_RIGHT;
-    const maxLineUnits =
-      maxTextWidth / fontSize - SECOND_THEME_EXTRA_RIGHT_CHAR_GAP;
+    const font = `normal ${fontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
+    ctx.font = font;
     const sections = slides.map((slide) => {
       const body = getCombinedBody(slide.paragraphs);
 
       return {
         order: slide.order,
-        lines: wrapCombinedText(body, maxLineUnits),
+        lines: wrapCombinedText(body, maxTextWidth, ctx),
       };
     });
     const height = sections.reduce((total, section, index) => {
@@ -894,7 +954,7 @@ import { checkTextContent } from "../../services/content-security";
 
     return {
       sections,
-      font: `normal ${fontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+      font,
       lineHeight,
       orderBottomGap,
       sectionGap,
@@ -946,35 +1006,39 @@ import { checkTextContent } from "../../services/content-security";
     return tokens.join(" ").replace(/\s+/g, " ").trim();
   }
 
-  function wrapCombinedText(text: string, maxUnits: number) {
+  function wrapCombinedText(
+    text: string,
+    maxWidth: number,
+    ctx: Canvas2DContext,
+  ) {
     if (!text) return [];
 
-    const lines: string[] = [];
+    const lines: CanvasTextLine[] = [];
     let currentLine = "";
-    let currentUnits = 0;
+    let currentWidth = 0;
 
     Array.from(text).forEach((char) => {
-      const charUnits = /[ -~]/.test(char) ? 0.56 : 1;
+      const charWidth = ctx.measureText(char).width;
 
-      if (currentLine && currentUnits + charUnits > maxUnits) {
-        lines.push(currentLine.trimEnd());
+      if (currentLine && currentWidth + charWidth > maxWidth) {
+        lines.push({ text: currentLine.trimEnd(), justify: true });
         currentLine = char.trimStart();
-        currentUnits = currentLine ? charUnits : 0;
+        currentWidth = currentLine ? charWidth : 0;
         return;
       }
 
       currentLine += char;
-      currentUnits += charUnits;
+      currentWidth += charWidth;
     });
 
     if (currentLine) {
-      lines.push(currentLine.trimEnd());
+      lines.push({ text: currentLine.trimEnd(), justify: false });
     }
 
     return lines;
   }
 
-  function getCanvasTextBlockHeight(paragraphLines: string[][]) {
+  function getCanvasTextBlockHeight(paragraphLines: CanvasTextLine[][]) {
     const bodyHeight = paragraphLines.reduce((total, lines, index) => {
       const gap =
         index === paragraphLines.length - 1 ? 0 : CANVAS_PARAGRAPH_GAP;

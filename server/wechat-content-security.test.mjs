@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import test from "node:test";
+import sharp from "sharp";
 import { createWechatContentSecurity } from "./lib/wechat-content-security.mjs";
 
 function jsonResponse(body, status = 200) {
@@ -97,4 +99,34 @@ test("image safety check blocks unsafe uploads before storage", async () => {
   assert.ok(imageCall);
   assert.equal(imageCall.options.method, "POST");
   assert.ok(imageCall.options.body instanceof FormData);
+});
+
+test("large images are compressed before the WeChat safety request", async () => {
+  let imageCall;
+  const security = createWechatContentSecurity({
+    appId: "test-app-id",
+    appSecret: "test-secret",
+    fetchImpl: async (url, options = {}) => {
+      if (String(url).includes("/cgi-bin/token")) {
+        return jsonResponse({ access_token: "test-access-token", expires_in: 7200 });
+      }
+      imageCall = options;
+      return jsonResponse({ errcode: 0, errmsg: "ok" });
+    },
+  });
+  const source = await sharp(randomBytes(900 * 900 * 3), {
+    raw: { width: 900, height: 900, channels: 3 },
+  }).png().toBuffer();
+  assert.ok(source.length > 900 * 1024);
+
+  await security.checkImage({
+    buffer: source,
+    mimetype: "image/png",
+    filename: "large.png",
+  });
+
+  const media = imageCall.body.get("media");
+  assert.equal(media.type, "image/jpeg");
+  assert.ok(media.size < source.length);
+  assert.ok(media.size < 900 * 1024);
 });

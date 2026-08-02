@@ -234,10 +234,15 @@ export async function createKeyMoment(supabase, userId, body, image) {
   return (await toResponses(supabase, [data]))[0];
 }
 
-export async function updateKeyMoment(supabase, userId, momentId, body) {
+export async function updateKeyMoment(supabase, userId, momentId, body, options = {}) {
   const current = await requireMoment(supabase, userId, momentId);
   const changes = {};
-  if (body.content !== undefined) changes.content = normalizeContent(body.content);
+  if (body.content !== undefined) {
+    changes.content = normalizeContent(body.content);
+    if (changes.content && changes.content !== current.content) {
+      await options.checkText?.(changes.content);
+    }
+  }
   if (body.occurred_at !== undefined) changes.occurred_at = normalizeOccurredAt(body.occurred_at);
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。");
   const nextContent = changes.content ?? current.content;

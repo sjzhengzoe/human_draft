@@ -797,9 +797,6 @@ export function buildServer(options = {}) {
   });
 
   app.put("/api/key-moments/:id", { preHandler: authenticated }, async (request) => {
-    if (request.body?.content) {
-      await contentSecurity.checkText(request.auth.user.openid, request.body.content);
-    }
     return {
       ok: true,
       data: {
@@ -808,6 +805,10 @@ export function buildServer(options = {}) {
           request.auth.user.id,
           request.params.id,
           request.body || {},
+          {
+            checkText: (content) =>
+              contentSecurity.checkText(request.auth.user.openid, content),
+          },
         ),
       },
     };

@@ -448,6 +448,57 @@ test("key moments can be created without an image and run text safety checks", a
   ]);
 });
 
+test("key moment edits only check text when the content actually changes", async (t) => {
+  const checked = [];
+  const momentId = "30000000-0000-4000-8000-000000000010";
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        key_moments: [{
+          id: momentId,
+          user_id: USER_ID,
+          content: "小猫",
+          occurred_at: "2026-08-02T04:30:00.000Z",
+          image_path: null,
+          thumbnail_path: null,
+        }],
+      }),
+    }),
+    contentSecurity: {
+      async checkText(openId, content) {
+        checked.push({ openId, content });
+      },
+      async checkImage() {},
+    },
+  });
+  t.after(() => app.close());
+
+  const unchangedResponse = await app.inject({
+    method: "PUT",
+    url: `/api/key-moments/${momentId}`,
+    headers: authHeaders,
+    payload: {
+      content: "小猫",
+      occurred_at: "2026-08-02T05:00:00+08:00",
+    },
+  });
+  assert.equal(unchangedResponse.statusCode, 200);
+  assert.deepEqual(checked, []);
+
+  const changedResponse = await app.inject({
+    method: "PUT",
+    url: `/api/key-moments/${momentId}`,
+    headers: authHeaders,
+    payload: {
+      content: "小狗",
+      occurred_at: "2026-08-02T05:00:00+08:00",
+    },
+  });
+  assert.equal(changedResponse.statusCode, 200);
+  assert.deepEqual(checked, [{ openId: "test-openid", content: "小狗" }]);
+});
+
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {
   const episode = {
     id: EPISODE_ID,

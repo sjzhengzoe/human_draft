@@ -1,5 +1,6 @@
 import { config } from "../config.mjs";
 import { HttpError } from "./errors.mjs";
+import sharp from "sharp";
 
 const TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token";
 const MSG_CHECK_URL = "https://api.weixin.qq.com/wxa/msg_sec_check";
@@ -7,6 +8,7 @@ const IMAGE_CHECK_URL = "https://api.weixin.qq.com/wxa/img_sec_check";
 const TEXT_CHUNK_LENGTH = 2_000;
 const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1_000;
 const INVALID_TOKEN_CODES = new Set([40014, 42001]);
+const IMAGE_CHECK_DIRECT_SIZE_LIMIT = 900 * 1024;
 
 const unsafeContentError = () =>
   new HttpError(
@@ -32,6 +34,39 @@ function splitText(content) {
     chunks.push(characters.slice(index, index + TEXT_CHUNK_LENGTH).join(""));
   }
   return chunks;
+}
+
+async function imageForSecurityCheck(image) {
+  const buffer = Buffer.isBuffer(image) ? image : image?.buffer;
+  if (!buffer?.length || buffer.length <= IMAGE_CHECK_DIRECT_SIZE_LIMIT) {
+    return {
+      buffer,
+      mimetype: image?.mimetype || "image/png",
+      filename: image?.filename || "upload.png",
+    };
+  }
+
+  try {
+    const compressed = await sharp(buffer, { failOn: "error" })
+      .rotate()
+      .resize({ width: 1_024, height: 1_024, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 78, mozjpeg: true })
+      .toBuffer();
+    return {
+      buffer: compressed,
+      mimetype: "image/jpeg",
+      filename: "security-check.jpg",
+    };
+  } catch (cause) {
+    const error = new HttpError(
+      400,
+      "INVALID_IMAGE",
+      "图片文件损坏或格式不受支持。",
+    );
+    error.cause = cause;
+    throw error;
+  }
 }
 
 export function createWechatContentSecurity(options = {}) {
@@ -70,6 +105,7 @@ export function createWechatContentSecurity(options = {}) {
       });
       result = await response.json();
     } catch (error) {
+      if (allowRetry) return requestCheck(endpoint, createRequest, false);
       throw unavailableError(error);
     }
 
@@ -106,6 +142,9 @@ export function createWechatContentSecurity(options = {}) {
       clearToken();
       return requestCheck(endpoint, createRequest, false);
     }
+    if (allowRetry && (response.status >= 500 || Number(result.errcode) === -1)) {
+      return requestCheck(endpoint, createRequest, false);
+    }
     if (!response.ok) {
       throw unavailableError(new Error(`微信内容安全接口返回 ${response.status}`));
     }
@@ -140,15 +179,15 @@ export function createWechatContentSecurity(options = {}) {
   };
 
   const checkImage = async (image) => {
-    const buffer = Buffer.isBuffer(image) ? image : image?.buffer;
-    if (!buffer?.length) return;
+    const prepared = await imageForSecurityCheck(image);
+    if (!prepared.buffer?.length) return;
 
     const result = await requestCheck(IMAGE_CHECK_URL, () => {
       const body = new FormData();
       body.append(
         "media",
-        new Blob([buffer], { type: image?.mimetype || "image/png" }),
-        image?.filename || "upload.png",
+        new Blob([prepared.buffer], { type: prepared.mimetype }),
+        prepared.filename,
       );
       return { method: "POST", body };
     });

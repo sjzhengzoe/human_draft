@@ -152,7 +152,7 @@
   src="{{cropSourcePath}}"
   shape="square"
   title="裁剪节点图片"
-  output-size="1440"
+  output-size="1080"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"
