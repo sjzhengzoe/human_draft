@@ -22,7 +22,7 @@ import {
   updateDish,
   updatePrintStatus,
 } from "./lib/dishes.mjs";
-import { HttpError } from "./lib/errors.mjs";
+import { assertCondition, HttpError } from "./lib/errors.mjs";
 import {
   createActivityItem,
   createDiningPlace,
@@ -116,9 +116,16 @@ import {
 } from "./lib/key-moments.mjs";
 import {
   addOfficialChatTopic,
+  createOfficialChatTopic,
   createUserChatTopic,
+  deleteOfficialChatTopic,
   deleteUserChatTopic,
+  hideOfficialChatTopic,
   listChatTopics,
+  listHiddenOfficialChatTopics,
+  randomOfficialChatTopics,
+  restoreOfficialChatTopic,
+  updateOfficialChatTopic,
   updateUserChatTopic,
 } from "./lib/chat-topics.mjs";
 
@@ -151,6 +158,15 @@ export function buildServer(options = {}) {
 
   const authenticated = async (request) => {
     await requireAuth(getSupabaseAdmin(), request);
+  };
+  const adminAuthenticated = async (request) => {
+    await authenticated(request);
+    assertCondition(
+      request.auth.user.is_admin,
+      403,
+      "ADMIN_REQUIRED",
+      "只有管理员可以管理官方话题。",
+    );
   };
   const profileCompletionAuthenticated = async (request) => {
     await requireAuth(getSupabaseAdmin(), request, { allowIncompleteProfile: true });
@@ -855,8 +871,79 @@ export function buildServer(options = {}) {
 
   app.get("/api/chat-topics", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await listChatTopics(getSupabaseAdmin(), request.auth.user.id),
+    data: await listChatTopics(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.query || {},
+    ),
   }));
+
+  app.get("/api/chat-topics/official/random", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      items: await randomOfficialChatTopics(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {},
+      ),
+    },
+  }));
+
+  app.get("/api/chat-topics/official/hidden", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await listHiddenOfficialChatTopics(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.query || {},
+    ),
+  }));
+
+  app.post("/api/chat-topics/official", { preHandler: adminAuthenticated }, async (request, reply) => {
+    const content = request.body?.content;
+    if (typeof content === "string" && content.trim()) {
+      await contentSecurity.checkText(request.auth.user.openid, content.trim());
+    }
+    const item = await createOfficialChatTopic(getSupabaseAdmin(), request.body || {});
+    return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.put("/api/chat-topics/official/:id", { preHandler: adminAuthenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await updateOfficialChatTopic(
+        getSupabaseAdmin(),
+        request.params.id,
+        request.body || {},
+        {
+          checkText: (content) =>
+            contentSecurity.checkText(request.auth.user.openid, content),
+        },
+      ),
+    },
+  }));
+
+  app.delete("/api/chat-topics/official/:id", { preHandler: adminAuthenticated }, async (request) => {
+    await deleteOfficialChatTopic(getSupabaseAdmin(), request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
+
+  app.post("/api/chat-topics/official/:id/dislike", { preHandler: authenticated }, async (request) => {
+    await hideOfficialChatTopic(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
+    return { ok: true, data: { hidden: true } };
+  });
+
+  app.delete("/api/chat-topics/official/:id/hide", { preHandler: authenticated }, async (request) => {
+    await restoreOfficialChatTopic(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.params.id,
+    );
+    return { ok: true, data: { restored: true } };
+  });
 
   app.post("/api/chat-topics/mine", { preHandler: authenticated }, async (request, reply) => {
     const content = request.body?.content;
@@ -881,10 +968,6 @@ export function buildServer(options = {}) {
   });
 
   app.put("/api/chat-topics/mine/:id", { preHandler: authenticated }, async (request) => {
-    const content = request.body?.content;
-    if (typeof content === "string" && content.trim()) {
-      await contentSecurity.checkText(request.auth.user.openid, content.trim());
-    }
     return {
       ok: true,
       data: {
@@ -893,6 +976,10 @@ export function buildServer(options = {}) {
           request.auth.user.id,
           request.params.id,
           request.body || {},
+          {
+            checkText: (content) =>
+              contentSecurity.checkText(request.auth.user.openid, content),
+          },
         ),
       },
     };

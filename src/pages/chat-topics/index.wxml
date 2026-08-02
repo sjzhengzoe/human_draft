@@ -9,55 +9,106 @@
   <view class="topic-tabs">
     <view class="topic-tab {{activeTab === 'official' ? 'topic-tab--active' : ''}}" data-tab="official" bindtap="handleTabTap">官方话题</view>
     <view class="topic-tab {{activeTab === 'mine' ? 'topic-tab--active' : ''}}" data-tab="mine" bindtap="handleTabTap">我的话题</view>
+    <view class="topic-tab {{activeTab === 'hidden' ? 'topic-tab--active' : ''}}" data-tab="hidden" bindtap="handleTabTap">隐藏列表</view>
   </view>
 
   <scroll-view class="topic-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view wx:if="{{activeTab === 'official'}}" class="topic-content">
       <view class="section-heading">
         <view>
-          <view class="section-heading__title">今天聊什么</view>
-          <view class="section-heading__hint">随机看看，也可以收进自己的话题库</view>
+          <view class="section-heading__title">官方话题</view>
+          <view class="section-heading__hint">{{officialTotal}} 个待收藏话题</view>
         </view>
-        <button class="random-button" bindtap="handleRandom">
-          <app-icon name="sparkles-white" size="22" />
-          <text>换一组</text>
-        </button>
+        <view class="section-heading__actions">
+          <button wx:if="{{isAdmin}}" class="official-add-button" bindtap="handleAddOfficialOpen">
+            <app-icon name="plus-white" size="20" />
+            <text>新增</text>
+          </button>
+        </view>
       </view>
 
       <view wx:if="{{contentLoading}}" class="content-loading">
         <view class="content-loading__spinner" />
         <view class="content-loading__text">正在加载…</view>
       </view>
-      <view wx:elif="{{randomItems.length === 0}}" class="empty-state">暂时还没有官方话题</view>
-      <view wx:else class="random-list">
+      <view wx:elif="{{officialItems.length === 0}}" class="empty-state">暂时还没有官方话题</view>
+      <view wx:else class="my-topic-list topic-list">
         <view
-          wx:for="{{randomItems}}"
+          wx:for="{{officialItems}}"
           wx:key="id"
-          class="random-card {{item.is_added ? 'random-card--added' : ''}}"
-          hover-class="random-card--hover"
+          class="my-topic-card official-topic-card"
           data-id="{{item.id}}"
-          bindtap="handleAddOfficial"
+          bindtap="handleEditOfficial"
         >
-          <view class="random-card__number">0{{index + 1}}</view>
-          <view class="random-card__content">{{item.content}}</view>
-          <view class="random-card__action">
-            <view wx:if="{{addingOfficialId === item.id}}" class="mini-spinner" />
-            <text wx:else>{{item.is_added ? '已加入' : '+ 加入我的话题'}}</text>
+          <view
+            wx:if="{{isAdmin}}"
+            class="official-topic-card__delete"
+            role="button"
+            aria-label="删除官方话题"
+            data-id="{{item.id}}"
+            catchtap="handleOfficialDeleteOpen"
+          >
+            <app-icon name="x-muted" size="18" />
+          </view>
+          <view class="official-topic-card__top">
+            <view class="my-topic-card__main">
+              <view class="my-topic-card__tag">官方话题</view>
+              <view class="my-topic-card__content">{{item.content}}</view>
+            </view>
+          </view>
+          <view class="official-topic-card__footer">
+            <view class="official-user-actions">
+              <view class="official-inline-action" role="button" data-id="{{item.id}}" catchtap="handleDislikeOfficial">
+                <view wx:if="{{hidingOfficialId === item.id}}" class="mini-spinner" />
+                <text wx:else>隐藏</text>
+              </view>
+              <view class="official-inline-action" role="button" data-id="{{item.id}}" catchtap="handleCopyOfficial">复制</view>
+              <view
+                class="official-topic-action"
+                role="button"
+                data-id="{{item.id}}"
+                catchtap="handleAddOfficial"
+              >
+                <view wx:if="{{addingOfficialId === item.id}}" class="mini-spinner" />
+                <text wx:else>+ 收藏</text>
+              </view>
+            </view>
           </view>
         </view>
       </view>
+      <view wx:if="{{officialTotalPages > 1}}" class="topic-pagination">
+        <button
+          class="topic-pagination__button"
+          disabled="{{officialPage <= 1 || loadingOfficialPage}}"
+          data-page="{{officialPage - 1}}"
+          bindtap="handleOfficialPageChange"
+        >上一页</button>
+        <view class="topic-pagination__status">{{officialPage}} / {{officialTotalPages}}</view>
+        <button
+          class="topic-pagination__button"
+          disabled="{{officialPage >= officialTotalPages || loadingOfficialPage}}"
+          data-page="{{officialPage + 1}}"
+          bindtap="handleOfficialPageChange"
+        >下一页</button>
+      </view>
     </view>
 
-    <view wx:else class="topic-content">
+    <view wx:elif="{{activeTab === 'mine'}}" class="topic-content">
       <view class="section-heading">
         <view>
           <view class="section-heading__title">我的话题</view>
           <view class="section-heading__hint">{{myItems.length}} 个随时可以聊的话题</view>
         </view>
-        <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddMine">
-          <app-icon name="plus-white" size="21" />
-          <text>新增</text>
-        </button>
+        <view class="section-heading__actions">
+          <button wx:if="{{myItems.length}}" class="random-button" bindtap="handleMyRandom">
+            <app-icon name="sparkles-white" size="22" />
+            <text>随机一组</text>
+          </button>
+          <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddMine">
+            <app-icon name="plus-white" size="21" />
+            <text>新增</text>
+          </button>
+        </view>
       </view>
 
       <view wx:if="{{contentLoading}}" class="content-loading">
@@ -66,16 +117,16 @@
       </view>
       <view wx:elif="{{myItems.length === 0}}" class="empty-state">
         <view class="empty-state__title">还没有自己的话题</view>
-        <view class="empty-state__hint">从官方话题加入，或新增一个</view>
+        <view class="empty-state__hint">从官方话题收藏，或新增一个</view>
       </view>
-      <view wx:else class="my-topic-list">
+      <view wx:else class="my-topic-list topic-list">
         <view wx:for="{{myItems}}" wx:key="id" class="my-topic-card">
           <view class="my-topic-card__main">
             <view class="my-topic-card__tag">{{item.official_topic_id ? '官方收录' : '自建'}}</view>
             <view class="my-topic-card__content">{{item.content}}</view>
           </view>
           <view wx:if="{{canWrite}}" class="my-topic-card__actions">
-            <view class="icon-button" role="button" aria-label="编辑话题" data-id="{{item.id}}" bindtap="handleEditMine">
+            <view wx:if="{{!item.official_topic_id}}" class="icon-button" role="button" aria-label="编辑话题" data-id="{{item.id}}" bindtap="handleEditMine">
               <app-icon name="pencil" size="25" />
             </view>
             <view class="icon-button" role="button" aria-label="删除话题" data-id="{{item.id}}" bindtap="handleDeleteMine">
@@ -85,8 +136,104 @@
         </view>
       </view>
     </view>
+
+    <view wx:else class="topic-content">
+      <view class="section-heading">
+        <view>
+          <view class="section-heading__title">隐藏列表</view>
+          <view class="section-heading__hint">{{hiddenTotal}} 个已隐藏的官方话题</view>
+        </view>
+      </view>
+
+      <view wx:if="{{loadingHiddenPage && !hiddenHasLoaded}}" class="content-loading">
+        <view class="content-loading__spinner" />
+        <view class="content-loading__text">正在加载…</view>
+      </view>
+      <view wx:elif="{{hiddenItems.length === 0}}" class="empty-state">
+        <view class="empty-state__title">没有隐藏的话题</view>
+        <view class="empty-state__hint">在官方话题中点击“隐藏”后会出现在这里</view>
+      </view>
+      <view wx:else class="my-topic-list topic-list">
+        <view wx:for="{{hiddenItems}}" wx:key="id" class="my-topic-card">
+          <view class="my-topic-card__main">
+            <view class="my-topic-card__tag">已隐藏</view>
+            <view class="my-topic-card__content">{{item.content}}</view>
+          </view>
+          <view
+            class="restore-topic-action"
+            role="button"
+            data-id="{{item.id}}"
+            bindtap="handleRestoreOfficial"
+          >
+            <view wx:if="{{restoringOfficialId === item.id}}" class="mini-spinner" />
+            <text wx:else>恢复</text>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{hiddenTotalPages > 1}}" class="topic-pagination">
+        <button
+          class="topic-pagination__button"
+          disabled="{{hiddenPage <= 1 || loadingHiddenPage}}"
+          data-page="{{hiddenPage - 1}}"
+          bindtap="handleHiddenPageChange"
+        >上一页</button>
+        <view class="topic-pagination__status">{{hiddenPage}} / {{hiddenTotalPages}}</view>
+        <button
+          class="topic-pagination__button"
+          disabled="{{hiddenPage >= hiddenTotalPages || loadingHiddenPage}}"
+          data-page="{{hiddenPage + 1}}"
+          bindtap="handleHiddenPageChange"
+        >下一页</button>
+      </view>
+    </view>
     <view class="scroll-safe-area" />
   </scroll-view>
+
+  <app-dialog
+    wx:if="{{showRandomDialog}}"
+    visible="{{true}}"
+    title="{{randomDialogSource === 'official' ? '官方话题 · 随机一组' : '我的话题 · 随机一组'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="random-dialog-list">
+      <view wx:for="{{randomDialogItems}}" wx:key="id" class="random-dialog-item">
+        <view class="random-dialog-item__number">0{{index + 1}}</view>
+        <view class="random-dialog-item__main">
+          <view class="random-dialog-item__content">{{item.content}}</view>
+          <view class="random-dialog-item__meta">{{item.meta}}</view>
+        </view>
+      </view>
+    </view>
+    <view slot="actions" class="dialog-actions">
+      <button class="dialog-button dialog-button--cancel" bindtap="closeRandomDialog">关闭</button>
+      <button class="dialog-button dialog-button--confirm" loading="{{randomLoading}}" disabled="{{randomLoading}}" bindtap="handleRandomAgain">再随机一次</button>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{showOfficialEditor}}"
+    visible="{{true}}"
+    title="{{editingOfficialId ? '编辑官方话题' : '添加官方话题'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="topic-editor">
+      <textarea
+        class="topic-editor__input"
+        value="{{officialEditorContent}}"
+        maxlength="120"
+        placeholder="写下一个官方话题…"
+        focus
+        bindinput="handleOfficialEditorInput"
+      />
+      <view class="topic-editor__count">{{officialEditorContent.length}} / 120</view>
+    </view>
+    <view slot="actions" class="dialog-actions">
+      <button class="dialog-button dialog-button--cancel" disabled="{{officialSaving}}" bindtap="closeOfficialEditor">取消</button>
+      <button class="dialog-button dialog-button--confirm" loading="{{officialSaving}}" disabled="{{officialSaving}}" bindtap="saveOfficialEditor">{{editingOfficialId ? '保存' : '添加'}}</button>
+    </view>
+  </app-dialog>
 
   <app-dialog
     wx:if="{{showEditor}}"
@@ -113,6 +260,17 @@
   </app-dialog>
 
   <app-dialog
+    wx:if="{{showOfficialDeleteConfirm}}"
+    visible="{{true}}"
+    title="删除官方话题"
+    content="删除只影响官方话题库，用户已经收藏的个人话题会继续保留。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="handleOfficialDeleteCancel"
+    bindconfirm="handleOfficialDeleteConfirm"
+  />
+
+  <app-dialog
     wx:if="{{showDeleteConfirm}}"
     visible="{{true}}"
     title="删除话题"
@@ -123,5 +281,5 @@
     bindconfirm="handleDeleteConfirm"
   />
 
-  <operation-loading visible="{{deleting}}" text="正在删除…" />
+  <operation-loading visible="{{deleting || officialDeleting}}" text="正在处理…" />
 </view>

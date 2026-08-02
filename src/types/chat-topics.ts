@@ -17,3 +17,10 @@ export type UserChatTopic = {
 export type OfficialChatTopicView = OfficialChatTopic & {
   is_added: boolean
 }
+
+export type OfficialChatTopicPagination = {
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}

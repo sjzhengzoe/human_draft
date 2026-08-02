@@ -232,6 +232,18 @@ test("chat topics list official examples and only the authenticated user's topic
     sort_order: 1000,
     is_active: true,
   };
+  const hiddenOfficialTopic = {
+    id: "20000000-0000-4000-8000-000000000002",
+    content: "这个话题已被当前用户标记为不喜欢",
+    sort_order: 2000,
+    is_active: true,
+  };
+  const extraOfficialTopics = Array.from({ length: 11 }, (_, index) => ({
+    id: `21000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    content: `分页测试官方话题 ${index + 1}`,
+    sort_order: 3000 + index * 1000,
+    is_active: true,
+  }));
   const mine = {
     id: "30000000-0000-4000-8000-000000000001",
     user_id: USER_ID,
@@ -249,8 +261,12 @@ test("chat topics list official examples and only the authenticated user's topic
     logger: false,
     supabase: createFakeSupabase({
       tables: authenticatedTables({
-        official_chat_topics: [officialTopic],
+        official_chat_topics: [officialTopic, hiddenOfficialTopic, ...extraOfficialTopics],
         user_chat_topics: [mine, anotherUsersTopic],
+        user_hidden_official_chat_topics: [
+          { user_id: USER_ID, official_topic_id: hiddenOfficialTopic.id },
+          { user_id: OTHER_USER_ID, official_topic_id: officialTopic.id },
+        ],
       }),
     }),
     contentSecurity: {
@@ -268,8 +284,87 @@ test("chat topics list official examples and only the authenticated user's topic
     headers: authHeaders,
   });
   assert.equal(listResponse.statusCode, 200);
-  assert.equal(listResponse.json().data.official_items.length, 1);
+  assert.equal(listResponse.json().data.official_items.length, 6);
+  assert.equal(listResponse.json().data.official_items[0].id, extraOfficialTopics[0].id);
+  assert.deepEqual(listResponse.json().data.official_pagination, {
+    page: 1,
+    page_size: 6,
+    total: 11,
+    total_pages: 2,
+  });
   assert.deepEqual(listResponse.json().data.my_items, [mine]);
+
+  const hiddenListResponse = await app.inject({
+    method: "GET",
+    url: "/api/chat-topics/official/hidden?page=1&page_size=10",
+    headers: authHeaders,
+  });
+  assert.equal(hiddenListResponse.statusCode, 200);
+  assert.deepEqual(hiddenListResponse.json().data.items, [hiddenOfficialTopic]);
+  assert.equal(hiddenListResponse.json().data.pagination.total, 1);
+
+  const secondPageResponse = await app.inject({
+    method: "GET",
+    url: "/api/chat-topics?page=2&page_size=10",
+    headers: authHeaders,
+  });
+  assert.equal(secondPageResponse.statusCode, 200);
+  assert.equal(secondPageResponse.json().data.official_items.length, 1);
+  assert.equal(secondPageResponse.json().data.official_pagination.page, 2);
+
+  const randomResponse = await app.inject({
+    method: "GET",
+    url: "/api/chat-topics/official/random?count=3",
+    headers: authHeaders,
+  });
+  assert.equal(randomResponse.statusCode, 200);
+  assert.equal(randomResponse.json().data.items.length, 3);
+  assert.equal(
+    randomResponse.json().data.items.some((item) => item.id === hiddenOfficialTopic.id),
+    false,
+  );
+  assert.equal(
+    randomResponse.json().data.items.some((item) => item.id === officialTopic.id),
+    false,
+  );
+
+  const restoreResponse = await app.inject({
+    method: "DELETE",
+    url: `/api/chat-topics/official/${hiddenOfficialTopic.id}/hide`,
+    headers: authHeaders,
+  });
+  assert.equal(restoreResponse.statusCode, 200);
+  assert.equal(restoreResponse.json().data.restored, true);
+
+  const officialEditResponse = await app.inject({
+    method: "PUT",
+    url: `/api/chat-topics/mine/${mine.id}`,
+    headers: authHeaders,
+    payload: { content: "试图修改官方话题" },
+  });
+  assert.equal(officialEditResponse.statusCode, 403);
+  assert.equal(officialEditResponse.json().error.code, "OFFICIAL_TOPIC_READ_ONLY");
+
+  const dislikeResponse = await app.inject({
+    method: "POST",
+    url: `/api/chat-topics/official/${officialTopic.id}/dislike`,
+    headers: authHeaders,
+  });
+  assert.equal(dislikeResponse.statusCode, 200);
+  assert.equal(dislikeResponse.json().data.hidden, true);
+
+  const officialUpdateResponse = await app.inject({
+    method: "PUT",
+    url: `/api/chat-topics/official/${officialTopic.id}`,
+    headers: authHeaders,
+    payload: { content: "管理员更新后的官方话题" },
+  });
+  assert.equal(officialUpdateResponse.statusCode, 200);
+  assert.equal(
+    officialUpdateResponse.json().data.item.content,
+    "管理员更新后的官方话题",
+  );
+  assert.equal(mine.content, "最近有什么小事，让你觉得生活很可爱？");
 
   const createResponse = await app.inject({
     method: "POST",
@@ -279,9 +374,32 @@ test("chat topics list official examples and only the authenticated user's topic
   });
   assert.equal(createResponse.statusCode, 201);
   assert.equal(createResponse.json().data.item.content, "最近最想分享的事情是什么？");
+
+  const officialCreateResponse = await app.inject({
+    method: "POST",
+    url: "/api/chat-topics/official",
+    headers: authHeaders,
+    payload: { content: "  只有管理员可以添加的官方话题  " },
+  });
+  assert.equal(officialCreateResponse.statusCode, 201);
+  assert.equal(
+    officialCreateResponse.json().data.item.content,
+    "只有管理员可以添加的官方话题",
+  );
   assert.deepEqual(checked, [
+    { openId: "test-openid", content: "管理员更新后的官方话题" },
     { openId: "test-openid", content: "最近最想分享的事情是什么？" },
+    { openId: "test-openid", content: "只有管理员可以添加的官方话题" },
   ]);
+
+  const officialDeleteResponse = await app.inject({
+    method: "DELETE",
+    url: `/api/chat-topics/official/${officialTopic.id}`,
+    headers: authHeaders,
+  });
+  assert.equal(officialDeleteResponse.statusCode, 200);
+  assert.equal(officialDeleteResponse.json().data.deleted, true);
+  assert.equal(mine.content, "最近有什么小事，让你觉得生活很可爱？");
 });
 
 test("media and dining detail routes load records by id", async (t) => {

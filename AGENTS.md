@@ -7,6 +7,13 @@
 - Image selection that requires cropping must use the shared `image-cropper` component. Do not implement page-local crop overlays or canvases; `image-cropper` owns the common `app-dialog` presentation and crop workflow.
 - Reuse existing shared modal components before adding new dialog behavior. Native image preview and system pickers are exempt because they are platform controls rather than business dialogs.
 
+## UI Typography Rules
+
+- New business and utility pages should use the global `--ui-font-size-base` (`25rpx`) for normal body text by default, and should compare typography with adjacent existing modules before introducing page-local sizes.
+- Keep compact page section titles around `30-32rpx`, primary card content around `25-27rpx`, tabs and buttons around `22-25rpx`, and secondary labels or hints around `19-22rpx`.
+- Do not use body or card text above `28rpx`, or ordinary section titles above `34rpx`, unless the page has an explicit display, hero, or data-emphasis requirement.
+- When reducing typography, also tighten the related card minimum height, padding, and vertical gaps so the visual density remains balanced.
+
 ## Project Skills
 
 When renewing the gufeifei.cn HTTPS certificate on Tencent Cloud, use the project-local skill:
