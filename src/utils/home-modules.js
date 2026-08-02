@@ -17,8 +17,8 @@ const HOME_FEATURE_GROUPS = [
     ]
   },
   {
-    key: "life",
-    title: "生活",
+    key: "records",
+    title: "记录",
     items: [
       {
         key: "menu",
@@ -45,22 +45,6 @@ const HOME_FEATURE_GROUPS = [
         requiresLogin: true
       },
       {
-        key: "key-moments",
-        icon: "flag",
-        title: "关键节点",
-        path: "/pages/key-moments/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "exercise",
-        icon: "dumbbell",
-        title: "运动养宠",
-        path: "/exercise/pages/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
         key: "luggage",
         icon: "luggage",
         title: "行李清单",
@@ -73,6 +57,28 @@ const HOME_FEATURE_GROUPS = [
         icon: "shirt",
         title: "我的衣橱",
         path: "/pages/wardrobe/index",
+        available: true,
+        requiresLogin: true
+      }
+    ]
+  },
+  {
+    key: "life",
+    title: "生活",
+    items: [
+      {
+        key: "key-moments",
+        icon: "flag",
+        title: "关键节点",
+        path: "/pages/key-moments/index",
+        available: true,
+        requiresLogin: true
+      },
+      {
+        key: "exercise",
+        icon: "dumbbell",
+        title: "运动养宠",
+        path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
       }
