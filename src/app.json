@@ -12,6 +12,7 @@
     "pages/media/episode-edit/index",
     "pages/media/categories/index",
     "pages/media/category-edit/index",
+    "pages/key-moments/index",
     "pages/activities/index",
     "pages/luggage/index",
     "pages/luggage/scenes/index",
@@ -39,7 +40,11 @@
     "navigationBarTitleText": "Earth",
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5",
+    "backgroundColorTop": "#f5f5f5",
+    "backgroundColorBottom": "#f5f5f5",
+    "backgroundTextStyle": "dark"
   },
   "usingComponents": {
     "app-icon": "/components/app-icon/index",

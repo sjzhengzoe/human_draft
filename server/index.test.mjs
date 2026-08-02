@@ -35,6 +35,11 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    insert(values) {
+      this.rows = Array.isArray(values) ? [...values] : [values];
+      return this;
+    }
+
     update(changes) {
       this.changes = changes;
       return this;
@@ -62,8 +67,23 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    gte(field, value) {
+      this.rows = this.rows.filter((row) => row[field] >= value);
+      return this;
+    }
+
+    lt(field, value) {
+      this.rows = this.rows.filter((row) => row[field] < value);
+      return this;
+    }
+
     order() {
       return this;
+    }
+
+    async limit(count) {
+      this.rows = this.rows.slice(0, count);
+      return { data: this.materialize(), error: null };
     }
 
     async range(from, to) {
@@ -350,6 +370,82 @@ test("personal modules never return another user's records", async (t) => {
   });
   assert.equal(detailResponse.statusCode, 404);
   assert.equal(detailResponse.json().error.code, "RECORD_NOT_FOUND");
+});
+
+test("key moments list is user-scoped and filtered by Shanghai day", async (t) => {
+  const ownMoment = {
+    id: "30000000-0000-4000-8000-000000000001",
+    user_id: USER_ID,
+    content: "当天的节点",
+    occurred_at: "2026-08-02T04:00:00.000Z",
+    image_path: null,
+    thumbnail_path: null,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        key_moments: [
+          ownMoment,
+          {
+            ...ownMoment,
+            id: "30000000-0000-4000-8000-000000000002",
+            occurred_at: "2026-08-02T16:00:00.000Z",
+          },
+          {
+            ...ownMoment,
+            id: "30000000-0000-4000-8000-000000000003",
+            user_id: OTHER_USER_ID,
+          },
+        ],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/key-moments?granularity=day&date=2026-08-02",
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().data.items, [
+    { ...ownMoment, image_url: "", thumbnail_url: "" },
+  ]);
+});
+
+test("key moments can be created without an image and run text safety checks", async (t) => {
+  const checked = [];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({ tables: authenticatedTables() }),
+    contentSecurity: {
+      async checkText(openId, content) {
+        checked.push({ openId, content });
+      },
+      async checkImage() {},
+    },
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/key-moments",
+    headers: authHeaders,
+    payload: {
+      content: "完成关键节点模块",
+      occurred_at: "2026-08-02T12:30:00+08:00",
+    },
+  });
+  const body = response.json();
+  assert.equal(response.statusCode, 201);
+  assert.equal(body.data.item.content, "完成关键节点模块");
+  assert.equal(body.data.item.user_id, USER_ID);
+  assert.equal(body.data.item.occurred_at, "2026-08-02T04:30:00.000Z");
+  assert.match(body.data.item.id, /^[0-9a-f-]{36}$/i);
+  assert.deepEqual(checked, [
+    { openId: "test-openid", content: "完成关键节点模块" },
+  ]);
 });
 
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {

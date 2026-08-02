@@ -91,30 +91,35 @@ import { checkTextContent } from "../../services/content-security";
   const BASE_CANVAS_WIDTH = 300;
   const CANVAS_WIDTH = 2160;
   const CANVAS_SCALE = CANVAS_WIDTH / BASE_CANVAS_WIDTH;
-  const CANVAS_PADDING_LEFT = scaleCanvasValue(22);
-  const CANVAS_SAFE_Y = scaleCanvasValue(38);
   const TEMPLATE_ONE_FONT_SIZE = (40 / 1080) * BASE_CANVAS_WIDTH;
-  const TEMPLATE_ONE_LINE_HEIGHT = (62 / 1080) * BASE_CANVAS_WIDTH;
+  const TEMPLATE_THREE_LINE_HEIGHT = (68 / 1080) * BASE_CANVAS_WIDTH;
+  const CANVAS_PADDING_LEFT = scaleCanvasValue(22 + TEMPLATE_ONE_FONT_SIZE);
+  const CANVAS_SAFE_Y = scaleCanvasValue(38);
   const CANVAS_BODY_FONT_SIZE = scaleCanvasValue(TEMPLATE_ONE_FONT_SIZE);
   const CANVAS_TITLE_FONT_SIZE = CANVAS_BODY_FONT_SIZE;
-  const CANVAS_BODY_LINE_HEIGHT = scaleCanvasValue(TEMPLATE_ONE_LINE_HEIGHT);
+  const CANVAS_LETTER_SPACING = Math.max(
+    1,
+    CANVAS_BODY_FONT_SIZE * 0.03,
+  );
+  const CANVAS_BODY_LINE_HEIGHT = scaleCanvasValue(TEMPLATE_THREE_LINE_HEIGHT);
   const CANVAS_TITLE_LINE_HEIGHT = CANVAS_BODY_LINE_HEIGHT;
   const CANVAS_SPACER_HEIGHT = scaleCanvasValue(13);
   const CANVAS_TITLE_BOTTOM_GAP = scaleCanvasValue(9);
   const CANVAS_TITLE_NEXT_GAP = scaleCanvasValue(20);
+  const CANVAS_TITLE_EXTRA_LINE_GAP = CANVAS_BODY_LINE_HEIGHT;
   const CANVAS_TEXT_TOP = scaleCanvasValue(238);
   const CANVAS_BOTTOM_SAFE = scaleCanvasValue(44);
   const CIRCLE_IMAGE_SIZE = scaleCanvasValue(140);
   const CIRCLE_IMAGE_TOP = scaleCanvasValue(44);
-  const DOUYIN2_FONT_FAMILY = "FangzhengBoyaFangkansong";
-  const DOUYIN2_FONT_URL =
-    "https://gufeifei.cn/fonts/fangzhengboyafangkansong.woff2?v=20260705";
-  const CANVAS_TEXT_FONT_FAMILY = `"${DOUYIN2_FONT_FAMILY}", "Songti SC", STSong, "Noto Serif CJK SC", serif`;
+  const DOUYIN3_FONT_FAMILY = "FangzhengLantingheiExtralight";
+  const DOUYIN3_FONT_URL =
+    "https://gufeifei.cn/fonts/FZLTHProGlobal-Extralight.woff2?v=20260802";
+  const CANVAS_TEXT_FONT_FAMILY = `"${DOUYIN3_FONT_FAMILY}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_BOLD_FONT = `bold ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
+  const CANVAS_BOLD_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_MAX_CHARS_PER_LINE = 23;
-  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 23;
+  const CANVAS_MAX_CHARS_PER_LINE = 20;
+  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 20;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
@@ -141,7 +146,7 @@ import { checkTextContent } from "../../services/content-security";
 爱我的人不要失望 
 舒舒服服地 苟且偷生 也不错`;
 
-  let douyin2FontPromise: Promise<void> | undefined;
+  let douyin3FontPromise: Promise<void> | undefined;
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
 
@@ -188,7 +193,7 @@ import { checkTextContent } from "../../services/content-security";
         } else {
           this.syncContent(DEFAULT_CONTENT);
         }
-        this.loadDouyin2Font();
+        this.loadDouyin3Font();
       },
       ready() {
         this.setData({ canvasReady: true }, () => {
@@ -217,13 +222,13 @@ import { checkTextContent } from "../../services/content-security";
         wx.redirectTo({ url: `/pages/${template}/index` });
       },
 
-      loadDouyin2Font() {
-        ensureDouyin2FontLoaded()
+      loadDouyin3Font() {
+        ensureDouyin3FontLoaded()
           .then(() => {
             this.refreshRenderedImages();
           })
           .catch((error) => {
-            console.warn("加载抖音 2 字体失败，使用系统字体回退", error);
+            console.warn("加载模板三方正兰亭黑 ExtraLight 失败，使用系统字体回退", error);
           });
       },
 
@@ -529,9 +534,9 @@ import { checkTextContent } from "../../services/content-security";
 
         return enqueueRender(async () => {
           try {
-            await ensureDouyin2FontLoaded();
+            await ensureDouyin3FontLoaded();
           } catch (error) {
-            console.warn("抖音 2 字体不可用，使用系统字体回退", error);
+            console.warn("模板三方正兰亭黑 ExtraLight 不可用，使用系统字体回退", error);
           }
 
           const urls: string[] = [];
@@ -833,9 +838,9 @@ import { checkTextContent } from "../../services/content-security";
           ? CANVAS_TITLE_LINE_HEIGHT
           : CANVAS_BODY_LINE_HEIGHT,
         afterGap: paragraph.isTitle
-          ? isNextSpacer
-            ? CANVAS_TITLE_NEXT_GAP
-            : CANVAS_TITLE_BOTTOM_GAP
+          ? (isNextSpacer
+              ? CANVAS_TITLE_NEXT_GAP
+              : CANVAS_TITLE_BOTTOM_GAP) + CANVAS_TITLE_EXTRA_LINE_GAP
           : 0,
         isTitle: paragraph.isTitle,
       });
@@ -959,6 +964,11 @@ import { checkTextContent } from "../../services/content-security";
     layoutItem: Extract<LayoutItem, { type: "text" }>,
   ) {
     let currentX = x;
+    let drawnCharacterCount = 0;
+    const characterCount = parts.reduce(
+      (total, part) => total + Array.from(part.text).length,
+      0,
+    );
 
     parts.forEach((part) => {
       ctx.font =
@@ -969,19 +979,27 @@ import { checkTextContent } from "../../services/content-security";
         ctx.font = CANVAS_TITLE_FONT;
       }
 
-      ctx.fillText(part.text, currentX, y);
+      const partStartX = currentX;
 
-      const width = ctx.measureText(part.text).width;
+      Array.from(part.text).forEach((character) => {
+        ctx.fillText(character, currentX, y);
+        currentX += ctx.measureText(character).width;
+        drawnCharacterCount += 1;
+
+        if (drawnCharacterCount < characterCount) {
+          currentX += CANVAS_LETTER_SPACING;
+        }
+      });
+
       if (part.emphasis) {
+        const width = currentX - partStartX;
         ctx.fillRect(
-          currentX,
+          partStartX,
           y + CANVAS_BODY_LINE_HEIGHT - scaleCanvasValue(12),
           width,
           scaleCanvasValue(2),
         );
       }
-
-      currentX += width;
     });
   }
 
@@ -1069,13 +1087,13 @@ import { checkTextContent } from "../../services/content-security";
     });
   }
 
-  function ensureDouyin2FontLoaded() {
-    if (douyin2FontPromise) return douyin2FontPromise;
+  function ensureDouyin3FontLoaded() {
+    if (douyin3FontPromise) return douyin3FontPromise;
 
-    douyin2FontPromise = new Promise<void>((resolve, reject) => {
+    douyin3FontPromise = new Promise<void>((resolve, reject) => {
       wx.loadFontFace({
-        family: DOUYIN2_FONT_FAMILY,
-        source: `url("${DOUYIN2_FONT_URL}")`,
+        family: DOUYIN3_FONT_FAMILY,
+        source: `url("${DOUYIN3_FONT_URL}")`,
         desc: {
           style: "normal",
           weight: "normal",
@@ -1086,13 +1104,13 @@ import { checkTextContent } from "../../services/content-security";
           setTimeout(resolve, 80);
         },
         fail: (error) => {
-          douyin2FontPromise = undefined;
+          douyin3FontPromise = undefined;
           reject(error);
         },
       });
     });
 
-    return douyin2FontPromise;
+    return douyin3FontPromise;
   }
 
   function enqueueRender<T>(task: () => Promise<T>) {

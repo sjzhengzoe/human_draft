@@ -45,6 +45,14 @@ const HOME_FEATURE_GROUPS = [
         requiresLogin: true
       },
       {
+        key: "key-moments",
+        icon: "flag",
+        title: "关键节点",
+        path: "/pages/key-moments/index",
+        available: true,
+        requiresLogin: true
+      },
+      {
         key: "exercise",
         icon: "dumbbell",
         title: "运动养宠",

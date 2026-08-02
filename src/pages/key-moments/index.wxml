@@ -1,0 +1,148 @@
+<custom-navigation title="关键节点" />
+
+<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在加载关键节点…</view>
+</view>
+
+<view wx:else class="page page--fixed">
+  <view class="filter-panel">
+    <view class="granularity-tabs">
+      <view
+        wx:for="{{granularityOptions}}"
+        wx:key="value"
+        class="granularity-tab {{activeGranularity === item.value ? 'granularity-tab--active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="handleGranularityTap"
+      >{{item.label}}</view>
+    </view>
+    <picker mode="date" value="{{anchorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleAnchorDateChange">
+      <view class="period-picker">
+        <text>{{periodLabel}}</text>
+        <app-icon name="chevron-down" size="26" />
+      </view>
+    </picker>
+    <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAdd">
+      <text>新增</text>
+    </button>
+  </view>
+
+  <scroll-view class="timeline-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{contentLoading}}" class="content-loading">
+      <view class="content-loading__spinner" />
+      <view class="content-loading__text">正在加载…</view>
+    </view>
+    <view wx:elif="{{items.length === 0}}" class="empty-state">暂无</view>
+    <view wx:else class="timeline">
+      <block wx:for="{{items}}" wx:key="id">
+        <view wx:if="{{item.show_date_heading}}" class="date-group-heading">
+          <view class="date-group-heading__day">{{item.heading_day}}</view>
+          <view class="date-group-heading__aside">
+            <view class="date-group-heading__month">{{item.heading_month}}</view>
+            <view class="date-group-heading__year">{{item.heading_year}}</view>
+          </view>
+        </view>
+        <view class="timeline-entry">
+          <view class="timeline-rail">
+            <view class="timeline-dot" />
+          </view>
+          <view class="timeline-main">
+            <view class="timeline-heading">
+              <view>
+                <text class="timeline-time">{{item.time_label}}</text>
+              </view>
+              <view wx:if="{{canWrite}}" class="edit-button" data-id="{{item.id}}" bindtap="handleEdit">
+                <app-icon name="pencil" size="27" />
+              </view>
+            </view>
+            <view class="moment-card">
+              <image
+                wx:if="{{item.thumbnail_url || item.image_url}}"
+                class="moment-image"
+                src="{{item.thumbnail_url || item.image_url}}"
+                mode="aspectFill"
+                data-url="{{item.image_url || item.thumbnail_url}}"
+                bindtap="handlePreview"
+              />
+              <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{item.interval_after}}" class="timeline-gap">
+          <view class="timeline-gap__line" />
+          <view class="timeline-gap__label">{{item.interval_after}}</view>
+        </view>
+      </block>
+    </view>
+    <view class="scroll-safe-area" />
+  </scroll-view>
+
+  <view wx:if="{{showEditor}}" class="modal" bindtap="closeEditor">
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-header">
+        <view class="modal-title">{{editingId ? '编辑关键节点' : '新增关键节点'}}</view>
+        <view class="modal-close" bindtap="closeEditor">×</view>
+      </view>
+
+      <view class="time-fields">
+        <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
+          <view class="time-field__value">{{editorDate}}</view>
+        </picker>
+        <picker class="time-field" mode="time" value="{{editorTime}}" bindchange="handleEditorTimeChange">
+          <view class="time-field__value">{{editorTime}}</view>
+        </picker>
+      </view>
+
+      <view class="editor-content-row">
+        <view class="image-editor {{selectingImage ? 'image-editor--loading' : ''}}">
+          <image
+            wx:if="{{selectedImagePath || currentImageUrl}}"
+            class="image-editor__preview"
+            src="{{selectedImagePath || currentImageUrl}}"
+            mode="aspectFill"
+            bindtap="handleChooseImage"
+          />
+          <view wx:else class="image-editor__empty" bindtap="handleChooseImage">
+            <app-icon name="image-plus" size="36" />
+            <text>{{selectingImage ? '选择中…' : '上传图片'}}</text>
+            <text class="image-editor__crop-hint">选择后裁剪</text>
+          </view>
+          <view
+            wx:if="{{selectedImagePath || currentImageUrl}}"
+            class="image-editor__remove-button"
+            aria-label="移除图片"
+            catchtap="handleRemoveEditorImage"
+          >×</view>
+        </view>
+
+        <view class="editor-text">
+          <textarea
+            class="content-input"
+            value="{{editorContent}}"
+            maxlength="2000"
+            placeholder="写下这个关键节点…"
+            bindinput="handleContentInput"
+          />
+          <view class="content-count">{{editorContent.length}} / 2000</view>
+        </view>
+      </view>
+
+      <view class="modal-actions">
+        <button wx:if="{{editingId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">删除</button>
+        <button class="cancel-button" disabled="{{saving || deleting || selectingImage}}" bindtap="closeEditor">取消</button>
+        <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="saveEditor">确定</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="square"
+  title="裁剪节点图片"
+  output-size="1440"
+  bind:cancel="handleImageCropCancel"
+  bind:confirm="handleImageCropConfirm"
+  bind:error="handleImageCropError"
+/>

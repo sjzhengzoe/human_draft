@@ -30,6 +30,7 @@ export const config = {
   supabaseSecretKey,
   dishBucket: process.env.SUPABASE_DISH_BUCKET || "dish-images",
   wardrobeBucket: process.env.SUPABASE_WARDROBE_BUCKET || "wardrobe-images",
+  keyMomentBucket: process.env.SUPABASE_KEY_MOMENT_BUCKET || "key-moment-images",
   avatarBucket: process.env.SUPABASE_AVATAR_BUCKET || "user-avatars",
   wechatAppId: process.env.WECHAT_APP_ID || "",
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",

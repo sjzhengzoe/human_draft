@@ -2,6 +2,7 @@
 
 <view class="page page--with-navigation">
   <textarea
+    wx:if="{{fontReady}}"
     class="editor-textarea"
     value="{{content}}"
     maxlength="{{20000}}"
@@ -12,6 +13,7 @@
     placeholder="输入文案"
     bindinput="handleInput"
   />
+  <view wx:else class="editor-font-loading">正在加载编辑框</view>
 
   <view class="editor-actions">
     <button class="btn-primary" bindtap="saveContent">保存</button>

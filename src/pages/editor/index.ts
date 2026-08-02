@@ -1,4 +1,5 @@
 import { checkTextContent } from "../../services/content-security"
+import { initializeUIFont } from "../../services/ui-font"
 
 type EditorSource = "xiaohongshu" | "douyin2" | "douyin3"
 
@@ -32,6 +33,7 @@ Page({
   data: {
     source: "xiaohongshu" as EditorSource,
     content: "",
+    fontReady: false,
     saving: false
   },
 
@@ -48,6 +50,14 @@ Page({
       source,
       content: typeof storedContent === "string" ? storedContent : ""
     })
+
+    void initializeUIFont()
+      .catch((error) => {
+        console.warn("编辑页通用字体加载失败，使用系统字体回退", error)
+      })
+      .finally(() => {
+        this.setData({ fontReady: true })
+      })
   },
 
   handleInput(event: WechatMiniprogram.Input) {
