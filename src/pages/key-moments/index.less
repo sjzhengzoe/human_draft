@@ -255,59 +255,15 @@
   height: calc(50rpx + env(safe-area-inset-bottom));
 }
 
-.modal {
-  position: fixed;
-  z-index: 100;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 28rpx;
-  background: rgba(0, 0, 0, .42);
-}
-
-.modal-card {
-  width: 100%;
-  max-height: calc(100vh - 90rpx - env(safe-area-inset-top));
-  box-sizing: border-box;
-  padding: 30rpx 30rpx calc(28rpx + env(safe-area-inset-bottom));
-  overflow-y: auto;
-  border-radius: 32rpx 32rpx 24rpx 24rpx;
-  background: #fff;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.modal-title {
-  color: #111;
-  font-size: 29rpx;
-  font-weight: 700;
-}
-
-.modal-close {
-  display: flex;
-  width: 50rpx;
-  height: 50rpx;
-  align-items: center;
-  justify-content: center;
-  color: #777;
-  font-size: 42rpx;
-  font-weight: 300;
-  line-height: 1;
+.key-moment-editor {
+  text-align: left;
 }
 
 .time-fields {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
   gap: 12rpx;
-  margin-top: 26rpx;
+  margin-top: 0;
 }
 
 .time-field__value {
@@ -333,13 +289,13 @@
 
 .image-editor {
   position: relative;
-  width: 210rpx;
-  height: 210rpx;
+  width: 174rpx;
+  height: 174rpx;
   box-sizing: border-box;
-  flex: 0 0 210rpx;
+  flex: 0 0 174rpx;
   overflow: hidden;
   border: 1rpx dashed #d3d3cf;
-  border-radius: 18rpx;
+  border-radius: var(--ui-radius-card);
   background: #f7f7f5;
 }
 
@@ -411,7 +367,7 @@
   margin: 0;
   padding: 22rpx;
   border: 1rpx solid #dededb;
-  border-radius: 18rpx;
+  border-radius: var(--ui-radius-card);
   background: #fff;
   color: #222;
   font-size: 24rpx;
@@ -427,8 +383,9 @@
 
 .modal-actions {
   display: flex;
+  width: 100%;
   gap: 12rpx;
-  margin-top: 22rpx;
+  margin: 0;
 }
 
 .delete-button,

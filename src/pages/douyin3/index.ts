@@ -94,13 +94,11 @@ import { checkTextContent } from "../../services/content-security";
   const TEMPLATE_ONE_FONT_SIZE = (40 / 1080) * BASE_CANVAS_WIDTH;
   const TEMPLATE_THREE_LINE_HEIGHT = (68 / 1080) * BASE_CANVAS_WIDTH;
   const CANVAS_PADDING_LEFT = scaleCanvasValue(22 + TEMPLATE_ONE_FONT_SIZE);
+  const CANVAS_TEXT_MAX_WIDTH = CANVAS_WIDTH - CANVAS_PADDING_LEFT * 2;
   const CANVAS_SAFE_Y = scaleCanvasValue(38);
   const CANVAS_BODY_FONT_SIZE = scaleCanvasValue(TEMPLATE_ONE_FONT_SIZE);
   const CANVAS_TITLE_FONT_SIZE = CANVAS_BODY_FONT_SIZE;
-  const CANVAS_LETTER_SPACING = Math.max(
-    1,
-    CANVAS_BODY_FONT_SIZE * 0.03,
-  );
+  const CANVAS_LETTER_SPACING = CANVAS_BODY_FONT_SIZE * 0.0025;
   const CANVAS_BODY_LINE_HEIGHT = scaleCanvasValue(TEMPLATE_THREE_LINE_HEIGHT);
   const CANVAS_TITLE_LINE_HEIGHT = CANVAS_BODY_LINE_HEIGHT;
   const CANVAS_SPACER_HEIGHT = scaleCanvasValue(13);
@@ -118,8 +116,6 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_BOLD_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_MAX_CHARS_PER_LINE = 20;
-  const CANVAS_TITLE_MAX_CHARS_PER_LINE = 20;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
@@ -564,12 +560,11 @@ import { checkTextContent } from "../../services/content-security";
         const circleImage = circleImagePath
           ? await loadCanvasImage(canvas, circleImagePath)
           : undefined;
-        const layout = createPageLayout(page);
-
         canvas.width = CANVAS_WIDTH;
         canvas.height = Math.ceil(
           Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) * 2,
         );
+        const layout = createPageLayout(page, ctx);
         const canvasHeight = getCanvasHeight(ctx, layout);
 
         canvas.width = CANVAS_WIDTH;
@@ -592,7 +587,7 @@ import { checkTextContent } from "../../services/content-security";
           }
 
           item.lines.forEach((line) => {
-            drawPartsLine(ctx, line.parts, CANVAS_PADDING_LEFT, y, item);
+            drawPartsLine(ctx, line, CANVAS_PADDING_LEFT, y, item);
             y += item.lineHeight;
           });
 
@@ -799,6 +794,7 @@ import { checkTextContent } from "../../services/content-security";
 
   type LayoutLine = {
     parts: TextPart[];
+    justify: boolean;
   };
 
   type LayoutItem =
@@ -812,7 +808,10 @@ import { checkTextContent } from "../../services/content-security";
         isTitle: boolean;
       };
 
-  function createPageLayout(page: Paragraph[]): LayoutItem[] {
+  function createPageLayout(
+    page: Paragraph[],
+    ctx: Canvas2DContext,
+  ): LayoutItem[] {
     const layout: LayoutItem[] = [];
 
     page.forEach((paragraph, index) => {
@@ -825,9 +824,9 @@ import { checkTextContent } from "../../services/content-security";
       const isNextSpacer = !!nextParagraph && nextParagraph.isSpacer;
       const lines = wrapParts(
         paragraph.parts,
-        paragraph.isTitle
-          ? CANVAS_TITLE_MAX_CHARS_PER_LINE
-          : CANVAS_MAX_CHARS_PER_LINE,
+        CANVAS_TEXT_MAX_WIDTH,
+        ctx,
+        paragraph.isTitle,
       );
 
       layout.push({
@@ -849,19 +848,35 @@ import { checkTextContent } from "../../services/content-security";
     return layout;
   }
 
-  function wrapParts(parts: TextPart[], maxChars: number): LayoutLine[] {
+  function wrapParts(
+    parts: TextPart[],
+    maxWidth: number,
+    ctx: Canvas2DContext,
+    isTitle: boolean,
+  ): LayoutLine[] {
     const lines: LayoutLine[] = [];
     let currentParts: TextPart[] = [];
     let currentWidth = 0;
+    let currentCharacterCount = 0;
 
     parts.forEach((part) => {
       Array.from(part.text).forEach((char) => {
-        const charWidth = /[ -~]/.test(char) ? 0.56 : 1;
+        ctx.font = isTitle
+          ? CANVAS_TITLE_FONT
+          : part.emphasis
+            ? CANVAS_BOLD_FONT
+            : CANVAS_BODY_FONT;
+        const charWidth = ctx.measureText(char).width;
+        const spacing = currentCharacterCount ? CANVAS_LETTER_SPACING : 0;
 
-        if (currentParts.length && currentWidth + charWidth > maxChars) {
-          lines.push({ parts: currentParts });
+        if (
+          currentParts.length &&
+          currentWidth + spacing + charWidth > maxWidth
+        ) {
+          lines.push({ parts: currentParts, justify: true });
           currentParts = [];
           currentWidth = 0;
+          currentCharacterCount = 0;
         }
 
         const lastPart = currentParts[currentParts.length - 1];
@@ -870,15 +885,17 @@ import { checkTextContent } from "../../services/content-security";
         } else {
           currentParts.push({ text: char, emphasis: part.emphasis });
         }
-        currentWidth += charWidth;
+        currentWidth +=
+          (currentCharacterCount ? CANVAS_LETTER_SPACING : 0) + charWidth;
+        currentCharacterCount += 1;
       });
     });
 
     if (currentParts.length) {
-      lines.push({ parts: currentParts });
+      lines.push({ parts: currentParts, justify: false });
     }
 
-    return lines.length ? lines : [{ parts }];
+    return lines.length ? lines : [{ parts, justify: false }];
   }
 
   function getCanvasHeight(ctx: Canvas2DContext, layout: LayoutItem[]) {
@@ -932,7 +949,7 @@ import { checkTextContent } from "../../services/content-security";
       ctx.fillStyle = "#000000";
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
-      drawPartsLine(ctx, line.parts, CANVAS_PADDING_LEFT, 0, item);
+      drawPartsLine(ctx, line, CANVAS_PADDING_LEFT, 0, item);
 
       const pixels = ctx.getImageData(
         0,
@@ -958,17 +975,27 @@ import { checkTextContent } from "../../services/content-security";
 
   function drawPartsLine(
     ctx: Canvas2DContext,
-    parts: TextPart[],
+    line: LayoutLine,
     x: number,
     y: number,
     layoutItem: Extract<LayoutItem, { type: "text" }>,
   ) {
+    const parts = line.parts;
     let currentX = x;
     let drawnCharacterCount = 0;
     const characterCount = parts.reduce(
       (total, part) => total + Array.from(part.text).length,
       0,
     );
+    const naturalWidth = measurePartsLineWidth(ctx, parts, layoutItem);
+    const justifiedExtraSpacing =
+      line.justify && characterCount > 1
+        ? Math.max(
+            0,
+            (CANVAS_TEXT_MAX_WIDTH - naturalWidth) / (characterCount - 1),
+          )
+        : 0;
+    const letterSpacing = CANVAS_LETTER_SPACING + justifiedExtraSpacing;
 
     parts.forEach((part) => {
       ctx.font =
@@ -987,7 +1014,7 @@ import { checkTextContent } from "../../services/content-security";
         drawnCharacterCount += 1;
 
         if (drawnCharacterCount < characterCount) {
-          currentX += CANVAS_LETTER_SPACING;
+          currentX += letterSpacing;
         }
       });
 
@@ -1001,6 +1028,32 @@ import { checkTextContent } from "../../services/content-security";
         );
       }
     });
+  }
+
+  function measurePartsLineWidth(
+    ctx: Canvas2DContext,
+    parts: TextPart[],
+    layoutItem: Extract<LayoutItem, { type: "text" }>,
+  ) {
+    let width = 0;
+    let characterCount = 0;
+
+    parts.forEach((part) => {
+      ctx.font =
+        layoutItem.isTitle || part.emphasis
+          ? CANVAS_BOLD_FONT
+          : layoutItem.font;
+      if (layoutItem.isTitle) {
+        ctx.font = CANVAS_TITLE_FONT;
+      }
+
+      Array.from(part.text).forEach((character) => {
+        width += ctx.measureText(character).width;
+        characterCount += 1;
+      });
+    });
+
+    return width + Math.max(0, characterCount - 1) * CANVAS_LETTER_SPACING;
   }
 
   function drawCircleImage(ctx: Canvas2DContext, image: CanvasImage) {

@@ -77,13 +77,14 @@
     <view class="scroll-safe-area" />
   </scroll-view>
 
-  <view wx:if="{{showEditor}}" class="modal" bindtap="closeEditor">
-    <view class="modal-card" catchtap="noop">
-      <view class="modal-header">
-        <view class="modal-title">{{editingId ? '编辑关键节点' : '新增关键节点'}}</view>
-        <view class="modal-close" bindtap="closeEditor">×</view>
-      </view>
-
+  <app-dialog
+    wx:if="{{showEditor}}"
+    visible="{{true}}"
+    title="{{editingId ? '编辑关键节点' : '新增关键节点'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="key-moment-editor">
       <view class="time-fields">
         <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
           <view class="time-field__value">{{editorDate}}</view>
@@ -119,21 +120,31 @@
           <textarea
             class="content-input"
             value="{{editorContent}}"
-            maxlength="2000"
+            maxlength="50"
             placeholder="写下这个关键节点…"
             bindinput="handleContentInput"
           />
-          <view class="content-count">{{editorContent.length}} / 2000</view>
+          <view class="content-count">{{editorContent.length}} / 50</view>
         </view>
       </view>
-
-      <view class="modal-actions">
-        <button wx:if="{{editingId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">删除</button>
-        <button class="cancel-button" disabled="{{saving || deleting || selectingImage}}" bindtap="closeEditor">取消</button>
-        <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="saveEditor">确定</button>
-      </view>
     </view>
-  </view>
+    <view slot="actions" class="modal-actions">
+      <button wx:if="{{editingId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">删除</button>
+      <button class="cancel-button" disabled="{{saving || deleting || selectingImage}}" bindtap="closeEditor">取消</button>
+      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="saveEditor">确定</button>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{showDeleteConfirm}}"
+    visible="{{true}}"
+    title="删除关键节点"
+    content="删除后，图片和文案都无法恢复。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="handleDeleteConfirmCancel"
+    bindconfirm="handleDeleteConfirm"
+  />
 </view>
 
 <image-cropper

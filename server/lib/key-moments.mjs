@@ -23,7 +23,7 @@ function assertUuid(value) {
 function normalizeContent(value) {
   assertCondition(typeof value === "string", 400, "INVALID_CONTENT", "文案格式无效。");
   const content = value.trim();
-  assertCondition(content.length <= 2000, 400, "CONTENT_TOO_LONG", "文案不能超过 2000 个字符。");
+  assertCondition(content.length <= 50, 400, "CONTENT_TOO_LONG", "文案不能超过 50 个字。");
   return content;
 }
 

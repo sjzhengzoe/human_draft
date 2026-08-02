@@ -120,6 +120,7 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     showEditor: false,
+    showDeleteConfirm: false,
     editingId: "",
     editorContent: "",
     editorDate: INITIAL_DATE_TIME.date,
@@ -323,8 +324,6 @@ Page({
     if (!this.data.saving && !this.data.deleting) this.setData({ showEditor: false })
   },
 
-  noop() {},
-
   async saveEditor() {
     if (this.data.saving || this.data.deleting || this.data.selectingImage) return
     const content = this.data.editorContent.trim()
@@ -375,40 +374,35 @@ Page({
 
   handleDelete() {
     if (!this.data.editingId || this.data.saving || this.data.deleting) return
+    this.setData({ showEditor: false, showDeleteConfirm: true })
+  },
+
+  handleDeleteConfirmCancel() {
+    if (this.data.deleting) return
+    this.setData({ showDeleteConfirm: false, showEditor: true })
+  },
+
+  async handleDeleteConfirm() {
+    if (!this.data.editingId || this.data.deleting) return
     this.setData({ deleting: true })
-    wx.showModal({
-      title: "删除关键节点",
-      content: "删除后，图片和文案都无法恢复。",
-      confirmText: "删除",
-      confirmColor: "#c9342f",
-      success: async (result) => {
-        if (!isAsyncPageActive(this)) return
-        if (!result.confirm) {
-          this.setData({ deleting: false })
-          return
-        }
-        wx.showLoading({ title: "删除中", mask: true })
-        try {
-          await deleteKeyMoment(this.data.editingId)
-          if (!isAsyncPageActive(this)) return
-          this.setData({ showEditor: false })
-          wx.showToast({ title: "已删除", icon: "success" })
-          await this.loadItems()
-        } catch (error) {
-          if (isAsyncPageActive(this)) {
-            wx.showToast({
-              title: error instanceof Error ? error.message : "删除失败",
-              icon: "none"
-            })
-          }
-        } finally {
-          wx.hideLoading()
-          if (isAsyncPageActive(this)) this.setData({ deleting: false })
-        }
-      },
-      fail: () => {
-        if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    wx.showLoading({ title: "删除中", mask: true })
+    try {
+      await deleteKeyMoment(this.data.editingId)
+      if (!isAsyncPageActive(this)) return
+      this.setData({ showDeleteConfirm: false, showEditor: false })
+      wx.showToast({ title: "已删除", icon: "success" })
+      await this.loadItems()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ showDeleteConfirm: false, showEditor: true })
+        wx.showToast({
+          title: error instanceof Error ? error.message : "删除失败",
+          icon: "none"
+        })
       }
-    })
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
   }
 })

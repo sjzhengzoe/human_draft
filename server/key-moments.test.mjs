@@ -39,3 +39,12 @@ test("key moments migration creates user-owned records and a private image bucke
   assert.match(migration, /'key-moment-images',[\s\S]*?false,/i);
   assert.match(migration, /key_moments_user_occurred_idx/i);
 });
+
+test("key moment content limit migration preserves old rows and enforces 50 characters", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/202608020002_key_moment_content_limit.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /char_length\(content\) <= 50/i);
+  assert.match(migration, /not valid/i);
+});
