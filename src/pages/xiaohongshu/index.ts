@@ -8,7 +8,23 @@ import { checkTextContent } from "../../services/content-security";
     paragraphs: string[];
   };
 
-  type ExportTheme = "light" | "dark";
+  type CombinedFontOption = {
+    family: string;
+    url: string;
+    fontSize: number;
+  };
+
+  type CombinedLayout = {
+    sections: Array<{
+      order: string;
+      lines: string[];
+    }>;
+    font: string;
+    lineHeight: number;
+    orderBottomGap: number;
+    sectionGap: number;
+    height: number;
+  };
 
   type Canvas2DNode = {
     width: number;
@@ -66,6 +82,26 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_ORDER_BODY_GAP = scaleCanvasValue(54);
   const CANVAS_PARAGRAPH_GAP = scaleCanvasValue(32);
   const CANVAS_TEXT_MAX_WIDTH = CANVAS_WIDTH - CANVAS_TEXT_X * 2;
+  const SECOND_THEME_BASE_WIDTH = 300;
+  const SECOND_THEME_SCALE = CANVAS_WIDTH / SECOND_THEME_BASE_WIDTH;
+  const SECOND_THEME_PADDING_LEFT = scaleSecondThemeValue(22);
+  const SECOND_THEME_PADDING_RIGHT = scaleSecondThemeValue(26);
+  const SECOND_THEME_EXTRA_RIGHT_CHAR_GAP = 2;
+  const SECOND_THEME_SAFE_Y = scaleSecondThemeValue(38);
+  const SECOND_THEME_BODY_FONT_SIZE = scaleCanvasValue(34);
+  const SECOND_THEME_BODY_LINE_HEIGHT = CANVAS_LINE_HEIGHT;
+  const SECOND_THEME_ORDER_BOTTOM_GAP = scaleSecondThemeValue(3);
+  const SECOND_THEME_SECTION_GAP = SECOND_THEME_BODY_LINE_HEIGHT;
+  const SECOND_THEME_FONT_FAMILY = "FangzhengLantingheiExtralight";
+  const SECOND_THEME_FONT_URL =
+    "https://gufeifei.cn/fonts/FZLTHProGlobal-Extralight.woff2?v=20260802";
+  const COMBINED_FONT_OPTIONS: CombinedFontOption[] = [
+    {
+      family: SECOND_THEME_FONT_FAMILY,
+      url: SECOND_THEME_FONT_URL,
+      fontSize: SECOND_THEME_BODY_FONT_SIZE,
+    },
+  ];
   const XIAOHONGSHU_BLANK_LINE = "\u2800";
   const XIAOHONGSHU_TAGS =
     "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
@@ -119,6 +155,7 @@ import { checkTextContent } from "../../services/content-security";
 这么厉害`;
 
   let red3FontPromise: Promise<void> | undefined;
+  const combinedFontPromises = new Map<string, Promise<void>>();
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
 
@@ -131,6 +168,7 @@ import { checkTextContent } from "../../services/content-security";
       showEditTextarea: false,
       slides: [] as Slide[],
       renderedImageUrls: [] as string[],
+      previewCount: 0,
       activeIndex: 0,
       showEditModal: false,
       isGenerating: false,
@@ -189,7 +227,13 @@ import { checkTextContent } from "../../services/content-security";
         ensureRed3FontLoaded()
           .then(() => {
             this.setData({ fontLoaded: true }, () => {
-              this.refreshRenderedImages();
+              if (
+                this.data.canvasReady &&
+                !this.data.isRenderingCards &&
+                !this.data.renderedImageUrls.length
+              ) {
+                this.refreshRenderedImages();
+              }
             });
           })
           .catch((error) => {
@@ -430,7 +474,7 @@ import { checkTextContent } from "../../services/content-security";
       },
 
       renderSlidesToImages(): Promise<string[]> {
-        return this.renderSlidesToImagesByTheme("light");
+        return this.generateExportImages();
       },
 
       generateExportImages(): Promise<string[]> {
@@ -444,42 +488,29 @@ import { checkTextContent } from "../../services/content-security";
           const urls: string[] = [];
 
           for (const slide of this.data.slides) {
-            urls.push(await this.generateSlideImage(slide, "light"));
+            urls.push(await this.generateSlideImage(slide));
           }
 
-          for (const slide of this.data.slides) {
-            urls.push(await this.generateSlideImage(slide, "dark"));
-          }
-
-          return urls;
-        });
-      },
-
-      renderSlidesToImagesByTheme(theme: ExportTheme): Promise<string[]> {
-        const slides = this.data.slides;
-
-        return enqueueRender(async () => {
-          try {
-            await ensureRed3FontLoaded();
-          } catch (error) {
-            console.warn("red3 字体不可用，使用系统字体回退", error);
-          }
-
-          const urls: string[] = [];
-
-          for (const slide of slides) {
-            const url = await this.generateSlideImage(slide, theme);
-            urls.push(url);
+          for (const fontOption of COMBINED_FONT_OPTIONS) {
+            try {
+              await ensureCombinedFontLoaded(fontOption);
+            } catch (error) {
+              console.warn("合并图字体不可用，使用系统字体回退", error);
+            }
+            urls.push(
+              await this.generateCombinedImage(
+                this.data.slides,
+                fontOption.family,
+                fontOption.fontSize,
+              ),
+            );
           }
 
           return urls;
         });
       },
 
-      async generateSlideImage(
-        slide: Slide,
-        theme: ExportTheme,
-      ): Promise<string> {
+      async generateSlideImage(slide: Slide): Promise<string> {
         const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
 
@@ -487,20 +518,11 @@ import { checkTextContent } from "../../services/content-security";
         canvas.height = CANVAS_HEIGHT;
 
         ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        if (theme === "dark") {
-          ctx.fillStyle = "#050505";
-          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-          ctx.fillStyle = "#f7f7f7";
-        } else {
-          const backgroundImage = await loadCanvasImage(
-            canvas,
-            BACKGROUND_IMAGE,
-          );
-          ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-          ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
-          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-          ctx.fillStyle = "#1a1a1a";
-        }
+        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
+        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = "#1a1a1a";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
         ctx.font = CANVAS_TEXT_FONT;
@@ -533,6 +555,51 @@ import { checkTextContent } from "../../services/content-security";
         return canvasToTempFilePath(canvas);
       },
 
+      async generateCombinedImage(
+        slides: Slide[],
+        fontFamily: string,
+        fontSize: number,
+      ): Promise<string> {
+        const canvas = await this.getExportCanvas();
+        const ctx = canvas.getContext("2d");
+        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = "#000000";
+        ctx.textBaseline = "top";
+        ctx.textAlign = "left";
+
+        const layout = createCombinedLayout(slides, fontFamily, fontSize);
+        const textTop = Math.max(
+          SECOND_THEME_SAFE_Y,
+          Math.round((CANVAS_HEIGHT - layout.height) / 2),
+        );
+        let y = textTop;
+
+        ctx.font = layout.font;
+        layout.sections.forEach((section, index) => {
+          ctx.fillText(section.order, SECOND_THEME_PADDING_LEFT, y);
+          y += layout.lineHeight + layout.orderBottomGap;
+
+          section.lines.forEach((line) => {
+            ctx.fillText(line, SECOND_THEME_PADDING_LEFT, y);
+            y += layout.lineHeight;
+          });
+
+          if (index < layout.sections.length - 1) {
+            y += layout.sectionGap;
+          }
+        });
+
+        return canvasToTempFilePath(canvas);
+      },
+
       getExportCanvas(): Promise<Canvas2DNode> {
         return new Promise((resolve, reject) => {
           this.createSelectorQuery()
@@ -552,9 +619,12 @@ import { checkTextContent } from "../../services/content-security";
       syncContent(content: string, activeIndex = 0) {
         const hasCustomContent = Boolean(content.trim());
         const slides = hasCustomContent ? getContentSlides(content) : [];
+        const previewCount = slides.length
+          ? slides.length + COMBINED_FONT_OPTIONS.length
+          : 0;
         const nextActiveIndex = Math.min(
           Math.max(activeIndex, 0),
-          Math.max(slides.length - 1, 0),
+          Math.max(previewCount - 1, 0),
         );
 
         this.setData(
@@ -563,6 +633,7 @@ import { checkTextContent } from "../../services/content-security";
             hasCustomContent,
             slides,
             renderedImageUrls: [],
+            previewCount,
             activeIndex: nextActiveIndex,
           },
           () => {
@@ -779,6 +850,130 @@ import { checkTextContent } from "../../services/content-security";
     return result.length ? result : [line];
   }
 
+  function createCombinedLayout(
+    slides: Slide[],
+    fontFamily: string,
+    fontSize: number,
+  ) {
+    return buildCombinedLayout(slides, fontFamily, fontSize);
+  }
+
+  function buildCombinedLayout(
+    slides: Slide[],
+    fontFamily: string,
+    fontSize: number,
+  ): CombinedLayout {
+    const lineHeight = SECOND_THEME_BODY_LINE_HEIGHT;
+    const orderBottomGap = SECOND_THEME_ORDER_BOTTOM_GAP;
+    const sectionGap = SECOND_THEME_SECTION_GAP;
+    const maxTextWidth =
+      CANVAS_WIDTH -
+      SECOND_THEME_PADDING_LEFT -
+      SECOND_THEME_PADDING_RIGHT;
+    const maxLineUnits =
+      maxTextWidth / fontSize - SECOND_THEME_EXTRA_RIGHT_CHAR_GAP;
+    const sections = slides.map((slide) => {
+      const body = getCombinedBody(slide.paragraphs);
+
+      return {
+        order: slide.order,
+        lines: wrapCombinedText(body, maxLineUnits),
+      };
+    });
+    const height = sections.reduce((total, section, index) => {
+      const gap = index < sections.length - 1 ? sectionGap : 0;
+
+      return (
+        total +
+        lineHeight +
+        orderBottomGap +
+        section.lines.length * lineHeight +
+        gap
+      );
+    }, 0);
+
+    return {
+      sections,
+      font: `normal ${fontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+      lineHeight,
+      orderBottomGap,
+      sectionGap,
+      height,
+    };
+  }
+
+  function getCombinedBody(paragraphs: string[]) {
+    const tokens: string[] = [];
+    const pushSeparator = () => {
+      if (tokens[tokens.length - 1] !== "/") {
+        tokens.push("/");
+      }
+    };
+
+    paragraphs.forEach((paragraph, paragraphIndex) => {
+      if (paragraphIndex > 0) {
+        pushSeparator();
+      }
+
+      paragraph.split("\n").forEach((line) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
+
+        if (trimmedLine === XIAOHONGSHU_BLANK_LINE) {
+          pushSeparator();
+          return;
+        }
+
+        const normalizedLine = trimmedLine
+          .replace(/\u2800+/g, " / ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (!normalizedLine) return;
+        if (normalizedLine === "/") {
+          pushSeparator();
+          return;
+        }
+
+        tokens.push(normalizedLine);
+      });
+    });
+
+    while (tokens[tokens.length - 1] === "/") {
+      tokens.pop();
+    }
+
+    return tokens.join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  function wrapCombinedText(text: string, maxUnits: number) {
+    if (!text) return [];
+
+    const lines: string[] = [];
+    let currentLine = "";
+    let currentUnits = 0;
+
+    Array.from(text).forEach((char) => {
+      const charUnits = /[ -~]/.test(char) ? 0.56 : 1;
+
+      if (currentLine && currentUnits + charUnits > maxUnits) {
+        lines.push(currentLine.trimEnd());
+        currentLine = char.trimStart();
+        currentUnits = currentLine ? charUnits : 0;
+        return;
+      }
+
+      currentLine += char;
+      currentUnits += charUnits;
+    });
+
+    if (currentLine) {
+      lines.push(currentLine.trimEnd());
+    }
+
+    return lines;
+  }
+
   function getCanvasTextBlockHeight(paragraphLines: string[][]) {
     const bodyHeight = paragraphLines.reduce((total, lines, index) => {
       const gap =
@@ -792,6 +987,10 @@ import { checkTextContent } from "../../services/content-security";
 
   function scaleCanvasValue(value: number) {
     return Math.round(value * CANVAS_SCALE);
+  }
+
+  function scaleSecondThemeValue(value: number) {
+    return Math.round(value * SECOND_THEME_SCALE);
   }
 
   function saveImageToPhotosAlbum(filePath: string) {
@@ -853,6 +1052,34 @@ import { checkTextContent } from "../../services/content-security";
     });
 
     return red3FontPromise;
+  }
+
+  function ensureCombinedFontLoaded(fontOption: CombinedFontOption) {
+    const cachedPromise = combinedFontPromises.get(fontOption.family);
+    if (cachedPromise) return cachedPromise;
+
+    const fontPromise = new Promise<void>((resolve, reject) => {
+      wx.loadFontFace({
+        family: fontOption.family,
+        source: `url("${fontOption.url}")`,
+        desc: {
+          style: "normal",
+          weight: "normal",
+        },
+        global: true,
+        scopes: ["webview", "native"],
+        success: () => {
+          setTimeout(resolve, 80);
+        },
+        fail: (error) => {
+          combinedFontPromises.delete(fontOption.family);
+          reject(error);
+        },
+      });
+    });
+
+    combinedFontPromises.set(fontOption.family, fontPromise);
+    return fontPromise;
   }
 
   function enqueueRender<T>(task: () => Promise<T>) {

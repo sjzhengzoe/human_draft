@@ -53,7 +53,7 @@
   </swiper>
 
   <view class="page-count" wx:if="{{slides.length}}">
-    {{activeIndex + 1}} / {{slides.length}}
+    {{activeIndex + 1}} / {{previewCount}}
   </view>
 
   <text-card-action-bar
