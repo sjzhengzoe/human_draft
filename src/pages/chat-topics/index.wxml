@@ -12,7 +12,7 @@
     <view class="topic-tab {{activeTab === 'hidden' ? 'topic-tab--active' : ''}}" data-tab="hidden" bindtap="handleTabTap">隐藏列表</view>
   </view>
 
-  <scroll-view class="topic-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="topic-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view wx:if="{{activeTab === 'official'}}" class="topic-content">
       <view class="section-heading">
         <view>
