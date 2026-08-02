@@ -5,7 +5,7 @@ import type {
 } from "../types/chat-topics"
 import { request } from "./request"
 
-export async function listChatTopics(page = 1, pageSize = 6): Promise<{
+export async function listChatTopics(page = 1, pageSize = 5): Promise<{
   officialItems: OfficialChatTopic[]
   officialPagination: OfficialChatTopicPagination
   myItems: UserChatTopic[]
@@ -22,16 +22,9 @@ export async function listChatTopics(page = 1, pageSize = 6): Promise<{
   }
 }
 
-export async function randomOfficialChatTopics(): Promise<OfficialChatTopic[]> {
-  const data = await request<{ items: OfficialChatTopic[] }>({
-    path: "/api/chat-topics/official/random?count=3"
-  })
-  return data.items
-}
-
 export async function listHiddenOfficialChatTopics(
   page = 1,
-  pageSize = 6
+  pageSize = 5
 ): Promise<{
   items: OfficialChatTopic[]
   pagination: OfficialChatTopicPagination

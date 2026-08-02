@@ -17,13 +17,13 @@ const HOME_FEATURE_GROUPS = [
     ]
   },
   {
-    key: "records",
-    title: "记录",
+    key: "practical",
+    title: "实际问题",
     items: [
       {
         key: "menu",
         icon: "cooking-pot",
-        title: "饮食清单",
+        title: "吃 / 饮食记录",
         path: "/pages/menu/index",
         available: true,
         requiresLogin: true
@@ -31,7 +31,7 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "media",
         icon: "clapperboard",
-        title: "影视记录",
+        title: "看 / 影视记录",
         path: "/pages/media/index",
         available: true,
         requiresLogin: true
@@ -39,24 +39,16 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "activities",
         icon: "sparkles",
-        title: "活动清单",
+        title: "玩 / 活动清单",
         path: "/pages/activities/index",
         available: true,
         requiresLogin: true
       },
       {
-        key: "luggage",
-        icon: "luggage",
-        title: "行李清单",
-        path: "/pages/luggage/index",
-        available: true,
-        requiresLogin: true
-      },
-      {
-        key: "wardrobe",
-        icon: "shirt",
-        title: "我的衣橱",
-        path: "/pages/wardrobe/index",
+        key: "chat-topics",
+        icon: "messages-square",
+        title: "聊 / 聊天话题",
+        path: "/pages/chat-topics/index",
         available: true,
         requiresLogin: true
       }
@@ -81,12 +73,26 @@ const HOME_FEATURE_GROUPS = [
         path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
+      }
+    ]
+  },
+  {
+    key: "records",
+    title: "记录",
+    items: [
+      {
+        key: "luggage",
+        icon: "luggage",
+        title: "行李清单",
+        path: "/pages/luggage/index",
+        available: true,
+        requiresLogin: true
       },
       {
-        key: "chat-topics",
-        icon: "messages-square",
-        title: "聊天话题",
-        path: "/pages/chat-topics/index",
+        key: "wardrobe",
+        icon: "shirt",
+        title: "衣橱记录",
+        path: "/pages/wardrobe/index",
         available: true,
         requiresLogin: true
       }

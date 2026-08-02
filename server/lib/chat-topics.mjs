@@ -4,7 +4,7 @@ import { throwSupabaseError } from "./supabase.mjs";
 const OFFICIAL_FIELDS = "id, content, sort_order, created_at, updated_at";
 const USER_FIELDS = "id, official_topic_id, content, created_at, updated_at";
 const MAX_TOPIC_LENGTH = 120;
-const DEFAULT_PAGE_SIZE = 6;
+const DEFAULT_PAGE_SIZE = 5;
 const MAX_PAGE_SIZE = 50;
 
 export function normalizeTopicContent(value) {
@@ -85,8 +85,9 @@ async function listVisibleOfficialTopics(supabase, userId) {
       .from("official_chat_topics")
       .select(OFFICIAL_FIELDS)
       .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("sort_order", { ascending: false }),
     supabase
       .from("user_hidden_official_chat_topics")
       .select("official_topic_id")
@@ -134,8 +135,9 @@ export async function listHiddenOfficialChatTopics(supabase, userId, query = {})
       .from("official_chat_topics")
       .select(OFFICIAL_FIELDS)
       .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("sort_order", { ascending: false }),
     supabase
       .from("user_hidden_official_chat_topics")
       .select("official_topic_id")
@@ -148,18 +150,6 @@ export async function listHiddenOfficialChatTopics(supabase, userId, query = {})
     (officialResult.data || []).filter((item) => hiddenIds.has(item.id)),
     query,
   );
-}
-
-export async function randomOfficialChatTopics(supabase, userId, query = {}) {
-  const items = await listVisibleOfficialTopics(supabase, userId);
-  const count = positiveInteger(query.count, 3, 10);
-  for (let index = items.length - 1; index > 0; index -= 1) {
-    const target = Math.floor(Math.random() * (index + 1));
-    const current = items[index];
-    items[index] = items[target];
-    items[target] = current;
-  }
-  return items.slice(0, count);
 }
 
 export async function createUserChatTopic(supabase, userId, body) {

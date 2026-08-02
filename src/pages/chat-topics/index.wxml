@@ -12,7 +12,8 @@
     <view class="topic-tab {{activeTab === 'hidden' ? 'topic-tab--active' : ''}}" data-tab="hidden" bindtap="handleTabTap">隐藏列表</view>
   </view>
 
-  <scroll-view class="topic-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+  <scroll-view class="topic-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}" scroll-into-view="{{topicScrollAnchor}}">
+    <view id="topic-scroll-top" />
     <view wx:if="{{activeTab === 'official'}}" class="topic-content">
       <view class="section-heading">
         <view>
@@ -31,7 +32,10 @@
         <view class="content-loading__spinner" />
         <view class="content-loading__text">正在加载…</view>
       </view>
-      <view wx:elif="{{officialItems.length === 0}}" class="empty-state">暂时还没有官方话题</view>
+      <view wx:elif="{{officialItems.length === 0}}" class="empty-state">
+        <view class="empty-state__title">没有待收藏的话题</view>
+        <view class="empty-state__hint">已收藏的在“我的话题”，隐藏的在“隐藏列表”</view>
+      </view>
       <view wx:else class="my-topic-list topic-list">
         <view
           wx:for="{{officialItems}}"
@@ -48,7 +52,9 @@
             data-id="{{item.id}}"
             catchtap="handleOfficialDeleteOpen"
           >
-            <app-icon name="x-muted" size="18" />
+            <view class="official-topic-card__delete-visual">
+              <app-icon name="x-muted" size="18" />
+            </view>
           </view>
           <view class="official-topic-card__top">
             <view class="my-topic-card__main">
@@ -192,7 +198,7 @@
   <app-dialog
     wx:if="{{showRandomDialog}}"
     visible="{{true}}"
-    title="{{randomDialogSource === 'official' ? '官方话题 · 随机一组' : '我的话题 · 随机一组'}}"
+    title="我的话题 · 随机一组"
     custom-body="{{true}}"
     custom-actions="{{true}}"
   >
@@ -207,7 +213,7 @@
     </view>
     <view slot="actions" class="dialog-actions">
       <button class="dialog-button dialog-button--cancel" bindtap="closeRandomDialog">关闭</button>
-      <button class="dialog-button dialog-button--confirm" loading="{{randomLoading}}" disabled="{{randomLoading}}" bindtap="handleRandomAgain">再随机一次</button>
+      <button class="dialog-button dialog-button--confirm" bindtap="handleRandomAgain">再随机一次</button>
     </view>
   </app-dialog>
 
@@ -231,14 +237,14 @@
     </view>
     <view slot="actions" class="dialog-actions">
       <button class="dialog-button dialog-button--cancel" disabled="{{officialSaving}}" bindtap="closeOfficialEditor">取消</button>
-      <button class="dialog-button dialog-button--confirm" loading="{{officialSaving}}" disabled="{{officialSaving}}" bindtap="saveOfficialEditor">{{editingOfficialId ? '保存' : '添加'}}</button>
+      <button class="dialog-button dialog-button--confirm" loading="{{officialSaving}}" disabled="{{officialSaving || !officialCanSave}}" bindtap="saveOfficialEditor">{{editingOfficialId ? '保存' : '添加'}}</button>
     </view>
   </app-dialog>
 
   <app-dialog
     wx:if="{{showEditor}}"
     visible="{{true}}"
-    title="{{editingId ? '编辑话题' : '新增话题'}}"
+    title="{{editorTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
   >
@@ -255,7 +261,7 @@
     </view>
     <view slot="actions" class="dialog-actions">
       <button class="dialog-button dialog-button--cancel" disabled="{{saving}}" bindtap="closeEditor">取消</button>
-      <button class="dialog-button dialog-button--confirm" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+      <button class="dialog-button dialog-button--confirm" loading="{{saving}}" disabled="{{saving || !editorCanSave}}" bindtap="saveEditor">保存</button>
     </view>
   </app-dialog>
 

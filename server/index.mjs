@@ -123,7 +123,6 @@ import {
   hideOfficialChatTopic,
   listChatTopics,
   listHiddenOfficialChatTopics,
-  randomOfficialChatTopics,
   restoreOfficialChatTopic,
   updateOfficialChatTopic,
   updateUserChatTopic,
@@ -876,17 +875,6 @@ export function buildServer(options = {}) {
       request.auth.user.id,
       request.query || {},
     ),
-  }));
-
-  app.get("/api/chat-topics/official/random", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      items: await randomOfficialChatTopics(
-        getSupabaseAdmin(),
-        request.auth.user.id,
-        request.query || {},
-      ),
-    },
   }));
 
   app.get("/api/chat-topics/official/hidden", { preHandler: authenticated }, async (request) => ({

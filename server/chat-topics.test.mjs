@@ -15,6 +15,14 @@ test("chat topic content is trimmed and limited", () => {
   );
 });
 
+test("official topic lists prioritize recently edited topics", async () => {
+  const source = await readFile(new URL("./lib/chat-topics.mjs", import.meta.url), "utf8");
+  const updatedAtDescending = source.match(
+    /\.order\("updated_at", \{ ascending: false \}\)/g,
+  ) || [];
+  assert.equal(updatedAtDescending.length, 2);
+});
+
 test("chat topics migration separates official topics from user-owned topics", async () => {
   const migration = await readFile(
     new URL("../supabase/migrations/202608020003_chat_topics.sql", import.meta.url),

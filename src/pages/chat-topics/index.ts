@@ -8,7 +8,6 @@ import {
   hideOfficialChatTopic,
   listChatTopics,
   listHiddenOfficialChatTopics,
-  randomOfficialChatTopics,
   restoreOfficialChatTopic,
   updateOfficialChatTopic,
   updateUserChatTopic
@@ -27,9 +26,8 @@ import {
 } from "../../utils/async-page"
 
 const RANDOM_TOPIC_COUNT = 3
-const OFFICIAL_PAGE_SIZE = 6
+const OFFICIAL_PAGE_SIZE = 5
 
-type RandomTopicSource = "official" | "mine"
 type TopicTab = "official" | "mine" | "hidden"
 
 type RandomDialogTopic = {
@@ -78,18 +76,12 @@ function randomTopics<T extends { id: string }>(
 
 function toRandomDialogTopics(
   items: Array<{ id: string; content: string; official_topic_id?: string | null }>,
-  source: RandomTopicSource,
   previousIds: string[] = []
 ): RandomDialogTopic[] {
   return randomTopics(items, previousIds).map((item) => ({
     id: item.id,
     content: item.content,
-    meta:
-      source === "official"
-        ? "官方话题"
-        : item.official_topic_id
-          ? "官方收录"
-          : "自建话题"
+    meta: item.official_topic_id ? "官方收录" : "自建话题"
   }))
 }
 
@@ -109,10 +101,9 @@ Page({
     hiddenHasLoaded: false,
     loadingHiddenPage: false,
     restoringOfficialId: "",
+    topicScrollAnchor: "",
     showRandomDialog: false,
-    randomDialogSource: "official" as RandomTopicSource,
     randomDialogItems: [] as RandomDialogTopic[],
-    randomLoading: false,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -122,6 +113,7 @@ Page({
     showOfficialEditor: false,
     editingOfficialId: "",
     officialEditorContent: "",
+    officialCanSave: false,
     officialSaving: false,
     showOfficialDeleteConfirm: false,
     deletingOfficialId: "",
@@ -129,7 +121,9 @@ Page({
     hidingOfficialId: "",
     showEditor: false,
     editingId: "",
+    editorTitle: "新增话题",
     editorContent: "",
+    editorCanSave: false,
     saving: false,
     showDeleteConfirm: false,
     deletingId: "",
@@ -185,35 +179,18 @@ Page({
     }
   },
 
+  resetTopicScroll() {
+    this.setData({ topicScrollAnchor: "" }, () => {
+      if (isAsyncPageActive(this)) this.setData({ topicScrollAnchor: "topic-scroll-top" })
+    })
+  },
+
   handleTabTap(event: WechatMiniprogram.TouchEvent) {
     const tab = event.currentTarget.dataset.tab as TopicTab
     if (!tab || tab === this.data.activeTab) return
-    this.setData({ activeTab: tab })
+    this.setData({ activeTab: tab }, () => this.resetTopicScroll())
     if (tab === "hidden" && !this.data.hiddenHasLoaded) {
       void this.loadHiddenPage(1)
-    }
-  },
-
-  async handleRandom() {
-    if (this.data.contentLoading || this.data.randomLoading || this.data.officialTotal === 0) return
-    this.setData({ randomLoading: true })
-    try {
-      const items = await randomOfficialChatTopics()
-      if (!isAsyncPageActive(this)) return
-      this.setData({
-        showRandomDialog: true,
-        randomDialogSource: "official",
-        randomDialogItems: toRandomDialogTopics(items, "official")
-      })
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "随机失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ randomLoading: false })
     }
   },
 
@@ -221,38 +198,15 @@ Page({
     if (this.data.contentLoading || this.data.myItems.length === 0) return
     this.setData({
       showRandomDialog: true,
-      randomDialogSource: "mine",
-      randomDialogItems: toRandomDialogTopics(this.data.myItems, "mine")
+      randomDialogItems: toRandomDialogTopics(this.data.myItems)
     })
   },
 
-  async handleRandomAgain() {
-    const source = this.data.randomDialogSource
-    if (this.data.randomLoading) return
-    if (source === "official") {
-      this.setData({ randomLoading: true })
-      try {
-        const items = await randomOfficialChatTopics()
-        if (isAsyncPageActive(this)) {
-          this.setData({ randomDialogItems: toRandomDialogTopics(items, "official") })
-        }
-      } catch (error) {
-        if (isAsyncPageActive(this)) {
-          wx.showToast({
-            title: error instanceof Error ? error.message : "随机失败",
-            icon: "none"
-          })
-        }
-      } finally {
-        if (isAsyncPageActive(this)) this.setData({ randomLoading: false })
-      }
-      return
-    }
+  handleRandomAgain() {
     if (this.data.myItems.length === 0) return
     this.setData({
       randomDialogItems: toRandomDialogTopics(
         this.data.myItems,
-        "mine",
         this.data.randomDialogItems.map((item) => item.id)
       )
     })
@@ -294,6 +248,7 @@ Page({
       page > this.data.officialTotalPages ||
       page === this.data.officialPage
     ) return
+    this.resetTopicScroll()
     void this.loadOfficialPage(page)
   },
 
@@ -333,6 +288,7 @@ Page({
       page > this.data.hiddenTotalPages ||
       page === this.data.hiddenPage
     ) return
+    this.resetTopicScroll()
     void this.loadHiddenPage(page)
   },
 
@@ -367,7 +323,8 @@ Page({
     this.setData({
       showOfficialEditor: true,
       editingOfficialId: "",
-      officialEditorContent: ""
+      officialEditorContent: "",
+      officialCanSave: false
     })
   },
 
@@ -379,12 +336,17 @@ Page({
     this.setData({
       showOfficialEditor: true,
       editingOfficialId: item.id,
-      officialEditorContent: item.content
+      officialEditorContent: item.content,
+      officialCanSave: Boolean(item.content.trim())
     })
   },
 
   handleOfficialEditorInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ officialEditorContent: event.detail.value })
+    const officialEditorContent = event.detail.value
+    this.setData({
+      officialEditorContent,
+      officialCanSave: Boolean(officialEditorContent.trim())
+    })
   },
 
   closeOfficialEditor() {
@@ -392,7 +354,8 @@ Page({
       this.setData({
         showOfficialEditor: false,
         editingOfficialId: "",
-        officialEditorContent: ""
+        officialEditorContent: "",
+        officialCanSave: false
       })
     }
   },
@@ -403,24 +366,18 @@ Page({
     const isEditing = Boolean(this.data.editingOfficialId)
     this.setData({ officialSaving: true })
     try {
-      const item = this.data.editingOfficialId
-        ? await updateOfficialChatTopic(this.data.editingOfficialId, content)
-        : await createOfficialChatTopic(content)
+      await (this.data.editingOfficialId
+        ? updateOfficialChatTopic(this.data.editingOfficialId, content)
+        : createOfficialChatTopic(content))
       if (!isAsyncPageActive(this)) return
       this.setData({
         showOfficialEditor: false,
         editingOfficialId: "",
-        officialEditorContent: ""
+        officialEditorContent: "",
+        officialCanSave: false
       })
-      if (isEditing) {
-        this.setData({
-          officialItems: this.data.officialItems.map((topic) =>
-            topic.id === item.id ? { ...item, is_added: topic.is_added } : topic
-          )
-        })
-      } else {
-        await this.loadOfficialPage(this.data.officialPage)
-      }
+      await this.loadOfficialPage(1)
+      this.resetTopicScroll()
       wx.showToast({
         title: isEditing ? "官方话题已更新" : "官方话题已添加",
         icon: "success"
@@ -505,7 +462,9 @@ Page({
     this.setData({
       showEditor: true,
       editingId: "",
-      editorContent: item.content
+      editorTitle: "复制为个人话题",
+      editorContent: item.content,
+      editorCanSave: Boolean(item.content.trim())
     })
   },
 
@@ -536,7 +495,9 @@ Page({
     this.setData({
       showEditor: true,
       editingId: "",
-      editorContent: ""
+      editorTitle: "新增话题",
+      editorContent: "",
+      editorCanSave: false
     })
   },
 
@@ -548,16 +509,29 @@ Page({
     this.setData({
       showEditor: true,
       editingId: item.id,
-      editorContent: item.content
+      editorTitle: "编辑话题",
+      editorContent: item.content,
+      editorCanSave: Boolean(item.content.trim())
     })
   },
 
   handleEditorInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ editorContent: event.detail.value })
+    const editorContent = event.detail.value
+    this.setData({
+      editorContent,
+      editorCanSave: Boolean(editorContent.trim())
+    })
   },
 
   closeEditor() {
-    if (!this.data.saving) this.setData({ showEditor: false })
+    if (!this.data.saving) {
+      this.setData({
+        showEditor: false,
+        editingId: "",
+        editorContent: "",
+        editorCanSave: false
+      })
+    }
   },
 
   async saveEditor() {
@@ -574,6 +548,9 @@ Page({
         : [item, ...this.data.myItems]
       this.setData({
         showEditor: false,
+        editingId: "",
+        editorContent: "",
+        editorCanSave: false,
         myItems
       })
       wx.showToast({ title: "已保存", icon: "success" })

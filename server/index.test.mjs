@@ -284,13 +284,13 @@ test("chat topics list official examples and only the authenticated user's topic
     headers: authHeaders,
   });
   assert.equal(listResponse.statusCode, 200);
-  assert.equal(listResponse.json().data.official_items.length, 6);
+  assert.equal(listResponse.json().data.official_items.length, 5);
   assert.equal(listResponse.json().data.official_items[0].id, extraOfficialTopics[0].id);
   assert.deepEqual(listResponse.json().data.official_pagination, {
     page: 1,
-    page_size: 6,
+    page_size: 5,
     total: 11,
-    total_pages: 2,
+    total_pages: 3,
   });
   assert.deepEqual(listResponse.json().data.my_items, [mine]);
 
@@ -311,22 +311,6 @@ test("chat topics list official examples and only the authenticated user's topic
   assert.equal(secondPageResponse.statusCode, 200);
   assert.equal(secondPageResponse.json().data.official_items.length, 1);
   assert.equal(secondPageResponse.json().data.official_pagination.page, 2);
-
-  const randomResponse = await app.inject({
-    method: "GET",
-    url: "/api/chat-topics/official/random?count=3",
-    headers: authHeaders,
-  });
-  assert.equal(randomResponse.statusCode, 200);
-  assert.equal(randomResponse.json().data.items.length, 3);
-  assert.equal(
-    randomResponse.json().data.items.some((item) => item.id === hiddenOfficialTopic.id),
-    false,
-  );
-  assert.equal(
-    randomResponse.json().data.items.some((item) => item.id === officialTopic.id),
-    false,
-  );
 
   const restoreResponse = await app.inject({
     method: "DELETE",
