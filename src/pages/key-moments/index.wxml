@@ -42,7 +42,7 @@
             <view class="date-group-heading__year">{{item.heading_year}}</view>
           </view>
         </view>
-        <view class="timeline-entry">
+        <view class="timeline-entry {{index === items.length - 1 ? 'timeline-entry--last' : ''}}">
           <view class="timeline-rail">
             <view class="timeline-dot" />
           </view>
@@ -51,8 +51,14 @@
               <view>
                 <text class="timeline-time">{{item.time_label}}</text>
               </view>
-              <view wx:if="{{canWrite}}" class="edit-button" data-id="{{item.id}}" bindtap="handleEdit">
-                <app-icon name="pencil" size="27" />
+              <view
+                wx:if="{{canWrite}}"
+                class="edit-button"
+                data-id="{{item.id}}"
+                aria-label="编辑关键节点"
+                bindtap="handleEdit"
+              >
+                <text class="edit-button__dots">•••</text>
               </view>
             </view>
             <view class="moment-card">

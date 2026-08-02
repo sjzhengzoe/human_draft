@@ -105,7 +105,7 @@ import { checkTextContent } from "../../services/content-security";
   const CANVAS_TITLE_BOTTOM_GAP = scaleCanvasValue(9);
   const CANVAS_TITLE_NEXT_GAP = scaleCanvasValue(20);
   const CANVAS_TITLE_EXTRA_LINE_GAP = CANVAS_BODY_LINE_HEIGHT;
-  const CANVAS_TEXT_TOP = scaleCanvasValue(238);
+  const CANVAS_TEXT_TOP = scaleCanvasValue(238) - CANVAS_BODY_LINE_HEIGHT;
   const CANVAS_BOTTOM_SAFE = scaleCanvasValue(44);
   const CIRCLE_IMAGE_SIZE = scaleCanvasValue(140);
   const CIRCLE_IMAGE_TOP = scaleCanvasValue(44);
