@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "运动养宠",
-  "enablePullDownRefresh": true,
+  "disableScroll": true,
+  "enablePullDownRefresh": false,
   "backgroundTextStyle": "dark"
 }

@@ -40,7 +40,7 @@
   <view class="reset-card">
     <view class="reset-card__main">
       <view class="reset-card__title">清空全部运动历史</view>
-      <view class="reset-card__desc">清空加餐、运动和休息记录，保留当前设置。</view>
+      <view class="reset-card__desc">清空运动和休息记录，保留当前设置。</view>
     </view>
     <button
       class="reset-button"
@@ -54,7 +54,7 @@
     wx:if="{{resetConfirmVisible}}"
     visible="{{true}}"
     title="清空全部运动历史"
-    content="将永久清空所有加餐任务、运动记录和休息日记录。每日运动分钟数与每月休息天数会保留。"
+    content="将永久清空所有运动记录和休息日记录。每日运动分钟数与每月休息天数会保留。"
     cancel-text="取消"
     confirm-text="确认清空"
     bindcancel="handleResetCancel"

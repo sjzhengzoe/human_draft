@@ -20,6 +20,55 @@
     </view>
   </view>
 
+  <view class="month-overview-card">
+    <view class="mini-calendar">
+      <view class="mini-calendar__title">{{calendarMonthLabel}}</view>
+      <view class="mini-calendar__weekdays">
+        <text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text><text>日</text>
+      </view>
+      <view class="mini-calendar__grid">
+        <view
+          wx:for="{{calendarCells}}"
+          wx:key="key"
+          class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}}"
+          data-date="{{item.key}}"
+          bindtap="handleCalendarDayTap"
+        >
+          <view wx:if="{{item.state === 'completed'}}" class="calendar-day__pet-frame">
+            <image
+              class="calendar-day__pet"
+              src="{{calendarCatImage}}"
+              mode="aspectFill"
+            />
+          </view>
+          <view wx:elif="{{item.state === 'incomplete'}}" class="calendar-day__pet-frame">
+            <image
+              class="calendar-day__pet"
+              src="{{calendarDogImage}}"
+              mode="aspectFill"
+            />
+          </view>
+          <text
+            wx:if="{{item.state === 'future' || item.state === 'untracked'}}"
+            class="calendar-day__number"
+          >{{item.day}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="calendar-actions">
+      <button
+        class="calendar-rest-button {{restDayDisabled ? 'calendar-rest-button--disabled' : ''}}"
+        disabled="{{restDayDisabled || busy}}"
+        loading="{{busyAction === 'rest-day'}}"
+        bindtap="handleRestDay"
+      >
+        <text class="calendar-rest-button__date">{{selectedRestDayLabel}}</text>
+        <text>{{restDayButtonText}}</text>
+      </button>
+    </view>
+  </view>
+
   <view class="balance-card">
     <view class="balance-header">
       <view class="balance-heading">今日任务</view>
@@ -36,16 +85,6 @@
         <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
         <view wx:else class="task-row__status">已完成</view>
       </view>
-      <view class="task-row">
-        <text class="task-row__label">加餐任务</text>
-        <view class="task-row__end">
-          <view wx:if="{{todayExtraTaskState === 'pending'}}" class="task-row__remaining">
-            <text class="task-row__hint">还需</text><text class="task-row__value">{{todayExtraPendingMinutes}}</text><text class="task-row__unit">分钟</text>
-          </view>
-          <view wx:elif="{{todayExtraTaskState === 'completed'}}" class="task-row__status">已完成</view>
-          <view wx:else class="task-row__status task-row__status--muted">暂无</view>
-        </view>
-      </view>
     </view>
     <view wx:if="{{todayOverachievedMinutes > 0}}" class="overachieved">
       今日超额完成 <text>+{{todayOverachievedMinutes}} 分钟</text>
@@ -54,30 +93,12 @@
 
   <view class="action-section">
     <button
-      class="task-button extra-task-button"
-      disabled="{{busy}}"
-      loading="{{busyAction === 'extra-claim'}}"
-      bindtap="handleExtraClaim"
-    >
-      <view class="extra-task-button__content">
-        <text>添加加餐任务</text>
-      </view>
-    </button>
-    <button
       class="task-button task-button--dark"
       disabled="{{busy}}"
       loading="{{busyAction === 'complete'}}"
       bindtap="handleComplete"
     >
       <view class="task-button__title">{{completeButtonText}}</view>
-    </button>
-    <button
-      class="task-button rest-day-button {{restDayDisabled ? 'task-button--disabled' : ''}}"
-      disabled="{{restDayDisabled || busy}}"
-      loading="{{busyAction === 'rest-day'}}"
-      bindtap="handleRestDay"
-    >
-      <view class="task-button__title">{{restDayButtonText}}</view>
     </button>
   </view>
 

@@ -1,5 +1,6 @@
 export type ExerciseEmotion = "happy" | "neutral" | "unhappy" | "pitiful"
 export type ExerciseBowlLevel = "full" | "normal" | "low" | "empty"
+export type ExerciseCalendarDayState = "completed" | "incomplete" | "future" | "untracked"
 
 export type ExerciseDashboard = {
   profile: {
@@ -12,9 +13,6 @@ export type ExerciseDashboard = {
     daily_minutes: number
     daily_completed_minutes: number
     daily_pending_minutes: number
-    extra_minutes: number
-    extra_completed_minutes: number
-    extra_pending_minutes: number
     recorded_minutes: number
     overachieved_minutes: number
     completed_minutes: number
@@ -25,6 +23,20 @@ export type ExerciseDashboard = {
     total: number
     remaining: number
     used_today: boolean
+  }
+  month: {
+    year: number
+    month: number
+    days_in_month: number
+    first_weekday: number
+    completed_days: number
+    days: Array<{
+      date: string
+      day: number
+      state: ExerciseCalendarDayState
+      rest_used: boolean
+      can_use_rest_day: boolean
+    }>
   }
   cat: {
     food_ratio: number

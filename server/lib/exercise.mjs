@@ -36,41 +36,51 @@ function dateString(year, month, day) {
 function monthContext(now = new Date()) {
   const { year, month, day } = datePartsInChina(now);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
   return {
+    year,
+    month,
+    day,
+    daysInMonth,
+    firstWeekday,
     today: dateString(year, month, day),
     monthStart: dateString(year, month, 1),
     monthEnd: dateString(year, month, daysInMonth),
   };
 }
 
-function sumMinutes(rows = []) {
-  return rows.reduce((total, row) => total + Number(row.minutes || 0), 0);
+function sumMinutesByDate(rows = [], dateField) {
+  return rows.reduce((totals, row) => {
+    const date = row[dateField];
+    totals.set(date, (totals.get(date) || 0) + Number(row.minutes || 0));
+    return totals;
+  }, new Map());
+}
+
+function dailyGoalOnDate(goals, date, fallbackMinutes) {
+  let minutes = fallbackMinutes;
+  for (const goal of goals) {
+    if (goal.effective_date > date) break;
+    minutes = Number(goal.daily_minutes || fallbackMinutes);
+  }
+  return minutes;
 }
 
 export function calculateTodayProgress({
   dailyMinutes,
-  extraMinutes = 0,
   completionMinutes = 0,
   restDayUsed = false,
 }) {
   const targetDailyMinutes = Math.max(0, Number(dailyMinutes || 0));
-  const targetExtraMinutes = Math.max(0, Number(extraMinutes || 0));
   const recordedMinutes = Math.max(0, Number(completionMinutes || 0));
   const dailyCompletedMinutes = restDayUsed
     ? targetDailyMinutes
     : Math.min(targetDailyMinutes, recordedMinutes);
-  const minutesAvailableForExtra = restDayUsed
-    ? recordedMinutes
-    : Math.max(0, recordedMinutes - dailyCompletedMinutes);
-  const extraCompletedMinutes = Math.min(targetExtraMinutes, minutesAvailableForExtra);
-  const appliedRecordedMinutes = restDayUsed
-    ? extraCompletedMinutes
-    : dailyCompletedMinutes + extraCompletedMinutes;
+  const appliedRecordedMinutes = restDayUsed ? 0 : dailyCompletedMinutes;
   const overachievedMinutes = Math.max(0, recordedMinutes - appliedRecordedMinutes);
   const dailyPendingMinutes = Math.max(0, targetDailyMinutes - dailyCompletedMinutes);
-  const extraPendingMinutes = Math.max(0, targetExtraMinutes - extraCompletedMinutes);
-  const completedMinutes = dailyCompletedMinutes + extraCompletedMinutes;
-  const targetMinutes = targetDailyMinutes + targetExtraMinutes;
+  const completedMinutes = dailyCompletedMinutes;
+  const targetMinutes = targetDailyMinutes;
   const foodRatio = targetMinutes === 0
     ? 1
     : Math.max(0, Math.min(1, completedMinutes / targetMinutes));
@@ -104,9 +114,6 @@ export function calculateTodayProgress({
     dailyMinutes: targetDailyMinutes,
     dailyCompletedMinutes,
     dailyPendingMinutes,
-    extraMinutes: targetExtraMinutes,
-    extraCompletedMinutes,
-    extraPendingMinutes,
     recordedMinutes,
     overachievedMinutes,
     completedMinutes,
@@ -122,7 +129,7 @@ export function calculateTodayProgress({
 
 export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   const context = monthContext(now);
-  const [profileResult, goalResult, completionResult, extraResult, restDayResult] = await Promise.all([
+  const [profileResult, goalResult, completionResult, restDayResult] = await Promise.all([
     supabase
       .from("exercise_profiles")
       .select("daily_minutes,monthly_rest_days")
@@ -136,15 +143,10 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       .order("effective_date", { ascending: true }),
     supabase
       .from("exercise_completion_events")
-      .select("minutes")
+      .select("minutes,completion_date")
       .eq("user_id", userId)
-      .eq("completion_date", context.today)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("exercise_daily_extra_tasks")
-      .select("minutes")
-      .eq("user_id", userId)
-      .eq("task_date", context.today)
+      .gte("completion_date", context.monthStart)
+      .lte("completion_date", context.today)
       .order("created_at", { ascending: true }),
     supabase
       .from("exercise_daily_rest_days")
@@ -159,7 +161,6 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
     throwSupabaseError(goalResult.error, "读取今日运动目标失败。");
   }
   throwSupabaseError(completionResult.error, "读取今日完成记录失败。");
-  throwSupabaseError(extraResult.error, "读取今日加餐任务失败。");
   throwSupabaseError(restDayResult.error, "读取休息日状态失败。");
 
   const profile = {
@@ -173,27 +174,59 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
     effectiveGoals.at(-1)?.daily_minutes || profile.daily_minutes,
   );
   const restDays = restDayResult.data || [];
+  const completionMinutesByDate = sumMinutesByDate(
+    completionResult.data,
+    "completion_date",
+  );
+  const restDates = new Set(restDays.map((item) => item.rest_date));
   const restDayUsedToday = restDays.some((item) => item.rest_date === context.today);
   const progress = calculateTodayProgress({
     dailyMinutes: currentDailyMinutes,
-    extraMinutes: sumMinutes(extraResult.data),
-    completionMinutes: sumMinutes(completionResult.data),
+    completionMinutes: completionMinutesByDate.get(context.today) || 0,
     restDayUsed: restDayUsedToday,
   });
   const restDaysUsed = restDays.length;
+  const trackingStartDate = effectiveGoals[0]?.effective_date || context.today;
+  const calendarDays = Array.from({ length: context.daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const date = dateString(context.year, context.month, day);
+    let state = "future";
+    let restUsed = false;
+    let canUseRestDay = false;
+    if (date <= context.today) {
+      if (date < trackingStartDate) {
+        state = "untracked";
+      } else {
+        restUsed = restDates.has(date);
+        const dayProgress = calculateTodayProgress({
+          dailyMinutes: dailyGoalOnDate(effectiveGoals, date, profile.daily_minutes),
+          completionMinutes: completionMinutesByDate.get(date) || 0,
+          restDayUsed: restUsed,
+        });
+        canUseRestDay = !restUsed && dayProgress.dailyPendingMinutes > 0;
+        state = dayProgress.dailyPendingMinutes === 0
+          ? "completed"
+          : "incomplete";
+      }
+    }
+    return {
+      date,
+      day,
+      state,
+      rest_used: restUsed,
+      can_use_rest_day: canUseRestDay,
+    };
+  });
+  const completedDays = calendarDays.filter((item) => item.state === "completed").length;
 
   return {
     profile,
     today: {
       date: context.today,
-      completed: progress.dailyPendingMinutes === 0
-        && progress.extraPendingMinutes === 0,
+      completed: progress.dailyPendingMinutes === 0,
       daily_minutes: progress.dailyMinutes,
       daily_completed_minutes: progress.dailyCompletedMinutes,
       daily_pending_minutes: progress.dailyPendingMinutes,
-      extra_minutes: progress.extraMinutes,
-      extra_completed_minutes: progress.extraCompletedMinutes,
-      extra_pending_minutes: progress.extraPendingMinutes,
       recorded_minutes: progress.recordedMinutes,
       overachieved_minutes: progress.overachievedMinutes,
       completed_minutes: progress.completedMinutes,
@@ -205,6 +238,14 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       remaining: Math.max(0, profile.monthly_rest_days - restDaysUsed),
       used_today: restDayUsedToday,
     },
+    month: {
+      year: context.year,
+      month: context.month,
+      days_in_month: context.daysInMonth,
+      first_weekday: context.firstWeekday,
+      completed_days: completedDays,
+      days: calendarDays,
+    },
     cat: {
       food_ratio: Number(progress.foodRatio.toFixed(3)),
       bowl_level: progress.bowlLevel,
@@ -212,7 +253,7 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       emotion: progress.emotion,
       emotion_label: progress.emotionLabel,
       status_text: progress.statusText,
-      pace_gap_minutes: progress.dailyPendingMinutes + progress.extraPendingMinutes,
+      pace_gap_minutes: progress.dailyPendingMinutes,
     },
   };
 }
@@ -261,24 +302,41 @@ export async function resetExerciseState(supabase, userId, now = new Date()) {
   return getExerciseDashboard(supabase, userId, now);
 }
 
-export async function consumeExerciseRestDay(supabase, userId, now = new Date()) {
-  const dashboard = await getExerciseDashboard(supabase, userId, now);
+export async function consumeExerciseRestDay(
+  supabase,
+  userId,
+  body = {},
+  now = new Date(),
+) {
+  const context = monthContext(now);
+  const restDate = body.date || context.today;
   assertCondition(
-    dashboard.today.daily_pending_minutes > 0,
+    /^\d{4}-\d{2}-\d{2}$/.test(restDate)
+      && restDate >= context.monthStart
+      && restDate <= context.today,
+    400,
+    "INVALID_EXERCISE_REST_DATE",
+    "只能选择本月且不晚于今天的日期。",
+  );
+  const dashboard = await getExerciseDashboard(supabase, userId, now);
+  const selectedDay = dashboard.month.days.find((item) => item.date === restDate);
+  assertCondition(
+    selectedDay && !selectedDay.rest_used && selectedDay.can_use_rest_day,
     409,
     "EXERCISE_DAILY_ALREADY_COMPLETED",
-    "今日日常任务已经完成。",
+    selectedDay?.rest_used
+      ? "该日期已经使用过休息日权限。"
+      : "该日期的日常任务已经完成或尚未开始记录。",
   );
-  const context = monthContext(now);
   const { error } = await supabase.rpc("use_exercise_daily_rest_day", {
     p_user_id: userId,
-    p_rest_date: context.today,
+    p_rest_date: restDate,
   });
   throwSupabaseError(error, "使用休息日失败。", {
     P0003: {
       statusCode: 409,
       code: "EXERCISE_REST_DAY_ALREADY_USED_TODAY",
-      message: "今天已经使用过休息日了。",
+      message: "该日期已经使用过休息日权限。",
     },
     P0004: {
       statusCode: 409,
@@ -286,18 +344,6 @@ export async function consumeExerciseRestDay(supabase, userId, now = new Date())
       message: "本月休息日已经用完了。",
     },
   });
-  return getExerciseDashboard(supabase, userId, now);
-}
-
-export async function addExerciseTask(supabase, userId, body, now = new Date()) {
-  const minutes = integerValue(body.minutes, "加餐任务分钟数", 1, 10_000);
-  const context = monthContext(now);
-  const { error } = await supabase.rpc("add_exercise_daily_extra_task", {
-    p_user_id: userId,
-    p_task_date: context.today,
-    p_minutes: minutes,
-  });
-  throwSupabaseError(error, "添加加餐任务失败。");
   return getExerciseDashboard(supabase, userId, now);
 }
 

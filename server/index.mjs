@@ -80,7 +80,6 @@ import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs"
 import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
 import { wechatContentSecurity } from "./lib/wechat-content-security.mjs";
 import {
-  addExerciseTask,
   completeExerciseTasks,
   consumeExerciseRestDay,
   getExerciseDashboard,
@@ -247,14 +246,6 @@ export function buildServer(options = {}) {
   app.post("/api/exercise/rest-day", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await consumeExerciseRestDay(
-      getSupabaseAdmin(),
-      request.auth.user.id,
-    ),
-  }));
-
-  app.post("/api/exercise/extra-claim", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: await addExerciseTask(
       getSupabaseAdmin(),
       request.auth.user.id,
       request.body || {},

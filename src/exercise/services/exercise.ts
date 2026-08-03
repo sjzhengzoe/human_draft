@@ -23,18 +23,11 @@ export function resetExerciseState(): Promise<ExerciseDashboard> {
   })
 }
 
-export function consumeExerciseRestDay(): Promise<ExerciseDashboard> {
+export function consumeExerciseRestDay(date: string): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({
     path: "/api/exercise/rest-day",
-    method: "POST"
-  })
-}
-
-export function claimExerciseExtra(minutes: number): Promise<ExerciseDashboard> {
-  return request<ExerciseDashboard>({
-    path: "/api/exercise/extra-claim",
     method: "POST",
-    data: { minutes }
+    data: { date }
   })
 }
 
