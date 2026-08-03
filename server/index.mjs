@@ -81,7 +81,6 @@ import { readAvatarImage, updateUserAvatar } from "./lib/user-profile.mjs";
 import { wechatContentSecurity } from "./lib/wechat-content-security.mjs";
 import {
   addExerciseTask,
-  claimExerciseMonth,
   completeExerciseTasks,
   consumeExerciseRestDay,
   getExerciseDashboard,
@@ -240,14 +239,6 @@ export function buildServer(options = {}) {
   app.post("/api/exercise/reset", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await resetExerciseState(
-      getSupabaseAdmin(),
-      request.auth.user.id,
-    ),
-  }));
-
-  app.post("/api/exercise/monthly-claim", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: await claimExerciseMonth(
       getSupabaseAdmin(),
       request.auth.user.id,
     ),

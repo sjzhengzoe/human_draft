@@ -12,10 +12,8 @@ Page({
     resetting: false,
     dailyMinutes: "30",
     monthlyRestDays: "4",
-    previewMinutes: 0,
-    calendarDays: 0,
-    restDays: 0,
-    daysInMonth: 31
+    restDaysUsed: 0,
+    resetConfirmVisible: false
   },
 
   onLoad() {
@@ -34,14 +32,7 @@ Page({
       this.setData({
         dailyMinutes: String(dashboard.profile.daily_minutes),
         monthlyRestDays: String(dashboard.profile.monthly_rest_days),
-        previewMinutes: dashboard.claim_preview.minutes,
-        calendarDays: dashboard.claim_preview.calendar_days,
-        restDays: dashboard.claim_preview.rest_days,
-        daysInMonth: new Date(
-          Number(dashboard.month.month_start.slice(0, 4)),
-          Number(dashboard.month.month_start.slice(5, 7)),
-          0
-        ).getDate()
+        restDaysUsed: dashboard.rest_days.used
       })
     } catch (error) {
       if (isAsyncPageActive(this)) {
@@ -56,27 +47,11 @@ Page({
   },
 
   handleDailyInput(event: WechatMiniprogram.Input) {
-    this.setData({ dailyMinutes: event.detail.value }, () => this.updatePreview())
+    this.setData({ dailyMinutes: event.detail.value })
   },
 
   handleRestInput(event: WechatMiniprogram.Input) {
-    this.setData({ monthlyRestDays: event.detail.value }, () => this.updatePreview())
-  },
-
-  updatePreview() {
-    const dailyMinutes = Number(this.data.dailyMinutes)
-    const monthlyRestDays = Number(this.data.monthlyRestDays)
-    if (!Number.isFinite(dailyMinutes) || !Number.isFinite(monthlyRestDays)) return
-    const proratedRestDays = Math.round(
-      monthlyRestDays * this.data.calendarDays / this.data.daysInMonth
-    )
-    const restDays = monthlyRestDays === 0
-      ? 0
-      : Math.min(this.data.calendarDays, Math.max(1, proratedRestDays))
-    this.setData({
-      restDays,
-      previewMinutes: Math.max(0, this.data.calendarDays * dailyMinutes)
-    })
+    this.setData({ monthlyRestDays: event.detail.value })
   },
 
   async handleSave() {
@@ -91,6 +66,13 @@ Page({
       wx.showToast({ title: "休息天数需为 0–28", icon: "none" })
       return
     }
+    if (monthlyRestDays < this.data.restDaysUsed) {
+      wx.showToast({
+        title: `不能少于本月已使用的 ${this.data.restDaysUsed} 天`,
+        icon: "none"
+      })
+      return
+    }
 
     this.setData({ saving: true })
     try {
@@ -99,7 +81,7 @@ Page({
         monthly_rest_days: monthlyRestDays
       })
       if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: "设置已保存", icon: "success" })
+      wx.showToast({ title: "已保存，每日目标明天生效", icon: "none" })
       setTimeout(() => {
         if (isAsyncPageActive(this)) wx.navigateBack()
       }, 450)
@@ -117,15 +99,18 @@ Page({
 
   handleReset() {
     if (this.data.saving || this.data.resetting) return
-    wx.showModal({
-      title: "重置运动状态",
-      content: "将清空全部任务、完成记录和跨月余额。每日运动分钟数与每月休息天数会保留，本月可以重新领取任务。",
-      confirmText: "确认重置",
-      confirmColor: "#111111",
-      success: (result) => {
-        if (result.confirm) this.performReset()
-      }
-    })
+    this.setData({ resetConfirmVisible: true })
+  },
+
+  handleResetCancel() {
+    if (this.data.resetting) return
+    this.setData({ resetConfirmVisible: false })
+  },
+
+  handleResetConfirm() {
+    if (this.data.resetting) return
+    this.setData({ resetConfirmVisible: false })
+    this.performReset()
   },
 
   async performReset() {
@@ -133,7 +118,7 @@ Page({
     try {
       await resetExerciseState()
       if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: "状态已重置", icon: "success" })
+      wx.showToast({ title: "运动历史已清空", icon: "success" })
       setTimeout(() => {
         if (isAsyncPageActive(this)) wx.navigateBack()
       }, 450)

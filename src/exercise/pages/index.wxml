@@ -21,29 +21,55 @@
   </view>
 
   <view class="balance-card">
-    <view class="settings-button" role="button" aria-label="运动设置" bindtap="handleSettings">
-      <app-icon name="settings-2" size="27" />
+    <view class="balance-header">
+      <view class="balance-heading">今日任务</view>
+      <view class="settings-button" role="button" aria-label="运动设置" bindtap="handleSettings">
+        <app-icon name="settings-2" size="24" />
+      </view>
     </view>
-    <view class="balance-label">当前待完成任务</view>
-    <view class="balance-value">{{remainingMinutes}}<text class="balance-unit">分钟</text></view>
-    <view class="balance-details">
-      <view><text class="balance-details__value">{{todayPendingMinutes}}</text><text>今日日常任务</text></view>
-      <view><text class="balance-details__value">{{todayExtraPendingMinutes}}</text><text>今日加餐任务</text></view>
+    <view class="task-list">
+      <view class="task-row">
+        <text class="task-row__label">日常任务</text>
+        <view wx:if="{{todayDailyTaskState === 'pending'}}" class="task-row__remaining">
+          <text class="task-row__hint">还需</text><text class="task-row__value">{{todayPendingMinutes}}</text><text class="task-row__unit">分钟</text>
+        </view>
+        <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
+        <view wx:else class="task-row__status">已完成</view>
+      </view>
+      <view class="task-row">
+        <text class="task-row__label">加餐任务</text>
+        <view class="task-row__end">
+          <view wx:if="{{todayExtraTaskState === 'pending'}}" class="task-row__remaining">
+            <text class="task-row__hint">还需</text><text class="task-row__value">{{todayExtraPendingMinutes}}</text><text class="task-row__unit">分钟</text>
+          </view>
+          <view wx:elif="{{todayExtraTaskState === 'completed'}}" class="task-row__status">已完成</view>
+          <view wx:else class="task-row__status task-row__status--muted">暂无</view>
+          <button
+            class="extra-add-button"
+            aria-label="添加加餐任务"
+            disabled="{{busy}}"
+            loading="{{busyAction === 'extra-claim'}}"
+            bindtap="handleExtraClaim"
+          >
+            <app-icon wx:if="{{busyAction !== 'extra-claim'}}" name="plus" size="24" />
+          </button>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{todayOverachievedMinutes > 0}}" class="overachieved">
+      今日超额完成 <text>+{{todayOverachievedMinutes}} 分钟</text>
     </view>
   </view>
 
-  <view class="monthly-claim-card">
+  <view class="action-section">
     <button
-      class="monthly-claim-button {{claimed ? 'monthly-claim-button--disabled' : ''}}"
-      disabled="{{claimed || busy}}"
-      loading="{{busyAction === 'monthly'}}"
-      bindtap="handleMonthlyClaim"
+      class="task-button task-button--dark"
+      disabled="{{busy}}"
+      loading="{{busyAction === 'complete'}}"
+      bindtap="handleComplete"
     >
-      <view class="task-button__title">领取本月任务</view>
+      <view class="task-button__title">{{completeButtonText}}</view>
     </button>
-  </view>
-
-  <view class="rest-day-card">
     <button
       class="task-button rest-day-button {{restDayDisabled ? 'task-button--disabled' : ''}}"
       disabled="{{restDayDisabled || busy}}"
@@ -54,29 +80,40 @@
     </button>
   </view>
 
-  <view class="action-section">
-    <view class="action-column">
-      <button
-        class="task-button"
-        disabled="{{busy}}"
-        loading="{{busyAction === 'extra-claim'}}"
-        bindtap="handleExtraClaim"
-      >
-        <view class="task-button__title">领取加餐任务</view>
-      </button>
-    </view>
+  <app-dialog
+    wx:if="{{restConfirmVisible}}"
+    visible="{{true}}"
+    title="使用休息日权限"
+    content="{{restConfirmContent}}"
+    cancel-text="取消"
+    confirm-text="确认使用"
+    bindcancel="handleRestCancel"
+    bindconfirm="handleRestConfirm"
+  />
 
-    <view class="action-divider" />
-
-    <view class="action-column">
-      <button
-        class="task-button task-button--dark"
-        disabled="{{busy}}"
-        loading="{{busyAction === 'complete'}}"
-        bindtap="handleComplete"
-      >
-        <view class="task-button__title">完成任务</view>
-      </button>
+  <app-dialog
+    wx:if="{{minutesDialogVisible}}"
+    visible="{{true}}"
+    title="{{minutesDialogTitle}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="minutes-dialog-body">
+      <view class="minutes-dialog-input">
+        <input
+          type="number"
+          value="{{minutesInput}}"
+          maxlength="5"
+          placeholder="{{minutesDialogPlaceholder}}"
+          focus
+          bindinput="handleMinutesInput"
+        />
+        <text>分钟</text>
+      </view>
     </view>
-  </view>
+    <view slot="actions" class="minutes-dialog-actions">
+      <button class="minutes-dialog-button" disabled="{{busy}}" bindtap="closeMinutesDialog">取消</button>
+      <button class="minutes-dialog-button minutes-dialog-button--confirm" disabled="{{busy}}" bindtap="confirmMinutesDialog">确定</button>
+    </view>
+  </app-dialog>
 </view>

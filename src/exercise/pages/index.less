@@ -1,74 +1,36 @@
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 32rpx var(--ui-page-gutter) 56rpx;
+  padding: 28rpx var(--ui-page-gutter) calc(48rpx + env(safe-area-inset-bottom));
   background: var(--ui-page-background);
 }
 
 .settings-button {
-  position: absolute;
-  top: 18rpx;
-  right: 18rpx;
   display: flex;
-  width: 56rpx;
-  height: 56rpx;
+  width: 60rpx;
+  min-height: 60rpx;
+  box-sizing: border-box;
+  flex: none;
   align-items: center;
   justify-content: center;
+  padding: 0;
   background: transparent;
+  color: #666660;
 }
 
 .pet-card,
 .balance-card,
-.monthly-claim-card,
-.rest-day-card,
 .action-section {
   border: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.025);
-}
-
-.rest-day-card {
-  margin-top: 18rpx;
-  padding: 20rpx;
-  border-radius: 20rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
 }
 
 .rest-day-button {
-  background: #fff9e9;
-  border-color: #e7d7a7;
-  color: #5b491a;
-}
-
-.monthly-claim-card {
-  margin-top: 18rpx;
-  padding: 20rpx;
-  border-radius: 20rpx;
-}
-
-.monthly-claim-button {
-  display: flex;
-  width: 100% !important;
-  min-height: 96rpx;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  margin: 0 !important;
-  padding: 18rpx !important;
-  border: 1rpx solid #171717;
-  border-radius: 15rpx;
-  background: #171717;
-  color: #fff;
-  text-align: center;
-}
-
-.monthly-claim-button::after {
-  border: 0;
-}
-
-.monthly-claim-button--disabled {
-  border-color: var(--ui-border);
-  background: #eeeeeb;
-  color: #aaa9a4;
+  min-height: 76rpx;
+  border-color: #e5dfce;
+  background: #f4f1e6;
+  color: #655a3d;
 }
 
 .pet-card {
@@ -78,10 +40,10 @@
 
 .pet-stage {
   display: grid;
-  min-height: 370rpx;
+  min-height: 350rpx;
   grid-template-columns: 36% 64%;
   align-items: end;
-  padding: 14rpx 16rpx 24rpx;
+  padding: 12rpx 16rpx 22rpx;
 }
 
 .bowl-zone,
@@ -94,14 +56,14 @@
 }
 
 .bowl-image {
-  width: 256rpx;
-  height: 300rpx;
+  width: 236rpx;
+  height: 282rpx;
   margin-bottom: 6rpx;
 }
 
 .pet-pair-image {
-  width: 414rpx;
-  height: 300rpx;
+  width: 396rpx;
+  height: 282rpx;
   margin-bottom: 6rpx;
 }
 
@@ -116,81 +78,200 @@
 }
 
 .balance-card {
-  position: relative;
   margin-top: 18rpx;
-  padding: 28rpx 28rpx 24rpx;
+  padding: 22rpx 26rpx 24rpx;
   border-radius: 20rpx;
   text-align: center;
 }
 
-.balance-label {
-  color: #777772;
-  font-size: 22rpx;
-  letter-spacing: 1rpx;
+.balance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
 }
 
-.balance-value {
-  margin-top: 4rpx;
-  color: #111;
-  font-size: 72rpx;
-  font-weight: 760;
-  line-height: 1.16;
+.balance-heading {
+  color: #22221f;
+  font-size: 27rpx;
+  font-weight: 680;
+  line-height: 1.3;
 }
 
-.balance-unit {
-  margin-left: 9rpx;
-  color: #777772;
-  font-size: 22rpx;
-  font-weight: 500;
-}
-
-.balance-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin-top: 20rpx;
-  padding-top: 18rpx;
+.task-list {
+  margin-top: 14rpx;
   border-top: 1rpx solid var(--ui-border);
 }
 
-.balance-details > view {
+.task-row {
   display: flex;
-  flex-direction: column;
-  color: #999994;
-  font-size: 19rpx;
+  min-height: 78rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 0 4rpx;
 }
 
-.balance-details > view + view {
-  border-left: 1rpx solid var(--ui-border);
+.task-row + .task-row {
+  border-top: 1rpx solid var(--ui-border);
 }
 
-.balance-details__value {
-  margin-bottom: 4rpx;
+.task-row__label {
+  flex: none;
+  color: #666660;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.4;
+}
+
+.task-row__remaining {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.task-row__value {
+  color: #171715;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.task-row__unit {
+  margin-left: 6rpx;
+  color: #777772;
+  font-size: 21rpx;
+}
+
+.task-row__end {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.extra-add-button {
+  display: flex;
+  width: 56rpx !important;
+  height: 56rpx;
+  min-height: 56rpx;
+  min-width: 56rpx !important;
+  box-sizing: border-box;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent;
   color: #333330;
-  font-size: 27rpx;
+  line-height: normal;
+}
+
+.extra-add-button::after {
+  border: 0;
+}
+
+.task-row__hint {
+  margin-right: 8rpx;
+  color: #a2a29c;
+  font-size: 21rpx;
+}
+
+.task-row__status {
+  color: #22221f;
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.task-row__status--muted {
+  color: #aaa9a4;
+  font-weight: 550;
+}
+
+.overachieved {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 18rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #f4f1e6;
+  color: #77715e;
+  font-size: 20rpx;
+}
+
+.overachieved text {
+  margin-left: 6rpx;
+  color: #51482f;
   font-weight: 650;
 }
 
-.action-section {
+.minutes-dialog-body {
+  padding: 4rpx 0 8rpx;
+}
+
+.minutes-dialog-input {
+  display: flex;
+  height: 82rpx;
+  align-items: center;
+  padding: 0 22rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: 14rpx;
+  background: var(--ui-page-background);
+}
+
+.minutes-dialog-input input {
+  min-width: 0;
+  flex: 1;
+  color: #171715;
+  font-size: var(--ui-font-size-base);
+}
+
+.minutes-dialog-input text {
+  margin-left: 12rpx;
+  color: #888882;
+  font-size: 21rpx;
+}
+
+.minutes-dialog-actions {
   display: grid;
-  grid-template-columns: 1fr 1rpx 1fr;
-  gap: 20rpx;
+  grid-template-columns: 1fr 1fr;
+  gap: 18rpx;
+}
+
+.minutes-dialog-button {
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 14rpx;
+  background: #f1f1ee;
+  color: #333330;
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+}
+
+.minutes-dialog-button::after {
+  border: 0;
+}
+
+.minutes-dialog-button--confirm {
+  background: #171715;
+  color: #fff;
+}
+
+.action-section {
   margin-top: 18rpx;
   padding: 20rpx;
   border-radius: 20rpx;
-}
-
-.action-divider {
-  background: #ebebe8;
-}
-
-.action-column {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
 }
 
 .task-button {
   display: flex;
   width: 100% !important;
-  min-height: 96rpx;
+  min-height: 88rpx;
   box-sizing: border-box;
   flex-direction: column;
   align-items: center;
@@ -225,4 +306,8 @@
   width: 100%;
   font-size: var(--ui-font-size-base);
   font-weight: 650;
+}
+
+.task-button.rest-day-button {
+  min-height: 76rpx;
 }

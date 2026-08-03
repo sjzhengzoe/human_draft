@@ -1,6 +1,5 @@
 import {
   claimExerciseExtra,
-  claimExerciseMonth,
   completeExercise,
   consumeExerciseRestDay,
   getExerciseDashboard
@@ -90,53 +89,37 @@ function pickRandomImage(images: readonly string[], currentImage = "") {
   return candidates[Math.floor(Math.random() * candidates.length)]
 }
 
-function promptMinutes(title: string, placeholder: string): Promise<number | null> {
-  return new Promise((resolve) => {
-    wx.showModal({
-      title,
-      content: "",
-      editable: true,
-      placeholderText: placeholder,
-      confirmText: "确定",
-      success: (result) => {
-        if (!result.confirm) {
-          resolve(null)
-          return
-        }
-        const value = Number(String(result.content || "").trim())
-        if (!Number.isInteger(value) || value <= 0 || value > 10000) {
-          wx.showToast({ title: "请输入 1–10000 的整数", icon: "none" })
-          resolve(null)
-          return
-        }
-        resolve(value)
-      },
-      fail: () => resolve(null)
-    })
-  })
-}
-
 Page({
   data: {
     loading: true,
     hasLoaded: false,
     busy: false,
     busyAction: "",
-    remainingMinutes: 0,
     todayPendingMinutes: 0,
+    todayDailyTaskState: "pending",
+    todayExtraMinutes: 0,
     todayExtraPendingMinutes: 0,
-    claimed: false,
+    todayExtraTaskState: "none",
+    todayPendingTotal: 0,
+    todayOverachievedMinutes: 0,
     restDaysUsed: 0,
     restDaysTotal: 0,
     restDaysRemaining: 0,
     restDayUsedToday: false,
-    restDayButtonText: "消耗休息日 0/0",
+    restDayButtonText: "使用休息日权限",
     restDayDisabled: true,
+    restConfirmVisible: false,
+    restConfirmContent: "",
+    completeButtonText: "完成运动",
     bowlLabel: "没有",
     emotionLabel: PET_STATE_LABELS.empty,
     petImage: PET_IMAGES.empty[0],
     bowlImage: BOWL_IMAGES.empty[0],
-    claimPreviewText: "计算本月剩余任务"
+    minutesDialogVisible: false,
+    minutesDialogMode: "",
+    minutesDialogTitle: "",
+    minutesDialogPlaceholder: "",
+    minutesInput: ""
   },
 
   onLoad() {
@@ -159,32 +142,43 @@ Page({
   applyDashboard(dashboard: ExerciseDashboard) {
     const bowlLevel = dashboard.cat.bowl_level
     const restDays = dashboard.rest_days
-    let restDayButtonText = `消耗休息日 ${restDays.used}/${restDays.total}`
-    if (!dashboard.month.claimed) {
-      restDayButtonText = `领取月任务后可用休息日 0/${restDays.total}`
+    const dailyPendingMinutes = dashboard.today.daily_pending_minutes
+    const extraMinutes = dashboard.today.extra_minutes
+    const extraPendingMinutes = dashboard.today.extra_pending_minutes
+    const pendingTotal = dailyPendingMinutes + extraPendingMinutes
+    let restDayButtonText = `使用休息日权限 · 剩余 ${restDays.remaining} 天`
+    if (restDays.used_today) {
+      restDayButtonText = "今日已使用休息日权限"
+    } else if (dailyPendingMinutes === 0) {
+      restDayButtonText = "今日日常任务已完成"
     } else if (restDays.remaining === 0) {
-      restDayButtonText = `休息日已用完 ${restDays.used}/${restDays.total}`
-    } else if (restDays.used_today) {
-      restDayButtonText = `今日已使用休息日 ${restDays.used}/${restDays.total}`
+      restDayButtonText = "休息日权限已用完"
     }
     this.setData({
-      remainingMinutes: dashboard.month.remainingMinutes,
-      todayPendingMinutes: dashboard.today.pending_minutes,
-      todayExtraPendingMinutes: dashboard.today.extra_pending_minutes,
-      claimed: dashboard.month.claimed,
+      todayPendingMinutes: dailyPendingMinutes,
+      todayDailyTaskState: restDays.used_today
+        ? "rest"
+        : dailyPendingMinutes === 0 ? "completed" : "pending",
+      todayExtraMinutes: extraMinutes,
+      todayExtraPendingMinutes: extraPendingMinutes,
+      todayExtraTaskState: extraMinutes === 0
+        ? "none"
+        : extraPendingMinutes === 0 ? "completed" : "pending",
+      todayPendingTotal: pendingTotal,
+      todayOverachievedMinutes: dashboard.today.overachieved_minutes,
       restDaysUsed: restDays.used,
       restDaysTotal: restDays.total,
       restDaysRemaining: restDays.remaining,
       restDayUsedToday: restDays.used_today,
       restDayButtonText,
-      restDayDisabled: !dashboard.month.claimed
-        || restDays.remaining === 0
-        || restDays.used_today,
+      restDayDisabled: restDays.remaining === 0
+        || restDays.used_today
+        || dailyPendingMinutes === 0,
+      completeButtonText: pendingTotal === 0 ? "记录额外运动" : "完成运动",
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: PET_STATE_LABELS[bowlLevel],
       petImage: pickRandomImage(PET_IMAGES[bowlLevel], this.data.petImage),
-      bowlImage: pickRandomImage(BOWL_IMAGES[bowlLevel], this.data.bowlImage),
-      claimPreviewText: `${dashboard.claim_preview.exercise_days} 天 · ${dashboard.claim_preview.minutes} 分钟`
+      bowlImage: pickRandomImage(BOWL_IMAGES[bowlLevel], this.data.bowlImage)
     })
   },
 
@@ -213,44 +207,98 @@ Page({
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },
 
-  handleMonthlyClaim() {
-    if (this.data.claimed || this.data.busy) return
-    wx.showModal({
-      title: "领取本月任务",
-      content: `将加入 ${this.data.claimPreviewText}。休息日由你当天手动使用，领取后本月不能重复领取。`,
-      confirmText: "领取",
-      success: (result) => {
-        if (result.confirm) this.runAction("monthly", () => claimExerciseMonth(), "本月任务已加入")
-      }
+  handleRestDay() {
+    if (this.data.restDayDisabled || this.data.busy) return
+    const remainingAfterUse = Math.max(0, this.data.restDaysRemaining - 1)
+    const extraText = this.data.todayExtraPendingMinutes > 0
+      ? `今日加餐任务仍需完成 ${this.data.todayExtraPendingMinutes} 分钟。`
+      : "之后添加的加餐任务仍需完成。"
+    this.setData({
+      restConfirmVisible: true,
+      restConfirmContent: `使用后将完成今日日常任务，${extraText}本月还剩 ${remainingAfterUse} 天休息权限。`
     })
   },
 
-  handleRestDay() {
-    if (this.data.restDayDisabled || this.data.busy) return
+  handleRestCancel() {
+    if (this.data.busy) return
+    this.setData({ restConfirmVisible: false })
+  },
+
+  handleRestConfirm() {
+    if (this.data.busy) return
+    this.setData({ restConfirmVisible: false })
     this.runAction(
       "rest-day",
       () => consumeExerciseRestDay(),
-      `休息日已使用，还剩 ${Math.max(0, this.data.restDaysRemaining - 1)} 次`
+      (dashboard) => `休息日权限已使用，还剩 ${dashboard.rest_days.remaining} 天`
     )
   },
 
-  async handleExtraClaim() {
+  handleExtraClaim() {
     if (this.data.busy) return
-    const minutes = await promptMinutes("领取加餐任务", "输入分钟数")
-    if (minutes) this.runAction("extra-claim", () => claimExerciseExtra(minutes), `已加入 ${minutes} 分钟`)
+    this.setData({
+      minutesDialogVisible: true,
+      minutesDialogMode: "extra",
+      minutesDialogTitle: "添加加餐任务",
+      minutesDialogPlaceholder: "需要额外运动多少分钟",
+      minutesInput: ""
+    })
   },
 
-  async handleComplete() {
+  handleComplete() {
     if (this.data.busy) return
-    const minutes = await promptMinutes("完成任务", "输入本次完成分钟数")
-    if (!minutes) return
-    this.runAction("complete", () => completeExercise(minutes), `已完成 ${minutes} 分钟`)
+    this.setData({
+      minutesDialogVisible: true,
+      minutesDialogMode: "complete",
+      minutesDialogTitle: "记录运动分钟",
+      minutesDialogPlaceholder: this.data.todayPendingTotal > 0
+        ? `今日还需 ${this.data.todayPendingTotal} 分钟，可继续记录超额`
+        : "输入额外运动分钟数",
+      minutesInput: this.data.todayPendingTotal > 0 ? String(this.data.todayPendingTotal) : ""
+    })
+  },
+
+  handleMinutesInput(event: WechatMiniprogram.Input) {
+    this.setData({ minutesInput: event.detail.value })
+  },
+
+  closeMinutesDialog() {
+    if (this.data.busy) return
+    this.setData({ minutesDialogVisible: false, minutesInput: "" })
+  },
+
+  confirmMinutesDialog() {
+    if (this.data.busy) return
+    const minutes = Number(String(this.data.minutesInput || "").trim())
+    if (!Number.isInteger(minutes) || minutes <= 0 || minutes > 10000) {
+      wx.showToast({ title: "请输入 1–10000 的整数", icon: "none" })
+      return
+    }
+    const mode = this.data.minutesDialogMode
+    this.setData({ minutesDialogVisible: false, minutesInput: "" })
+    if (mode === "extra") {
+      const overachievedBeforeAdd = this.data.todayOverachievedMinutes
+      this.runAction(
+        "extra-claim",
+        () => claimExerciseExtra(minutes),
+        (dashboard) => {
+          const offsetMinutes = Math.min(minutes, overachievedBeforeAdd)
+          const pendingMinutes = dashboard.today.daily_pending_minutes
+            + dashboard.today.extra_pending_minutes
+          return offsetMinutes > 0
+            ? `已抵扣 ${offsetMinutes} 分钟，今日还需 ${pendingMinutes} 分钟`
+            : `已添加 ${minutes} 分钟，今日还需 ${pendingMinutes} 分钟`
+        }
+      )
+    } else if (mode === "complete") {
+      this.runAction("complete", () => completeExercise(minutes), `已记录 ${minutes} 分钟`)
+    }
   },
 
   async runAction(
     action: string,
     request: () => Promise<ExerciseDashboard>,
-    successMessage: string
+    successMessage: string | ((dashboard: ExerciseDashboard) => string)
   ) {
     if (this.data.busy) return
     this.setData({ busy: true, busyAction: action })
@@ -258,7 +306,13 @@ Page({
       const dashboard = await request()
       if (!isAsyncPageActive(this)) return
       this.applyDashboard(dashboard)
-      wx.showToast({ title: successMessage, icon: "success" })
+      const resolvedMessage = typeof successMessage === "function"
+        ? successMessage(dashboard)
+        : successMessage
+      wx.showToast({
+        title: resolvedMessage,
+        icon: resolvedMessage.length > 7 ? "none" : "success"
+      })
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

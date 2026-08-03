@@ -2,172 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
-  calculateCatState,
-  calculateExerciseRollup,
-  calculateMonthlyClaim,
-  calculatePendingBreakdown,
+  calculateTodayProgress,
   getExerciseDashboard,
 } from "./lib/exercise.mjs";
 
 const USER_ID = "10000000-0000-4000-8000-000000000002";
-const JULY_FIRST_CHINA = new Date("2026-06-30T16:00:00.000Z");
-const JULY_TWENTY_SEVENTH_CHINA = new Date("2026-07-26T16:00:00.000Z");
+const OTHER_USER_ID = "10000000-0000-4000-8000-000000000003";
+const AUGUST_THIRD_CHINA = new Date("2026-08-02T16:00:00.000Z");
 
-test("monthly claim keeps every remaining day and makes rest days manually available", () => {
-  const claim = calculateMonthlyClaim({
-    dailyMinutes: 30,
-    monthlyRestDays: 4,
-    now: JULY_TWENTY_SEVENTH_CHINA,
-  });
-
-  assert.equal(claim.today, "2026-07-27");
-  assert.equal(claim.remainingDays, 5);
-  assert.equal(claim.availableRestDays, 1);
-  assert.equal(claim.plannedExerciseDays, 5);
-  assert.equal(claim.taskMinutes, 150);
-});
-
-test("monthly claim keeps one rest day near month end when rest is configured", () => {
-  const claim = calculateMonthlyClaim({
-    dailyMinutes: 30,
-    monthlyRestDays: 4,
-    now: new Date("2026-07-28T16:00:00.000Z"),
-  });
-
-  assert.equal(claim.today, "2026-07-29");
-  assert.equal(claim.remainingDays, 3);
-  assert.equal(claim.availableRestDays, 1);
-  assert.equal(claim.taskMinutes, 90);
-});
-
-test("monthly claim does not invent a rest day when monthly rest is zero", () => {
-  const claim = calculateMonthlyClaim({
-    dailyMinutes: 30,
-    monthlyRestDays: 0,
-    now: new Date("2026-07-28T16:00:00.000Z"),
-  });
-
-  assert.equal(claim.availableRestDays, 0);
-});
-
-test("claiming alone leaves the shared bowl empty, while completed minutes feed both pets", () => {
-  const baseMonth = {
-    base_task_minutes: 810,
-    extra_task_minutes: 0,
-    completed_minutes: 0,
-    claim_date: "2026-07-01",
-    claim_end_date: "2026-07-31",
-  };
-
-  const beforeExercise = calculateCatState({
-    month: baseMonth,
-    dailyMinutes: 30,
-    today: "2026-07-01",
-  });
-  assert.equal(beforeExercise.foodRatio, 0);
-  assert.equal(beforeExercise.bowlLevel, "empty");
-  assert.equal(beforeExercise.emotion, "pitiful");
-
-  const afterDaily = calculateCatState({
-    month: { ...baseMonth, completed_minutes: 30 },
-    dailyMinutes: 30,
-    today: "2026-07-01",
-  });
-  assert.equal(afterDaily.bowlLevel, "full");
-  assert.equal(afterDaily.emotion, "happy");
-
-  const withUnfinishedExtra = calculateCatState({
-    month: { ...baseMonth, extra_task_minutes: 60, completed_minutes: 30 },
-    dailyMinutes: 30,
-    today: "2026-07-01",
-  });
-  assert.equal(withUnfinishedExtra.emotion, "unhappy");
-
-  const withFinishedExtra = calculateCatState({
-    month: { ...baseMonth, extra_task_minutes: 60, completed_minutes: 90 },
-    dailyMinutes: 30,
-    today: "2026-07-01",
-  });
-  assert.equal(withFinishedExtra.bowlLevel, "full");
-  assert.equal(withFinishedExtra.emotion, "happy");
-});
-
-test("completed and prepaid future minutes keep both pets happy", () => {
-  const state = calculateCatState({
-    month: {
-      base_task_minutes: 810,
-      extra_task_minutes: 0,
-      completed_minutes: 120,
-      claim_date: "2026-07-01",
-      claim_end_date: "2026-07-31",
-    },
-    dailyMinutes: 30,
-    today: "2026-07-03",
-  });
-
-  assert.equal(state.paceGapMinutes, 0);
-  assert.equal(state.bowlLevel, "full");
-  assert.equal(state.emotion, "happy");
-});
-
-test("unfinished daily and extra minutes accumulate in today's pending display", () => {
-  const pending = calculatePendingBreakdown({
-    baseTaskMinutes: 100,
-    extraTaskMinutes: 400,
-    baseCompletedMinutes: 20,
-    extraCompletedMinutes: 100,
-    futureBaseMinutes: 60,
-  });
-
-  assert.deepEqual(pending, {
-    pendingMinutes: 20,
-    extraPendingMinutes: 300,
-  });
-});
-
-test("rolling credit makes the total balance negative and offsets daily work before extras", () => {
-  const rollup = calculateExerciseRollup({
-    months: [{
-      month_start: "2026-07-01",
-      claim_date: "2026-07-01",
-      claim_end_date: "2026-07-31",
-      base_task_minutes: 100,
-      extra_task_minutes: 20,
-      base_completed_minutes: 100,
-      extra_completed_minutes: 20,
-      completed_minutes: 120,
-    }],
-    creditMinutes: 30,
-    today: "2026-07-31",
-  });
-
-  assert.equal(rollup.remainingMinutes, -30);
-  assert.equal(rollup.pendingMinutes, 0);
-  assert.equal(rollup.extraPendingMinutes, 0);
-  assert.equal(rollup.bowlLevel, "full");
-
-  const prioritized = calculatePendingBreakdown({
-    baseTaskMinutes: 100,
-    extraTaskMinutes: 400,
-    baseCompletedMinutes: 20,
-    extraCompletedMinutes: 100,
-    futureBaseMinutes: 0,
-    creditMinutes: 100,
-  });
-  assert.deepEqual(prioritized, {
-    pendingMinutes: 0,
-    extraPendingMinutes: 280,
-  });
-});
-
-test("dashboard reads every exercise table with the authenticated user scope", async () => {
-  const scopedTables = [];
-  const tables = {
-    exercise_profiles: [{ user_id: USER_ID, daily_minutes: 30, monthly_rest_days: 4 }],
-    exercise_months: [],
-    exercise_daily_completions: [],
-  };
-  const supabase = {
+function createSupabaseMock(tables) {
+  const reads = [];
+  return {
+    reads,
     from(table) {
       const filters = [];
       const query = {
@@ -175,127 +21,231 @@ test("dashboard reads every exercise table with the authenticated user scope", a
           return query;
         },
         eq(field, value) {
-          filters.push([field, value]);
+          filters.push(["eq", field, value]);
+          return query;
+        },
+        gte(field, value) {
+          filters.push(["gte", field, value]);
+          return query;
+        },
+        lte(field, value) {
+          filters.push(["lte", field, value]);
           return query;
         },
         async maybeSingle() {
-          scopedTables.push({ table, filters });
-          const matching = (tables[table] || []).find((row) =>
-            filters.every(([field, value]) => row[field] === value)
-          );
-          return { data: matching || null, error: null };
+          reads.push({ table, filters });
+          const matching = filterRows(tables[table] || [], filters);
+          return { data: matching[0] || null, error: null };
         },
         async order() {
-          scopedTables.push({ table, filters });
-          const matching = (tables[table] || []).filter((row) =>
-            filters.every(([field, value]) => row[field] === value)
-          );
-          return { data: matching, error: null };
+          reads.push({ table, filters });
+          return { data: filterRows(tables[table] || [], filters), error: null };
         },
       };
       return query;
     },
   };
+}
 
-  const dashboard = await getExerciseDashboard(supabase, USER_ID, JULY_FIRST_CHINA);
+function filterRows(rows, filters) {
+  return rows.filter((row) => filters.every(([operator, field, value]) => {
+    if (operator === "eq") return row[field] === value;
+    if (operator === "gte") return row[field] >= value;
+    if (operator === "lte") return row[field] <= value;
+    return true;
+  }));
+}
 
-  assert.equal(scopedTables.length, 3);
+test("today starts with an empty bowl even when previous days were completed", () => {
+  const progress = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 0,
+    completionMinutes: 0,
+  });
+
+  assert.equal(progress.dailyPendingMinutes, 20);
+  assert.equal(progress.completedMinutes, 0);
+  assert.equal(progress.overachievedMinutes, 0);
+  assert.equal(progress.foodRatio, 0);
+  assert.equal(progress.bowlLevel, "empty");
+});
+
+test("the bowl reflects only today's daily and extra completion ratio", () => {
+  const partial = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 10,
+    completionMinutes: 15,
+  });
+  assert.equal(partial.dailyCompletedMinutes, 15);
+  assert.equal(partial.dailyPendingMinutes, 5);
+  assert.equal(partial.extraCompletedMinutes, 0);
+  assert.equal(partial.extraPendingMinutes, 10);
+  assert.equal(partial.foodRatio, 0.5);
+  assert.equal(partial.bowlLevel, "normal");
+
+  const complete = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 10,
+    completionMinutes: 30,
+  });
+  assert.equal(complete.dailyPendingMinutes, 0);
+  assert.equal(complete.extraPendingMinutes, 0);
+  assert.equal(complete.overachievedMinutes, 0);
+  assert.equal(complete.bowlLevel, "full");
+
+  const almostComplete = calculateTodayProgress({
+    dailyMinutes: 20,
+    completionMinutes: 19,
+  });
+  assert.equal(almostComplete.foodRatio, 0.95);
+  assert.equal(almostComplete.bowlLevel, "normal");
+});
+
+test("same-day extra tasks consume previously overachieved minutes", () => {
+  const beforeExtraTask = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 0,
+    completionMinutes: 30,
+  });
+  assert.equal(beforeExtraTask.dailyPendingMinutes, 0);
+  assert.equal(beforeExtraTask.overachievedMinutes, 10);
+
+  const afterExtraTask = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 15,
+    completionMinutes: 30,
+  });
+  assert.equal(afterExtraTask.extraCompletedMinutes, 10);
+  assert.equal(afterExtraTask.extraPendingMinutes, 5);
+  assert.equal(afterExtraTask.overachievedMinutes, 0);
+});
+
+test("using a rest day completes today's daily task without consuming extra exercise", () => {
+  const progress = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 10,
+    completionMinutes: 5,
+    restDayUsed: true,
+  });
+
+  assert.equal(progress.dailyCompletedMinutes, 20);
+  assert.equal(progress.dailyPendingMinutes, 0);
+  assert.equal(progress.extraCompletedMinutes, 5);
+  assert.equal(progress.extraPendingMinutes, 5);
+  assert.equal(progress.overachievedMinutes, 0);
+  assert.equal(progress.bowlLevel, "normal");
+});
+
+test("extra tasks added after a rest day remain required", () => {
+  const progress = calculateTodayProgress({
+    dailyMinutes: 20,
+    extraMinutes: 10,
+    completionMinutes: 0,
+    restDayUsed: true,
+  });
+
+  assert.equal(progress.dailyPendingMinutes, 0);
+  assert.equal(progress.extraPendingMinutes, 10);
+  assert.equal(progress.foodRatio, 2 / 3);
+  assert.equal(progress.bowlLevel, "normal");
+});
+
+test("dashboard reads only today's tasks and completions plus this month's rest days", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 40, monthly_rest_days: 3 },
+      { user_id: OTHER_USER_ID, daily_minutes: 90, monthly_rest_days: 9 },
+    ],
+    exercise_daily_goal_changes: [
+      { user_id: USER_ID, effective_date: "2026-08-03", daily_minutes: 20 },
+      { user_id: USER_ID, effective_date: "2026-08-04", daily_minutes: 40 },
+      { user_id: OTHER_USER_ID, effective_date: "2026-08-03", daily_minutes: 90 },
+    ],
+    exercise_completion_events: [
+      { user_id: USER_ID, completion_date: "2026-08-01", minutes: 20 },
+      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 8 },
+      { user_id: OTHER_USER_ID, completion_date: "2026-08-03", minutes: 90 },
+    ],
+    exercise_daily_extra_tasks: [
+      { user_id: USER_ID, task_date: "2026-08-02", minutes: 30 },
+      { user_id: USER_ID, task_date: "2026-08-03", minutes: 10 },
+      { user_id: OTHER_USER_ID, task_date: "2026-08-03", minutes: 90 },
+    ],
+    exercise_daily_rest_days: [
+      { user_id: USER_ID, rest_date: "2026-07-31" },
+      { user_id: USER_ID, rest_date: "2026-08-02" },
+      { user_id: OTHER_USER_ID, rest_date: "2026-08-03" },
+    ],
+  });
+
+  const dashboard = await getExerciseDashboard(supabase, USER_ID, AUGUST_THIRD_CHINA);
+
+  assert.deepEqual(dashboard.profile, {
+    daily_minutes: 40,
+    monthly_rest_days: 3,
+  });
+  assert.deepEqual(dashboard.today, {
+    date: "2026-08-03",
+    completed: false,
+    daily_minutes: 20,
+    daily_completed_minutes: 8,
+    daily_pending_minutes: 12,
+    extra_minutes: 10,
+    extra_completed_minutes: 0,
+    extra_pending_minutes: 10,
+    recorded_minutes: 8,
+    overachieved_minutes: 0,
+    completed_minutes: 8,
+    target_minutes: 30,
+  });
   assert.deepEqual(dashboard.rest_days, {
-    used: 0,
-    total: 4,
-    remaining: 4,
+    used: 1,
+    total: 3,
+    remaining: 2,
     used_today: false,
   });
-  for (const entry of scopedTables) {
+  assert.equal(dashboard.cat.bowl_level, "low");
+  assert.equal(supabase.reads.length, 5);
+  for (const read of supabase.reads) {
     assert.ok(
-      entry.filters.some(([field, value]) => field === "user_id" && value === USER_ID),
-      `${entry.table} must be filtered by the authenticated user`,
+      read.filters.some(([operator, field, value]) =>
+        operator === "eq" && field === "user_id" && value === USER_ID
+      ),
+      `${read.table} must be filtered with the authenticated user`,
     );
   }
 });
 
-test("manual rest-day migration tracks daily use and converts it into feeding progress", async () => {
+test("daily goal settings migration applies new goals from the next day", async () => {
   const migration = await readFile(
     new URL(
-      "../supabase/migrations/202607290001_exercise_manual_rest_days.sql",
+      "../supabase/migrations/202608030002_exercise_next_day_settings.sql",
       import.meta.url,
     ),
     "utf8",
   );
 
-  assert.match(migration, /rest_days_total integer not null default 0/i);
-  assert.match(migration, /rest_days_used integer not null default 0/i);
-  assert.match(migration, /create table if not exists public\.exercise_rest_day_events/i);
+  assert.match(migration, /create table if not exists public\.exercise_daily_goal_changes/i);
+  assert.match(migration, /effective_date date not null/i);
+  assert.match(migration, /create or replace function public\.save_exercise_profile_for_next_day/i);
+  assert.match(migration, /p_effective_date <= p_current_date/i);
+});
+
+test("daily exercise migration stores extras and rest days without month tasks", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608030001_exercise_daily_tasks.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(migration, /create table if not exists public\.exercise_daily_extra_tasks/i);
+  assert.match(migration, /task_date date not null/i);
+  assert.match(migration, /create table if not exists public\.exercise_daily_rest_days/i);
   assert.match(migration, /unique \(user_id, rest_date\)/i);
-  assert.match(migration, /create or replace function public\.consume_exercise_rest_day/i);
-  assert.match(migration, /set rest_days_used = rest_days_used \+ 1/i);
-  assert.match(migration, /available_minutes := public\.allocate_exercise_minutes/i);
-  assert.match(
-    migration,
-    /claim_exercise_month\([\s\S]*?p_rest_days_total integer/i,
-  );
-});
-
-test("rolling-credit migration records completions and carries surplus forward", async () => {
-  const migration = await readFile(
-    new URL("../supabase/migrations/202607270003_exercise_rolling_credit.sql", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(migration, /credit_minutes integer not null default 0/i);
-  assert.match(migration, /create table if not exists public\.exercise_completion_events/i);
-  assert.match(migration, /create or replace function public\.complete_exercise_tasks/i);
-  assert.match(migration, /available_minutes := public\.allocate_exercise_minutes/i);
-  assert.match(migration, /set credit_minutes = available_minutes/i);
-  assert.match(migration, /order by month_start, created_at[\s\S]*?for update/i);
-});
-
-test("exercise migration enforces per-user rows and service-role-only mutations", async () => {
-  const migration = await readFile(
-    new URL("../supabase/migrations/202607270001_exercise_checkins.sql", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(migration, /exercise_profiles[\s\S]*?user_id uuid primary key/i);
-  assert.match(migration, /unique \(user_id, month_start\)/i);
-  assert.match(migration, /unique \(user_id, completion_date\)/i);
-  assert.match(migration, /revoke all on public\.exercise_months from anon, authenticated/i);
-  assert.match(migration, /grant execute on function public\.complete_exercise_daily[\s\S]*?service_role/i);
-});
-
-test("completion bucket migration preserves totals and separates daily from extra work", async () => {
-  const migration = await readFile(
-    new URL("../supabase/migrations/202607270002_exercise_completion_buckets.sql", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(migration, /base_completed_minutes integer not null default 0/i);
-  assert.match(migration, /extra_completed_minutes integer not null default 0/i);
-  assert.match(
-    migration,
-    /completed_minutes = base_completed_minutes \+ extra_completed_minutes/i,
-  );
-  assert.match(
-    migration,
-    /base_completed_minutes = base_completed_minutes \+ actual_minutes/i,
-  );
-  assert.match(
-    migration,
-    /extra_completed_minutes = extra_completed_minutes \+ extra_actual/i,
-  );
-});
-
-test("exercise reset migration clears only the user's state and preserves settings", async () => {
-  const migration = await readFile(
-    new URL("../supabase/migrations/202607280001_exercise_reset.sql", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(migration, /create or replace function public\.reset_exercise_state/i);
-  assert.match(migration, /delete from public\.exercise_completion_events[\s\S]*?where user_id = p_user_id/i);
-  assert.match(migration, /delete from public\.exercise_daily_completions[\s\S]*?where user_id = p_user_id/i);
-  assert.match(migration, /delete from public\.exercise_months[\s\S]*?where user_id = p_user_id/i);
-  assert.match(migration, /update public\.exercise_profiles[\s\S]*?set credit_minutes = 0[\s\S]*?where user_id = p_user_id/i);
-  assert.doesNotMatch(migration, /delete from public\.exercise_profiles/i);
-  assert.match(migration, /grant execute on function public\.reset_exercise_state\(uuid\)[\s\S]*?to service_role/i);
+  assert.match(migration, /create or replace function public\.add_exercise_daily_extra_task/i);
+  assert.match(migration, /create or replace function public\.record_exercise_daily_completion/i);
+  assert.match(migration, /create or replace function public\.use_exercise_daily_rest_day/i);
+  assert.match(migration, /create or replace function public\.reset_exercise_daily_state/i);
 });

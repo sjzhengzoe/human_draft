@@ -6,17 +6,11 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <view class="intro-card">
-    <view class="intro-card__eyebrow">EXERCISE PLAN</view>
-    <view class="intro-card__title">设置适合你的节奏</view>
-    <view class="intro-card__text">设置只影响之后领取的本月任务；已经领取的任务总量不会被重新计算。</view>
-  </view>
-
+  <view class="section-title">目标设置</view>
   <view class="form-card">
     <view class="field">
       <view class="field__main">
         <view class="field__label">每日运动分钟数</view>
-        <view class="field__hint">完成任务时优先抵扣今日待完成分钟数</view>
       </view>
       <view class="number-input">
         <input type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
@@ -27,19 +21,12 @@
     <view class="field">
       <view class="field__main">
         <view class="field__label">每月休息天数</view>
-        <view class="field__hint">领取后可在需要休息的当天手动使用</view>
       </view>
       <view class="number-input">
         <input type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
         <text>天</text>
       </view>
     </view>
-  </view>
-
-  <view class="preview-card">
-    <view class="preview-card__label">按当前设置，本月现在领取</view>
-    <view class="preview-card__value">{{previewMinutes}}<text>分钟</text></view>
-    <view class="preview-card__desc">剩余 {{calendarDays}} 天均计入任务，可手动使用 {{restDays}} 个休息日</view>
   </view>
 
   <button
@@ -49,16 +36,28 @@
     bindtap="handleSave"
   >保存设置</button>
 
+  <view class="section-title section-title--data">数据管理</view>
   <view class="reset-card">
     <view class="reset-card__main">
-      <view class="reset-card__title">重置运动状态</view>
-      <view class="reset-card__desc">清空任务、完成记录和跨月余额，保留当前运动设置。</view>
+      <view class="reset-card__title">清空全部运动历史</view>
+      <view class="reset-card__desc">清空所有加餐、运动和休息日记录，保留当前运动设置。</view>
     </view>
     <button
       class="reset-button"
       loading="{{resetting}}"
       disabled="{{saving || resetting}}"
       bindtap="handleReset"
-    >重置</button>
+    >清空</button>
   </view>
+
+  <app-dialog
+    wx:if="{{resetConfirmVisible}}"
+    visible="{{true}}"
+    title="清空全部运动历史"
+    content="将永久清空所有加餐任务、运动记录和休息日记录。每日运动分钟数与每月休息天数会保留。"
+    cancel-text="取消"
+    confirm-text="确认清空"
+    bindcancel="handleResetCancel"
+    bindconfirm="handleResetConfirm"
+  />
 </view>

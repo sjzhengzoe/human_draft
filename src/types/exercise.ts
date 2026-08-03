@@ -5,31 +5,20 @@ export type ExerciseDashboard = {
   profile: {
     daily_minutes: number
     monthly_rest_days: number
-    credit_minutes: number
-  }
-  month: {
-    month_start: string
-    claimed: boolean
-    claimed_at: string | null
-    baseTaskMinutes: number
-    extraTaskMinutes: number
-    baseCompletedMinutes: number
-    extraCompletedMinutes: number
-    completedMinutes: number
-    totalMinutes: number
-    remainingMinutes: number
   }
   today: {
     date: string
     completed: boolean
-    pending_minutes: number
+    daily_minutes: number
+    daily_completed_minutes: number
+    daily_pending_minutes: number
+    extra_minutes: number
+    extra_completed_minutes: number
     extra_pending_minutes: number
-  }
-  claim_preview: {
-    minutes: number
-    calendar_days: number
-    exercise_days: number
-    rest_days: number
+    recorded_minutes: number
+    overachieved_minutes: number
+    completed_minutes: number
+    target_minutes: number
   }
   rest_days: {
     used: number

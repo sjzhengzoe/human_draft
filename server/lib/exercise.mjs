@@ -33,256 +33,60 @@ function dateString(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function utcDate(value) {
-  return new Date(`${value}T00:00:00.000Z`);
-}
-
-function daysBetween(from, to) {
-  return Math.round((utcDate(to).getTime() - utcDate(from).getTime()) / 86_400_000);
-}
-
 function monthContext(now = new Date()) {
   const { year, month, day } = datePartsInChina(now);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const today = dateString(year, month, day);
   return {
-    today,
+    today: dateString(year, month, day),
     monthStart: dateString(year, month, 1),
     monthEnd: dateString(year, month, daysInMonth),
-    daysInMonth,
-    remainingDays: daysInMonth - day + 1,
   };
 }
 
-export function calculateMonthlyClaim({
-  dailyMinutes,
-  monthlyRestDays,
-  now = new Date(),
-}) {
-  const context = monthContext(now);
-  const proratedRestDays = Math.round(
-    (monthlyRestDays * context.remainingDays) / context.daysInMonth,
-  );
-  const availableRestDays = monthlyRestDays === 0
-    ? 0
-    : Math.min(context.remainingDays, Math.max(1, proratedRestDays));
-  const plannedExerciseDays = context.remainingDays;
-  return {
-    ...context,
-    availableRestDays,
-    plannedExerciseDays,
-    taskMinutes: plannedExerciseDays * dailyMinutes,
-  };
+function sumMinutes(rows = []) {
+  return rows.reduce((total, row) => total + Number(row.minutes || 0), 0);
 }
 
-export function calculateCatState({
-  month,
+export function calculateTodayProgress({
   dailyMinutes,
-  today,
+  extraMinutes = 0,
+  completionMinutes = 0,
+  restDayUsed = false,
 }) {
-  const baseMinutes = Number(month?.base_task_minutes || 0);
-  const extraMinutes = Number(month?.extra_task_minutes || 0);
-  const completedMinutes = Number(month?.completed_minutes || 0);
-  const totalMinutes = baseMinutes + extraMinutes;
-  const remainingMinutes = Math.max(0, totalMinutes - completedMinutes);
-
-  if (totalMinutes === 0) {
-    return {
-      foodRatio: 0,
-      bowlLevel: "empty",
-      bowlLabel: "没有",
-      emotion: "pitiful",
-      emotionLabel: "可可怜怜",
-      statusText: "领取任务后，它们会等你投喂",
-      futureBaseMinutes: 0,
-      paceGapMinutes: 0,
-    };
-  }
-
-  const claimDate = month.claim_date || today;
-  const claimEndDate = month.claim_end_date || today;
-  const claimWindowDays = Math.max(1, daysBetween(claimDate, claimEndDate) + 1);
-  const futureDays = Math.max(0, daysBetween(today, claimEndDate));
-  const futureBaseMinutes = Math.round(
-    baseMinutes * Math.min(1, futureDays / claimWindowDays),
-  );
-  const dueMinutes = Math.min(
-    totalMinutes,
-    Math.max(0, baseMinutes - futureBaseMinutes) + extraMinutes,
-  );
-  const paceGapMinutes = Math.max(0, dueMinutes - completedMinutes);
-  const foodRatio = remainingMinutes === 0
+  const targetDailyMinutes = Math.max(0, Number(dailyMinutes || 0));
+  const targetExtraMinutes = Math.max(0, Number(extraMinutes || 0));
+  const recordedMinutes = Math.max(0, Number(completionMinutes || 0));
+  const dailyCompletedMinutes = restDayUsed
+    ? targetDailyMinutes
+    : Math.min(targetDailyMinutes, recordedMinutes);
+  const minutesAvailableForExtra = restDayUsed
+    ? recordedMinutes
+    : Math.max(0, recordedMinutes - dailyCompletedMinutes);
+  const extraCompletedMinutes = Math.min(targetExtraMinutes, minutesAvailableForExtra);
+  const appliedRecordedMinutes = restDayUsed
+    ? extraCompletedMinutes
+    : dailyCompletedMinutes + extraCompletedMinutes;
+  const overachievedMinutes = Math.max(0, recordedMinutes - appliedRecordedMinutes);
+  const dailyPendingMinutes = Math.max(0, targetDailyMinutes - dailyCompletedMinutes);
+  const extraPendingMinutes = Math.max(0, targetExtraMinutes - extraCompletedMinutes);
+  const completedMinutes = dailyCompletedMinutes + extraCompletedMinutes;
+  const targetMinutes = targetDailyMinutes + targetExtraMinutes;
+  const foodRatio = targetMinutes === 0
     ? 1
-    : dueMinutes === 0
-      ? completedMinutes > 0 ? 1 : 0
-      : Math.max(0, Math.min(1, completedMinutes / dueMinutes));
-
-  if (foodRatio >= 0.9) {
-    return {
-      foodRatio,
-      bowlLevel: "full",
-      bowlLabel: "很满",
-      emotion: "happy",
-      emotionLabel: "高兴",
-      statusText: paceGapMinutes === 0 ? "今天的进度很棒，它们吃饱啦" : "进度充足，它们很满足",
-      futureBaseMinutes,
-      paceGapMinutes,
-    };
-  }
-  if (foodRatio >= 0.42) {
-    return {
-      foodRatio,
-      bowlLevel: "normal",
-      bowlLabel: "一般",
-      emotion: "neutral",
-      emotionLabel: "一般",
-      statusText: "完成今天的任务，食盆就会变满",
-      futureBaseMinutes,
-      paceGapMinutes,
-    };
-  }
-  if (foodRatio > 0.05) {
-    return {
-      foodRatio,
-      bowlLevel: "low",
-      bowlLabel: "偏少",
-      emotion: "unhappy",
-      emotionLabel: "不高兴",
-      statusText: "进度有点落后，它们在等你运动",
-      futureBaseMinutes,
-      paceGapMinutes,
-    };
-  }
-  return {
-    foodRatio: 0,
-    bowlLevel: "empty",
-    bowlLabel: "没有",
-    emotion: "pitiful",
-    emotionLabel: "可可怜怜",
-    statusText: "食盆空了，今天动一动吧",
-    futureBaseMinutes,
-    paceGapMinutes,
-  };
-}
-
-function monthTotals(month) {
-  const baseTaskMinutes = Number(month?.base_task_minutes || 0);
-  const extraTaskMinutes = Number(month?.extra_task_minutes || 0);
-  const storedCompletedMinutes = Number(month?.completed_minutes || 0);
-  const baseCompletedMinutes = Number(
-    month?.base_completed_minutes
-      ?? Math.min(baseTaskMinutes, storedCompletedMinutes),
-  );
-  const extraCompletedMinutes = Number(
-    month?.extra_completed_minutes
-      ?? Math.max(0, storedCompletedMinutes - baseCompletedMinutes),
-  );
-  const completedMinutes = baseCompletedMinutes + extraCompletedMinutes;
-  return {
-    baseTaskMinutes,
-    extraTaskMinutes,
-    baseCompletedMinutes,
-    extraCompletedMinutes,
-    completedMinutes,
-    totalMinutes: baseTaskMinutes + extraTaskMinutes,
-    remainingMinutes: baseTaskMinutes + extraTaskMinutes - completedMinutes,
-  };
-}
-
-export function calculateBaseDueMinutes(month, today) {
-  const baseMinutes = Number(month?.base_task_minutes || 0);
-  if (baseMinutes === 0 || !month?.claim_date) return 0;
-  const claimDate = month.claim_date;
-  const claimEndDate = month.claim_end_date || claimDate;
-  if (today < claimDate) return 0;
-  if (today >= claimEndDate) return baseMinutes;
-  const claimWindowDays = Math.max(1, daysBetween(claimDate, claimEndDate) + 1);
-  const futureDays = Math.max(0, daysBetween(today, claimEndDate));
-  return Math.max(
-    0,
-    baseMinutes - Math.round(baseMinutes * Math.min(1, futureDays / claimWindowDays)),
-  );
-}
-
-export function calculatePendingBreakdown({
-  baseTaskMinutes,
-  extraTaskMinutes,
-  baseCompletedMinutes,
-  extraCompletedMinutes,
-  futureBaseMinutes,
-  creditMinutes = 0,
-}) {
-  const baseDueThroughToday = Math.max(0, baseTaskMinutes - futureBaseMinutes);
-  const basePending = Math.max(0, baseDueThroughToday - baseCompletedMinutes);
-  const creditAfterBase = Math.max(0, creditMinutes - basePending);
-  return {
-    pendingMinutes: Math.max(0, basePending - creditMinutes),
-    extraPendingMinutes: Math.max(
-      0,
-      extraTaskMinutes - extraCompletedMinutes - creditAfterBase,
-    ),
-  };
-}
-
-export function calculateExerciseRollup({
-  months = [],
-  creditMinutes = 0,
-  today,
-}) {
-  const totals = months.reduce((result, month) => {
-    const item = monthTotals(month);
-    const baseDueMinutes = calculateBaseDueMinutes(month, today);
-    result.baseTaskMinutes += item.baseTaskMinutes;
-    result.extraTaskMinutes += item.extraTaskMinutes;
-    result.baseCompletedMinutes += item.baseCompletedMinutes;
-    result.extraCompletedMinutes += item.extraCompletedMinutes;
-    result.completedMinutes += item.completedMinutes;
-    result.basePendingMinutes += Math.max(
-      0,
-      baseDueMinutes - item.baseCompletedMinutes,
-    );
-    result.extraPendingMinutes += Math.max(
-      0,
-      item.extraTaskMinutes - item.extraCompletedMinutes,
-    );
-    result.dueMinutes += baseDueMinutes + item.extraTaskMinutes;
-    return result;
-  }, {
-    baseTaskMinutes: 0,
-    extraTaskMinutes: 0,
-    baseCompletedMinutes: 0,
-    extraCompletedMinutes: 0,
-    completedMinutes: 0,
-    basePendingMinutes: 0,
-    extraPendingMinutes: 0,
-    dueMinutes: 0,
-  });
-  const totalMinutes = totals.baseTaskMinutes + totals.extraTaskMinutes;
-  const creditAfterBase = Math.max(0, creditMinutes - totals.basePendingMinutes);
-  const pendingMinutes = Math.max(0, totals.basePendingMinutes - creditMinutes);
-  const extraPendingMinutes = Math.max(
-    0,
-    totals.extraPendingMinutes - creditAfterBase,
-  );
-  const effectiveCompletedMinutes = totals.completedMinutes + creditMinutes;
-  const foodRatio = totals.dueMinutes === 0
-    ? effectiveCompletedMinutes > 0 ? 1 : 0
-    : Math.max(0, Math.min(1, effectiveCompletedMinutes / totals.dueMinutes));
+    : Math.max(0, Math.min(1, completedMinutes / targetMinutes));
 
   let bowlLevel = "empty";
   let bowlLabel = "没有";
   let emotion = "pitiful";
   let emotionLabel = "可可怜怜";
-  let statusText = totalMinutes === 0
-    ? "领取任务后，它们会等你投喂"
-    : "食盆空了，今天动一动吧";
-  if (foodRatio >= 0.9) {
+  let statusText = "食盆空了，今天动一动吧";
+  if (foodRatio >= 1) {
     bowlLevel = "full";
     bowlLabel = "很满";
     emotion = "happy";
     emotionLabel = "高兴";
-    statusText = "今天的进度很棒，它们吃饱啦";
-  } else if (foodRatio >= 0.42) {
+    statusText = "今天的任务完成啦，它们吃饱了";
+  } else if (foodRatio >= 0.5) {
     bowlLevel = "normal";
     bowlLabel = "一般";
     emotion = "neutral";
@@ -293,48 +97,69 @@ export function calculateExerciseRollup({
     bowlLabel = "偏少";
     emotion = "unhappy";
     emotionLabel = "不高兴";
-    statusText = "进度有点落后，它们在等你运动";
+    statusText = "今天刚开始，它们还在等你运动";
   }
 
   return {
-    ...totals,
-    totalMinutes,
-    creditMinutes,
-    remainingMinutes: totalMinutes - totals.completedMinutes - creditMinutes,
-    pendingMinutes,
+    dailyMinutes: targetDailyMinutes,
+    dailyCompletedMinutes,
+    dailyPendingMinutes,
+    extraMinutes: targetExtraMinutes,
+    extraCompletedMinutes,
     extraPendingMinutes,
+    recordedMinutes,
+    overachievedMinutes,
+    completedMinutes,
+    targetMinutes,
     foodRatio,
     bowlLevel,
     bowlLabel,
     emotion,
     emotionLabel,
     statusText,
-    paceGapMinutes: pendingMinutes + extraPendingMinutes,
   };
 }
 
 export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   const context = monthContext(now);
-  const [profileResult, monthsResult, restDayResult] = await Promise.all([
+  const [profileResult, goalResult, completionResult, extraResult, restDayResult] = await Promise.all([
     supabase
       .from("exercise_profiles")
-      .select("*")
+      .select("daily_minutes,monthly_rest_days")
       .eq("user_id", userId)
       .maybeSingle(),
     supabase
-      .from("exercise_months")
-      .select("*")
+      .from("exercise_daily_goal_changes")
+      .select("daily_minutes,effective_date")
       .eq("user_id", userId)
-      .order("month_start", { ascending: true }),
+      .lte("effective_date", context.today)
+      .order("effective_date", { ascending: true }),
     supabase
-      .from("exercise_rest_day_events")
-      .select("id")
+      .from("exercise_completion_events")
+      .select("minutes")
       .eq("user_id", userId)
-      .eq("rest_date", context.today)
-      .maybeSingle(),
+      .eq("completion_date", context.today)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("exercise_daily_extra_tasks")
+      .select("minutes")
+      .eq("user_id", userId)
+      .eq("task_date", context.today)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("exercise_daily_rest_days")
+      .select("rest_date")
+      .eq("user_id", userId)
+      .gte("rest_date", context.monthStart)
+      .lte("rest_date", context.monthEnd)
+      .order("rest_date", { ascending: true }),
   ]);
   throwSupabaseError(profileResult.error, "读取运动设置失败。");
-  throwSupabaseError(monthsResult.error, "读取运动任务失败。");
+  if (goalResult.error && !["42P01", "PGRST205"].includes(goalResult.error.code)) {
+    throwSupabaseError(goalResult.error, "读取今日运动目标失败。");
+  }
+  throwSupabaseError(completionResult.error, "读取今日完成记录失败。");
+  throwSupabaseError(extraResult.error, "读取今日加餐任务失败。");
   throwSupabaseError(restDayResult.error, "读取休息日状态失败。");
 
   const profile = {
@@ -342,67 +167,52 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
     monthly_rest_days: Number(
       profileResult.data?.monthly_rest_days ?? DEFAULT_MONTHLY_REST_DAYS,
     ),
-    credit_minutes: Number(profileResult.data?.credit_minutes || 0),
   };
-  const claimPreview = calculateMonthlyClaim({
-    dailyMinutes: profile.daily_minutes,
-    monthlyRestDays: profile.monthly_rest_days,
-    now,
-  });
-  const months = monthsResult.data || [];
-  const month = months.find((item) => item.month_start === context.monthStart);
-  const rollup = calculateExerciseRollup({
-    months,
-    creditMinutes: profile.credit_minutes,
-    today: context.today,
-  });
-  const restDaysUsed = Number(month?.rest_days_used || 0);
-  const restDaysTotal = Number(
-    month?.claimed_at
-      ? month?.rest_days_total || 0
-      : claimPreview.availableRestDays,
+  const effectiveGoals = goalResult.data || [];
+  const currentDailyMinutes = Number(
+    effectiveGoals.at(-1)?.daily_minutes || profile.daily_minutes,
   );
+  const restDays = restDayResult.data || [];
+  const restDayUsedToday = restDays.some((item) => item.rest_date === context.today);
+  const progress = calculateTodayProgress({
+    dailyMinutes: currentDailyMinutes,
+    extraMinutes: sumMinutes(extraResult.data),
+    completionMinutes: sumMinutes(completionResult.data),
+    restDayUsed: restDayUsedToday,
+  });
+  const restDaysUsed = restDays.length;
 
   return {
     profile,
-    month: {
-      month_start: context.monthStart,
-      claimed: Boolean(month?.claimed_at),
-      claimed_at: month?.claimed_at || null,
-      baseTaskMinutes: rollup.baseTaskMinutes,
-      extraTaskMinutes: rollup.extraTaskMinutes,
-      baseCompletedMinutes: rollup.baseCompletedMinutes,
-      extraCompletedMinutes: rollup.extraCompletedMinutes,
-      completedMinutes: rollup.completedMinutes,
-      totalMinutes: rollup.totalMinutes,
-      remainingMinutes: rollup.remainingMinutes,
-    },
     today: {
       date: context.today,
-      completed: rollup.pendingMinutes === 0,
-      pending_minutes: rollup.pendingMinutes,
-      extra_pending_minutes: rollup.extraPendingMinutes,
-    },
-    claim_preview: {
-      minutes: claimPreview.taskMinutes,
-      calendar_days: claimPreview.remainingDays,
-      exercise_days: claimPreview.plannedExerciseDays,
-      rest_days: claimPreview.availableRestDays,
+      completed: progress.dailyPendingMinutes === 0
+        && progress.extraPendingMinutes === 0,
+      daily_minutes: progress.dailyMinutes,
+      daily_completed_minutes: progress.dailyCompletedMinutes,
+      daily_pending_minutes: progress.dailyPendingMinutes,
+      extra_minutes: progress.extraMinutes,
+      extra_completed_minutes: progress.extraCompletedMinutes,
+      extra_pending_minutes: progress.extraPendingMinutes,
+      recorded_minutes: progress.recordedMinutes,
+      overachieved_minutes: progress.overachievedMinutes,
+      completed_minutes: progress.completedMinutes,
+      target_minutes: progress.targetMinutes,
     },
     rest_days: {
       used: restDaysUsed,
-      total: restDaysTotal,
-      remaining: Math.max(0, restDaysTotal - restDaysUsed),
-      used_today: Boolean(restDayResult.data),
+      total: profile.monthly_rest_days,
+      remaining: Math.max(0, profile.monthly_rest_days - restDaysUsed),
+      used_today: restDayUsedToday,
     },
     cat: {
-      food_ratio: Number(rollup.foodRatio.toFixed(3)),
-      bowl_level: rollup.bowlLevel,
-      bowl_label: rollup.bowlLabel,
-      emotion: rollup.emotion,
-      emotion_label: rollup.emotionLabel,
-      status_text: rollup.statusText,
-      pace_gap_minutes: rollup.paceGapMinutes,
+      food_ratio: Number(progress.foodRatio.toFixed(3)),
+      bowl_level: progress.bowlLevel,
+      bowl_label: progress.bowlLabel,
+      emotion: progress.emotion,
+      emotion_label: progress.emotionLabel,
+      status_text: progress.statusText,
+      pace_gap_minutes: progress.dailyPendingMinutes + progress.extraPendingMinutes,
     },
   };
 }
@@ -410,61 +220,61 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
 export async function saveExerciseSettings(supabase, userId, body, now = new Date()) {
   const dailyMinutes = integerValue(body.daily_minutes, "每日运动分钟数", 1, 300);
   const monthlyRestDays = integerValue(body.monthly_rest_days, "每月休息天数", 0, 28);
-  const { error } = await supabase.rpc("save_exercise_profile", {
+  const context = monthContext(now);
+  const tomorrow = new Date(Date.UTC(
+    Number(context.today.slice(0, 4)),
+    Number(context.today.slice(5, 7)) - 1,
+    Number(context.today.slice(8, 10)) + 1,
+  ));
+  const effectiveDate = dateString(
+    tomorrow.getUTCFullYear(),
+    tomorrow.getUTCMonth() + 1,
+    tomorrow.getUTCDate(),
+  );
+  const { error } = await supabase.rpc("save_exercise_profile_for_next_day", {
     p_user_id: userId,
     p_daily_minutes: dailyMinutes,
     p_monthly_rest_days: monthlyRestDays,
+    p_current_date: context.today,
+    p_effective_date: effectiveDate,
   });
-  throwSupabaseError(error, "保存运动设置失败。");
+  throwSupabaseError(error, "保存运动设置失败。", {
+    PGRST202: {
+      statusCode: 503,
+      code: "EXERCISE_SETTINGS_MIGRATION_REQUIRED",
+      message: "运动设置升级尚未完成，请稍后再试。",
+    },
+    P0005: {
+      statusCode: 409,
+      code: "EXERCISE_REST_DAYS_BELOW_USED",
+      message: "每月休息天数不能少于本月已使用天数。",
+    },
+  });
   return getExerciseDashboard(supabase, userId, now);
 }
 
 export async function resetExerciseState(supabase, userId, now = new Date()) {
-  const { error } = await supabase.rpc("reset_exercise_state", {
+  const { error } = await supabase.rpc("reset_exercise_daily_state", {
     p_user_id: userId,
   });
   throwSupabaseError(error, "重置运动状态失败。");
   return getExerciseDashboard(supabase, userId, now);
 }
 
-export async function claimExerciseMonth(supabase, userId, now = new Date()) {
-  const dashboard = await getExerciseDashboard(supabase, userId, now);
-  const claim = calculateMonthlyClaim({
-    dailyMinutes: dashboard.profile.daily_minutes,
-    monthlyRestDays: dashboard.profile.monthly_rest_days,
-    now,
-  });
-  const { error } = await supabase.rpc("claim_exercise_month", {
-    p_user_id: userId,
-    p_month_start: claim.monthStart,
-    p_claim_date: claim.today,
-    p_claim_end_date: claim.monthEnd,
-    p_base_task_minutes: claim.taskMinutes,
-    p_rest_days_total: claim.availableRestDays,
-  });
-  throwSupabaseError(error, "领取本月任务失败。", {
-    P0001: {
-      statusCode: 409,
-      code: "EXERCISE_MONTH_ALREADY_CLAIMED",
-      message: "本月任务已经领取过了。",
-    },
-  });
-  return getExerciseDashboard(supabase, userId, now);
-}
-
 export async function consumeExerciseRestDay(supabase, userId, now = new Date()) {
+  const dashboard = await getExerciseDashboard(supabase, userId, now);
+  assertCondition(
+    dashboard.today.daily_pending_minutes > 0,
+    409,
+    "EXERCISE_DAILY_ALREADY_COMPLETED",
+    "今日日常任务已经完成。",
+  );
   const context = monthContext(now);
-  const { error } = await supabase.rpc("consume_exercise_rest_day", {
+  const { error } = await supabase.rpc("use_exercise_daily_rest_day", {
     p_user_id: userId,
-    p_month_start: context.monthStart,
     p_rest_date: context.today,
   });
   throwSupabaseError(error, "使用休息日失败。", {
-    P0002: {
-      statusCode: 409,
-      code: "EXERCISE_MONTH_NOT_CLAIMED",
-      message: "请先领取本月任务。",
-    },
     P0003: {
       statusCode: 409,
       code: "EXERCISE_REST_DAY_ALREADY_USED_TODAY",
@@ -482,24 +292,23 @@ export async function consumeExerciseRestDay(supabase, userId, now = new Date())
 export async function addExerciseTask(supabase, userId, body, now = new Date()) {
   const minutes = integerValue(body.minutes, "加餐任务分钟数", 1, 10_000);
   const context = monthContext(now);
-  const { error } = await supabase.rpc("add_exercise_task", {
+  const { error } = await supabase.rpc("add_exercise_daily_extra_task", {
     p_user_id: userId,
-    p_month_start: context.monthStart,
-    p_claim_end_date: context.monthEnd,
+    p_task_date: context.today,
     p_minutes: minutes,
   });
-  throwSupabaseError(error, "领取加餐任务失败。");
+  throwSupabaseError(error, "添加加餐任务失败。");
   return getExerciseDashboard(supabase, userId, now);
 }
 
 export async function completeExerciseTasks(supabase, userId, body, now = new Date()) {
   const minutes = integerValue(body.minutes, "完成分钟数", 1, 10_000);
   const context = monthContext(now);
-  const { error } = await supabase.rpc("complete_exercise_tasks", {
+  const { error } = await supabase.rpc("record_exercise_daily_completion", {
     p_user_id: userId,
     p_completion_date: context.today,
     p_minutes: minutes,
   });
-  throwSupabaseError(error, "记录完成任务失败。");
+  throwSupabaseError(error, "记录运动失败。");
   return getExerciseDashboard(supabase, userId, now);
 }
