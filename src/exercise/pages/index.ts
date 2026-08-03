@@ -4,6 +4,7 @@ import {
   getExerciseDashboard
 } from "../services/exercise"
 import type { ExerciseBowlLevel, ExerciseDashboard } from "../../types/exercise"
+import { getCurrentUser } from "../../services/auth"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -83,6 +84,12 @@ const PET_STATE_LABELS: Record<ExerciseBowlLevel, string> = {
 
 const CALENDAR_CAT_IMAGE = "/exercise/assets/calendar/happy-cat.png"
 const CALENDAR_DOG_IMAGE = "/exercise/assets/calendar/unhappy-dog.png"
+const EXERCISE_IMAGE_SELECTION_STORAGE_PREFIX = "EXERCISE_DAILY_IMAGES_V2"
+
+type ExerciseImageSelections = {
+  petImage: string
+  bowlImage: string
+}
 
 type ExerciseCalendarCell = {
   key: string
@@ -106,11 +113,45 @@ function restDayButtonState(cell: ExerciseCalendarCell, remaining: number) {
   return { disabled: false, text: "使用休息日权限" }
 }
 
-function pickRandomImage(images: readonly string[], currentImage = "") {
-  const candidates = images.length > 1
-    ? images.filter((image) => image !== currentImage)
-    : images
-  return candidates[Math.floor(Math.random() * candidates.length)]
+function pickRandomImage(images: readonly string[]) {
+  return images[Math.floor(Math.random() * images.length)]
+}
+
+function imageSelectionStorageKey(date: string) {
+  return `${EXERCISE_IMAGE_SELECTION_STORAGE_PREFIX}:${getCurrentUser()?.id || "local"}:${date}`
+}
+
+function getImagesForState(state: ExerciseBowlLevel, date: string) {
+  const storageKey = imageSelectionStorageKey(date)
+  try {
+    const stored = wx.getStorageSync(storageKey) as ExerciseImageSelections | undefined
+    if (
+      stored
+      && PET_IMAGES[state].includes(stored.petImage)
+      && BOWL_IMAGES[state].includes(stored.bowlImage)
+    ) {
+      return stored
+    }
+  } catch (_error) {
+    // 本地缓存不可用时仍可正常显示随机图片。
+  }
+
+  const selections: ExerciseImageSelections = {
+    petImage: pickRandomImage(PET_IMAGES[state]),
+    bowlImage: pickRandomImage(BOWL_IMAGES[state])
+  }
+  try {
+    wx.setStorageSync(storageKey, selections)
+  } catch (_error) {
+    // 缓存写入失败不影响运动数据和页面使用。
+  }
+  return selections
+}
+
+function shiftCalendarMonth(value: string, offset: number) {
+  const [year, month] = value.split("-").map(Number)
+  const shifted = new Date(Date.UTC(year, month - 1 + offset, 1))
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`
 }
 
 Page({
@@ -141,6 +182,14 @@ Page({
     calendarCatImage: CALENDAR_CAT_IMAGE,
     calendarDogImage: CALENDAR_DOG_IMAGE,
     calendarMonthLabel: "本月",
+    calendarMonthValue: "",
+    calendarPickerValue: "",
+    calendarPickerStart: "",
+    calendarPickerEnd: "",
+    calendarIsCurrent: true,
+    calendarCanGoPrevious: false,
+    calendarCanGoNext: false,
+    calendarLoading: false,
     calendarCells: [] as ExerciseCalendarCell[],
     minutesDialogVisible: false,
     minutesDialogTitle: "",
@@ -163,15 +212,20 @@ Page({
 
   applyDashboard(dashboard: ExerciseDashboard) {
     const bowlLevel = dashboard.cat.bowl_level
+    const stateImages = getImagesForState(bowlLevel, dashboard.today.date)
     const restDays = dashboard.rest_days
     const dailyPendingMinutes = dashboard.today.daily_pending_minutes
     const pendingTotal = dailyPendingMinutes
     const preferredRestDate = this.data.selectedRestDate || dashboard.today.date
-    const selectedDay = dashboard.month.days.find((item) => item.date === preferredRestDate)
-      || dashboard.month.days.find((item) => item.date === dashboard.today.date)
-      || dashboard.month.days[0]
-    const selectedRestDate = selectedDay.date
-    const selectedRestDayLabel = `${dashboard.month.month}月${selectedDay.day}日`
+    const selectedDay = dashboard.month.is_current
+      ? dashboard.month.days.find((item) => item.date === preferredRestDate)
+        || dashboard.month.days.find((item) => item.date === dashboard.today.date)
+        || dashboard.month.days[0]
+      : undefined
+    const selectedRestDate = selectedDay?.date || this.data.selectedRestDate || dashboard.today.date
+    const selectedRestDayLabel = selectedDay
+      ? `${dashboard.month.month}月${selectedDay.day}日`
+      : this.data.selectedRestDayLabel
     const calendarCells: ExerciseCalendarCell[] = [
       ...Array.from({ length: dashboard.month.first_weekday }, (_, index) => ({
         key: `blank-${index}`,
@@ -190,10 +244,10 @@ Page({
         restUsed: item.rest_used
       }))
     ]
-    const restButton = restDayButtonState(
-      calendarCells.find((item) => item.key === selectedRestDate)!,
-      restDays.remaining
-    )
+    const selectedCell = calendarCells.find((item) => item.key === selectedRestDate)
+    const restButton = selectedCell
+      ? restDayButtonState(selectedCell, restDays.remaining)
+      : { disabled: true, text: "使用休息日权限" }
     this.setData({
       todayPendingMinutes: dailyPendingMinutes,
       todayDailyTaskState: restDays.used_today
@@ -212,18 +266,30 @@ Page({
       completeButtonText: pendingTotal === 0 ? "记录额外运动" : "完成运动",
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: PET_STATE_LABELS[bowlLevel],
-      petImage: pickRandomImage(PET_IMAGES[bowlLevel], this.data.petImage),
-      bowlImage: pickRandomImage(BOWL_IMAGES[bowlLevel], this.data.bowlImage),
-      calendarMonthLabel: `${dashboard.month.month}月`,
+      petImage: stateImages.petImage,
+      bowlImage: stateImages.bowlImage,
+      calendarMonthLabel: `${dashboard.month.year}年${dashboard.month.month}月`,
+      calendarMonthValue: dashboard.month.value,
+      calendarPickerValue: `${dashboard.month.value}-01`,
+      calendarPickerStart: `${dashboard.month.min_month}-01`,
+      calendarPickerEnd: `${dashboard.month.max_month}-01`,
+      calendarIsCurrent: dashboard.month.is_current,
+      calendarCanGoPrevious: dashboard.month.value > dashboard.month.min_month,
+      calendarCanGoNext: dashboard.month.value < dashboard.month.max_month,
       calendarCells
     })
   },
 
-  async loadDashboard() {
+  async loadDashboard(month?: string) {
     const generation = beginAsyncPageRequest(this)
-    if (!this.data.hasLoaded) this.setData({ loading: true })
+    const requestedMonth = month ?? this.data.calendarMonthValue
+    if (!this.data.hasLoaded) {
+      this.setData({ loading: true })
+    } else {
+      this.setData({ calendarLoading: true })
+    }
     try {
-      const dashboard = await getExerciseDashboard()
+      const dashboard = await getExerciseDashboard(requestedMonth)
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.applyDashboard(dashboard)
     } catch (error) {
@@ -234,9 +300,26 @@ Page({
       })
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
-        this.setData({ loading: false, hasLoaded: true })
+        this.setData({ loading: false, hasLoaded: true, calendarLoading: false })
       }
     }
+  },
+
+  handlePreviousMonth() {
+    if (!this.data.calendarCanGoPrevious || this.data.calendarLoading || this.data.busy) return
+    this.loadDashboard(shiftCalendarMonth(this.data.calendarMonthValue, -1))
+  },
+
+  handleNextMonth() {
+    if (!this.data.calendarCanGoNext || this.data.calendarLoading || this.data.busy) return
+    this.loadDashboard(shiftCalendarMonth(this.data.calendarMonthValue, 1))
+  },
+
+  handleCalendarMonthChange(event: WechatMiniprogram.PickerChange) {
+    if (this.data.calendarLoading || this.data.busy) return
+    const month = String(event.detail.value || "").slice(0, 7)
+    if (!month || month === this.data.calendarMonthValue) return
+    this.loadDashboard(month)
   },
 
   handleSettings() {
@@ -245,7 +328,7 @@ Page({
   },
 
   handleCalendarDayTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.busy) return
+    if (this.data.busy || !this.data.calendarIsCurrent) return
     const date = String(event.currentTarget.dataset.date || "")
     const cell = this.data.calendarCells.find((item) => item.key === date)
     if (!cell || cell.state === "blank") return
@@ -332,9 +415,14 @@ Page({
     if (this.data.busy) return
     this.setData({ busy: true, busyAction: action })
     try {
+      const viewedMonth = this.data.calendarMonthValue
       const dashboard = await request()
       if (!isAsyncPageActive(this)) return
-      this.applyDashboard(dashboard)
+      const displayDashboard = viewedMonth && viewedMonth !== dashboard.month.value
+        ? await getExerciseDashboard(viewedMonth)
+        : dashboard
+      if (!isAsyncPageActive(this)) return
+      this.applyDashboard(displayDashboard)
       const resolvedMessage = typeof successMessage === "function"
         ? successMessage(dashboard)
         : successMessage

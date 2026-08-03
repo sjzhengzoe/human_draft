@@ -1,8 +1,11 @@
 import type { ExerciseDashboard } from "../../types/exercise"
 import { request } from "../../services/request"
 
-export function getExerciseDashboard(): Promise<ExerciseDashboard> {
-  return request<ExerciseDashboard>({ path: "/api/exercise" })
+export function getExerciseDashboard(month = ""): Promise<ExerciseDashboard> {
+  return request<ExerciseDashboard>({
+    path: "/api/exercise",
+    data: month ? { month } : undefined
+  })
 }
 
 export function saveExerciseSettings(input: {

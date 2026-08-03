@@ -7,6 +7,9 @@
 
 <view wx:else class="page page--with-navigation">
   <view class="pet-card">
+    <view class="settings-button pet-card__settings" role="button" aria-label="运动设置" bindtap="handleSettings">
+      <app-icon name="settings-2" size="24" />
+    </view>
     <view class="pet-stage">
       <view class="bowl-zone">
         <image class="bowl-image" src="{{bowlImage}}" mode="aspectFit" />
@@ -22,7 +25,34 @@
 
   <view class="month-overview-card">
     <view class="mini-calendar">
-      <view class="mini-calendar__title">{{calendarMonthLabel}}</view>
+      <view class="mini-calendar__toolbar">
+        <view
+          class="mini-calendar__arrow {{calendarCanGoPrevious ? '' : 'mini-calendar__arrow--disabled'}}"
+          role="button"
+          aria-label="上个月"
+          bindtap="handlePreviousMonth"
+        >‹</view>
+        <picker
+          mode="date"
+          fields="month"
+          value="{{calendarPickerValue}}"
+          start="{{calendarPickerStart}}"
+          end="{{calendarPickerEnd}}"
+          disabled="{{calendarLoading || busy}}"
+          bindchange="handleCalendarMonthChange"
+        >
+          <view class="mini-calendar__title">
+            <text>{{calendarMonthLabel}}</text>
+            <text class="mini-calendar__title-arrow">⌄</text>
+          </view>
+        </picker>
+        <view
+          class="mini-calendar__arrow {{calendarCanGoNext ? '' : 'mini-calendar__arrow--disabled'}}"
+          role="button"
+          aria-label="下个月"
+          bindtap="handleNextMonth"
+        >›</view>
+      </view>
       <view class="mini-calendar__weekdays">
         <text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text><text>日</text>
       </view>
@@ -56,7 +86,7 @@
       </view>
     </view>
 
-    <view class="calendar-actions">
+    <view wx:if="{{calendarIsCurrent}}" class="calendar-actions">
       <button
         class="calendar-rest-button {{restDayDisabled ? 'calendar-rest-button--disabled' : ''}}"
         disabled="{{restDayDisabled || busy}}"
@@ -72,19 +102,11 @@
   <view class="balance-card">
     <view class="balance-header">
       <view class="balance-heading">今日任务</view>
-      <view class="settings-button" role="button" aria-label="运动设置" bindtap="handleSettings">
-        <app-icon name="settings-2" size="24" />
+      <view wx:if="{{todayDailyTaskState === 'pending'}}" class="task-row__remaining">
+        <text class="task-row__hint">还需</text><text class="task-row__value">{{todayPendingMinutes}}</text><text class="task-row__unit">分钟</text>
       </view>
-    </view>
-    <view class="task-list">
-      <view class="task-row">
-        <text class="task-row__label">日常任务</text>
-        <view wx:if="{{todayDailyTaskState === 'pending'}}" class="task-row__remaining">
-          <text class="task-row__hint">还需</text><text class="task-row__value">{{todayPendingMinutes}}</text><text class="task-row__unit">分钟</text>
-        </view>
-        <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
-        <view wx:else class="task-row__status">已完成</view>
-      </view>
+      <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
+      <view wx:else class="task-row__status">已完成</view>
     </view>
     <view wx:if="{{todayOverachievedMinutes > 0}}" class="overachieved">
       今日超额完成 <text>+{{todayOverachievedMinutes}} 分钟</text>

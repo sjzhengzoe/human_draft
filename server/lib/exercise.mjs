@@ -49,6 +49,35 @@ function monthContext(now = new Date()) {
   };
 }
 
+function requestedMonthContext(requestedMonth, currentContext) {
+  const monthValue = requestedMonth || currentContext.today.slice(0, 7);
+  assertCondition(
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(monthValue),
+    400,
+    "INVALID_EXERCISE_MONTH",
+    "请选择有效的年月。",
+  );
+  assertCondition(
+    monthValue <= currentContext.today.slice(0, 7),
+    400,
+    "FUTURE_EXERCISE_MONTH",
+    "不能查看未来月份。",
+  );
+  const [year, month] = monthValue.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+  return {
+    value: monthValue,
+    year,
+    month,
+    daysInMonth,
+    firstWeekday,
+    monthStart: dateString(year, month, 1),
+    monthEnd: dateString(year, month, daysInMonth),
+    isCurrent: monthValue === currentContext.today.slice(0, 7),
+  };
+}
+
 function sumMinutesByDate(rows = [], dateField) {
   return rows.reduce((totals, row) => {
     const date = row[dateField];
@@ -127,9 +156,22 @@ export function calculateTodayProgress({
   };
 }
 
-export async function getExerciseDashboard(supabase, userId, now = new Date()) {
-  const context = monthContext(now);
-  const [profileResult, goalResult, completionResult, restDayResult] = await Promise.all([
+export async function getExerciseDashboard(
+  supabase,
+  userId,
+  now = new Date(),
+  requestedMonth = "",
+) {
+  const currentContext = monthContext(now);
+  const calendarContext = requestedMonthContext(requestedMonth, currentContext);
+  const [
+    profileResult,
+    goalResult,
+    todayCompletionResult,
+    calendarCompletionResult,
+    currentRestDayResult,
+    calendarRestDayResult,
+  ] = await Promise.all([
     supabase
       .from("exercise_profiles")
       .select("daily_minutes,monthly_rest_days")
@@ -139,29 +181,44 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       .from("exercise_daily_goal_changes")
       .select("daily_minutes,effective_date")
       .eq("user_id", userId)
-      .lte("effective_date", context.today)
+      .lte("effective_date", currentContext.today)
       .order("effective_date", { ascending: true }),
     supabase
       .from("exercise_completion_events")
       .select("minutes,completion_date")
       .eq("user_id", userId)
-      .gte("completion_date", context.monthStart)
-      .lte("completion_date", context.today)
+      .eq("completion_date", currentContext.today)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("exercise_completion_events")
+      .select("minutes,completion_date")
+      .eq("user_id", userId)
+      .gte("completion_date", calendarContext.monthStart)
+      .lte("completion_date", calendarContext.monthEnd)
       .order("created_at", { ascending: true }),
     supabase
       .from("exercise_daily_rest_days")
       .select("rest_date")
       .eq("user_id", userId)
-      .gte("rest_date", context.monthStart)
-      .lte("rest_date", context.monthEnd)
+      .gte("rest_date", currentContext.monthStart)
+      .lte("rest_date", currentContext.monthEnd)
+      .order("rest_date", { ascending: true }),
+    supabase
+      .from("exercise_daily_rest_days")
+      .select("rest_date")
+      .eq("user_id", userId)
+      .gte("rest_date", calendarContext.monthStart)
+      .lte("rest_date", calendarContext.monthEnd)
       .order("rest_date", { ascending: true }),
   ]);
   throwSupabaseError(profileResult.error, "读取运动设置失败。");
   if (goalResult.error && !["42P01", "PGRST205"].includes(goalResult.error.code)) {
     throwSupabaseError(goalResult.error, "读取今日运动目标失败。");
   }
-  throwSupabaseError(completionResult.error, "读取今日完成记录失败。");
-  throwSupabaseError(restDayResult.error, "读取休息日状态失败。");
+  throwSupabaseError(todayCompletionResult.error, "读取今日完成记录失败。");
+  throwSupabaseError(calendarCompletionResult.error, "读取月度完成记录失败。");
+  throwSupabaseError(currentRestDayResult.error, "读取休息日状态失败。");
+  throwSupabaseError(calendarRestDayResult.error, "读取月度休息日状态失败。");
 
   const profile = {
     daily_minutes: Number(profileResult.data?.daily_minutes || DEFAULT_DAILY_MINUTES),
@@ -173,37 +230,47 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   const currentDailyMinutes = Number(
     effectiveGoals.at(-1)?.daily_minutes || profile.daily_minutes,
   );
-  const restDays = restDayResult.data || [];
-  const completionMinutesByDate = sumMinutesByDate(
-    completionResult.data,
+  const currentRestDays = currentRestDayResult.data || [];
+  const calendarRestDays = calendarRestDayResult.data || [];
+  const todayCompletionMinutesByDate = sumMinutesByDate(
+    todayCompletionResult.data,
     "completion_date",
   );
-  const restDates = new Set(restDays.map((item) => item.rest_date));
-  const restDayUsedToday = restDays.some((item) => item.rest_date === context.today);
+  const calendarCompletionMinutesByDate = sumMinutesByDate(
+    calendarCompletionResult.data,
+    "completion_date",
+  );
+  const calendarRestDates = new Set(calendarRestDays.map((item) => item.rest_date));
+  const restDayUsedToday = currentRestDays.some(
+    (item) => item.rest_date === currentContext.today,
+  );
   const progress = calculateTodayProgress({
     dailyMinutes: currentDailyMinutes,
-    completionMinutes: completionMinutesByDate.get(context.today) || 0,
+    completionMinutes: todayCompletionMinutesByDate.get(currentContext.today) || 0,
     restDayUsed: restDayUsedToday,
   });
-  const restDaysUsed = restDays.length;
-  const trackingStartDate = effectiveGoals[0]?.effective_date || context.today;
-  const calendarDays = Array.from({ length: context.daysInMonth }, (_, index) => {
+  const restDaysUsed = currentRestDays.length;
+  const trackingStartDate = effectiveGoals[0]?.effective_date || currentContext.today;
+  const pickerFloorMonth = `${currentContext.year - 9}-01`;
+  const calendarDays = Array.from({ length: calendarContext.daysInMonth }, (_, index) => {
     const day = index + 1;
-    const date = dateString(context.year, context.month, day);
+    const date = dateString(calendarContext.year, calendarContext.month, day);
     let state = "future";
     let restUsed = false;
     let canUseRestDay = false;
-    if (date <= context.today) {
+    if (date <= currentContext.today) {
       if (date < trackingStartDate) {
         state = "untracked";
       } else {
-        restUsed = restDates.has(date);
+        restUsed = calendarRestDates.has(date);
         const dayProgress = calculateTodayProgress({
           dailyMinutes: dailyGoalOnDate(effectiveGoals, date, profile.daily_minutes),
-          completionMinutes: completionMinutesByDate.get(date) || 0,
+          completionMinutes: calendarCompletionMinutesByDate.get(date) || 0,
           restDayUsed: restUsed,
         });
-        canUseRestDay = !restUsed && dayProgress.dailyPendingMinutes > 0;
+        canUseRestDay = calendarContext.isCurrent
+          && !restUsed
+          && dayProgress.dailyPendingMinutes > 0;
         state = dayProgress.dailyPendingMinutes === 0
           ? "completed"
           : "incomplete";
@@ -222,7 +289,7 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
   return {
     profile,
     today: {
-      date: context.today,
+      date: currentContext.today,
       completed: progress.dailyPendingMinutes === 0,
       daily_minutes: progress.dailyMinutes,
       daily_completed_minutes: progress.dailyCompletedMinutes,
@@ -239,10 +306,16 @@ export async function getExerciseDashboard(supabase, userId, now = new Date()) {
       used_today: restDayUsedToday,
     },
     month: {
-      year: context.year,
-      month: context.month,
-      days_in_month: context.daysInMonth,
-      first_weekday: context.firstWeekday,
+      value: calendarContext.value,
+      year: calendarContext.year,
+      month: calendarContext.month,
+      days_in_month: calendarContext.daysInMonth,
+      first_weekday: calendarContext.firstWeekday,
+      is_current: calendarContext.isCurrent,
+      min_month: trackingStartDate.slice(0, 7) < pickerFloorMonth
+        ? trackingStartDate.slice(0, 7)
+        : pickerFloorMonth,
+      max_month: currentContext.today.slice(0, 7),
       completed_days: completedDays,
       days: calendarDays,
     },

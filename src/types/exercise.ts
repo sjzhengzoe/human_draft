@@ -25,10 +25,14 @@ export type ExerciseDashboard = {
     used_today: boolean
   }
   month: {
+    value: string
     year: number
     month: number
     days_in_month: number
     first_weekday: number
+    is_current: boolean
+    min_month: string
+    max_month: string
     completed_days: number
     days: Array<{
       date: string

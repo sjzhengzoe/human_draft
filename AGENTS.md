@@ -15,6 +15,16 @@
 - Do not use body or card text above `28rpx`, or ordinary section titles above `34rpx`, unless the page has an explicit display, hero, or data-emphasis requirement.
 - When reducing typography, also tighten the related card minimum height, padding, and vertical gaps so the visual density remains balanced.
 
+## Database Migration and Compatibility Rules
+
+- Treat every schema change, table replacement, field semantic change, or change to how historical records are read as a compatibility task. Never assume the database is empty or that only new users matter.
+- Before completing a database-backed feature change, audit existing tables and live record counts, identify which historical records the new code will stop reading, and decide whether a backfill or compatibility migration is required.
+- When a migration or manual database action is required, tell the user proactively in the same task. Clearly state what will be migrated, whether it has been applied, what remains for the user to do, and the impact of not applying it. Do not wait for user reports to reveal missing migration work.
+- Prefer migrations that preserve and backfill existing data before switching reads or dropping obsolete structures. Validate migrated counts and representative user-visible results before deleting old tables or columns.
+- Before destructive cleanup, resolve exact targets and report what data exists in them. Drop old tables or fields only after replacement data and current application reads have been verified. State whether deleted data is recoverable and how.
+- Keep migrations repeat-safe when they may also be applied manually or when live migration history is incomplete. Do not expose database URLs, keys, tokens, user identifiers, or other credentials in logs or responses.
+- In the final handoff for any database-affecting change, always include: compatibility impact on existing users, migration/backfill status, verification performed, deleted legacy structures, and any required user action. If no user action is required, say so explicitly.
+
 ## Project Skills
 
 When renewing the gufeifei.cn HTTPS certificate on Tencent Cloud, use the project-local skill:

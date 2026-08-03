@@ -163,6 +163,10 @@ test("dashboard reads the current month and builds daily calendar states", async
   });
   assert.equal(dashboard.month.year, 2026);
   assert.equal(dashboard.month.month, 8);
+  assert.equal(dashboard.month.value, "2026-08");
+  assert.equal(dashboard.month.is_current, true);
+  assert.equal(dashboard.month.min_month, "2017-01");
+  assert.equal(dashboard.month.max_month, "2026-08");
   assert.equal(dashboard.month.days_in_month, 31);
   assert.equal(dashboard.month.first_weekday, 5);
   assert.equal(dashboard.month.completed_days, 0);
@@ -185,7 +189,7 @@ test("dashboard reads the current month and builds daily calendar states", async
     },
   ]);
   assert.equal(dashboard.cat.bowl_level, "low");
-  assert.equal(supabase.reads.length, 4);
+  assert.equal(supabase.reads.length, 6);
   for (const read of supabase.reads) {
     assert.ok(
       read.filters.some(([operator, field, value]) =>
@@ -194,6 +198,65 @@ test("dashboard reads the current month and builds daily calendar states", async
       `${read.table} must be filtered with the authenticated user`,
     );
   }
+});
+
+test("dashboard can display a historical month without changing today's progress", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+    ],
+    exercise_daily_goal_changes: [
+      { user_id: USER_ID, effective_date: "2026-07-01", daily_minutes: 20 },
+    ],
+    exercise_completion_events: [
+      { user_id: USER_ID, completion_date: "2026-07-01", minutes: 20 },
+      { user_id: USER_ID, completion_date: "2026-07-02", minutes: 5 },
+      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 10 },
+    ],
+    exercise_daily_rest_days: [
+      { user_id: USER_ID, rest_date: "2026-07-02" },
+    ],
+  });
+
+  const dashboard = await getExerciseDashboard(
+    supabase,
+    USER_ID,
+    AUGUST_THIRD_CHINA,
+    "2026-07",
+  );
+
+  assert.equal(dashboard.today.date, "2026-08-03");
+  assert.equal(dashboard.today.daily_pending_minutes, 10);
+  assert.deepEqual(dashboard.rest_days, {
+    used: 0,
+    total: 3,
+    remaining: 3,
+    used_today: false,
+  });
+  assert.equal(dashboard.month.value, "2026-07");
+  assert.equal(dashboard.month.is_current, false);
+  assert.equal(dashboard.month.completed_days, 2);
+  assert.deepEqual(
+    dashboard.month.days.slice(0, 3).map((item) => ({
+      state: item.state,
+      canUseRestDay: item.can_use_rest_day,
+    })),
+    [
+      { state: "completed", canUseRestDay: false },
+      { state: "completed", canUseRestDay: false },
+      { state: "incomplete", canUseRestDay: false },
+    ],
+  );
+});
+
+test("dashboard rejects future calendar months", async () => {
+  const supabase = createSupabaseMock({});
+
+  await assert.rejects(
+    getExerciseDashboard(supabase, USER_ID, AUGUST_THIRD_CHINA, "2026-09"),
+    { code: "FUTURE_EXERCISE_MONTH" },
+  );
+  assert.equal(supabase.reads.length, 0);
 });
 
 test("calendar counts days whose daily task is complete", async () => {
@@ -276,18 +339,27 @@ test("daily goal settings migration applies new goals from the next day", async 
   assert.match(migration, /p_effective_date <= p_current_date/i);
 });
 
-test("daily exercise migration stores rest days and completion records", async () => {
+test("exercise cleanup migration preserves history before dropping legacy tables", async () => {
   const migration = await readFile(
     new URL(
-      "../supabase/migrations/202608030001_exercise_daily_tasks.sql",
+      "../supabase/migrations/202608030003_exercise_history_cleanup.sql",
       import.meta.url,
     ),
     "utf8",
   );
 
-  assert.match(migration, /create table if not exists public\.exercise_daily_rest_days/i);
-  assert.match(migration, /unique \(user_id, rest_date\)/i);
-  assert.match(migration, /create or replace function public\.record_exercise_daily_completion/i);
-  assert.match(migration, /create or replace function public\.use_exercise_daily_rest_day/i);
+  const completionBackfill = migration.indexOf(
+    "insert into public.exercise_completion_events",
+  );
+  const legacyCompletionDrop = migration.indexOf(
+    "drop table if exists public.exercise_daily_completions",
+  );
+  assert.ok(completionBackfill >= 0);
+  assert.ok(legacyCompletionDrop > completionBackfill);
+  assert.match(migration, /insert into public\.exercise_daily_rest_days/i);
   assert.match(migration, /create or replace function public\.reset_exercise_daily_state/i);
+  assert.match(migration, /drop table if exists public\.exercise_daily_extra_tasks/i);
+  assert.match(migration, /drop table if exists public\.exercise_rest_day_events/i);
+  assert.match(migration, /drop table if exists public\.exercise_months/i);
+  assert.match(migration, /drop column if exists credit_minutes/i);
 });

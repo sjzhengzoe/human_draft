@@ -32,8 +32,16 @@
 }
 
 .pet-card {
+  position: relative;
   overflow: hidden;
   border-radius: 24rpx;
+}
+
+.pet-card__settings {
+  position: absolute;
+  z-index: 2;
+  top: 12rpx;
+  right: 12rpx;
 }
 
 .month-overview-card {
@@ -47,11 +55,45 @@
   min-width: 0;
 }
 
+.mini-calendar__toolbar {
+  display: grid;
+  grid-template-columns: 58rpx 1fr 58rpx;
+  align-items: center;
+}
+
 .mini-calendar__title {
+  display: flex;
+  min-height: 52rpx;
+  align-items: center;
+  justify-content: center;
   color: #22221f;
   font-size: 27rpx;
   font-weight: 680;
   line-height: 1.3;
+}
+
+.mini-calendar__title-arrow {
+  margin-left: 8rpx;
+  color: #8f8f89;
+  font-size: 20rpx;
+  font-weight: 500;
+  transform: translateY(-2rpx);
+}
+
+.mini-calendar__arrow {
+  display: flex;
+  width: 52rpx;
+  height: 52rpx;
+  align-items: center;
+  justify-content: center;
+  color: #333330;
+  font-size: 42rpx;
+  font-weight: 350;
+  line-height: 1;
+}
+
+.mini-calendar__arrow--disabled {
+  color: #d0d0cb;
 }
 
 .mini-calendar__weekdays,
@@ -204,7 +246,7 @@
 
 .balance-card {
   margin-top: 18rpx;
-  padding: 22rpx 26rpx 24rpx;
+  padding: 24rpx 26rpx;
   border-radius: 20rpx;
   text-align: center;
 }

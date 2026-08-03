@@ -223,6 +223,8 @@ export function buildServer(options = {}) {
     data: await getExerciseDashboard(
       getSupabaseAdmin(),
       request.auth.user.id,
+      new Date(),
+      request.query?.month,
     ),
   }));
 
