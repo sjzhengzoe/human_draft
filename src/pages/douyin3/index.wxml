@@ -36,9 +36,13 @@
   <view wx:if="{{!hasCustomContent && !isExampleContent}}" class="card-swiper card-slide">
     <view class="card-item card-item--empty">
       <view class="card-loading card-empty-state">
-        <view class="card-empty-state__mark"><app-icon name="pencil" size="32" inverse="{{true}}" /></view>
-        <view class="card-loading__title">开始创作</view>
-        <button class="card-empty-state__copy" bindtap="handleCopyTemplate">复制模板</button>
+        <view class="card-empty-state__content">
+          <view class="card-loading__title">开始创作</view>
+          <view class="card-loading__desc">复制模板，按示例填写内容</view>
+          <button class="card-empty-state__copy" bindtap="handleCopyTemplate">
+            <text>复制模板</text>
+          </button>
+        </view>
       </view>
     </view>
   </view>
