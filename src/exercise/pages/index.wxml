@@ -44,15 +44,6 @@
           </view>
           <view wx:elif="{{todayExtraTaskState === 'completed'}}" class="task-row__status">已完成</view>
           <view wx:else class="task-row__status task-row__status--muted">暂无</view>
-          <button
-            class="extra-add-button"
-            aria-label="添加加餐任务"
-            disabled="{{busy}}"
-            loading="{{busyAction === 'extra-claim'}}"
-            bindtap="handleExtraClaim"
-          >
-            <app-icon wx:if="{{busyAction !== 'extra-claim'}}" name="plus" size="24" />
-          </button>
         </view>
       </view>
     </view>
@@ -62,6 +53,16 @@
   </view>
 
   <view class="action-section">
+    <button
+      class="task-button extra-task-button"
+      disabled="{{busy}}"
+      loading="{{busyAction === 'extra-claim'}}"
+      bindtap="handleExtraClaim"
+    >
+      <view class="extra-task-button__content">
+        <text>添加加餐任务</text>
+      </view>
+    </button>
     <button
       class="task-button task-button--dark"
       disabled="{{busy}}"

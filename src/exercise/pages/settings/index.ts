@@ -5,6 +5,10 @@ import {
 } from "../../services/exercise"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
 
+function digitsOnly(value: string, maxLength: number) {
+  return value.replace(/\D/g, "").slice(0, maxLength)
+}
+
 Page({
   data: {
     loading: true,
@@ -47,11 +51,15 @@ Page({
   },
 
   handleDailyInput(event: WechatMiniprogram.Input) {
-    this.setData({ dailyMinutes: event.detail.value })
+    const dailyMinutes = digitsOnly(event.detail.value, 3)
+    this.setData({ dailyMinutes })
+    return dailyMinutes
   },
 
   handleRestInput(event: WechatMiniprogram.Input) {
-    this.setData({ monthlyRestDays: event.detail.value })
+    const monthlyRestDays = digitsOnly(event.detail.value, 2)
+    this.setData({ monthlyRestDays })
+    return monthlyRestDays
   },
 
   async handleSave() {

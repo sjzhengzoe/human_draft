@@ -151,27 +151,6 @@
   gap: 12rpx;
 }
 
-.extra-add-button {
-  display: flex;
-  width: 56rpx !important;
-  height: 56rpx;
-  min-height: 56rpx;
-  min-width: 56rpx !important;
-  box-sizing: border-box;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: transparent;
-  color: #333330;
-  line-height: normal;
-}
-
-.extra-add-button::after {
-  border: 0;
-}
-
 .task-row__hint {
   margin-right: 8rpx;
   color: #a2a29c;
@@ -306,6 +285,19 @@
   width: 100%;
   font-size: var(--ui-font-size-base);
   font-weight: 650;
+}
+
+.task-button.extra-task-button {
+  min-height: 76rpx;
+  background: var(--ui-surface);
+}
+
+.extra-task-button__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23rpx;
+  font-weight: 600;
 }
 
 .task-button.rest-day-button {

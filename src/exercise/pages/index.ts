@@ -215,7 +215,7 @@ Page({
       : "之后添加的加餐任务仍需完成。"
     this.setData({
       restConfirmVisible: true,
-      restConfirmContent: `使用后将完成今日日常任务，${extraText}本月还剩 ${remainingAfterUse} 天休息权限。`
+      restConfirmContent: `使用后将完成今日日常任务，${extraText}使用后本月还剩 ${remainingAfterUse} 天休息权限。`
     })
   },
 
@@ -259,7 +259,9 @@ Page({
   },
 
   handleMinutesInput(event: WechatMiniprogram.Input) {
-    this.setData({ minutesInput: event.detail.value })
+    const minutesInput = event.detail.value.replace(/\D/g, "").slice(0, 5)
+    this.setData({ minutesInput })
+    return minutesInput
   },
 
   closeMinutesDialog() {
