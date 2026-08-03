@@ -8,7 +8,7 @@
   <textarea
     class="editor-textarea"
     value="{{content}}"
-    maxlength="{{20000}}"
+    maxlength="{{maxContentLength}}"
     auto-height="{{false}}"
     cursor-spacing="160"
     adjust-position="{{true}}"
@@ -19,8 +19,7 @@
   />
 
   <view class="editor-meta">
-    <text class="editor-meta__hint">{{formatHint}}</text>
-    <text class="editor-meta__count">{{characterCount}} / 20000</text>
+    <text class="editor-meta__count">{{characterCount}} / {{maxContentLength}}</text>
   </view>
 
   <view class="editor-actions">

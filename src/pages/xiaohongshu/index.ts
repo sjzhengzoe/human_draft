@@ -1,6 +1,16 @@
 import { checkTextContent } from "../../services/content-security";
+import {
+  getStoredTextCardContent,
+  TEXT_CARD_STORAGE_KEYS,
+} from "../../utils/text-card-storage";
 
-  type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
+  type ActionKey =
+    | "paste"
+    | "append"
+    | "copy"
+    | "edit"
+    | "clear"
+    | "export";
   type CopyMode = "xiaohongshu" | "douyin";
 
   type Slide = {
@@ -76,7 +86,7 @@ import { checkTextContent } from "../../services/content-security";
     measureText: (text: string) => { width: number };
   };
 
-  const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.xiaohongshu;
   const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
@@ -168,6 +178,20 @@ import { checkTextContent } from "../../services/content-security";
 都要炫耀的一件事情
 毕竟我的小猫
 这么厉害`;
+  const COPY_TEMPLATE_CONTENT = [
+    "01",
+    "这里填写第一张卡片的内容",
+    "可以自由换行",
+    "",
+    "这里可以开始新的段落",
+    "",
+    "02",
+    "这里填写第二张卡片的内容",
+    "可以继续添加更多文字",
+    "",
+    "03",
+    "这里填写第三张卡片的内容",
+  ].join("\n");
 
   let red3FontPromise: Promise<void> | undefined;
   const combinedFontPromises = new Map<string, Promise<void>>();
@@ -194,7 +218,7 @@ import { checkTextContent } from "../../services/content-security";
     },
     lifetimes: {
       attached() {
-        const storedContent = wx.getStorageSync(STORAGE_KEY);
+        const storedContent = getStoredTextCardContent("xiaohongshu");
         const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
         const initialContent =
           typeof storedContent === "string"
@@ -245,8 +269,19 @@ import { checkTextContent } from "../../services/content-security";
         if (template !== "douyin2" && template !== "douyin3") return;
 
         this.finalizeClearUndo();
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
+      },
+
+      handleCopyTemplate() {
+        wx.setClipboardData({
+          data: COPY_TEMPLATE_CONTENT,
+          success: () => {
+            wx.showToast({ title: "模板已复制", icon: "success" });
+          },
+          fail: () => {
+            wx.showToast({ title: "复制失败", icon: "none" });
+          },
+        });
       },
 
       loadRed3Font() {
@@ -278,6 +313,11 @@ import { checkTextContent } from "../../services/content-security";
 
         if (key === "paste") {
           this.handlePasteContent();
+          return;
+        }
+
+        if (key === "append") {
+          this.handleAppendContent();
           return;
         }
 
@@ -314,6 +354,36 @@ import { checkTextContent } from "../../services/content-security";
       },
 
       handlePasteContent() {
+        wx.getClipboardData({
+          success: async (result) => {
+            const content = result.data.trim();
+            if (!content) {
+              wx.showToast({
+                title: "剪贴板为空",
+                icon: "none",
+              });
+              return;
+            }
+
+            if (!(await this.ensureSafeContent(content))) return;
+
+            this.finalizeClearUndo();
+            this.syncContent(content);
+            wx.showToast({
+              title: "已粘贴",
+              icon: "success",
+            });
+          },
+          fail: () => {
+            wx.showToast({
+              title: "读取剪贴板失败",
+              icon: "none",
+            });
+          },
+        });
+      },
+
+      handleAppendContent() {
         wx.getClipboardData({
           success: async (result) => {
             const currentContent = this.data.hasCustomContent

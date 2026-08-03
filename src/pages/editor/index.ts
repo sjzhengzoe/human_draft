@@ -1,12 +1,12 @@
 import { checkTextContent } from "../../services/content-security"
 import { initializeUIFont } from "../../services/ui-font"
+import { TEXT_CARD_STORAGE_KEYS } from "../../utils/text-card-storage"
 
 type EditorSource = "xiaohongshu" | "douyin2" | "douyin3"
 
 type EditorConfig = {
   title: string
   storageKey: string
-  formatHint: string
 }
 
 type EditorDraft = {
@@ -15,22 +15,20 @@ type EditorDraft = {
 }
 
 const DRAFT_STORAGE_PREFIX = "TEXT_CARD_EDITOR_DRAFT_"
+const MAX_CONTENT_LENGTH = 800
 
 const EDITOR_CONFIG: Record<EditorSource, EditorConfig> = {
   xiaohongshu: {
     title: "编辑文案",
-    storageKey: "TEXT_CARD_CONTENT",
-    formatHint: "两位数字（01、02…）开始新卡片；空行分段；# 开头的内容不会显示。"
+    storageKey: TEXT_CARD_STORAGE_KEYS.xiaohongshu
   },
   douyin2: {
     title: "编辑文案",
-    storageKey: "TEXT_CARD_CONTENT",
-    formatHint: "用［日期或标题］、两位数字开始新卡片；用 `文字` 标记重点。"
+    storageKey: TEXT_CARD_STORAGE_KEYS.douyin2
   },
   douyin3: {
     title: "编辑文案",
-    storageKey: "TEXT_CARD_CONTENT",
-    formatHint: "用［日期或标题］、两位数字开始新卡片；用 `文字` 标记重点。"
+    storageKey: TEXT_CARD_STORAGE_KEYS.douyin3
   }
 }
 
@@ -62,7 +60,7 @@ Page({
     source: "xiaohongshu" as EditorSource,
     content: "",
     originalContent: "",
-    formatHint: "",
+    maxContentLength: MAX_CONTENT_LENGTH,
     characterCount: 0,
     isDirty: false,
     saving: false,
@@ -88,7 +86,6 @@ Page({
       source,
       content,
       originalContent,
-      formatHint: config.formatHint,
       characterCount: Array.from(content).length,
       isDirty: content !== originalContent
     })

@@ -1,4 +1,3 @@
-<view wx:if="{{visible}}" class="undo-bar" role="status" aria-live="polite">
-  <text class="undo-bar__message">{{message}}</text>
+<view wx:if="{{visible}}" class="undo-bar">
   <button class="undo-bar__action" bindtap="handleUndo">撤销</button>
 </view>

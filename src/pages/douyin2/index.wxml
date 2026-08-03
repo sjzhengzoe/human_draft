@@ -11,21 +11,21 @@
       aria-selected="false"
       data-template="xiaohongshu"
       bindtap="handleTemplateChange"
-    >图文分卡</view>
+    >模板一</view>
     <view
       class="template-switch__item template-switch__item--active"
       role="tab"
       aria-selected="true"
       data-template="douyin2"
       bindtap="handleTemplateChange"
-    >文字短句</view>
+    >模板二</view>
     <view
       class="template-switch__item"
       role="tab"
       aria-selected="false"
       data-template="douyin3"
       bindtap="handleTemplateChange"
-    >图文头像</view>
+    >模板三</view>
   </view>
 
   <view wx:if="{{isExampleContent}}" class="example-notice">
@@ -37,8 +37,8 @@
     <view class="card-item card-item--empty">
       <view class="card-loading card-empty-state">
         <view class="card-empty-state__mark"><app-icon name="pencil" size="32" inverse="{{true}}" /></view>
-        <view class="card-loading__title">开始创作短句</view>
-        <view class="card-loading__desc">从底部选择“粘贴”或“编辑”，生成你的短句卡片</view>
+        <view class="card-loading__title">开始创作</view>
+        <button class="card-empty-state__copy" bindtap="handleCopyTemplate">复制模板</button>
       </view>
     </view>
   </view>
@@ -92,7 +92,6 @@
 
   <text-card-undo-bar
     visible="{{showClearUndo}}"
-    message="内容已清空"
     bind:undo="handleUndoClear"
   />
 

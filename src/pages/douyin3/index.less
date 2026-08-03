@@ -26,19 +26,20 @@
 .template-switch {
   display: flex;
   flex: none;
-  margin-bottom: 20rpx;
-  padding: 6rpx;
-  border-radius: 18rpx;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
+  padding: 14rpx;
+  border-radius: 999rpx;
   background: #e9e9e9;
 }
 
 .template-switch__item {
   display: flex;
-  height: 68rpx;
+  height: 72rpx;
   flex: 1;
   align-items: center;
   justify-content: center;
-  border-radius: 14rpx;
+  border-radius: 999rpx;
   color: #777772;
   font-size: var(--ui-font-size-base);
   font-weight: 500;
@@ -46,9 +47,9 @@
 }
 
 .template-switch__item--active {
-  background: var(--ui-surface);
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
-  color: #111111;
+  background: #111111;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.14);
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -215,6 +216,24 @@
   text-align: center;
 }
 
+.card-empty-state__copy {
+  min-width: 184rpx;
+  height: 68rpx;
+  margin: 28rpx 0 0;
+  padding: 0 30rpx;
+  border: 0;
+  border-radius: 999rpx;
+  background: #20241f;
+  color: #ffffff;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 68rpx;
+}
+
+.card-empty-state__copy::after {
+  border: 0;
+}
+
 .card-loading__retry {
   min-width: 184rpx;
   height: 68rpx;
@@ -256,11 +275,11 @@
   }
 
   .template-switch {
-    margin-bottom: 16rpx;
+    margin-bottom: 20rpx;
   }
 
   .template-switch__item {
-    height: 60rpx;
+    height: 64rpx;
   }
 
   .card-item--empty {

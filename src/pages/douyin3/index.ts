@@ -1,10 +1,13 @@
 import { checkTextContent } from "../../services/content-security";
+import {
+  getStoredTextCardContent,
+  TEXT_CARD_STORAGE_KEYS,
+} from "../../utils/text-card-storage";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
 
   type TextPart = {
     text: string;
-    emphasis: boolean;
   };
 
   type Paragraph = {
@@ -102,9 +105,9 @@ import { checkTextContent } from "../../services/content-security";
     ) => { data: Uint8ClampedArray };
   };
 
-  const STORAGE_KEY = "TEXT_CARD_CONTENT";
+  const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.douyin3;
   const LOCAL_IMAGES_STORAGE_KEY = "DOUYIN3_LOCAL_IMAGE_PATHS";
-  const LEGACY_STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
+  const LEGACY_STORAGE_KEY = "DOUYIN3_FORM_DATA_CONTENT";
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin3ExportCanvas";
@@ -134,7 +137,6 @@ import { checkTextContent } from "../../services/content-security";
     "https://gufeifei.cn/fonts/FZLTHProGlobal-Extralight.woff2?v=20260802";
   const CANVAS_TEXT_FONT_FAMILY = `"${DOUYIN3_FONT_FAMILY}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
-  const CANVAS_BOLD_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
   const CLEAR_UNDO_DURATION = 5000;
@@ -162,6 +164,17 @@ import { checkTextContent } from "../../services/content-security";
 想我爱的人开心自己也能开心 
 爱我的人不要失望 
 舒舒服服地 苟且偷生 也不错`;
+  const COPY_TEMPLATE_CONTENT = [
+    "01",
+    "这里填写第一张卡片的内容",
+    "头像可以在卡片中单独选择",
+    "",
+    "02",
+    "这里填写第二张卡片的内容",
+    "",
+    "03",
+    "这里填写第三张卡片的内容",
+  ].join("\n");
 
   let douyin3FontPromise: Promise<void> | undefined;
   let renderRequestId = 0;
@@ -193,7 +206,7 @@ import { checkTextContent } from "../../services/content-security";
     },
     lifetimes: {
       attached() {
-        const storedContent = wx.getStorageSync(STORAGE_KEY);
+        const storedContent = getStoredTextCardContent("douyin3");
         const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
         const storedImageValue = wx.getStorageSync(LOCAL_IMAGES_STORAGE_KEY);
         const initialContent =
@@ -258,8 +271,19 @@ import { checkTextContent } from "../../services/content-security";
         if (template !== "xiaohongshu" && template !== "douyin2") return;
 
         this.finalizeClearUndo();
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, template);
         wx.redirectTo({ url: `/pages/${template}/index` });
+      },
+
+      handleCopyTemplate() {
+        wx.setClipboardData({
+          data: COPY_TEMPLATE_CONTENT,
+          success: () => {
+            wx.showToast({ title: "模板已复制", icon: "success" });
+          },
+          fail: () => {
+            wx.showToast({ title: "复制失败", icon: "none" });
+          },
+        });
       },
 
       loadDouyin3Font() {
@@ -815,7 +839,7 @@ import { checkTextContent } from "../../services/content-security";
       }
 
       return {
-        parts: isSpacer ? [] : parseEmphasis(line),
+        parts: isSpacer ? [] : [{ text: line }],
         isTitle,
         isSpacer,
       };
@@ -913,25 +937,14 @@ import { checkTextContent } from "../../services/content-security";
   }
 
   function normalizeText(text: string) {
-    return text.replace(/\r\n/g, "\n").replace(/\u2800/g, " ");
+    return text
+      .replace(/\r\n/g, "\n")
+      .replace(/\u2800/g, " ")
+      .replace(/`/g, "");
   }
 
   function getRenderErrorMessage(_error: unknown) {
     return "生成失败，请重试";
-  }
-
-  function parseEmphasis(text: string) {
-    return text
-      .split(/(`.*?`)/g)
-      .filter(Boolean)
-      .map((part) => {
-        const emphasis = part.startsWith("`") && part.endsWith("`");
-        return {
-          text: emphasis ? part.slice(1, -1) : part,
-          emphasis,
-        };
-      })
-      .filter((part) => part.text);
   }
 
   type LayoutLine = {
@@ -1003,11 +1016,7 @@ import { checkTextContent } from "../../services/content-security";
 
     parts.forEach((part) => {
       Array.from(part.text).forEach((char) => {
-        ctx.font = isTitle
-          ? CANVAS_TITLE_FONT
-          : part.emphasis
-            ? CANVAS_BOLD_FONT
-            : CANVAS_BODY_FONT;
+        ctx.font = isTitle ? CANVAS_TITLE_FONT : CANVAS_BODY_FONT;
         const charWidth = ctx.measureText(char).width;
         const spacing = currentCharacterCount ? CANVAS_LETTER_SPACING : 0;
 
@@ -1022,10 +1031,10 @@ import { checkTextContent } from "../../services/content-security";
         }
 
         const lastPart = currentParts[currentParts.length - 1];
-        if (lastPart && lastPart.emphasis === part.emphasis) {
+        if (lastPart) {
           lastPart.text += char;
         } else {
-          currentParts.push({ text: char, emphasis: part.emphasis });
+          currentParts.push({ text: char });
         }
         currentWidth +=
           (currentCharacterCount ? CANVAS_LETTER_SPACING : 0) + charWidth;
@@ -1140,15 +1149,7 @@ import { checkTextContent } from "../../services/content-security";
     const letterSpacing = CANVAS_LETTER_SPACING + justifiedExtraSpacing;
 
     parts.forEach((part) => {
-      ctx.font =
-        layoutItem.isTitle || part.emphasis
-          ? CANVAS_BOLD_FONT
-          : layoutItem.font;
-      if (layoutItem.isTitle) {
-        ctx.font = CANVAS_TITLE_FONT;
-      }
-
-      const partStartX = currentX;
+      ctx.font = layoutItem.isTitle ? CANVAS_TITLE_FONT : layoutItem.font;
 
       Array.from(part.text).forEach((character) => {
         ctx.fillText(character, currentX, y);
@@ -1159,16 +1160,6 @@ import { checkTextContent } from "../../services/content-security";
           currentX += letterSpacing;
         }
       });
-
-      if (part.emphasis) {
-        const width = currentX - partStartX;
-        ctx.fillRect(
-          partStartX,
-          y + CANVAS_BODY_LINE_HEIGHT - scaleCanvasValue(12),
-          width,
-          scaleCanvasValue(2),
-        );
-      }
     });
   }
 
@@ -1181,13 +1172,7 @@ import { checkTextContent } from "../../services/content-security";
     let characterCount = 0;
 
     parts.forEach((part) => {
-      ctx.font =
-        layoutItem.isTitle || part.emphasis
-          ? CANVAS_BOLD_FONT
-          : layoutItem.font;
-      if (layoutItem.isTitle) {
-        ctx.font = CANVAS_TITLE_FONT;
-      }
+      ctx.font = layoutItem.isTitle ? CANVAS_TITLE_FONT : layoutItem.font;
 
       Array.from(part.text).forEach((character) => {
         width += ctx.measureText(character).width;

@@ -1,12 +1,26 @@
+const BASE_ACTIONS = [
+  { key: "paste", label: "粘贴", icon: "clipboard-paste" },
+  { key: "copy", label: "复制", icon: "copy" },
+  { key: "edit", label: "编辑", icon: "pencil" },
+  { key: "clear", label: "清空", icon: "eraser" },
+  { key: "export", label: "导出", icon: "download" }
+]
+
+const APPEND_ACTION = {
+  key: "append",
+  label: "追加",
+  icon: "plus"
+}
+
 Component({
   data: {
-    actions: [
-      { key: "paste", label: "粘贴", icon: "clipboard-paste", disabled: false },
-      { key: "copy", label: "复制", icon: "copy", disabled: true },
-      { key: "edit", label: "编辑", icon: "pencil", disabled: false },
-      { key: "clear", label: "清空", icon: "eraser", disabled: true },
-      { key: "export", label: "导出", icon: "download", disabled: true }
-    ]
+    actions: BASE_ACTIONS.map((action) => ({
+      ...action,
+      disabled:
+        action.key === "copy" ||
+        action.key === "clear" ||
+        action.key === "export"
+    }))
   },
 
   properties: {
@@ -25,6 +39,11 @@ Component({
       value: false,
       observer: "syncActionStates"
     },
+    showAppend: {
+      type: Boolean,
+      value: false,
+      observer: "syncActionStates"
+    },
     label: {
       type: String,
       value: "图文创作操作"
@@ -36,9 +55,12 @@ Component({
       const globallyDisabled = this.data.disabled
       const hasContent = this.data.hasContent
       const exportReady = this.data.exportReady
+      const actions = this.data.showAppend
+        ? [BASE_ACTIONS[0], APPEND_ACTION, ...BASE_ACTIONS.slice(1)]
+        : BASE_ACTIONS
 
       this.setData({
-        actions: this.data.actions.map((action) => ({
+        actions: actions.map((action) => ({
           ...action,
           disabled:
             globallyDisabled ||
