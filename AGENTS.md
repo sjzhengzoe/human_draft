@@ -25,6 +25,22 @@
 - Keep migrations repeat-safe when they may also be applied manually or when live migration history is incomplete. Do not expose database URLs, keys, tokens, user identifiers, or other credentials in logs or responses.
 - In the final handoff for any database-affecting change, always include: compatibility impact on existing users, migration/backfill status, verification performed, deleted legacy structures, and any required user action. If no user action is required, say so explicitly.
 
+## Git Push and WeChat Mini Program Upload
+
+When the user asks to commit/push code and upload the mini program, use this established release workflow instead of rediscovering the tooling each time.
+
+- Unless the user specifies another destination, this project's confirmed push target is `git@github.com:sjzhengzoe/human_draft.git`, branch `main`. Do not create a feature branch or pull request for this routine release flow.
+- Before committing, run `git status -sb`, inspect the diff, stage only the intended files, run the relevant focused tests plus `pnpm run typecheck`, and run `git diff --check`.
+- Use a short commit message that describes the actual change, then push with `git push origin main`. Verify that the working tree is clean and `main` matches `origin/main` afterward.
+- Prefer the official WeChat Developer Tools CLI for uploads. Do not rely on clicking the GUI upload dialog because its NW.js confirmation buttons are unreliable under automation.
+- The confirmed CLI service port is `9420`. The normal upload command is:
+  `/Applications/wechatwebdevtools.app/Contents/MacOS/cli upload --port 9420 --project /Users/gufeifei/Sites/human_draft --version <version> --desc <description> --lang zh`
+- If the CLI reports that the service port is disabled or cannot read the `.ide` port file, close WeChat Developer Tools first. If a stuck modal prevents normal exit and the user has authorized the upload, terminate only the main `wechatdevtools` app process, not helper processes. Then rerun the upload while confirming service-port enablement:
+  `printf 'y\n' | /Applications/wechatwebdevtools.app/Contents/MacOS/cli upload --port 9420 --project /Users/gufeifei/Sites/human_draft --version <version> --desc <description> --lang zh`
+- When the user does not provide a version, default to the Asia/Shanghai date as `YYYY.MM.DD`. If that version was already uploaded the same day, append `.HHmm`. Use a concise Chinese description of the changes unless the user provides one.
+- Treat an upload as complete only when the CLI prints `✔ upload`. Report the uploaded version, description, package size, commit hash, push target, and whether the developer-tools service port was enabled.
+- Uploading may replace the currently selected experience version. The user's explicit instruction to upload authorizes this expected replacement, but do not submit a production review or publish a production release unless separately requested.
+
 ## Project Skills
 
 When renewing the gufeifei.cn HTTPS certificate on Tencent Cloud, use the project-local skill:

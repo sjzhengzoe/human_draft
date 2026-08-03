@@ -61,8 +61,6 @@
           wx:for="{{calendarCells}}"
           wx:key="key"
           class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}}"
-          data-date="{{item.key}}"
-          bindtap="handleCalendarDayTap"
         >
           <view wx:if="{{item.state === 'completed'}}" class="calendar-day__pet-frame">
             <image
@@ -86,17 +84,6 @@
       </view>
     </view>
 
-    <view wx:if="{{calendarIsCurrent}}" class="calendar-actions">
-      <button
-        class="calendar-rest-button {{restDayDisabled ? 'calendar-rest-button--disabled' : ''}}"
-        disabled="{{restDayDisabled || busy}}"
-        loading="{{busyAction === 'rest-day'}}"
-        bindtap="handleRestDay"
-      >
-        <text class="calendar-rest-button__date">{{selectedRestDayLabel}}</text>
-        <text>{{restDayButtonText}}</text>
-      </button>
-    </view>
   </view>
 
   <view class="balance-card">
@@ -106,10 +93,12 @@
         <text class="task-row__hint">还需</text><text class="task-row__value">{{todayPendingMinutes}}</text><text class="task-row__unit">分钟</text>
       </view>
       <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
-      <view wx:else class="task-row__status">已完成</view>
-    </view>
-    <view wx:if="{{todayOverachievedMinutes > 0}}" class="overachieved">
-      今日超额完成 <text>+{{todayOverachievedMinutes}} 分钟</text>
+      <view wx:else class="task-completion-summary">
+        <text>共完成</text>
+        <text class="task-completion-summary__value">{{todayRecordedMinutes}}</text>
+        <text>分钟</text>
+        <text wx:if="{{todayOverachievedMinutes > 0}}" class="task-completion-summary__extra">· 超额 {{todayOverachievedMinutes}} 分钟</text>
+      </view>
     </view>
   </view>
 
@@ -122,7 +111,44 @@
     >
       <view class="task-button__title">{{completeButtonText}}</view>
     </button>
+    <view
+      class="rest-day-entry {{restDaysRemaining === 0 ? 'rest-day-entry--disabled' : ''}}"
+      role="button"
+      aria-label="选择休息日补卡日期"
+      bindtap="handleRestDay"
+    >{{restDayEntryText}}</view>
   </view>
+
+  <app-dialog
+    wx:if="{{restDayPickerVisible}}"
+    visible="{{true}}"
+    title="选择补卡日期"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="rest-day-picker">
+      <view class="rest-day-picker__hint">休息日权限会将所选日期标记为完成</view>
+      <scroll-view scroll-y class="rest-day-picker__list">
+        <view
+          wx:for="{{restDayOptions}}"
+          wx:key="date"
+          class="rest-day-picker__item"
+          role="button"
+          data-date="{{item.date}}"
+          bindtap="handleRestDayOption"
+        >
+          <view class="rest-day-picker__label">
+            <text>{{item.label}}</text>
+            <text wx:if="{{item.isToday}}" class="rest-day-picker__preferred">优先</text>
+          </view>
+          <text class="rest-day-picker__arrow">›</text>
+        </view>
+      </scroll-view>
+    </view>
+    <view slot="actions" class="rest-day-picker__actions">
+      <button class="minutes-dialog-button" disabled="{{busy}}" bindtap="handleRestPickerCancel">取消</button>
+    </view>
+  </app-dialog>
 
   <app-dialog
     wx:if="{{restConfirmVisible}}"

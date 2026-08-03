@@ -158,53 +158,6 @@
   color: #c8c8c3;
 }
 
-.calendar-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 18rpx;
-  padding-top: 18rpx;
-  border-top: 1rpx solid var(--ui-border);
-}
-
-.calendar-rest-button {
-  display: flex;
-  width: auto !important;
-  min-height: 62rpx;
-  box-sizing: border-box;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  margin: 0 !important;
-  padding: 10rpx 22rpx !important;
-  border-radius: 12rpx;
-  background: #1d1d1b;
-  color: #fff;
-  font-size: 20rpx;
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.calendar-rest-button::after {
-  border: 0;
-}
-
-.calendar-rest-button__date {
-  margin-right: 10rpx;
-  color: rgba(255, 255, 255, 0.64);
-  font-size: 18rpx;
-  font-weight: 500;
-}
-
-.calendar-rest-button--disabled {
-  background: #eeeeeb;
-  color: #aaa9a4;
-}
-
-.calendar-rest-button--disabled .calendar-rest-button__date {
-  color: #b5b5af;
-}
-
 .pet-stage {
   display: grid;
   min-height: 350rpx;
@@ -336,21 +289,27 @@
   font-weight: 550;
 }
 
-.overachieved {
-  display: inline-flex;
+.task-completion-summary {
+  display: flex;
   align-items: center;
-  margin-top: 18rpx;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: #f4f1e6;
-  color: #77715e;
-  font-size: 20rpx;
+  justify-content: flex-end;
+  color: #777772;
+  font-size: 21rpx;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
-.overachieved text {
-  margin-left: 6rpx;
-  color: #51482f;
-  font-weight: 650;
+.task-completion-summary__value {
+  margin: 0 5rpx;
+  color: #171715;
+  font-size: 29rpx;
+  font-weight: 700;
+}
+
+.task-completion-summary__extra {
+  margin-left: 8rpx;
+  color: #8d856f;
+  font-size: 19rpx;
 }
 
 .minutes-dialog-body {
@@ -412,6 +371,65 @@
   display: flex;
   flex-direction: column;
   gap: 14rpx;
+}
+
+.rest-day-entry {
+  min-height: 42rpx;
+  color: #969690;
+  font-size: 20rpx;
+  line-height: 42rpx;
+  text-align: center;
+}
+
+.rest-day-entry--disabled {
+  color: #c0c0bb;
+}
+
+.rest-day-picker__hint {
+  margin-bottom: 18rpx;
+  color: #999993;
+  font-size: 20rpx;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.rest-day-picker__list {
+  max-height: 430rpx;
+  border-top: 1rpx solid var(--ui-border);
+}
+
+.rest-day-picker__item {
+  display: flex;
+  min-height: 76rpx;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+  color: #333330;
+  font-size: var(--ui-font-size-base);
+}
+
+.rest-day-picker__label {
+  display: flex;
+  align-items: center;
+}
+
+.rest-day-picker__preferred {
+  margin-left: 12rpx;
+  padding: 3rpx 10rpx;
+  border-radius: 999rpx;
+  background: #f1f1ee;
+  color: #85857f;
+  font-size: 18rpx;
+}
+
+.rest-day-picker__arrow {
+  color: #b1b1ab;
+  font-size: 30rpx;
+}
+
+.rest-day-picker__actions .minutes-dialog-button {
+  width: 100% !important;
 }
 
 .task-button {
