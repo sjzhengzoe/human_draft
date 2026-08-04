@@ -17,6 +17,10 @@ import {
 } from "../../utils/async-page"
 import { findClosestSortTarget } from "../../utils/drag-sort"
 import type { SortableRect } from "../../utils/drag-sort"
+import {
+  normalizeCookingTypes,
+  normalizeTasteTags
+} from "../../utils/menu-attributes"
 
 let dragSourceIndex = -1
 let dragTargetIndex = -1
@@ -39,6 +43,7 @@ type MenuDish = Dish & {
   mealPeriodText: string
   recordTypeLabel: string
   displayCategory: string
+  tasteTags: string[]
 }
 
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
@@ -57,6 +62,8 @@ function toMenuDish(dish: Dish): MenuDish {
     : dish.category?.name || "未分类"
   return {
     ...dish,
+    cooking_methods: normalizeCookingTypes(dish.cooking_methods),
+    tasteTags: normalizeTasteTags(dish.taste),
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
     displayCategory,
     mealPeriodTags: mealPeriods

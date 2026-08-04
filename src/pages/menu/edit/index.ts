@@ -17,10 +17,21 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import {
+  COOKING_TYPE_OPTIONS,
+  normalizeCookingTypes,
+  normalizeTasteTags,
+  TASTE_OPTIONS
+} from "../../../utils/menu-attributes"
 
 type MealPeriodOption = {
   key: MealPeriod
   label: string
+  selected: boolean
+}
+
+type ChoiceOption = {
+  value: string
   selected: boolean
 }
 
@@ -29,6 +40,14 @@ const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
   { key: "lunch", label: "午餐", selected: true },
   { key: "dinner", label: "晚餐", selected: true }
 ]
+
+function buildChoiceOptions(defaults: string[], selectedValues: string[]): ChoiceOption[] {
+  const selected = new Set(selectedValues.filter(Boolean))
+  return [...new Set([...defaults, ...selectedValues].filter(Boolean))].map((value) => ({
+    value,
+    selected: selected.has(value)
+  }))
+}
 
 function parseTextItems(value: string): string[] {
   return [...new Set(
@@ -53,8 +72,8 @@ Page({
     recommendedText: "",
     mainIngredientsText: "",
     introduction: "",
-    cookingMethodsText: "",
-    taste: "",
+    cookingMethodOptions: buildChoiceOptions(COOKING_TYPE_OPTIONS, []),
+    tasteOptions: buildChoiceOptions(TASTE_OPTIONS, []),
     flavorOptionsText: "",
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
@@ -119,8 +138,14 @@ Page({
           recommendedText: dish.recommended_items.join("\n"),
           mainIngredientsText: dish.main_ingredients.join("\n"),
           introduction: dish.introduction,
-          cookingMethodsText: dish.cooking_methods.join("、"),
-          taste: dish.taste,
+          cookingMethodOptions: buildChoiceOptions(
+            COOKING_TYPE_OPTIONS,
+            normalizeCookingTypes(dish.cooking_methods)
+          ),
+          tasteOptions: buildChoiceOptions(
+            TASTE_OPTIONS,
+            normalizeTasteTags(dish.taste)
+          ),
           flavorOptionsText: dish.flavor_options.join("\n"),
           mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({
             ...option,
@@ -172,12 +197,24 @@ Page({
     this.setData({ introduction: event.detail.value })
   },
 
-  handleCookingMethodsInput(event: WechatMiniprogram.Input) {
-    this.setData({ cookingMethodsText: event.detail.value })
+  handleCookingMethodTap(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || "")
+    if (!value) return
+    this.setData({
+      cookingMethodOptions: this.data.cookingMethodOptions.map((option) =>
+        option.value === value ? { ...option, selected: !option.selected } : option
+      )
+    })
   },
 
-  handleTasteInput(event: WechatMiniprogram.Input) {
-    this.setData({ taste: event.detail.value })
+  handleTasteTap(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || "")
+    if (!value) return
+    this.setData({
+      tasteOptions: this.data.tasteOptions.map((option) =>
+        option.value === value ? { ...option, selected: !option.selected } : option
+      )
+    })
   },
 
   handleFlavorOptionsInput(event: WechatMiniprogram.Input) {
@@ -317,8 +354,13 @@ Page({
     const recommendedItems = parseTextItems(this.data.recommendedText)
     const mainIngredients = parseTextItems(this.data.mainIngredientsText)
     const introduction = this.data.introduction.trim()
-    const cookingMethods = parseTextItems(this.data.cookingMethodsText)
-    const taste = this.data.taste.trim()
+    const cookingMethods = this.data.cookingMethodOptions
+      .filter((option) => option.selected)
+      .map((option) => option.value)
+    const taste = this.data.tasteOptions
+      .filter((option) => option.selected)
+      .map((option) => option.value)
+      .join("、")
     const flavorOptions = parseTextItems(this.data.flavorOptionsText)
     if (!name) {
       wx.showToast({ title: recordType === "outside" ? "请填写店铺名" : "请填写菜名", icon: "none" })

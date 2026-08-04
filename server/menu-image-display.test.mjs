@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("menu supports camera capture with one 4:3 crop and matching previews", async () => {
-  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper] = await Promise.all([
+  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes] = await Promise.all([
     readFile(new URL("../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.less", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.ts", import.meta.url), "utf8"),
@@ -11,15 +11,38 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
     readFile(new URL("../src/pages/menu/index.less", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/components/image-cropper/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/utils/menu-attributes.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /class="image-field__preview"[\s\S]*?mode="aspectFill"/);
   assert.match(page, /拍照或从相册选择/);
+  assert.doesNotMatch(page, /record-overview/);
+  assert.match(
+    page,
+    /菜名[\s\S]*介绍（可不填）[\s\S]*用餐场景[\s\S]*菜品分类[\s\S]*适用餐次[\s\S]*主要食材[\s\S]*烹饪类型[\s\S]*口味特点[\s\S]*衍生菜系/,
+  );
+  assert.match(page, /bindtap="handleCookingMethodTap"/);
+  assert.match(page, /bindtap="handleTasteTap"/);
+  assert.doesNotMatch(page, /bindinput="handleCookingMethodsInput"/);
+  assert.doesNotMatch(page, /bindinput="handleTasteInput"/);
   assert.match(page, /shape="rectangle"/);
   assert.match(page, /aspect-ratio="1\.333333"/);
   assert.match(page, /output-size="1536"/);
   assert.match(styles, /\.image-field[^}]*aspect-ratio:\s*4\s*\/\s*3/);
+  assert.match(styles, /\.field--inline[^}]*grid-template-columns:\s*132rpx minmax\(0, 1fr\)/);
+  assert.match(styles, /\.field--section-start[^}]*border-top:\s*1rpx solid #e8e8e8/);
+  assert.match(styles, /\.choice-option--selected,[\s\S]*background:\s*var\(--ui-surface\)/);
+  assert.match(styles, /\.choice-option--selected,[\s\S]*color:\s*#111/);
   assert.match(editLogic, /sourceType:\s*\["album", "camera"\]/);
+  assert.match(editLogic, /COOKING_TYPE_OPTIONS/);
+  assert.match(editLogic, /normalizeCookingTypes\(dish\.cooking_methods\)/);
+  assert.match(editLogic, /normalizeTasteTags\(dish\.taste\)/);
+  assert.match(editLogic, /handleCookingMethodTap\(event:/);
+  assert.match(editLogic, /handleTasteTap\(event:/);
+  assert.match(editLogic, /tasteOptions[\s\S]*filter\(\(option\) => option\.selected\)[\s\S]*join\("、"\)/);
+  assert.match(editLogic, /cookingMethodOptions[\s\S]*filter\(\(option\) => option\.selected\)/);
+  assert.match(attributes, /COOKING_TYPE_OPTIONS = \["煎炒", "蒸煮", "凉拌", "烤炸"\]/);
+  assert.match(attributes, /TASTE_OPTIONS = \["清淡", "咸", "鲜", "酸", "甜", "辣"\]/);
   assert.match(menuPage, /displayMode === 'quick'/);
   assert.match(menuPage, /displayMode === 'browse'/);
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);
@@ -39,10 +62,11 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.doesNotMatch(menuPage, /browse-card__edit|handleDishImageTap/);
   assert.match(
     menuPage,
-    /browse-card__name[\s\S]*browse-card__title-introduction[\s\S]*browse-card__record-row[\s\S]*用餐场景[\s\S]*菜品分类[\s\S]*browse-card__meal-row[\s\S]*主要食材[\s\S]*烹饪方式[\s\S]*口味[\s\S]*衍生菜系/,
+    /browse-card__name[\s\S]*browse-card__title-introduction[\s\S]*browse-card__record-row[\s\S]*用餐场景[\s\S]*菜品分类[\s\S]*browse-card__meal-row[\s\S]*主要食材[\s\S]*烹饪类型[\s\S]*口味特点[\s\S]*衍生菜系/,
   );
-  assert.match(menuPage, /menu-filter-label">用餐场景/);
-  assert.match(menuPage, /activeRecordType === 'outside' \? '外食分类' : '菜品分类'/);
+  assert.match(menuPage, /wx:for="\{\{item\.tasteTags\}\}"/);
+  assert.match(menuPage, /menu-filter-label">用餐场景：/);
+  assert.match(menuPage, /activeRecordType === 'outside' \? '外食分类：' : '菜品分类：'/);
   assert.match(menuPage, /wx:if="\{\{item\.record_type === 'home' && item\.introduction\}\}"/);
   assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid #e8e8e8/);
   assert.match(menuPage, /class="browse-slide-scroll"[\s\S]*scroll-y/);
@@ -68,6 +92,7 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuStyles, /\.browse-card[^}]*padding:\s*40rpx 24rpx 24rpx/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*color:\s*#111/);
+  assert.match(menuStyles, /\.browse-card__black-tag[^}]*border:\s*2rpx solid #d4d4d4/);
   assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(3/);
   assert.match(
     menuStyles,

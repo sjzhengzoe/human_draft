@@ -26,7 +26,7 @@
 
     <view class="menu-section-row">
       <view class="record-filter-group">
-        <view class="menu-filter-label">用餐场景</view>
+        <view class="menu-filter-label">用餐场景：</view>
         <view class="record-filter" role="tablist" aria-label="用餐场景">
           <view
             class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}"
@@ -47,7 +47,7 @@
     </view>
 
     <view wx:if="{{activeRecordType !== 'all'}}" class="category-filter-row">
-      <view class="menu-filter-label">{{activeRecordType === 'outside' ? '外食分类' : '菜品分类'}}</view>
+      <view class="menu-filter-label">{{activeRecordType === 'outside' ? '外食分类：' : '菜品分类：'}}</view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
           <view
@@ -257,7 +257,7 @@
                 class="browse-card__home-section"
               >
                 <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">烹饪方式</view>
+                  <view class="browse-card__attribute-label">烹饪类型</view>
                   <view wx:if="{{item.cooking_methods.length}}" class="browse-card__attribute-tags">
                     <view
                       wx:for="{{item.cooking_methods}}"
@@ -275,9 +275,14 @@
                 class="browse-card__home-section"
               >
                 <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">口味</view>
-                  <view wx:if="{{item.taste}}" class="browse-card__attribute-tags">
-                    <view class="browse-card__black-tag">{{item.taste}}</view>
+                  <view class="browse-card__attribute-label">口味特点</view>
+                  <view wx:if="{{item.tasteTags.length}}" class="browse-card__attribute-tags">
+                    <view
+                      wx:for="{{item.tasteTags}}"
+                      wx:key="*this"
+                      wx:for-item="taste"
+                      class="browse-card__black-tag"
+                    >{{taste}}</view>
                   </view>
                   <view wx:else class="browse-card__attribute-empty">-</view>
                 </view>
