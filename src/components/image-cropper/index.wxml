@@ -16,11 +16,14 @@
         class="crop-stage__image"
         src="{{src}}"
         mode="scaleToFill"
-        style="width: {{displayWidth}}px; height: {{displayHeight}}px; transform: translate3d({{offsetX}}px, {{offsetY}}px, 0);"
+        style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{displayWidth}}px; height: {{displayHeight}}px; transform: translate3d({{offsetX}}px, {{offsetY}}px, 0);"
       />
-      <view class="crop-stage__guide crop-stage__guide--{{shape}}" />
+      <view
+        class="crop-stage__guide crop-stage__guide--{{shape}}"
+        style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{frameWidth}}px; height: {{frameHeight}}px;"
+      />
     </view>
-    <view class="crop-modal__hint">单指拖动，双指缩放</view>
+    <view class="crop-modal__hint">单指拖动，双指缩放，白框内为保留范围</view>
   </view>
   <view slot="actions" class="crop-modal__actions">
     <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing}}" bindtap="handleCancel">取消</button>

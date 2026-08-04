@@ -1,4 +1,4 @@
-type CropShape = "circle" | "square"
+type CropShape = "circle" | "square" | "rectangle"
 
 type CanvasImage = {
   src: string
@@ -31,7 +31,8 @@ type CanvasContext = {
 type CropState = {
   naturalWidth: number
   naturalHeight: number
-  viewportSize: number
+  viewportWidth: number
+  viewportHeight: number
   minScale: number
   scale: number
   offsetX: number
@@ -59,7 +60,8 @@ type TouchPoint = {
   clientY: number
 }
 
-const VIEWPORT_RPX = 420
+const STAGE_RPX = 536
+const VIEWPORT_WIDTH_RPX = 420
 const CANVAS_ID = "imageCropperCanvas"
 const cropStates = new WeakMap<object, CropState>()
 const cropGestures = new WeakMap<object, CropGesture>()
@@ -81,6 +83,10 @@ Component({
     outputSize: {
       type: Number,
       value: 1080
+    },
+    aspectRatio: {
+      type: Number,
+      value: 1
     }
   },
 
@@ -90,7 +96,11 @@ Component({
     displayWidth: 0,
     displayHeight: 0,
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
+    frameLeft: 0,
+    frameTop: 0,
+    frameWidth: 0,
+    frameHeight: 0
   },
 
   lifetimes: {
@@ -115,24 +125,36 @@ Component({
         src,
         success: (imageInfo) => {
           const windowWidth = wx.getSystemInfoSync().windowWidth
-          const viewportSize = (windowWidth * VIEWPORT_RPX) / 750
+          const aspectRatio = Math.max(Number(this.properties.aspectRatio) || 1, 0.5)
+          const viewportWidth = (windowWidth * VIEWPORT_WIDTH_RPX) / 750
+          const viewportHeight = viewportWidth / aspectRatio
+          const stageSize = (windowWidth * STAGE_RPX) / 750
+          const frameLeft = (stageSize - viewportWidth) / 2
+          const frameTop = (stageSize - viewportHeight) / 2
           const minScale = Math.max(
-            viewportSize / imageInfo.width,
-            viewportSize / imageInfo.height
+            viewportWidth / imageInfo.width,
+            viewportHeight / imageInfo.height
           )
           const displayWidth = imageInfo.width * minScale
           const displayHeight = imageInfo.height * minScale
           const state: CropState = {
             naturalWidth: imageInfo.width,
             naturalHeight: imageInfo.height,
-            viewportSize,
+            viewportWidth,
+            viewportHeight,
             minScale,
             scale: minScale,
-            offsetX: (viewportSize - displayWidth) / 2,
-            offsetY: (viewportSize - displayHeight) / 2
+            offsetX: (viewportWidth - displayWidth) / 2,
+            offsetY: (viewportHeight - displayHeight) / 2
           }
 
           cropStates.set(this, state)
+          this.setData({
+            frameLeft,
+            frameTop,
+            frameWidth: viewportWidth,
+            frameHeight: viewportHeight
+          })
           this.syncTransform(state, true)
         },
         fail: () => {
@@ -169,13 +191,14 @@ Component({
         const requestedScale = gesture.startScale * (distance / gesture.startDistance)
         const nextScale = clampScale(state, requestedScale)
         const ratio = nextScale / gesture.startScale
-        const anchor = state.viewportSize / 2
+        const anchorX = state.viewportWidth / 2
+        const anchorY = state.viewportHeight / 2
 
         applyTransform(
           state,
           nextScale,
-          anchor - (anchor - gesture.startOffsetX) * ratio,
-          anchor - (anchor - gesture.startOffsetY) * ratio
+          anchorX - (anchorX - gesture.startOffsetX) * ratio,
+          anchorY - (anchorY - gesture.startOffsetY) * ratio
         )
         this.syncTransform(state)
       }
@@ -241,28 +264,33 @@ Component({
       try {
         const canvas = await this.getCanvas()
         const image = await loadCanvasImage(canvas, this.properties.src)
-        const outputSize = Math.max(Number(this.properties.outputSize) || 1080, 320)
-        const sourceSize = state.viewportSize / state.scale
+        const outputWidth = Math.max(Number(this.properties.outputSize) || 1080, 320)
+        const outputHeight = Math.max(
+          Math.round(outputWidth / Math.max(Number(this.properties.aspectRatio) || 1, 0.5)),
+          320
+        )
+        const sourceWidth = state.viewportWidth / state.scale
+        const sourceHeight = state.viewportHeight / state.scale
         const sourceX = -state.offsetX / state.scale
         const sourceY = -state.offsetY / state.scale
 
-        canvas.width = outputSize
-        canvas.height = outputSize
+        canvas.width = outputWidth
+        canvas.height = outputHeight
         const ctx = canvas.getContext("2d")
-        ctx.clearRect(0, 0, outputSize, outputSize)
+        ctx.clearRect(0, 0, outputWidth, outputHeight)
         ctx.drawImage(
           image,
           sourceX,
           sourceY,
-          sourceSize,
-          sourceSize,
+          sourceWidth,
+          sourceHeight,
           0,
           0,
-          outputSize,
-          outputSize
+          outputWidth,
+          outputHeight
         )
 
-        const tempFilePath = await canvasToTempFilePath(canvas, outputSize)
+        const tempFilePath = await canvasToTempFilePath(canvas, outputWidth, outputHeight)
         this.triggerEvent("confirm", { tempFilePath })
       } catch (error) {
         console.error("裁剪图片失败", error)
@@ -309,8 +337,8 @@ function applyTransform(
   const displayHeight = state.naturalHeight * nextScale
 
   state.scale = nextScale
-  state.offsetX = Math.min(0, Math.max(state.viewportSize - displayWidth, offsetX))
-  state.offsetY = Math.min(0, Math.max(state.viewportSize - displayHeight, offsetY))
+  state.offsetX = Math.min(0, Math.max(state.viewportWidth - displayWidth, offsetX))
+  state.offsetY = Math.min(0, Math.max(state.viewportHeight - displayHeight, offsetY))
 }
 
 function loadCanvasImage(canvas: CanvasNode, src: string) {
@@ -322,14 +350,14 @@ function loadCanvasImage(canvas: CanvasNode, src: string) {
   })
 }
 
-function canvasToTempFilePath(canvas: CanvasNode, outputSize: number) {
+function canvasToTempFilePath(canvas: CanvasNode, outputWidth: number, outputHeight: number) {
   return new Promise<string>((resolve, reject) => {
     wx.canvasToTempFilePath({
       canvas,
-      width: outputSize,
-      height: outputSize,
-      destWidth: outputSize,
-      destHeight: outputSize,
+      width: outputWidth,
+      height: outputHeight,
+      destWidth: outputWidth,
+      destHeight: outputHeight,
       fileType: "png",
       success: (result) => resolve(result.tempFilePath),
       fail: reject

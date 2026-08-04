@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
 import { config } from "../config.mjs";
 import { assertCondition, HttpError } from "./errors.mjs";
+import {
+  IMAGE_PROFILES,
+  optimizeImage,
+  optimizedImagePaths,
+} from "./image-processing.mjs";
 import { throwSupabaseError } from "./supabase.mjs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -131,26 +135,7 @@ export async function readMultipartImage(request) {
 
 async function normalizeImage(buffer) {
   try {
-    const source = sharp(buffer, { failOn: "error" }).rotate();
-    const metadata = await source.metadata();
-    assertCondition(
-      metadata.width && metadata.height,
-      400,
-      "INVALID_IMAGE",
-      "无法读取图片尺寸。",
-    );
-
-    const original = await source
-      .clone()
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toBuffer();
-    const thumbnail = await source
-      .clone()
-      .resize({ width: 480, height: 360, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 82, alphaQuality: 90 })
-      .toBuffer();
-
-    return { original, thumbnail };
+    return await optimizeImage(buffer, IMAGE_PROFILES.dish);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。" );
@@ -162,15 +147,15 @@ async function normalizeImage(buffer) {
 async function uploadImagePair(supabase, userId, dishId, buffer) {
   const revision = randomUUID();
   const basePath = `users/${userId}/dishes/${dishId}/${revision}`;
-  const imagePath = `${basePath}-original.png`;
-  const thumbnailPath = `${basePath}-thumbnail.webp`;
-  const { original, thumbnail } = await normalizeImage(buffer);
+  const { imagePath, thumbnailPath } = optimizedImagePaths(basePath);
+  const { original, thumbnail, originalContentType, thumbnailContentType } =
+    await normalizeImage(buffer);
 
   const { error: originalError } = await supabase.storage
     .from(config.dishBucket)
     .upload(imagePath, original, {
       cacheControl: "31536000",
-      contentType: "image/png",
+      contentType: originalContentType,
       upsert: false,
     });
   if (originalError) {
@@ -183,7 +168,7 @@ async function uploadImagePair(supabase, userId, dishId, buffer) {
     .from(config.dishBucket)
     .upload(thumbnailPath, thumbnail, {
       cacheControl: "31536000",
-      contentType: "image/webp",
+      contentType: thumbnailContentType,
       upsert: false,
     });
   if (thumbnailError) {

@@ -42,7 +42,7 @@
         wx:if="{{selectedImagePath || currentImageUrl}}"
         class="image-field__preview"
         src="{{selectedImagePath || currentImageUrl}}"
-        mode="aspectFill"
+        mode="aspectFit"
       />
       <view wx:else class="image-field__empty">
         <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
@@ -124,8 +124,10 @@
 <image-cropper
   wx:if="{{showImageCropper}}"
   src="{{cropSourcePath}}"
-  shape="square"
-  title="裁剪图片"
+  shape="rectangle"
+  aspect-ratio="1.5"
+  output-size="1440"
+  title="裁剪为横图"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"

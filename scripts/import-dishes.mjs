@@ -2,8 +2,12 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
-import sharp from "sharp";
 import { config } from "../server/config.mjs";
+import {
+  IMAGE_PROFILES,
+  optimizeImage,
+  optimizedImagePaths,
+} from "../server/lib/image-processing.mjs";
 import { getSupabaseAdmin } from "../server/lib/supabase.mjs";
 
 const projectRoot = resolve(import.meta.dirname, "..");
@@ -98,25 +102,16 @@ async function main() {
     }
 
     const dishId = randomUUID();
-    const imagePath = `dishes/${dishId}/import-original.png`;
-    const thumbnailPath = `dishes/${dishId}/import-thumbnail.webp`;
+    const { imagePath, thumbnailPath } = optimizedImagePaths(`dishes/${dishId}/import`);
     const input = await readFile(file.path);
-    const source = sharp(input).rotate();
-    const original = await source
-      .clone()
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toBuffer();
-    const thumbnail = await source
-      .clone()
-      .resize({ width: 480, height: 360, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 82, alphaQuality: 90 })
-      .toBuffer();
+    const { original, thumbnail, originalContentType, thumbnailContentType } =
+      await optimizeImage(input, IMAGE_PROFILES.dish);
 
     const { error: imageError } = await supabase.storage
       .from(config.dishBucket)
       .upload(imagePath, original, {
         cacheControl: "31536000",
-        contentType: "image/png",
+        contentType: originalContentType,
         upsert: false,
       });
     if (imageError) throw imageError;
@@ -125,7 +120,7 @@ async function main() {
       .from(config.dishBucket)
       .upload(thumbnailPath, thumbnail, {
         cacheControl: "31536000",
-        contentType: "image/webp",
+        contentType: thumbnailContentType,
         upsert: false,
       });
     if (thumbnailError) {

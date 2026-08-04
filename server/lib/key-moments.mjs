@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
 import { config } from "../config.mjs";
 import { assertCondition, HttpError } from "./errors.mjs";
+import {
+  IMAGE_PROFILES,
+  optimizeImage,
+  optimizedImagePaths,
+} from "./image-processing.mjs";
 import { throwSupabaseError } from "./supabase.mjs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -113,20 +117,7 @@ async function normalizeImage(image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择图片。");
   assertCondition(ALLOWED_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
   try {
-    const source = sharp(image.buffer, { failOn: "error" }).rotate();
-    const metadata = await source.metadata();
-    assertCondition(metadata.width && metadata.height, 400, "INVALID_IMAGE", "无法读取图片尺寸。");
-    const original = await source
-      .clone()
-      .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toBuffer();
-    const thumbnail = await source
-      .clone()
-      .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 84, alphaQuality: 90 })
-      .toBuffer();
-    return { original, thumbnail };
+    return await optimizeImage(image.buffer, IMAGE_PROFILES.keyMoment);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。");
@@ -136,15 +127,15 @@ async function normalizeImage(image) {
 }
 
 async function uploadImage(supabase, userId, momentId, image) {
-  const { original, thumbnail } = await normalizeImage(image);
+  const { original, thumbnail, originalContentType, thumbnailContentType } =
+    await normalizeImage(image);
   const revision = randomUUID();
   const basePath = `users/${userId}/moments/${momentId}/${revision}`;
-  const imagePath = `${basePath}-original.png`;
-  const thumbnailPath = `${basePath}-thumbnail.webp`;
+  const { imagePath, thumbnailPath } = optimizedImagePaths(basePath);
   const bucket = supabase.storage.from(config.keyMomentBucket);
   const { error: imageError } = await bucket.upload(imagePath, original, {
     cacheControl: "31536000",
-    contentType: "image/png",
+    contentType: originalContentType,
     upsert: false,
   });
   if (imageError) {
@@ -154,7 +145,7 @@ async function uploadImage(supabase, userId, momentId, image) {
   }
   const { error: thumbnailError } = await bucket.upload(thumbnailPath, thumbnail, {
     cacheControl: "31536000",
-    contentType: "image/webp",
+    contentType: thumbnailContentType,
     upsert: false,
   });
   if (thumbnailError) {

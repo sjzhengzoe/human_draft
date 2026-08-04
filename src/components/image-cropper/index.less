@@ -11,8 +11,6 @@
 
 .crop-stage__image {
   position: absolute;
-  top: 58rpx;
-  left: 58rpx;
   display: block;
   max-width: none;
   transform-origin: 0 0;
@@ -21,7 +19,6 @@
 .crop-stage__guide {
   position: absolute;
   z-index: 2;
-  inset: 58rpx;
   box-sizing: border-box;
   border: 3rpx solid rgba(255, 255, 255, 0.92);
   box-shadow: 0 0 0 999rpx rgba(0, 0, 0, 0.52);
@@ -33,6 +30,10 @@
 }
 
 .crop-stage__guide--square {
+  border-radius: 16rpx;
+}
+
+.crop-stage__guide--rectangle {
   border-radius: 16rpx;
 }
 
