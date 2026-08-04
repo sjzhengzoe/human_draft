@@ -1,5 +1,5 @@
 export const COOKING_TYPE_OPTIONS = ["煎炒", "蒸煮", "凉拌", "烤炸"]
-export const TASTE_OPTIONS = ["清淡", "咸", "鲜", "酸", "甜", "辣"]
+export const TASTE_OPTIONS = ["清淡", "咸", "鲜", "香", "酸", "甜", "辣"]
 
 function splitAttributeValues(values: string[]): string[] {
   return values.flatMap((value) =>
@@ -57,6 +57,10 @@ export function normalizeTasteTags(value: string): string[] {
     }
     if (item.includes("鲜")) {
       matched.add("鲜")
+      hasMatch = true
+    }
+    if (item.includes("香")) {
+      matched.add("香")
       hasMatch = true
     }
     if (item.includes("酸")) {
