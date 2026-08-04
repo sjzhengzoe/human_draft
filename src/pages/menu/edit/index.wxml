@@ -5,7 +5,15 @@
   <view class="fullscreen-loading__text">正在加载菜品…</view>
 </view>
 
-<view wx:else class="page page--with-navigation">
+<scroll-view
+  wx:else
+  class="edit-scroll page--fixed"
+  scroll-y
+  enhanced
+  bounces="{{true}}"
+  show-scrollbar="{{false}}"
+>
+<view class="page">
   <view class="record-overview">
     <view class="record-overview__title">{{dishId ? '编辑' : '新增'}}{{recordType === 'outside' ? '外食店铺' : '居家菜品'}}</view>
     <view class="record-overview__stats">
@@ -175,6 +183,7 @@
     </button>
   </view>
 </view>
+</scroll-view>
 
 <image-cropper
   wx:if="{{showImageCropper}}"

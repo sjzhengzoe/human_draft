@@ -7,6 +7,30 @@ import type {
 } from "../types/api"
 import { request, upload } from "./request"
 
+const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : []
+}
+
+function normalizeDish(dish: Dish): Dish {
+  const mealPeriods = normalizeStringArray(dish.meal_periods).filter(
+    (item): item is MealPeriod => ["breakfast", "lunch", "dinner"].includes(item)
+  )
+  return {
+    ...dish,
+    recommended_items: normalizeStringArray(dish.recommended_items),
+    main_ingredients: normalizeStringArray(dish.main_ingredients),
+    introduction: typeof dish.introduction === "string" ? dish.introduction : "",
+    cooking_methods: normalizeStringArray(dish.cooking_methods),
+    taste: typeof dish.taste === "string" ? dish.taste : "",
+    flavor_options: normalizeStringArray(dish.flavor_options),
+    meal_periods: mealPeriods.length > 0 ? mealPeriods : [...DEFAULT_MEAL_PERIODS]
+  }
+}
+
 function toQuery(params: DishListParams): string {
   const entries: string[] = []
   Object.keys(params).forEach((key) => {
@@ -27,12 +51,12 @@ export async function listDishes(params: DishListParams): Promise<Dish[]> {
   const data = await request<{ items: Dish[] }>({
     path: `/api/dishes${toQuery(params)}`
   })
-  return data.items
+  return Array.isArray(data.items) ? data.items.map(normalizeDish) : []
 }
 
 export async function getDish(id: string): Promise<Dish> {
   const data = await request<{ dish: Dish }>({ path: `/api/dishes/${id}` })
-  return data.dish
+  return normalizeDish(data.dish)
 }
 
 export async function createDish(input: {
@@ -66,7 +90,7 @@ export async function createDish(input: {
       flavor_options: JSON.stringify(input.flavorOptions || [])
     }
   })
-  return data.dish
+  return normalizeDish(data.dish)
 }
 
 export async function updateDish(
@@ -90,7 +114,7 @@ export async function updateDish(
     method: "PUT",
     data: changes
   })
-  return data.dish
+  return normalizeDish(data.dish)
 }
 
 export async function replaceDishImage(id: string, imagePath: string): Promise<Dish> {
@@ -98,7 +122,7 @@ export async function replaceDishImage(id: string, imagePath: string): Promise<D
     path: `/api/dishes/${id}/image`,
     filePath: imagePath
   })
-  return data.dish
+  return normalizeDish(data.dish)
 }
 
 export function deleteDish(id: string): Promise<void> {

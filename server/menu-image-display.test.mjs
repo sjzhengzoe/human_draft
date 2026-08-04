@@ -77,3 +77,29 @@ test("menu uploads one 3:2 crop and keeps browse cards top-aligned", async () =>
   assert.match(cropper, /viewportHeight/);
   assert.match(cropper, /canvas\.height = outputHeight/);
 });
+
+test("menu client supplies safe defaults when older APIs omit new dish fields", async () => {
+  const service = await readFile(
+    new URL("../src/services/menu.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(service, /function normalizeDish\(dish: Dish\): Dish/);
+  assert.match(service, /main_ingredients: normalizeStringArray\(dish\.main_ingredients\)/);
+  assert.match(service, /cooking_methods: normalizeStringArray\(dish\.cooking_methods\)/);
+  assert.match(service, /flavor_options: normalizeStringArray\(dish\.flavor_options\)/);
+  assert.match(service, /mealPeriods\.length > 0 \? mealPeriods : \[\.\.\.DEFAULT_MEAL_PERIODS\]/);
+  assert.match(service, /data\.items\.map\(normalizeDish\)/);
+  assert.match(service, /return normalizeDish\(data\.dish\)/);
+});
+
+test("menu edit page locks native scrolling and scrolls its content area", async () => {
+  const [pageConfig, page] = await Promise.all([
+    readFile(new URL("../src/pages/menu/edit/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(pageConfig).disableScroll, true);
+  assert.match(page, /<scroll-view[\s\S]*class="edit-scroll page--fixed"[\s\S]*scroll-y/);
+  assert.match(page, /show-scrollbar="\{\{false\}\}"/);
+});
