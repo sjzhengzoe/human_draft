@@ -1,0 +1,104 @@
+<custom-navigation title="休息日补卡" background="#ffffff" />
+
+<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在整理运动记录…</view>
+</view>
+
+<view wx:else class="page page--with-navigation">
+  <view class="stats-grid">
+    <view class="stat-card">
+      <view class="stat-card__label">本月未完成</view>
+      <view class="stat-card__value">{{monthIncompleteDays}}<text>天</text></view>
+      <view class="stat-card__hint">已完成 {{monthCompletedDays}} 天 · 不含今天</view>
+    </view>
+    <view class="stat-card">
+      <view class="stat-card__label">今年未完成</view>
+      <view class="stat-card__value">{{yearIncompleteDays}}<text>天</text></view>
+      <view class="stat-card__hint">已完成 {{yearCompletedDays}} 天 · 不含今天</view>
+    </view>
+  </view>
+
+  <view class="calendar-card">
+    <view class="calendar-toolbar">
+      <view
+        class="calendar-arrow {{canGoPrevious ? '' : 'calendar-arrow--disabled'}}"
+        role="button"
+        aria-label="上个月"
+        bindtap="handlePreviousMonth"
+      >‹</view>
+      <picker
+        mode="date"
+        fields="month"
+        value="{{pickerValue}}"
+        start="{{pickerStart}}"
+        end="{{pickerEnd}}"
+        disabled="{{calendarLoading || busy}}"
+        bindchange="handleMonthChange"
+      >
+        <view class="calendar-title">
+          <text>{{monthLabel}}</text><text class="calendar-title__arrow">⌄</text>
+        </view>
+      </picker>
+      <view
+        class="calendar-arrow {{canGoNext ? '' : 'calendar-arrow--disabled'}}"
+        role="button"
+        aria-label="下个月"
+        bindtap="handleNextMonth"
+      >›</view>
+    </view>
+
+    <view class="calendar-weekdays">
+      <text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text><text>日</text>
+    </view>
+    <view class="calendar-grid">
+      <view
+        wx:for="{{cells}}"
+        wx:key="key"
+        class="calendar-cell calendar-cell--{{item.state}} {{item.restUsed ? 'calendar-cell--rest' : ''}} {{item.isToday ? 'calendar-cell--today' : ''}} {{item.isSelected ? 'calendar-cell--selected' : ''}}"
+        data-date="{{item.date}}"
+        bindtap="handleDayTap"
+      >
+        <view wx:if="{{item.day}}" class="calendar-cell__day">{{item.day}}</view>
+        <view wx:if="{{item.restUsed}}" class="calendar-cell__mark">休</view>
+      </view>
+    </view>
+
+    <view wx:if="{{emptyMessage}}" class="calendar-empty">{{emptyMessage}}</view>
+
+    <view class="calendar-footer">
+      <view class="calendar-footer__quota">
+        该月休息权限还剩 <text>{{restDaysRemaining}}</text>/{{restDaysTotal}} 天
+      </view>
+      <view class="calendar-legend">
+        <view><text class="legend-dot legend-dot--open" />未完成</view>
+        <view><text class="legend-dot legend-dot--done" />已完成</view>
+        <view><text class="legend-dot legend-dot--rest" />已休息</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="selection-card">
+    <view class="selection-copy">
+      <view class="selection-copy__title">{{selectedDate ? selectedDateLabel : '暂无可补卡日期'}}</view>
+      <view class="selection-copy__hint">{{selectedDate ? '使用后计入所选月份的休息额度' : '切换月份查看其他未完成日期'}}</view>
+    </view>
+    <button
+      class="use-button"
+      disabled="{{busy || !selectedDate}}"
+      loading="{{busy}}"
+      bindtap="handleUseRestDay"
+    >使用休息日权限</button>
+  </view>
+
+  <app-dialog
+    wx:if="{{confirmVisible}}"
+    visible="{{true}}"
+    title="使用休息日权限"
+    content="{{confirmContent}}"
+    cancel-text="取消"
+    confirm-text="确认使用"
+    bindcancel="handleConfirmCancel"
+    bindconfirm="handleConfirm"
+  />
+</view>

@@ -83,6 +83,7 @@ import {
   completeExerciseTasks,
   consumeExerciseRestDay,
   getExerciseDashboard,
+  getExerciseRestCalendar,
   resetExerciseState,
   saveExerciseSettings,
 } from "./lib/exercise.mjs";
@@ -221,6 +222,16 @@ export function buildServer(options = {}) {
   app.get("/api/exercise", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await getExerciseDashboard(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      new Date(),
+      request.query?.month,
+    ),
+  }));
+
+  app.get("/api/exercise/rest-calendar", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await getExerciseRestCalendar(
       getSupabaseAdmin(),
       request.auth.user.id,
       new Date(),

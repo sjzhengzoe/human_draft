@@ -1,6 +1,5 @@
 import {
   completeExercise,
-  consumeExerciseRestDay,
   getExerciseDashboard
 } from "../services/exercise"
 import type { ExerciseBowlLevel, ExerciseDashboard } from "../../types/exercise"
@@ -98,30 +97,6 @@ type ExerciseCalendarCell = {
   isToday: boolean
 }
 
-type ExerciseRestDayOption = {
-  date: string
-  label: string
-  isToday: boolean
-}
-
-function restDayOptionsFromDashboard(dashboard: ExerciseDashboard): ExerciseRestDayOption[] {
-  if (!dashboard.month.is_current) return []
-  return dashboard.month.days
-    .filter((item) => item.can_use_rest_day)
-    .sort((left, right) => {
-      if (left.date === dashboard.today.date) return -1
-      if (right.date === dashboard.today.date) return 1
-      return right.date.localeCompare(left.date)
-    })
-    .map((item) => ({
-      date: item.date,
-      label: item.date === dashboard.today.date
-        ? `今天 · ${dashboard.month.month}月${item.day}日`
-        : `${dashboard.month.month}月${item.day}日`,
-      isToday: item.date === dashboard.today.date
-    }))
-}
-
 function pickRandomImage(images: readonly string[]) {
   return images[Math.floor(Math.random() * images.length)]
 }
@@ -179,12 +154,6 @@ Page({
     restDaysRemaining: 0,
     restDayUsedToday: false,
     restDayEntryText: "使用休息日权限",
-    restDayPickerVisible: false,
-    restDayOptions: [] as ExerciseRestDayOption[],
-    selectedRestDate: "",
-    selectedRestDayLabel: "今天",
-    restConfirmVisible: false,
-    restConfirmContent: "",
     completeButtonText: "完成运动",
     bowlLabel: "没有",
     emotionLabel: PET_STATE_LABELS.empty,
@@ -227,9 +196,6 @@ Page({
     const restDays = dashboard.rest_days
     const dailyPendingMinutes = dashboard.today.daily_pending_minutes
     const pendingTotal = dailyPendingMinutes
-    const currentRestDayOptions = dashboard.month.is_current
-      ? restDayOptionsFromDashboard(dashboard)
-      : this.data.restDayOptions
     const calendarCells: ExerciseCalendarCell[] = [
       ...Array.from({ length: dashboard.month.first_weekday }, (_, index) => ({
         key: `blank-${index}`,
@@ -256,10 +222,7 @@ Page({
       restDaysTotal: restDays.total,
       restDaysRemaining: restDays.remaining,
       restDayUsedToday: restDays.used_today,
-      restDayEntryText: restDays.remaining > 0
-        ? `使用休息日权限 · 本月剩余 ${restDays.remaining} 天`
-        : "本月休息日权限已用完",
-      restDayOptions: currentRestDayOptions,
+      restDayEntryText: `休息日补卡 · 本月剩余 ${restDays.remaining} 天`,
       completeButtonText: pendingTotal === 0 ? "记录额外运动" : "完成运动",
       bowlLabel: dashboard.cat.bowl_label,
       emotionLabel: PET_STATE_LABELS[bowlLevel],
@@ -324,78 +287,9 @@ Page({
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },
 
-  async handleRestDay() {
+  handleRestDay() {
     if (this.data.busy) return
-    if (this.data.restDaysRemaining === 0) {
-      wx.showToast({ title: "本月休息日权限已用完", icon: "none" })
-      return
-    }
-    let options = this.data.restDayOptions
-    if (!this.data.calendarIsCurrent) {
-      this.setData({ busy: true, busyAction: "rest-options" })
-      try {
-        const dashboard = await getExerciseDashboard()
-        if (!isAsyncPageActive(this)) return
-        options = restDayOptionsFromDashboard(dashboard)
-        this.setData({
-          restDayOptions: options,
-          restDaysRemaining: dashboard.rest_days.remaining,
-          restDayEntryText: dashboard.rest_days.remaining > 0
-            ? `使用休息日权限 · 本月剩余 ${dashboard.rest_days.remaining} 天`
-            : "本月休息日权限已用完"
-        })
-      } catch (error) {
-        if (isAsyncPageActive(this)) {
-          wx.showToast({
-            title: error instanceof Error ? error.message : "读取可补卡日期失败",
-            icon: "none"
-          })
-        }
-        return
-      } finally {
-        if (isAsyncPageActive(this)) this.setData({ busy: false, busyAction: "" })
-      }
-    }
-    if (options.length === 0) {
-      wx.showToast({ title: "本月没有可以补卡的日期", icon: "none" })
-      return
-    }
-    this.setData({ restDayPickerVisible: true })
-  },
-
-  handleRestPickerCancel() {
-    if (this.data.busy) return
-    this.setData({ restDayPickerVisible: false })
-  },
-
-  handleRestDayOption(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.busy) return
-    const date = String(event.currentTarget.dataset.date || "")
-    const option = this.data.restDayOptions.find((item) => item.date === date)
-    if (!option) return
-    const remainingAfterUse = Math.max(0, this.data.restDaysRemaining - 1)
-    this.setData({
-      restDayPickerVisible: false,
-      selectedRestDate: option.date,
-      selectedRestDayLabel: option.isToday ? "今天" : option.label,
-      restConfirmVisible: true,
-      restConfirmContent: `使用后将把${option.isToday ? "今天" : option.label}的日常任务标记为完成。使用后本月还剩 ${remainingAfterUse} 天休息权限。`
-    })
-  },
-
-  handleRestCancel() {
-    if (this.data.busy) return
-    this.setData({ restConfirmVisible: false })
-  },
-
-  handleRestConfirm() {
-    if (this.data.busy) return
-    this.setData({ restConfirmVisible: false })
-    this.runAction(
-      "rest-day",
-      () => consumeExerciseRestDay(this.data.selectedRestDate),
-      (dashboard) => `${this.data.selectedRestDayLabel}已设为休息日，还剩 ${dashboard.rest_days.remaining} 天`
-    )
+    wx.navigateTo({ url: "/exercise/pages/rest-days/index" })
   },
 
   handleComplete() {

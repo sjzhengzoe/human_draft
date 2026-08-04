@@ -112,54 +112,12 @@
       <view class="task-button__title">{{completeButtonText}}</view>
     </button>
     <view
-      class="rest-day-entry {{restDaysRemaining === 0 ? 'rest-day-entry--disabled' : ''}}"
+      class="rest-day-entry"
       role="button"
       aria-label="选择休息日补卡日期"
       bindtap="handleRestDay"
     >{{restDayEntryText}}</view>
   </view>
-
-  <app-dialog
-    wx:if="{{restDayPickerVisible}}"
-    visible="{{true}}"
-    title="选择补卡日期"
-    custom-body="{{true}}"
-    custom-actions="{{true}}"
-  >
-    <view slot="body" class="rest-day-picker">
-      <view class="rest-day-picker__hint">休息日权限会将所选日期标记为完成</view>
-      <scroll-view scroll-y class="rest-day-picker__list">
-        <view
-          wx:for="{{restDayOptions}}"
-          wx:key="date"
-          class="rest-day-picker__item"
-          role="button"
-          data-date="{{item.date}}"
-          bindtap="handleRestDayOption"
-        >
-          <view class="rest-day-picker__label">
-            <text>{{item.label}}</text>
-            <text wx:if="{{item.isToday}}" class="rest-day-picker__preferred">优先</text>
-          </view>
-          <text class="rest-day-picker__arrow">›</text>
-        </view>
-      </scroll-view>
-    </view>
-    <view slot="actions" class="rest-day-picker__actions">
-      <button class="minutes-dialog-button" disabled="{{busy}}" bindtap="handleRestPickerCancel">取消</button>
-    </view>
-  </app-dialog>
-
-  <app-dialog
-    wx:if="{{restConfirmVisible}}"
-    visible="{{true}}"
-    title="使用休息日权限"
-    content="{{restConfirmContent}}"
-    cancel-text="取消"
-    confirm-text="确认使用"
-    bindcancel="handleRestCancel"
-    bindconfirm="handleRestConfirm"
-  />
 
   <app-dialog
     wx:if="{{minutesDialogVisible}}"

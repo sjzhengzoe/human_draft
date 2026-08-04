@@ -33,7 +33,8 @@
       "root": "exercise",
       "pages": [
         "pages/index",
-        "pages/settings/index"
+        "pages/settings/index",
+        "pages/rest-days/index"
       ]
     }
   ],

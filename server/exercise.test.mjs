@@ -5,6 +5,7 @@ import {
   calculateTodayProgress,
   consumeExerciseRestDay,
   getExerciseDashboard,
+  getExerciseRestCalendar,
 } from "./lib/exercise.mjs";
 
 const USER_ID = "10000000-0000-4000-8000-000000000002";
@@ -165,7 +166,7 @@ test("dashboard reads the current month and builds daily calendar states", async
   assert.equal(dashboard.month.month, 8);
   assert.equal(dashboard.month.value, "2026-08");
   assert.equal(dashboard.month.is_current, true);
-  assert.equal(dashboard.month.min_month, "2017-01");
+  assert.equal(dashboard.month.min_month, "2026-08");
   assert.equal(dashboard.month.max_month, "2026-08");
   assert.equal(dashboard.month.days_in_month, 31);
   assert.equal(dashboard.month.first_weekday, 5);
@@ -244,7 +245,7 @@ test("dashboard can display a historical month without changing today's progress
     [
       { state: "completed", canUseRestDay: false },
       { state: "completed", canUseRestDay: false },
-      { state: "incomplete", canUseRestDay: false },
+      { state: "incomplete", canUseRestDay: true },
     ],
   );
 });
@@ -309,6 +310,79 @@ test("a rest day can be applied to a selected tracked date in the current month"
   }]);
 });
 
+test("a historical rest day consumes the selected month's allowance", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 5 },
+    ],
+    exercise_daily_goal_changes: [
+      {
+        user_id: USER_ID,
+        effective_date: "2026-07-01",
+        daily_minutes: 20,
+        monthly_rest_days: 2,
+      },
+      {
+        user_id: USER_ID,
+        effective_date: "2026-08-01",
+        daily_minutes: 20,
+        monthly_rest_days: 5,
+      },
+    ],
+    exercise_daily_rest_days: [
+      { user_id: USER_ID, rest_date: "2026-07-01" },
+    ],
+  });
+
+  await consumeExerciseRestDay(
+    supabase,
+    USER_ID,
+    { date: "2026-07-02" },
+    AUGUST_THIRD_CHINA,
+  );
+
+  assert.deepEqual(supabase.rpcCalls, [{
+    name: "use_exercise_daily_rest_day",
+    args: { p_user_id: USER_ID, p_rest_date: "2026-07-02" },
+  }]);
+});
+
+test("rest calendar excludes today and future days from incomplete statistics", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+    ],
+    exercise_daily_goal_changes: [
+      {
+        user_id: USER_ID,
+        effective_date: "2026-08-01",
+        daily_minutes: 20,
+        monthly_rest_days: 3,
+      },
+    ],
+    exercise_completion_events: [
+      { user_id: USER_ID, completion_date: "2026-08-01", minutes: 20 },
+      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 5 },
+    ],
+    exercise_daily_rest_days: [],
+  });
+
+  const calendar = await getExerciseRestCalendar(
+    supabase,
+    USER_ID,
+    AUGUST_THIRD_CHINA,
+  );
+
+  assert.deepEqual(calendar.stats.month, {
+    tracked_days: 2,
+    completed_days: 1,
+    incomplete_days: 1,
+  });
+  assert.deepEqual(calendar.stats.year, calendar.stats.month);
+  assert.equal(calendar.month.days[2].state, "incomplete");
+  assert.equal(calendar.month.days[2].can_use_rest_day, true);
+});
+
 test("a rest day cannot be applied to a future date", async () => {
   const supabase = createSupabaseMock({});
 
@@ -337,6 +411,22 @@ test("daily goal settings migration applies new goals from the next day", async 
   assert.match(migration, /effective_date date not null/i);
   assert.match(migration, /create or replace function public\.save_exercise_profile_for_next_day/i);
   assert.match(migration, /p_effective_date <= p_current_date/i);
+});
+
+test("rest allowance migration backfills settings history without changing activity", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608040001_exercise_rest_day_history.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(migration, /add column if not exists monthly_rest_days integer/i);
+  assert.match(migration, /set monthly_rest_days = coalesce\(profile\.monthly_rest_days, 4\)/i);
+  assert.match(migration, /create or replace function public\.use_exercise_daily_rest_day/i);
+  assert.match(migration, /date_trunc\('month', p_rest_date\)/i);
+  assert.doesNotMatch(migration, /delete from public\.exercise_completion_events/i);
 });
 
 test("exercise cleanup migration preserves history before dropping legacy tables", async () => {

@@ -1,4 +1,4 @@
-import type { ExerciseDashboard } from "../../types/exercise"
+import type { ExerciseDashboard, ExerciseRestCalendar } from "../../types/exercise"
 import { request } from "../../services/request"
 
 export function getExerciseDashboard(month = ""): Promise<ExerciseDashboard> {
@@ -31,6 +31,13 @@ export function consumeExerciseRestDay(date: string): Promise<ExerciseDashboard>
     path: "/api/exercise/rest-day",
     method: "POST",
     data: { date }
+  })
+}
+
+export function getExerciseRestCalendar(month = ""): Promise<ExerciseRestCalendar> {
+  return request<ExerciseRestCalendar>({
+    path: "/api/exercise/rest-calendar",
+    data: month ? { month } : undefined
   })
 }
 
