@@ -126,7 +126,7 @@
   src="{{cropSourcePath}}"
   shape="rectangle"
   aspect-ratio="1.5"
-  output-size="1440"
+  output-size="1536"
   title="裁剪为横图"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"

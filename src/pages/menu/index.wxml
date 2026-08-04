@@ -1,66 +1,84 @@
-<custom-navigation title="饮食记录" />
+<custom-navigation title="我的菜单" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载菜单…</view>
 </view>
 
-<view wx:else class="page page--fixed">
-  <scroll-view class="side-tabs" scroll-y enhanced show-scrollbar="{{false}}">
-    <view
-      class="side-tab {{activeFilter === 'all' ? 'side-tab--active' : ''}}"
-      data-filter="all"
-      bindtap="handleFilterTap"
-    >全部</view>
-    <view class="side-tabs__divider" />
-    <view
-      class="side-tab side-tab--section {{activeFilter === 'outside' ? 'side-tab--active' : ''}}"
-      data-filter="outside"
-      bindtap="handleFilterTap"
-    >外食</view>
-    <view
-      wx:for="{{outsideCategories}}"
-      wx:key="id"
-      class="side-tab {{activeFilter === 'outside:' + item.id ? 'side-tab--active' : ''}}"
-      data-filter="outside:{{item.id}}"
-      bindtap="handleFilterTap"
-    >{{item.name}}</view>
-    <view class="side-tabs__divider" />
-    <view
-      class="side-tab side-tab--section {{activeFilter === 'home' ? 'side-tab--active' : ''}}"
-      data-filter="home"
-      bindtap="handleFilterTap"
-    >在家</view>
-    <view
-      wx:for="{{categories}}"
-      wx:key="id"
-      class="side-tab {{activeFilter === 'home:' + item.id ? 'side-tab--active' : ''}}"
-      data-filter="home:{{item.id}}"
-      bindtap="handleFilterTap"
-    >{{item.name}}</view>
-  </scroll-view>
-
-  <view class="content">
-    <view class="app-overview menu-overview">
-      <view class="app-overview__topline">
-        <view class="app-overview__title-group">
-          <view class="app-overview__title">饮食记录</view>
-        </view>
-        <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAddTap"><app-icon name="plus-white" size="22" /><text>新增</text></button>
+<view wx:else class="page page--fixed {{displayMode === 'browse' ? 'page--browse' : ''}}">
+  <view class="menu-header">
+    <view class="menu-title-row">
+      <view class="menu-title-group">
+        <view class="menu-count">当前 {{dishes.length}} 个选择</view>
       </view>
-      <view class="app-overview__stats">
-        <view class="app-overview__stat">
-          <view class="app-overview__value">{{dishes.length}}</view>
-          <view class="app-overview__label">当前选项</view>
-        </view>
-        <view class="app-overview__stat">
-          <view class="app-overview__value">{{categories.length}}</view>
-          <view class="app-overview__label">居家分类</view>
-        </view>
-      </view>
+      <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddTap">
+        <app-icon name="plus-white" size="22" />
+        <text>新增</text>
+      </button>
     </view>
 
-    <view class="menu-toolbar">
+    <view class="view-switch" role="tablist" aria-label="菜单浏览方式">
+      <view
+        class="view-switch__item {{displayMode === 'quick' ? 'view-switch__item--active' : ''}}"
+        data-mode="quick"
+        bindtap="handleDisplayModeTap"
+        role="tab"
+        aria-selected="{{displayMode === 'quick'}}"
+      >速览</view>
+      <view
+        class="view-switch__item {{displayMode === 'browse' ? 'view-switch__item--active' : ''}}"
+        data-mode="browse"
+        bindtap="handleDisplayModeTap"
+        role="tab"
+        aria-selected="{{displayMode === 'browse'}}"
+      >翻阅</view>
+    </view>
+
+    <view class="record-filter" role="tablist" aria-label="菜单类型">
+      <view
+        class="record-filter__item {{activeRecordType === 'all' ? 'record-filter__item--active' : ''}}"
+        data-type="all"
+        bindtap="handleRecordTypeTap"
+      >全部</view>
+      <view
+        class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}"
+        data-type="home"
+        bindtap="handleRecordTypeTap"
+      >在家</view>
+      <view
+        class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}"
+        data-type="outside"
+        bindtap="handleRecordTypeTap"
+      >外食</view>
+    </view>
+
+    <scroll-view wx:if="{{activeRecordType !== 'all'}}" class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-list">
+        <view
+          class="category-chip {{activeFilter === activeRecordType ? 'category-chip--active' : ''}}"
+          data-filter="{{activeRecordType}}"
+          bindtap="handleFilterTap"
+        >全部</view>
+        <view
+          wx:if="{{activeRecordType === 'home'}}"
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}"
+          data-filter="home:{{item.id}}"
+          bindtap="handleFilterTap"
+        >{{item.name}}</view>
+        <view
+          wx:if="{{activeRecordType === 'outside'}}"
+          wx:for="{{outsideCategories}}"
+          wx:key="id"
+          class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}"
+          data-filter="outside:{{item.id}}"
+          bindtap="handleFilterTap"
+        >{{item.name}}</view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{displayMode === 'quick'}}" class="menu-toolbar">
       <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap">
         <app-icon name="layout-grid" size="22" />
         <text>安排三餐</text>
@@ -78,53 +96,129 @@
         <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
       </view>
     </view>
+  </view>
 
-    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view
+    wx:if="{{displayMode === 'quick'}}"
+    class="content-scroll content-scroll--quick"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+  >
     <view wx:if="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
       <button class="retry-button" bindtap="handleRetry">重试</button>
     </view>
-    <view wx:elif="{{dishes.length === 0}}" class="state-block">暂无菜品</view>
+    <view wx:elif="{{dishes.length === 0}}" class="state-block">当前筛选还没有记录</view>
 
-    <view wx:else class="dish-list">
+    <view wx:else class="quick-grid">
       <view
         wx:for="{{dishes}}"
         wx:key="id"
-        class="dish-card"
+        class="quick-card"
         data-id="{{item.id}}"
-        data-index="{{index}}"
         bindtap="handleDishTap"
       >
-        <view class="dish-card__image-wrap">
-          <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
-          <view wx:else class="dish-card__image-empty">暂无图片</view>
+        <view class="dish-image-frame quick-card__image-frame">
+          <image
+            wx:if="{{item.thumbnail_url || item.image_url}}"
+            class="dish-image"
+            src="{{item.thumbnail_url || item.image_url}}"
+            mode="aspectFit"
+            lazy-load
+          />
+          <view wx:else class="dish-image-empty">暂无图片</view>
+          <view class="quick-card__type quick-card__type--{{item.record_type}}">{{item.recordTypeLabel}}</view>
+          <view wx:if="{{item.mealPeriodTags.length}}" class="quick-card__meals">
+            <text wx:for="{{item.mealPeriodTags}}" wx:key="key" wx:for-item="mealTag">{{mealTag.label}}</text>
+          </view>
         </view>
-        <view class="dish-card__body">
-          <view class="dish-card__title-row">
-            <view class="dish-card__name">{{item.name}}</view>
-            <view class="dish-card__type">{{item.recordTypeLabel}}</view>
-          </view>
-          <view class="dish-card__category">
-            {{item.record_type === 'outside'
-              ? (item.outside_category && item.outside_category.name ? item.outside_category.name : '未分类')
-              : (item.category && item.category.name ? item.category.name : '未分类')}}
-          </view>
-          <view wx:if="{{item.mealPeriodTags.length}}" class="dish-card__meals">
-            <view
-              wx:for="{{item.mealPeriodTags}}"
-              wx:key="key"
-              wx:for-item="mealTag"
-              class="dish-card__meal"
-            >{{mealTag.label}}</view>
-          </view>
+        <view class="quick-card__body">
+          <view class="quick-card__name">{{item.name}}</view>
+          <view class="quick-card__category">{{item.displayCategory}}</view>
           <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
-            <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
-            <view class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
+            <view
+              class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}"
+              data-index="{{index}}"
+              data-direction="-1"
+              catchtap="handleMove"
+              aria-label="上移"
+            ><app-icon name="arrow-up" size="23" /></view>
+            <view
+              class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}"
+              data-index="{{index}}"
+              data-direction="1"
+              catchtap="handleMove"
+              aria-label="下移"
+            ><app-icon name="arrow-down" size="23" /></view>
           </view>
         </view>
       </view>
     </view>
-    </scroll-view>
-  </view>
+    <view wx:if="{{dishes.length > 0}}" class="quick-footer">点一道菜，进入翻阅模式慢慢看</view>
+  </scroll-view>
+
+  <scroll-view
+    wx:else
+    class="content-scroll content-scroll--browse"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    scroll-into-view="{{browseScrollIntoView}}"
+    scroll-with-animation
+  >
+    <view wx:if="{{errorMessage}}" class="state-block">
+      <view>{{errorMessage}}</view>
+      <button class="retry-button" bindtap="handleRetry">重试</button>
+    </view>
+    <view wx:elif="{{dishes.length === 0}}" class="state-block">当前筛选还没有记录</view>
+
+    <view wx:else class="browse-list">
+      <view wx:for="{{dishes}}" wx:key="id" id="browse-{{item.id}}" class="browse-card">
+        <view class="browse-card__eyebrow">
+          <view>{{item.displayCategory}} · {{item.recordTypeLabel}}</view>
+          <view>{{index + 1}} / {{dishes.length}}</view>
+        </view>
+
+        <view
+          class="dish-image-frame browse-card__image-frame"
+          data-id="{{item.id}}"
+          catchtap="handleDishImageTap"
+        >
+          <image
+            wx:if="{{item.thumbnail_url || item.image_url}}"
+            class="dish-image"
+            src="{{item.thumbnail_url || item.image_url}}"
+            mode="aspectFit"
+            lazy-load
+          />
+          <view wx:else class="dish-image-empty dish-image-empty--large">暂无图片</view>
+        </view>
+
+        <view class="browse-card__body">
+          <view class="browse-card__title-row">
+            <view class="browse-card__name">{{item.name}}</view>
+            <view
+              wx:if="{{canWrite}}"
+              class="browse-card__edit"
+              data-id="{{item.id}}"
+              bindtap="handleEditDishTap"
+              role="button"
+              aria-label="编辑{{item.name}}"
+            ><app-icon name="pencil" size="25" /></view>
+          </view>
+          <view wx:if="{{item.mealPeriodText}}" class="browse-card__meal-text">适合{{item.mealPeriodText}}</view>
+          <view wx:if="{{item.record_type === 'outside' && item.recommended_items.length}}" class="browse-card__recommendations">
+            <view class="browse-card__recommendation-label">推荐</view>
+            <view class="browse-card__recommendation-list">
+              <text wx:for="{{item.recommended_items}}" wx:key="*this">{{item}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="browse-footer">已经翻到最后一道</view>
+    </view>
+  </scroll-view>
+
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 </view>

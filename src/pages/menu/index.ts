@@ -31,9 +31,14 @@ type MealPeriodTag = {
   label: string
 }
 
+type DisplayMode = "quick" | "browse"
+type RecordTypeFilter = "all" | "home" | "outside"
+
 type MenuDish = Dish & {
   mealPeriodTags: MealPeriodTag[]
+  mealPeriodText: string
   recordTypeLabel: string
+  displayCategory: string
 }
 
 const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
@@ -42,21 +47,41 @@ const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
   dinner: "晚"
 }
 
+const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
+  breakfast: "早餐",
+  lunch: "午餐",
+  dinner: "晚餐"
+}
+
 function toMenuDish(dish: Dish): MenuDish {
   const mealPeriods =
     Array.isArray(dish.meal_periods) && dish.meal_periods.length > 0
       ? dish.meal_periods
       : []
+  const displayCategory = dish.record_type === "outside"
+    ? dish.outside_category?.name || "未分类"
+    : dish.category?.name || "未分类"
   return {
     ...dish,
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
+    displayCategory,
     mealPeriodTags: mealPeriods
       .filter((key) => Boolean(MEAL_PERIOD_LABELS[key]))
       .map((key) => ({
         key,
         label: MEAL_PERIOD_LABELS[key]
-      }))
+      })),
+    mealPeriodText: mealPeriods
+      .filter((key) => Boolean(MEAL_PERIOD_TEXT[key]))
+      .map((key) => MEAL_PERIOD_TEXT[key])
+      .join("、")
   }
+}
+
+function recordTypeFromFilter(filter: string): RecordTypeFilter {
+  if (filter === "home" || filter.startsWith("home:")) return "home"
+  if (filter === "outside" || filter.startsWith("outside:")) return "outside"
+  return "all"
 }
 
 function resetDragSession(): void {
@@ -76,7 +101,10 @@ Page({
     categories: [] as Category[],
     outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
+    displayMode: "quick" as DisplayMode,
+    browseScrollIntoView: "",
     activeFilter: "all",
+    activeRecordType: "all" as RecordTypeFilter,
     canWrite: false,
     canReorder: false,
     sortEditing: false,
@@ -169,14 +197,49 @@ Page({
     }
     const filter = String(event.currentTarget.dataset.filter || "all")
     if (filter === this.data.activeFilter) return
-    this.setData({ activeFilter: filter, sortEditing: false }, () => this.refreshData())
+    this.setData({
+      activeFilter: filter,
+      activeRecordType: recordTypeFromFilter(filter),
+      browseScrollIntoView: "",
+      sortEditing: false
+    }, () => this.refreshData())
+  },
+
+  handleRecordTypeTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
+    const recordType = String(event.currentTarget.dataset.type || "all") as RecordTypeFilter
+    if (!["all", "home", "outside"].includes(recordType)) return
+    const filter = recordType
+    if (filter === this.data.activeFilter) return
+    this.setData({
+      activeFilter: filter,
+      activeRecordType: recordType,
+      browseScrollIntoView: "",
+      sortEditing: false
+    }, () => this.refreshData())
+  },
+
+  handleDisplayModeTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.sorting || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
+    const displayMode = String(event.currentTarget.dataset.mode || "quick") as DisplayMode
+    if (displayMode !== "quick" && displayMode !== "browse") return
+    if (displayMode === this.data.displayMode) return
+    this.setData({ displayMode, browseScrollIntoView: "" })
   },
 
   async handleSortEditingToggle() {
     if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
     if (!this.data.sortEditing) {
       sortOriginalIds = this.data.dishes.map((dish) => dish.id)
-      this.setData({ sortEditing: true })
+      this.setData({ sortEditing: true, displayMode: "quick", browseScrollIntoView: "" })
       return
     }
 
@@ -240,14 +303,33 @@ Page({
 
   handleDishTap(event: WechatMiniprogram.TouchEvent) {
     if (
-      !this.data.canWrite ||
       this.data.sortEditing ||
       this.data.sorting ||
       this.data.contentLoading ||
       Date.now() < suppressDishTapUntil
     ) return
     const id = String(event.currentTarget.dataset.id || "")
+    if (!id) return
+    this.setData({ displayMode: "browse", browseScrollIntoView: "" }, () => {
+      this.setData({ browseScrollIntoView: `browse-${id}` })
+    })
+  },
+
+  handleEditDishTap(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canWrite || this.data.contentLoading) return
+    const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
+  },
+
+  handleDishImageTap(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || "")
+    const currentDish = this.data.dishes.find((dish) => dish.id === id)
+    const current = currentDish?.image_url || currentDish?.thumbnail_url || ""
+    if (!current) return
+    const urls = this.data.dishes
+      .map((dish) => dish.image_url || dish.thumbnail_url || "")
+      .filter(Boolean)
+    wx.previewImage({ current, urls })
   },
 
   handleMove(event: WechatMiniprogram.TouchEvent) {
