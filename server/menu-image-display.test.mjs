@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("menu supports camera capture with one 4:3 crop and matching previews", async () => {
-  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes] = await Promise.all([
+  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes, placePage, placeEdit] = await Promise.all([
     readFile(new URL("../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.less", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.ts", import.meta.url), "utf8"),
@@ -12,10 +12,15 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
     readFile(new URL("../src/pages/menu/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/components/image-cropper/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/utils/menu-attributes.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/menu/place/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/menu/place-edit/index.wxml", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /class="image-field__preview"[\s\S]*?mode="aspectFill"/);
   assert.match(page, /拍照或从相册选择/);
+  assert.match(page, /外食菜品可暂不添加/);
+  assert.match(page, /所属店铺/);
+  assert.match(page, /<app-dialog[\s\S]*title="删除菜品"/);
   assert.doesNotMatch(page, /record-overview/);
   assert.match(
     page,
@@ -67,7 +72,13 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuPage, /wx:for="\{\{item\.tasteTags\}\}"/);
   assert.match(menuPage, /menu-filter-label">用餐场景：/);
   assert.match(menuPage, /activeRecordType === 'outside' \? '外食分类：' : '菜品分类：'/);
-  assert.match(menuPage, /wx:if="\{\{item\.record_type === 'home' && item\.introduction\}\}"/);
+  assert.match(menuPage, /wx:if="\{\{item\.introduction\}\}"/);
+  assert.match(menuPage, /wx:for="\{\{outsidePlaces\}\}"/);
+  assert.match(menuPage, /bindtap="handlePlaceTap"/);
+  assert.match(menuPage, /店内菜品/);
+  assert.match(placePage, /class="store-hero"/);
+  assert.match(placePage, /新增菜品/);
+  assert.match(placeEdit, /<app-dialog[\s\S]*title="删除店铺"/);
   assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid #e8e8e8/);
   assert.match(menuPage, /class="browse-slide-scroll"[\s\S]*scroll-y/);
   assert.doesNotMatch(menuPage, /handleBrowseScroll/);

@@ -22,6 +22,14 @@ import {
   updateDish,
   updatePrintStatus,
 } from "./lib/dishes.mjs";
+import {
+  createMenuPlace,
+  deleteMenuPlace,
+  getMenuPlace,
+  listMenuPlaces,
+  replaceMenuPlaceImage,
+  updateMenuPlace,
+} from "./lib/menu-places.mjs";
 import { assertCondition, HttpError } from "./lib/errors.mjs";
 import {
   createActivityItem,
@@ -143,7 +151,7 @@ export function buildServer(options = {}) {
     limits: {
       files: 1,
       fileSize: config.maxUploadSizeMb * 1024 * 1024,
-      fields: 10,
+      fields: 16,
     },
   });
 
@@ -279,6 +287,56 @@ export function buildServer(options = {}) {
     data: { items: await listCategories(getSupabaseAdmin(), request.auth.user.id) },
   }));
 
+  app.get("/api/menu-places", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: { items: await listMenuPlaces(getSupabaseAdmin(), request.auth.user.id, request.query || {}) },
+  }));
+
+  app.get("/api/menu-places/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: { place: await getMenuPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id) },
+  }));
+
+  app.post("/api/menu-places", { preHandler: authenticated }, async (request, reply) => {
+    const { fields, image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
+    const place = await createMenuPlace(getSupabaseAdmin(), request.auth.user.id, fields, image);
+    return reply.code(201).send({ ok: true, data: { place } });
+  });
+
+  app.put("/api/menu-places/:id", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      place: await updateMenuPlace(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.params.id,
+        request.body || {},
+      ),
+    },
+  }));
+
+  app.post("/api/menu-places/:id/image", { preHandler: authenticated }, async (request) => {
+    const { image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
+    return {
+      ok: true,
+      data: {
+        place: await replaceMenuPlaceImage(
+          getSupabaseAdmin(),
+          request.auth.user.id,
+          request.params.id,
+          image,
+        ),
+      },
+    };
+  });
+
+  app.delete("/api/menu-places/:id", { preHandler: authenticated }, async (request) => {
+    await deleteMenuPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    return { ok: true, data: { deleted: true } };
+  });
+
   app.get("/api/dishes", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: await listDishes(getSupabaseAdmin(), request.auth.user.id, request.query || {}),
@@ -301,6 +359,16 @@ export function buildServer(options = {}) {
     const { fields, image } = await readMultipartImage(request);
     await contentSecurity.checkImage(image);
     const dish = await createDish(getSupabaseAdmin(), request.auth.user.id, fields, image);
+    return reply.code(201).send({ ok: true, data: { dish } });
+  });
+
+  app.post("/api/menu-dishes", { preHandler: authenticated }, async (request, reply) => {
+    const dish = await createDish(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+      undefined,
+    );
     return reply.code(201).send({ ok: true, data: { dish } });
   });
 

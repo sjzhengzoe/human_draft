@@ -330,6 +330,59 @@
   text-align: center;
 }
 
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22rpx;
+}
+
+.store-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1rpx solid var(--ui-border);
+  border-radius: 24rpx;
+  background: var(--ui-surface);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.store-card:active {
+  opacity: .72;
+  transform: scale(.985);
+}
+
+.store-card__image {
+  display: flex;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  align-items: center;
+  justify-content: center;
+  background: #f1f1f1;
+  color: #aaa;
+  font-size: 20rpx;
+}
+
+.store-card__body {
+  padding: 18rpx 18rpx 20rpx;
+}
+
+.store-card__name {
+  overflow: hidden;
+  color: #222;
+  font-size: 26rpx;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-card__meta {
+  margin-top: 8rpx;
+  overflow: hidden;
+  color: #888;
+  font-size: 20rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .browse-carousel {
   display: flex;
   min-height: 0;
@@ -564,6 +617,25 @@
 .browse-card__recommendation-number {
   color: #999;
   font-variant-numeric: tabular-nums;
+}
+
+.store-browse-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9rpx;
+  margin-top: 20rpx;
+}
+
+.store-ticket {
+  border-top-style: dashed;
+}
+
+.store-ticket__more {
+  padding: 13rpx 2rpx;
+  border-top: 1rpx dotted #dedede;
+  color: #888;
+  font-size: 21rpx;
+  text-align: center;
 }
 
 .browse-state {

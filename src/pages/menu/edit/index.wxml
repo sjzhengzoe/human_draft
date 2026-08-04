@@ -13,173 +13,158 @@
   bounces="{{true}}"
   show-scrollbar="{{false}}"
 >
-<view class="page">
-  <view class="form-card">
-    <view class="image-field" bindtap="handleChooseImage">
-      <image
-        wx:if="{{selectedImagePath || currentImageUrl}}"
-        class="image-field__preview"
-        src="{{selectedImagePath || currentImageUrl}}"
-        mode="aspectFill"
-      />
-      <view wx:else class="image-field__empty">
-        <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
-        <view>拍照或从相册选择{{recordType === 'outside' ? '店铺' : '菜品'}}图片</view>
-      </view>
-      <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换图片' : '拍照或选择')}}</view>
-    </view>
-
-    <view class="field">
-      <view class="field__label">{{recordType === 'outside' ? '店铺名' : '菜名'}}</view>
-      <input
-        class="field__input"
-        value="{{name}}"
-        maxlength="120"
-        placeholder="{{recordType === 'outside' ? '例如：海底捞' : '例如：番茄炒鸡蛋'}}"
-        bindinput="handleNameInput"
-      />
-    </view>
-
-    <view wx:if="{{recordType === 'home'}}" class="field">
-      <view class="field__label">介绍（可不填）</view>
-      <textarea
-        class="field__textarea"
-        value="{{introduction}}"
-        maxlength="1000"
-        placeholder="简单介绍这道菜"
-        bindinput="handleIntroductionInput"
-      />
-    </view>
-
-    <view class="field field--inline field--section-start">
-      <view class="field__label">用餐场景</view>
-      <view class="field__choices">
-        <view
-          class="choice-option {{recordType === 'home' ? 'choice-option--selected' : ''}}"
-          data-type="home"
-          bindtap="handleRecordTypeTap"
-          role="button"
-        >在家</view>
-        <view
-          class="choice-option {{recordType === 'outside' ? 'choice-option--selected' : ''}}"
-          data-type="outside"
-          bindtap="handleRecordTypeTap"
-          role="button"
-        >外食</view>
-      </view>
-    </view>
-
-    <view wx:if="{{recordType === 'home'}}" class="field field--inline">
-      <view class="field__label">菜品分类</view>
-      <picker class="field__control" mode="selector" range="{{categoryNames}}" value="{{categoryIndex}}" bindchange="handleCategoryChange">
-        <view class="field__picker">
-          <text>{{categoryNames[categoryIndex] || '请选择分类'}}</text>
-          <view class="field__arrow"><app-icon name="chevron-right" size="28" /></view>
+  <view class="page">
+    <view class="form-card">
+      <view class="image-field" bindtap="handleChooseImage">
+        <image
+          wx:if="{{selectedImagePath || currentImageUrl}}"
+          class="image-field__preview"
+          src="{{selectedImagePath || currentImageUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="image-field__empty">
+          <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
+          <view>拍照或从相册选择菜品图片</view>
+          <view wx:if="{{recordType === 'outside'}}" class="image-field__optional">外食菜品可暂不添加</view>
         </view>
-      </picker>
-    </view>
+        <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换图片' : '拍照或选择')}}</view>
+      </view>
 
-    <view wx:if="{{recordType === 'outside'}}" class="field field--inline">
-      <view class="field__label">外食分类</view>
-      <picker class="field__control" mode="selector" range="{{outsideCategoryNames}}" value="{{outsideCategoryIndex}}" bindchange="handleOutsideCategoryChange">
-        <view class="field__picker">
-          <text>{{outsideCategoryNames[outsideCategoryIndex] || '请选择分类'}}</text>
-          <view class="field__arrow"><app-icon name="chevron-right" size="28" /></view>
-        </view>
-      </picker>
-    </view>
+      <view class="field">
+        <view class="field__label">菜名</view>
+        <input
+          class="field__input"
+          value="{{name}}"
+          maxlength="120"
+          placeholder="例如：番茄炒鸡蛋"
+          bindinput="handleNameInput"
+        />
+      </view>
 
-    <view class="field field--inline meal-period-field">
-      <view class="field__label">适用餐次</view>
-      <view class="meal-period-options">
-        <view
-          wx:for="{{mealOptions}}"
-          wx:key="key"
-          class="meal-period-option {{item.selected ? 'meal-period-option--selected' : ''}}"
-          data-key="{{item.key}}"
-          bindtap="handleMealPeriodTap"
-          role="button"
-          aria-label="{{item.label}}{{item.selected ? '，已选择' : '，未选择'}}"
-        >
-          <view class="meal-period-option__label">{{item.label}}</view>
+      <view class="field">
+        <view class="field__label">介绍（可不填）</view>
+        <textarea
+          class="field__textarea"
+          value="{{introduction}}"
+          maxlength="1000"
+          placeholder="简单介绍这道菜"
+          bindinput="handleIntroductionInput"
+        />
+      </view>
+
+      <view class="field field--inline field--section-start">
+        <view class="field__label">用餐场景</view>
+        <view class="field__choices">
+          <view class="choice-option choice-option--selected">{{recordType === 'outside' ? '外食' : '在家'}}</view>
         </view>
       </view>
-    </view>
 
-    <view wx:if="{{recordType === 'home'}}" class="field field--section-start">
-      <view class="field__label">主要食材（可不填，每行一个）</view>
-      <textarea
-        class="field__textarea field__textarea--compact"
-        value="{{mainIngredientsText}}"
-        maxlength="2400"
-        placeholder="例如：&#10;虾&#10;紫苏"
-        bindinput="handleMainIngredientsInput"
-      />
-    </view>
+      <view wx:if="{{recordType === 'outside'}}" class="field field--inline">
+        <view class="field__label">所属店铺</view>
+        <view class="field__choices">
+          <view class="choice-option choice-option--selected">{{placeName}}</view>
+        </view>
+      </view>
 
-    <view wx:if="{{recordType === 'home'}}" class="field field--inline field--section-start">
-      <view class="field__label">烹饪类型</view>
-      <view class="field__choices">
-        <view
-          wx:for="{{cookingMethodOptions}}"
-          wx:key="value"
-          class="choice-option {{item.selected ? 'choice-option--selected' : ''}}"
-          data-value="{{item.value}}"
-          bindtap="handleCookingMethodTap"
-          role="button"
-          aria-label="{{item.value}}{{item.selected ? '，已选择' : '，未选择'}}"
-        >{{item.value}}</view>
+      <view class="field field--inline">
+        <view class="field__label">菜品分类</view>
+        <picker class="field__control" mode="selector" range="{{categoryNames}}" value="{{categoryIndex}}" bindchange="handleCategoryChange">
+          <view class="field__picker">
+            <text>{{categoryNames[categoryIndex] || '请选择分类'}}</text>
+            <view class="field__arrow"><app-icon name="chevron-right" size="28" /></view>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field field--inline meal-period-field">
+        <view class="field__label">适用餐次</view>
+        <view class="meal-period-options">
+          <view
+            wx:for="{{mealOptions}}"
+            wx:key="key"
+            class="meal-period-option {{item.selected ? 'meal-period-option--selected' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="handleMealPeriodTap"
+            role="button"
+            aria-label="{{item.label}}{{item.selected ? '，已选择' : '，未选择'}}"
+          >
+            <view class="meal-period-option__label">{{item.label}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="field field--section-start">
+        <view class="field__label">主要食材（可不填，每行一个）</view>
+        <textarea
+          class="field__textarea field__textarea--compact"
+          value="{{mainIngredientsText}}"
+          maxlength="2400"
+          placeholder="例如：&#10;虾&#10;紫苏"
+          bindinput="handleMainIngredientsInput"
+        />
+      </view>
+
+      <view class="field field--inline field--section-start">
+        <view class="field__label">烹饪类型</view>
+        <view class="field__choices">
+          <view
+            wx:for="{{cookingMethodOptions}}"
+            wx:key="value"
+            class="choice-option {{item.selected ? 'choice-option--selected' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="handleCookingMethodTap"
+            role="button"
+            aria-label="{{item.value}}{{item.selected ? '，已选择' : '，未选择'}}"
+          >{{item.value}}</view>
+        </view>
+      </view>
+
+      <view class="field field--inline field--section-start">
+        <view class="field__label">口味特点</view>
+        <view class="field__choices">
+          <view
+            wx:for="{{tasteOptions}}"
+            wx:key="value"
+            class="choice-option {{item.selected ? 'choice-option--selected' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="handleTasteTap"
+            role="button"
+            aria-label="{{item.value}}{{item.selected ? '，已选择' : '，未选择'}}"
+          >{{item.value}}</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="field__label">衍生菜系（可不填，每行一个）</view>
+        <textarea
+          class="field__textarea field__textarea--compact"
+          value="{{flavorOptionsText}}"
+          maxlength="2400"
+          placeholder="例如：&#10;紫苏炒虾&#10;九层塔炒虾"
+          bindinput="handleFlavorOptionsInput"
+        />
       </view>
     </view>
 
-    <view wx:if="{{recordType === 'home'}}" class="field field--inline field--section-start">
-      <view class="field__label">口味特点</view>
-      <view class="field__choices">
-        <view
-          wx:for="{{tasteOptions}}"
-          wx:key="value"
-          class="choice-option {{item.selected ? 'choice-option--selected' : ''}}"
-          data-value="{{item.value}}"
-          bindtap="handleTasteTap"
-          role="button"
-          aria-label="{{item.value}}{{item.selected ? '，已选择' : '，未选择'}}"
-        >{{item.value}}</view>
-      </view>
-    </view>
-
-    <view wx:if="{{recordType === 'home'}}" class="field">
-      <view class="field__label">衍生菜系（可不填，每行一个）</view>
-      <textarea
-        class="field__textarea field__textarea--compact"
-        value="{{flavorOptionsText}}"
-        maxlength="2400"
-        placeholder="例如：&#10;紫苏&#10;九层塔"
-        bindinput="handleFlavorOptionsInput"
-      />
-    </view>
-
-    <view wx:if="{{recordType === 'outside'}}" class="field field--section-start">
-      <view class="field__label">推荐菜品（可不填，每行一个）</view>
-      <textarea
-        class="field__textarea"
-        value="{{recommendedText}}"
-        maxlength="3000"
-        placeholder="例如：&#10;番茄锅&#10;虾滑&#10;炸豆皮"
-        bindinput="handleRecommendedInput"
-      />
+    <view class="footer-actions">
+      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleSave">
+        保存菜品
+      </button>
+      <button wx:if="{{dishId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">
+        <app-icon name="trash-2-danger" size="25" /><text>删除菜品</text>
+      </button>
     </view>
   </view>
-
-  <view class="footer-actions">
-    <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleSave">
-      保存{{recordType === 'outside' ? '店铺' : '菜品'}}
-    </button>
-    <button wx:if="{{dishId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">
-      <app-icon name="trash-2-danger" size="25" /><text>删除{{recordType === 'outside' ? '店铺' : '菜品'}}</text>
-    </button>
-  </view>
-</view>
 </scroll-view>
+
+<app-dialog
+  visible="{{showDeleteDialog}}"
+  title="删除菜品"
+  content="删除后图片也会从云端移除，无法恢复。"
+  confirmText="删除"
+  bind:cancel="handleDeleteCancel"
+  bind:confirm="handleDeleteConfirm"
+/>
 
 <image-cropper
   wx:if="{{showImageCropper}}"

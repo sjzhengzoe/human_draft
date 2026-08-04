@@ -54,6 +54,23 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    in(field, values) {
+      this.rows = this.rows.filter((row) => values.includes(row[field]));
+      return this;
+    }
+
+    is(field, value) {
+      this.rows = this.rows.filter((row) => row[field] === value || (value === null && row[field] == null));
+      return this;
+    }
+
+    not(field, operator, value) {
+      if (operator === "is" && value === null) {
+        this.rows = this.rows.filter((row) => row[field] != null);
+      }
+      return this;
+    }
+
     ilike(field, pattern) {
       const keyword = String(pattern).replace(/^%|%$/g, "").toLocaleLowerCase();
       this.rows = this.rows.filter((row) =>
@@ -443,6 +460,71 @@ test("media and dining detail routes load records by id", async (t) => {
   });
   assert.equal(unauthenticatedResponse.statusCode, 401);
   assert.equal(unauthenticatedResponse.json().error.code, "UNAUTHORIZED");
+});
+
+test("menu places expose stores first and their linked dishes separately", async (t) => {
+  const place = {
+    id: DINING_ID,
+    user_id: USER_ID,
+    name: "街角面馆",
+    place_type: "outside",
+    outside_category_id: SOURCE_ID,
+    outside_category: { id: SOURCE_ID, name: "面馆" },
+    image_path: "stores/noodle.webp",
+    thumbnail_path: "stores/noodle-thumb.webp",
+    sort_order: 1000,
+    source_dish_id: DINING_ID,
+    created_at: "2026-08-01T00:00:00.000Z",
+    updated_at: "2026-08-01T00:00:00.000Z",
+  };
+  const dish = {
+    id: TARGET_ID,
+    user_id: USER_ID,
+    name: "牛肉面",
+    record_type: "outside",
+    category_id: null,
+    outside_category_id: SOURCE_ID,
+    recommended_items: [],
+    main_ingredients: [],
+    introduction: "",
+    cooking_methods: [],
+    taste: "",
+    flavor_options: [],
+    image_path: "",
+    thumbnail_path: null,
+    meal_periods: ["lunch", "dinner"],
+    place_id: DINING_ID,
+    place_sort_order: 1000,
+    sort_order: 2000,
+    created_at: "2026-08-01T00:00:00.000Z",
+    updated_at: "2026-08-01T00:00:00.000Z",
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ menu_places: [place], dishes: [dish] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const placeResponse = await app.inject({
+    method: "GET",
+    url: "/api/menu-places?place_type=outside",
+    headers: authHeaders,
+  });
+  assert.equal(placeResponse.statusCode, 200);
+  assert.equal(placeResponse.json().data.items[0].name, "街角面馆");
+  assert.equal(placeResponse.json().data.items[0].dish_count, 1);
+  assert.equal(placeResponse.json().data.items[0].preview_dishes[0].name, "牛肉面");
+
+  const dishResponse = await app.inject({
+    method: "GET",
+    url: `/api/dishes?place_id=${DINING_ID}&sort=custom`,
+    headers: authHeaders,
+  });
+  assert.equal(dishResponse.statusCode, 200);
+  assert.equal(dishResponse.json().data.items.length, 1);
+  assert.equal(dishResponse.json().data.items[0].place_id, DINING_ID);
 });
 
 test("media list supports server-side pagination and fuzzy title search", async (t) => {
@@ -1374,6 +1456,23 @@ test("home dish detail migration preserves historical rows with empty defaults",
     migration,
     /create function public\.create_dish_at_end\([\s\S]*p_recommended_items text\[\][\s\S]*language sql/i,
   );
+});
+
+test("menu place migration preserves legacy stores and backfills real dishes", async () => {
+  const migration = await readFile(
+    new URL("../supabase/migrations/202608040004_menu_places_and_dishes.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /create table if not exists public\.menu_places/i);
+  assert.match(migration, /add column if not exists place_id uuid/i);
+  assert.match(migration, /'家里'[\s\S]*'home'/i);
+  assert.match(migration, /from public\.dishes as legacy[\s\S]*legacy\.record_type = 'outside'/i);
+  assert.match(migration, /cross join lateral unnest\(legacy\.recommended_items\)/i);
+  assert.match(migration, /legacy\.place_id is null/i);
+  assert.match(migration, /create or replace function public\.create_menu_dish/i);
+  assert.match(migration, /create or replace function public\.sync_menu_place_from_legacy_dish/i);
+  assert.doesNotMatch(migration, /drop table public\.dishes/i);
+  assert.doesNotMatch(migration, /delete from public\.dishes/i);
 });
 
 test("dish ordering migration backfills newest-first and inserts new dishes first", async () => {

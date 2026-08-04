@@ -2,10 +2,11 @@ import { ensureLogin } from "../../services/auth"
 import {
   listCategories,
   listDishes,
+  listMenuPlaces,
   reorderDishSortOrders
 } from "../../services/menu"
 import { listDiningScenes } from "../../services/life-lists"
-import type { Category, Dish, MealPeriod } from "../../types/api"
+import type { Category, Dish, MealPeriod, MenuPlace } from "../../types/api"
 import type { DiningScene } from "../../types/life-lists"
 import {
   activateAsyncPage,
@@ -143,6 +144,8 @@ Page({
     categories: [] as Category[],
     outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
+    outsidePlaces: [] as MenuPlace[],
+    homePlaceId: "",
     displayMode: "quick" as DisplayMode,
     browseCurrentIndex: 0,
     activeFilter: "home",
@@ -203,24 +206,36 @@ Page({
         ? activeFilter.slice("outside:".length)
         : ""
       const activeRecordType = recordTypeFromFilter(activeFilter)
-      const dishes = await listDishes({
-        category_id: homeCategoryId || undefined,
-        outside_category_id: outsideCategoryId || undefined,
-        record_type: activeRecordType === "all" ? undefined : activeRecordType,
-        sort: "custom",
-        page_size: 100
-      })
+      const homePlaces = activeRecordType === "home"
+        ? await listMenuPlaces({ place_type: "home" })
+        : []
+      const homePlaceId = homePlaces[0]?.id || ""
+      const [dishes, outsidePlaces] = activeRecordType === "home"
+        ? [await listDishes({
+          place_id: homePlaceId || undefined,
+          category_id: homeCategoryId || undefined,
+          record_type: "home",
+          sort: "custom",
+          page_size: 100
+        }), [] as MenuPlace[]]
+        : [[], await listMenuPlaces({
+          place_type: "outside",
+          outside_category_id: outsideCategoryId || undefined
+        })]
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const browsePosition = getBrowsePosition(dishes.length, this.data.browseCurrentIndex)
+      const itemCount = activeRecordType === "outside" ? outsidePlaces.length : dishes.length
+      const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
       this.setData({
         categories,
         outsideCategories,
         dishes: dishes.map(toMenuDish),
+        outsidePlaces,
+        homePlaceId,
         activeFilter,
         activeRecordType,
         ...browsePosition,
         canWrite: session.user.can_write,
-        canReorder: session.user.can_write,
+        canReorder: session.user.can_write && activeRecordType === "home",
         draggingIndex: -1,
         dragTargetIndex: -1
       })
@@ -308,7 +323,7 @@ Page({
 
     this.setData({ ordering: true })
     try {
-      await reorderDishSortOrders(dishIds)
+      await reorderDishSortOrders(dishIds, this.data.homePlaceId)
       if (!isAsyncPageActive(this)) return
       sortOriginalIds = []
       this.setData({ sortEditing: false })
@@ -336,7 +351,12 @@ Page({
       wx.showToast({ title: "当前账号只有查看权限", icon: "none" })
       return
     }
-    wx.navigateTo({ url: "/pages/menu/edit/index" })
+    if (this.data.activeRecordType === "outside") {
+      wx.navigateTo({ url: "/pages/menu/place-edit/index" })
+      return
+    }
+    const suffix = this.data.homePlaceId ? `?placeId=${this.data.homePlaceId}` : ""
+    wx.navigateTo({ url: `/pages/menu/edit/index${suffix}` })
   },
 
   handlePrintTap() {
@@ -374,7 +394,10 @@ Page({
 
   handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
     const index = Number(event.detail.current)
-    const browsePosition = getBrowsePosition(this.data.dishes.length, index)
+    const itemCount = this.data.activeRecordType === "outside"
+      ? this.data.outsidePlaces.length
+      : this.data.dishes.length
+    const browsePosition = getBrowsePosition(itemCount, index)
     if (browsePosition.browseCurrentIndex !== this.data.browseCurrentIndex) {
       this.setData(browsePosition)
     }
@@ -384,6 +407,12 @@ Page({
     if (!this.data.canWrite || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
+  },
+
+  handlePlaceTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.contentLoading) return
+    const id = String(event.currentTarget.dataset.id || "")
+    if (id) wx.navigateTo({ url: `/pages/menu/place/index?id=${id}` })
   },
 
   handleMove(event: WechatMiniprogram.TouchEvent) {

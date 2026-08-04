@@ -1,0 +1,19 @@
+.edit-scroll { width: 100%; box-sizing: border-box; background: var(--ui-page-background); }
+.page { min-height: 100%; box-sizing: border-box; padding: 30rpx var(--ui-page-gutter) calc(46rpx + env(safe-area-inset-bottom)); }
+.form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: #fff; }
+.image-field { position: relative; display: flex; width: 100%; aspect-ratio: 4 / 3; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1rpx solid var(--ui-border); background: var(--ui-subtle-background); }
+.image-field__preview { width: 100%; height: 100%; }
+.image-field__empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; color: #888; font-size: var(--ui-font-size-base); }
+.image-field__hint { position: absolute; right: 20rpx; bottom: 20rpx; padding: 10rpx 18rpx; border-radius: 24rpx; background: rgba(17,17,17,.78); color: #fff; font-size: 22rpx; }
+.field { padding: 25rpx 28rpx; }
+.field--section-start { border-top: 1rpx solid #e8e8e8; }
+.field--inline { display: grid; grid-template-columns: 132rpx minmax(0, 1fr); align-items: center; gap: 24rpx; }
+.field__label { margin-bottom: 12rpx; color: #777; font-size: 23rpx; }
+.field--inline .field__label { margin-bottom: 0; }
+.field__input { height: 58rpx; color: #161616; font-size: var(--ui-font-size-base); }
+.field__picker, .value-tag { display: inline-flex; min-height: 42rpx; box-sizing: border-box; align-items: center; gap: 5rpx; padding: 6rpx 12rpx 6rpx 14rpx; border: 2rpx solid #d4d4d4; border-radius: 999rpx; background: #fff; color: #111; font-size: 21rpx; font-weight: 600; }
+.footer-actions { margin-top: 28rpx; }
+.save-button, .delete-button { display: flex; height: 92rpx; align-items: center; justify-content: center; gap: 9rpx; border-radius: 46rpx; font-size: var(--ui-font-size-base); }
+.save-button { background: #111; color: #fff; }
+.delete-button { margin-top: 16rpx; background: #fff; color: #c9342f; }
+.save-button::after, .delete-button::after { border: 0; }

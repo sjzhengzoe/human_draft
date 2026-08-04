@@ -8,36 +8,16 @@
 <view wx:else class="page page--fixed {{displayMode === 'browse' ? 'page--browse' : ''}}">
   <view class="menu-header">
     <view class="view-switch" role="tablist" aria-label="菜单浏览方式">
-      <view
-        class="view-switch__item {{displayMode === 'quick' ? 'view-switch__item--active' : ''}}"
-        data-mode="quick"
-        bindtap="handleDisplayModeTap"
-        role="tab"
-        aria-selected="{{displayMode === 'quick'}}"
-      >速览</view>
-      <view
-        class="view-switch__item {{displayMode === 'browse' ? 'view-switch__item--active' : ''}}"
-        data-mode="browse"
-        bindtap="handleDisplayModeTap"
-        role="tab"
-        aria-selected="{{displayMode === 'browse'}}"
-      >翻阅</view>
+      <view class="view-switch__item {{displayMode === 'quick' ? 'view-switch__item--active' : ''}}" data-mode="quick" bindtap="handleDisplayModeTap" role="tab">速览</view>
+      <view class="view-switch__item {{displayMode === 'browse' ? 'view-switch__item--active' : ''}}" data-mode="browse" bindtap="handleDisplayModeTap" role="tab">翻阅</view>
     </view>
 
     <view class="menu-section-row">
       <view class="record-filter-group">
         <view class="menu-filter-label">用餐场景：</view>
         <view class="record-filter" role="tablist" aria-label="用餐场景">
-          <view
-            class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}"
-            data-type="home"
-            bindtap="handleRecordTypeTap"
-          >在家</view>
-          <view
-            class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}"
-            data-type="outside"
-            bindtap="handleRecordTypeTap"
-          >外食</view>
+          <view class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}" data-type="home" bindtap="handleRecordTypeTap">在家</view>
+          <view class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}" data-type="outside" bindtap="handleRecordTypeTap">外食</view>
         </view>
       </view>
       <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddTap">
@@ -46,278 +26,114 @@
       </button>
     </view>
 
-    <view wx:if="{{activeRecordType !== 'all'}}" class="category-filter-row">
+    <view class="category-filter-row">
       <view class="menu-filter-label">{{activeRecordType === 'outside' ? '外食分类：' : '菜品分类：'}}</view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
-          <view
-            wx:if="{{activeRecordType === 'home'}}"
-            wx:for="{{categories}}"
-            wx:key="id"
-            class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}"
-            data-filter="home:{{item.id}}"
-            bindtap="handleFilterTap"
-          >{{item.name}}</view>
-          <view
-            wx:if="{{activeRecordType === 'outside'}}"
-            wx:for="{{outsideCategories}}"
-            wx:key="id"
-            class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}"
-            data-filter="outside:{{item.id}}"
-            bindtap="handleFilterTap"
-          >{{item.name}}</view>
+          <view wx:if="{{activeRecordType === 'home'}}" wx:for="{{categories}}" wx:key="id" class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}" data-filter="home:{{item.id}}" bindtap="handleFilterTap">{{item.name}}</view>
+          <view wx:if="{{activeRecordType === 'outside'}}" wx:for="{{outsideCategories}}" wx:key="id" class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}" data-filter="outside:{{item.id}}" bindtap="handleFilterTap">{{item.name}}</view>
         </view>
       </scroll-view>
     </view>
 
-    <view wx:if="{{displayMode === 'quick'}}" class="menu-toolbar">
-      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap">
-        <app-icon name="layout-grid" size="22" />
-        <text>安排三餐</text>
-      </view>
-      <view class="menu-toolbar__action" bindtap="handlePrintTap">
-        <app-icon name="printer" size="22" />
-        <text>打印</text>
-      </view>
-      <view
-        wx:if="{{canReorder}}"
-        class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}"
-        bindtap="handleSortEditingToggle"
-      >
-        <app-icon name="settings-2" size="22" />
-        <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
-      </view>
+    <view wx:if="{{displayMode === 'quick' && activeRecordType === 'home'}}" class="menu-toolbar">
+      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="22" /><text>安排三餐</text></view>
+      <view class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="22" /><text>打印</text></view>
+      <view wx:if="{{canReorder}}" class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle"><app-icon name="settings-2" size="22" /><text>{{sortEditing ? '完成排序' : '编辑排序'}}</text></view>
     </view>
   </view>
 
-  <scroll-view
-    wx:if="{{displayMode === 'quick'}}"
-    class="content-scroll content-scroll--quick"
-    scroll-y
-    enhanced
-    show-scrollbar="{{false}}"
-  >
-    <view wx:if="{{errorMessage}}" class="state-block">
-      <view>{{errorMessage}}</view>
-      <button class="retry-button" bindtap="handleRetry">重试</button>
-    </view>
-    <view wx:elif="{{dishes.length === 0}}" class="state-block">当前筛选还没有记录</view>
+  <scroll-view wx:if="{{displayMode === 'quick'}}" class="content-scroll content-scroll--quick" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{errorMessage}}" class="state-block"><view>{{errorMessage}}</view><button class="retry-button" bindtap="handleRetry">重试</button></view>
+    <view wx:elif="{{activeRecordType === 'home' && dishes.length === 0}}" class="state-block">当前分类还没有菜品</view>
+    <view wx:elif="{{activeRecordType === 'outside' && outsidePlaces.length === 0}}" class="state-block">当前分类还没有店铺</view>
 
-    <view wx:else class="quick-grid">
-      <view
-        wx:for="{{dishes}}"
-        wx:key="id"
-        class="quick-card"
-        data-id="{{item.id}}"
-        bindtap="handleDishTap"
-      >
+    <view wx:elif="{{activeRecordType === 'home'}}" class="quick-grid">
+      <view wx:for="{{dishes}}" wx:key="id" class="quick-card" data-id="{{item.id}}" bindtap="handleDishTap">
         <view class="dish-image-frame quick-card__image-frame">
-          <image
-            wx:if="{{item.thumbnail_url || item.image_url}}"
-            class="dish-image"
-            src="{{item.thumbnail_url || item.image_url}}"
-            mode="aspectFill"
-            lazy-load
-          />
+          <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
           <view wx:else class="dish-image-empty">暂无图片</view>
         </view>
         <view class="quick-card__body">
           <view class="quick-card__name">{{item.name}}</view>
           <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
-            <view
-              class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}"
-              data-index="{{index}}"
-              data-direction="-1"
-              catchtap="handleMove"
-              aria-label="上移"
-            ><app-icon name="arrow-up" size="23" /></view>
-            <view
-              class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}"
-              data-index="{{index}}"
-              data-direction="1"
-              catchtap="handleMove"
-              aria-label="下移"
-            ><app-icon name="arrow-down" size="23" /></view>
+            <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="23" /></view>
+            <view class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="23" /></view>
           </view>
         </view>
       </view>
     </view>
-    <view wx:if="{{dishes.length > 0}}" class="quick-footer">没有更多菜了</view>
+
+    <view wx:else class="store-grid">
+      <view wx:for="{{outsidePlaces}}" wx:key="id" class="store-card" data-id="{{item.id}}" bindtap="handlePlaceTap">
+        <image wx:if="{{item.thumbnail_url || item.image_url}}" class="store-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+        <view wx:else class="store-card__image store-card__image--empty">暂无图片</view>
+        <view class="store-card__body">
+          <view class="store-card__name">{{item.name}}</view>
+          <view class="store-card__meta">{{item.outside_category.name || '未分类'}} · {{item.dish_count}} 道菜</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{activeRecordType === 'home' ? dishes.length > 0 : outsidePlaces.length > 0}}" class="quick-footer">没有更多了</view>
   </scroll-view>
 
-  <view wx:elif="{{errorMessage}}" class="browse-state state-block">
-    <view>{{errorMessage}}</view>
-    <button class="retry-button" bindtap="handleRetry">重试</button>
-  </view>
-  <view wx:elif="{{dishes.length === 0}}" class="browse-state state-block">当前筛选还没有记录</view>
+  <view wx:elif="{{errorMessage}}" class="browse-state state-block"><view>{{errorMessage}}</view><button class="retry-button" bindtap="handleRetry">重试</button></view>
+  <view wx:elif="{{activeRecordType === 'home' && dishes.length === 0}}" class="browse-state state-block">当前分类还没有菜品</view>
+  <view wx:elif="{{activeRecordType === 'outside' && outsidePlaces.length === 0}}" class="browse-state state-block">当前分类还没有店铺</view>
 
-  <view wx:else class="browse-carousel">
-    <swiper
-      class="browse-swiper"
-      current="{{browseCurrentIndex}}"
-      circular="{{false}}"
-      display-multiple-items="1"
-      acceleration="{{false}}"
-      duration="160"
-      bindchange="handleBrowseChange"
-    >
-      <swiper-item wx:for="{{dishes}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
-        <scroll-view
-          class="browse-slide-scroll"
-          scroll-y
-          enhanced
-          bounces="{{true}}"
-          show-scrollbar="{{false}}"
-        >
-          <view
-            class="browse-card"
-            data-id="{{item.id}}"
-            bindtap="handleEditDishTap"
-            role="button"
-            aria-label="编辑{{item.name}}"
-          >
-            <view
-              class="dish-image-frame browse-card__image-frame"
-            >
-              <image
-                wx:if="{{item.thumbnail_url || item.image_url}}"
-                class="dish-image"
-                src="{{item.thumbnail_url || item.image_url}}"
-                mode="aspectFill"
-                lazy-load
-              />
-              <view wx:else class="dish-image-empty dish-image-empty--large">暂无图片</view>
+  <view wx:elif="{{activeRecordType === 'outside'}}" class="browse-carousel">
+    <swiper class="browse-swiper" current="{{browseCurrentIndex}}" circular="{{false}}" display-multiple-items="1" acceleration="{{false}}" duration="160" bindchange="handleBrowseChange">
+      <swiper-item wx:for="{{outsidePlaces}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
+        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
+          <view class="browse-card store-browse-card" data-id="{{item.id}}" bindtap="handlePlaceTap" role="button" aria-label="查看{{item.name}}">
+            <view class="dish-image-frame browse-card__image-frame">
+              <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+              <view wx:else class="dish-image-empty dish-image-empty--large">暂无店铺图片</view>
             </view>
-
             <view class="browse-card__body">
-              <view class="browse-card__title-row">
-                <view class="browse-card__title-copy">
-                  <view wx:if="{{item.record_type === 'outside'}}" class="browse-card__category">{{item.displayCategory}}</view>
-                  <view class="browse-card__name">{{item.name}}</view>
-                </view>
+              <view class="browse-card__name">{{item.name}}</view>
+              <view class="store-browse-card__meta">
+                <view class="browse-card__black-tag">外食</view>
+                <view class="browse-card__black-tag">{{item.outside_category.name || '未分类'}}</view>
+                <view class="browse-card__black-tag">{{item.dish_count}} 道菜</view>
               </view>
-
-              <view
-                wx:if="{{item.record_type === 'home' && item.introduction}}"
-                class="browse-card__title-introduction"
-              >{{item.introduction}}</view>
-
-              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row browse-card__record-row">
-                <view class="browse-card__attribute-label">用餐场景</view>
-                <view class="browse-card__attribute-tags">
-                  <view class="browse-card__black-tag">{{item.recordTypeLabel}}</view>
-                </view>
-              </view>
-
-              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row">
-                <view class="browse-card__attribute-label">菜品分类</view>
-                <view class="browse-card__attribute-tags">
-                  <view class="browse-card__black-tag">{{item.displayCategory}}</view>
-                </view>
-              </view>
-
-              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row browse-card__meal-row">
-                <view class="browse-card__attribute-label">适用餐次</view>
-                <view wx:if="{{item.mealPeriodTags.length}}" class="browse-card__attribute-tags">
-                  <view
-                    wx:for="{{item.mealPeriodTags}}"
-                    wx:key="key"
-                    wx:for-item="mealTag"
-                    class="browse-card__black-tag"
-                  >{{mealTag.label}}</view>
-                </view>
-                <view wx:else class="browse-card__attribute-empty">-</view>
-              </view>
-
-              <view wx:else class="browse-card__summary">
-                <text>{{item.recordTypeLabel}}</text>
-                <text wx:if="{{item.mealPeriodText}}"> · 适合{{item.mealPeriodText}}</text>
-              </view>
-
-              <view
-                wx:if="{{item.record_type === 'home'}}"
-                class="browse-card__home-section"
-              >
-                <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">主要食材</view>
-                  <view wx:if="{{item.main_ingredients.length}}" class="browse-card__attribute-tags">
-                    <view
-                      wx:for="{{item.main_ingredients}}"
-                      wx:key="*this"
-                      wx:for-item="ingredient"
-                      class="browse-card__black-tag"
-                    >{{ingredient}}</view>
+              <view class="browse-card__home-section store-ticket">
+                <view class="browse-card__detail-label">店内菜品</view>
+                <view wx:if="{{item.preview_dishes.length}}" class="browse-card__recommendation-list">
+                  <view wx:for="{{item.preview_dishes}}" wx:key="id" wx:for-item="preview" wx:for-index="previewIndex" class="browse-card__recommendation-item">
+                    <text class="browse-card__recommendation-number">{{previewIndex + 1}}</text><text>{{preview.name}}</text>
                   </view>
-                  <view wx:else class="browse-card__attribute-empty">-</view>
-                </view>
-              </view>
-
-              <view
-                wx:if="{{item.record_type === 'home'}}"
-                class="browse-card__home-section"
-              >
-                <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">烹饪类型</view>
-                  <view wx:if="{{item.cooking_methods.length}}" class="browse-card__attribute-tags">
-                    <view
-                      wx:for="{{item.cooking_methods}}"
-                      wx:key="*this"
-                      wx:for-item="method"
-                      class="browse-card__black-tag"
-                    >{{method}}</view>
-                  </view>
-                  <view wx:else class="browse-card__attribute-empty">-</view>
-                </view>
-              </view>
-
-              <view
-                wx:if="{{item.record_type === 'home'}}"
-                class="browse-card__home-section"
-              >
-                <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">口味特点</view>
-                  <view wx:if="{{item.tasteTags.length}}" class="browse-card__attribute-tags">
-                    <view
-                      wx:for="{{item.tasteTags}}"
-                      wx:key="*this"
-                      wx:for-item="taste"
-                      class="browse-card__black-tag"
-                    >{{taste}}</view>
-                  </view>
-                  <view wx:else class="browse-card__attribute-empty">-</view>
-                </view>
-                <view class="browse-card__attribute-row">
-                  <view class="browse-card__attribute-label">衍生菜系</view>
-                  <view wx:if="{{item.flavor_options.length}}" class="browse-card__attribute-tags">
-                    <view
-                      wx:for="{{item.flavor_options}}"
-                      wx:key="*this"
-                      wx:for-item="flavor"
-                      class="browse-card__black-tag"
-                    >{{flavor}}</view>
-                  </view>
-                  <view wx:else class="browse-card__attribute-empty">-</view>
-                </view>
-              </view>
-
-              <view
-                wx:if="{{item.record_type === 'outside'}}"
-                class="browse-card__recommendations"
-              >
-                <view class="browse-card__detail-label">推荐菜品</view>
-                <view wx:if="{{item.recommended_items.length}}" class="browse-card__recommendation-list">
-                  <view
-                    wx:for="{{item.recommended_items}}"
-                    wx:key="*this"
-                    wx:for-item="recommendation"
-                    wx:for-index="recommendationIndex"
-                    class="browse-card__recommendation-item"
-                  >
-                    <text class="browse-card__recommendation-number">{{recommendationIndex + 1}}</text>
-                    <text>{{recommendation}}</text>
-                  </view>
+                  <view wx:if="{{item.dish_count > item.preview_dishes.length}}" class="store-ticket__more">另有 {{item.dish_count - item.preview_dishes.length}} 道菜</view>
                 </view>
                 <view wx:else class="browse-card__empty-value browse-card__empty-value--ticket">-</view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </swiper-item>
+    </swiper>
+  </view>
+
+  <view wx:else class="browse-carousel">
+    <swiper class="browse-swiper" current="{{browseCurrentIndex}}" circular="{{false}}" display-multiple-items="1" acceleration="{{false}}" duration="160" bindchange="handleBrowseChange">
+      <swiper-item wx:for="{{dishes}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
+        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
+          <view class="browse-card" data-id="{{item.id}}" bindtap="handleEditDishTap" role="button" aria-label="编辑{{item.name}}">
+            <view class="dish-image-frame browse-card__image-frame">
+              <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+              <view wx:else class="dish-image-empty dish-image-empty--large">暂无图片</view>
+            </view>
+            <view class="browse-card__body">
+              <view class="browse-card__title-row"><view class="browse-card__title-copy"><view class="browse-card__name">{{item.name}}</view></view></view>
+              <view wx:if="{{item.introduction}}" class="browse-card__title-introduction">{{item.introduction}}</view>
+              <view class="browse-card__attribute-row browse-card__record-row"><view class="browse-card__attribute-label">用餐场景</view><view class="browse-card__attribute-tags"><view class="browse-card__black-tag">在家</view></view></view>
+              <view class="browse-card__attribute-row"><view class="browse-card__attribute-label">菜品分类</view><view class="browse-card__attribute-tags"><view class="browse-card__black-tag">{{item.displayCategory}}</view></view></view>
+              <view class="browse-card__attribute-row browse-card__meal-row"><view class="browse-card__attribute-label">适用餐次</view><view wx:if="{{item.mealPeriodTags.length}}" class="browse-card__attribute-tags"><view wx:for="{{item.mealPeriodTags}}" wx:key="key" wx:for-item="mealTag" class="browse-card__black-tag">{{mealTag.label}}</view></view><view wx:else class="browse-card__attribute-empty">-</view></view>
+              <view class="browse-card__home-section"><view class="browse-card__attribute-row"><view class="browse-card__attribute-label">主要食材</view><view wx:if="{{item.main_ingredients.length}}" class="browse-card__attribute-tags"><view wx:for="{{item.main_ingredients}}" wx:key="*this" wx:for-item="ingredient" class="browse-card__black-tag">{{ingredient}}</view></view><view wx:else class="browse-card__attribute-empty">-</view></view></view>
+              <view class="browse-card__home-section"><view class="browse-card__attribute-row"><view class="browse-card__attribute-label">烹饪类型</view><view wx:if="{{item.cooking_methods.length}}" class="browse-card__attribute-tags"><view wx:for="{{item.cooking_methods}}" wx:key="*this" wx:for-item="method" class="browse-card__black-tag">{{method}}</view></view><view wx:else class="browse-card__attribute-empty">-</view></view></view>
+              <view class="browse-card__home-section">
+                <view class="browse-card__attribute-row"><view class="browse-card__attribute-label">口味特点</view><view wx:if="{{item.tasteTags.length}}" class="browse-card__attribute-tags"><view wx:for="{{item.tasteTags}}" wx:key="*this" wx:for-item="taste" class="browse-card__black-tag">{{taste}}</view></view><view wx:else class="browse-card__attribute-empty">-</view></view>
+                <view class="browse-card__attribute-row"><view class="browse-card__attribute-label">衍生菜系</view><view wx:if="{{item.flavor_options.length}}" class="browse-card__attribute-tags"><view wx:for="{{item.flavor_options}}" wx:key="*this" wx:for-item="flavor" class="browse-card__black-tag">{{flavor}}</view></view><view wx:else class="browse-card__attribute-empty">-</view></view>
               </view>
             </view>
           </view>

@@ -3,6 +3,7 @@ import type {
   Dish,
   DishListParams,
   MealPeriod,
+  MenuPlace,
   MenuRecordType
 } from "../types/api"
 import { request, upload } from "./request"
@@ -27,14 +28,27 @@ function normalizeDish(dish: Dish): Dish {
     cooking_methods: normalizeStringArray(dish.cooking_methods),
     taste: typeof dish.taste === "string" ? dish.taste : "",
     flavor_options: normalizeStringArray(dish.flavor_options),
+    place_id: typeof dish.place_id === "string" ? dish.place_id : null,
+    place_sort_order: Number.isFinite(Number(dish.place_sort_order))
+      ? Number(dish.place_sort_order)
+      : Number(dish.sort_order || 0),
     meal_periods: mealPeriods.length > 0 ? mealPeriods : [...DEFAULT_MEAL_PERIODS]
   }
 }
 
-function toQuery(params: DishListParams): string {
+function normalizeMenuPlace(place: MenuPlace): MenuPlace {
+  return {
+    ...place,
+    image_url: typeof place.image_url === "string" ? place.image_url : "",
+    thumbnail_url: typeof place.thumbnail_url === "string" ? place.thumbnail_url : "",
+    dish_count: Number(place.dish_count || 0),
+    preview_dishes: Array.isArray(place.preview_dishes) ? place.preview_dishes : []
+  }
+}
+
+function toQuery<T extends object>(params: T): string {
   const entries: string[] = []
-  Object.keys(params).forEach((key) => {
-    const value = params[key as keyof DishListParams]
+  Object.entries(params as Record<string, unknown>).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
       entries.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     }
@@ -59,12 +73,68 @@ export async function getDish(id: string): Promise<Dish> {
   return normalizeDish(data.dish)
 }
 
+export async function listMenuPlaces(params: {
+  place_type?: MenuRecordType
+  outside_category_id?: string
+} = {}): Promise<MenuPlace[]> {
+  const data = await request<{ items: MenuPlace[] }>({
+    path: `/api/menu-places${toQuery(params)}`
+  })
+  return Array.isArray(data.items) ? data.items.map(normalizeMenuPlace) : []
+}
+
+export async function getMenuPlace(id: string): Promise<MenuPlace> {
+  const data = await request<{ place: MenuPlace }>({ path: `/api/menu-places/${id}` })
+  return normalizeMenuPlace(data.place)
+}
+
+export async function createMenuPlace(input: {
+  name: string
+  outsideCategoryId: string
+  imagePath: string
+}): Promise<MenuPlace> {
+  const data = await upload<{ place: MenuPlace }>({
+    path: "/api/menu-places",
+    filePath: input.imagePath,
+    formData: {
+      name: input.name,
+      outside_category_id: input.outsideCategoryId
+    }
+  })
+  return normalizeMenuPlace(data.place)
+}
+
+export async function updateMenuPlace(
+  id: string,
+  changes: { name?: string; outside_category_id?: string }
+): Promise<MenuPlace> {
+  const data = await request<{ place: MenuPlace }>({
+    path: `/api/menu-places/${id}`,
+    method: "PUT",
+    data: changes
+  })
+  return normalizeMenuPlace(data.place)
+}
+
+export async function replaceMenuPlaceImage(id: string, imagePath: string): Promise<MenuPlace> {
+  const data = await upload<{ place: MenuPlace }>({
+    path: `/api/menu-places/${id}/image`,
+    filePath: imagePath
+  })
+  return normalizeMenuPlace(data.place)
+}
+
+export function deleteMenuPlace(id: string): Promise<void> {
+  return request<void>({ path: `/api/menu-places/${id}`, method: "DELETE" })
+}
+
 export async function createDish(input: {
   name: string
   recordType: MenuRecordType
+  placeId?: string
   categoryId?: string
   outsideCategoryId?: string
-  imagePath: string
+  imagePath?: string
   mealPeriods: MealPeriod[]
   recommendedItems?: string[]
   mainIngredients?: string[]
@@ -73,12 +143,10 @@ export async function createDish(input: {
   taste?: string
   flavorOptions?: string[]
 }): Promise<Dish> {
-  const data = await upload<{ dish: Dish }>({
-    path: "/api/dishes",
-    filePath: input.imagePath,
-    formData: {
+  const payload = {
       name: input.name,
       record_type: input.recordType,
+      place_id: input.placeId || "",
       category_id: input.categoryId || "",
       outside_category_id: input.outsideCategoryId || "",
       meal_periods: JSON.stringify(input.mealPeriods),
@@ -88,8 +156,18 @@ export async function createDish(input: {
       cooking_methods: JSON.stringify(input.cookingMethods || []),
       taste: input.taste || "",
       flavor_options: JSON.stringify(input.flavorOptions || [])
-    }
-  })
+  }
+  const data = input.imagePath
+    ? await upload<{ dish: Dish }>({
+      path: "/api/dishes",
+      filePath: input.imagePath,
+      formData: payload
+    })
+    : await request<{ dish: Dish }>({
+      path: "/api/menu-dishes",
+      method: "POST",
+      data: payload
+    })
   return normalizeDish(data.dish)
 }
 
@@ -97,6 +175,7 @@ export async function updateDish(
   id: string,
   changes: {
     name?: string
+    place_id?: string
     record_type?: MenuRecordType
     category_id?: string | null
     outside_category_id?: string | null
@@ -148,6 +227,10 @@ export function swapDishSortOrders(
   })
 }
 
-export function reorderDishSortOrders(ids: string[]): Promise<{ updated: number }> {
-  return request<{ updated: number }>({ path: "/api/dishes/reorder", method: "PUT", data: { ids } })
+export function reorderDishSortOrders(ids: string[], placeId?: string): Promise<{ updated: number }> {
+  return request<{ updated: number }>({
+    path: "/api/dishes/reorder",
+    method: "PUT",
+    data: { ids, place_id: placeId || "" }
+  })
 }

@@ -1,0 +1,75 @@
+<custom-navigation title="店铺菜品" />
+
+<view wx:if="{{loading}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在加载店铺…</view>
+</view>
+
+<scroll-view wx:else class="store-scroll page--fixed" scroll-y enhanced show-scrollbar="{{false}}">
+  <view wx:if="{{errorMessage}}" class="state-block">
+    <view>{{errorMessage}}</view>
+    <button class="retry-button" bindtap="handleRetry">重试</button>
+  </view>
+
+  <view wx:elif="{{place}}" class="store-page">
+    <view class="store-hero">
+      <image
+        wx:if="{{place.thumbnail_url || place.image_url}}"
+        class="store-hero__image"
+        src="{{place.thumbnail_url || place.image_url}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="store-hero__empty">暂无店铺图片</view>
+      <view class="store-hero__body">
+        <view class="store-hero__copy">
+          <view class="store-hero__name">{{place.name}}</view>
+          <view class="store-hero__meta">
+            <view class="store-tag">{{place.outside_category.name || '未分类'}}</view>
+            <text>{{dishes.length}} 道菜</text>
+          </view>
+        </view>
+        <button wx:if="{{canWrite}}" class="outline-action" bindtap="handleEditPlace">编辑店铺</button>
+      </view>
+    </view>
+
+    <view class="dish-section">
+      <view class="dish-section__header">
+        <view>
+          <view class="dish-section__title">店内菜品</view>
+          <view class="dish-section__hint">这里的菜品和居家菜共用相同属性</view>
+        </view>
+        <button wx:if="{{canWrite}}" class="add-dish-button" bindtap="handleAddDish">+ 新增菜品</button>
+      </view>
+
+      <view wx:if="{{dishes.length}}" class="dish-list">
+        <view
+          wx:for="{{dishes}}"
+          wx:key="id"
+          class="dish-row"
+          data-id="{{item.id}}"
+          bindtap="handleDishTap"
+        >
+          <image
+            wx:if="{{item.thumbnail_url || item.image_url}}"
+            class="dish-row__image"
+            src="{{item.thumbnail_url || item.image_url}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="dish-row__image dish-row__image--empty">暂无图片</view>
+          <view class="dish-row__body">
+            <view class="dish-row__name">{{item.name}}</view>
+            <view class="dish-row__tags">
+              <view class="store-tag">{{item.categoryText}}</view>
+              <view wx:if="{{item.mealText}}" class="store-tag">{{item.mealText}}</view>
+            </view>
+          </view>
+          <app-icon wx:if="{{canWrite}}" name="chevron-right" size="30" />
+        </view>
+      </view>
+      <view wx:else class="empty-dishes">
+        <view>这家店还没有记录菜品</view>
+        <button wx:if="{{canWrite}}" class="empty-dishes__button" bindtap="handleAddDish">添加第一道菜</button>
+      </view>
+    </view>
+  </view>
+</scroll-view>

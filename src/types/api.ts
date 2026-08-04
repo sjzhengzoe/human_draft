@@ -36,6 +36,31 @@ export type Category = {
 export type MealPeriod = "breakfast" | "lunch" | "dinner"
 export type MenuRecordType = "home" | "outside"
 
+export type MenuPlaceDishPreview = {
+  id: string
+  name: string
+  image_url: string
+  thumbnail_url: string
+}
+
+export type MenuPlace = {
+  id: string
+  name: string
+  place_type: MenuRecordType
+  outside_category_id: string | null
+  outside_category: Pick<Category, "id" | "name"> | null
+  image_path: string
+  thumbnail_path: string | null
+  image_url: string
+  thumbnail_url: string
+  sort_order: number
+  source_dish_id: string | null
+  dish_count: number
+  preview_dishes: MenuPlaceDishPreview[]
+  created_at: string
+  updated_at: string
+}
+
 export type Dish = {
   id: string
   name: string
@@ -50,6 +75,8 @@ export type Dish = {
   cooking_methods: string[]
   taste: string
   flavor_options: string[]
+  place_id: string | null
+  place_sort_order: number
   image_path: string
   thumbnail_path: string | null
   image_url: string
@@ -64,6 +91,7 @@ export type Dish = {
 export type DishSort = "created_desc" | "created_asc" | "custom"
 
 export type DishListParams = {
+  place_id?: string
   category_id?: string
   outside_category_id?: string
   record_type?: MenuRecordType

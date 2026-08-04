@@ -4,6 +4,8 @@
     "pages/login/index",
     "pages/menu/index",
     "pages/menu/edit/index",
+    "pages/menu/place/index",
+    "pages/menu/place-edit/index",
     "pages/menu/day-plan/index",
     "pages/menu/print/index",
     "pages/media/index",
