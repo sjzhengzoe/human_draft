@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "行李场景"
+  "navigationBarTitleText": "行李场景",
+  "disableScroll": true
 }

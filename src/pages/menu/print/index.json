@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "选四张打印"
+  "navigationBarTitleText": "选四张打印",
+  "disableScroll": true
 }

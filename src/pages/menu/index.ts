@@ -391,16 +391,12 @@ Page({
       this.data.contentLoading ||
       Date.now() < suppressDishTapUntil
     ) return
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || index < 0 || index >= this.data.dishes.length) return
-    const dish = this.data.dishes[index]
-    this.setData({
-      displayMode: "browse",
-      browseScrollIntoView: "",
-      ...getBrowsePosition(this.data.dishes.length, index)
-    }, () => {
-      this.setData({ browseScrollIntoView: `browse-${dish.id}` })
-    })
+    if (!this.data.canWrite) {
+      wx.showToast({ title: "当前账号只有查看权限", icon: "none" })
+      return
+    }
+    const id = String(event.currentTarget.dataset.id || "")
+    if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
   },
 
   handleBrowseScroll(event: WechatMiniprogram.ScrollViewScroll) {

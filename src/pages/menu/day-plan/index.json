@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "一日三餐",
+  "disableScroll": true,
   "navigationBarBackgroundColor": "#f7f3eb",
   "navigationBarTextStyle": "black"
 }

@@ -1,1 +1,4 @@
-{"navigationBarTitleText":"编辑用餐场景"}
+{
+  "navigationBarTitleText": "编辑用餐场景",
+  "disableScroll": true
+}

@@ -103,7 +103,6 @@
         wx:key="id"
         class="quick-card"
         data-id="{{item.id}}"
-        data-index="{{index}}"
         bindtap="handleDishTap"
       >
         <view class="dish-image-frame quick-card__image-frame">
@@ -137,7 +136,7 @@
         </view>
       </view>
     </view>
-    <view wx:if="{{dishes.length > 0}}" class="quick-footer">点一道菜，进入翻阅模式慢慢看</view>
+    <view wx:if="{{dishes.length > 0}}" class="quick-footer">没有更多菜了</view>
   </scroll-view>
 
   <view wx:elif="{{errorMessage}}" class="browse-state state-block">

@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "影视分类"
+  "navigationBarTitleText": "影视分类",
+  "disableScroll": true
 }

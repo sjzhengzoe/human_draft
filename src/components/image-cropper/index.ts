@@ -63,6 +63,10 @@ type TouchPoint = {
 const STAGE_RPX = 536
 const VIEWPORT_WIDTH_RPX = 420
 const CANVAS_ID = "imageCropperCanvas"
+// Keep a small rendered-image buffer around the crop frame. A boundary that is
+// mathematically exact can still expose the stage background after sub-pixel
+// rounding on high-density screens.
+const EDGE_GUARD_PX = 2
 const cropStates = new WeakMap<object, CropState>()
 const cropGestures = new WeakMap<object, CropGesture>()
 
@@ -132,8 +136,8 @@ Component({
           const frameLeft = (stageSize - viewportWidth) / 2
           const frameTop = (stageSize - viewportHeight) / 2
           const minScale = Math.max(
-            viewportWidth / imageInfo.width,
-            viewportHeight / imageInfo.height
+            (viewportWidth + EDGE_GUARD_PX * 2) / imageInfo.width,
+            (viewportHeight + EDGE_GUARD_PX * 2) / imageInfo.height
           )
           const displayWidth = imageInfo.width * minScale
           const displayHeight = imageInfo.height * minScale
@@ -258,6 +262,10 @@ Component({
       const state = cropStates.get(this)
       if (!state || this.data.processing) return
 
+      // Normalize once more before exporting so stale or rounded gesture data
+      // can never request pixels outside the source image.
+      applyTransform(state, state.scale, state.offsetX, state.offsetY)
+
       this.setData({ processing: true })
       wx.showLoading({ title: "裁剪中", mask: true })
 
@@ -269,10 +277,19 @@ Component({
           Math.round(outputWidth / Math.max(Number(this.properties.aspectRatio) || 1, 0.5)),
           320
         )
-        const sourceWidth = state.viewportWidth / state.scale
-        const sourceHeight = state.viewportHeight / state.scale
-        const sourceX = -state.offsetX / state.scale
-        const sourceY = -state.offsetY / state.scale
+        const sourceWidth = Math.min(state.viewportWidth / state.scale, state.naturalWidth)
+        const sourceHeight = Math.min(
+          state.viewportHeight / state.scale,
+          state.naturalHeight
+        )
+        const sourceX = Math.min(
+          Math.max(-state.offsetX / state.scale, 0),
+          state.naturalWidth - sourceWidth
+        )
+        const sourceY = Math.min(
+          Math.max(-state.offsetY / state.scale, 0),
+          state.naturalHeight - sourceHeight
+        )
 
         canvas.width = outputWidth
         canvas.height = outputHeight
@@ -337,8 +354,22 @@ function applyTransform(
   const displayHeight = state.naturalHeight * nextScale
 
   state.scale = nextScale
-  state.offsetX = Math.min(0, Math.max(state.viewportWidth - displayWidth, offsetX))
-  state.offsetY = Math.min(0, Math.max(state.viewportHeight - displayHeight, offsetY))
+  state.offsetX = clampOffset(
+    offsetX,
+    state.viewportWidth,
+    displayWidth
+  )
+  state.offsetY = clampOffset(
+    offsetY,
+    state.viewportHeight,
+    displayHeight
+  )
+}
+
+function clampOffset(offset: number, viewportSize: number, displaySize: number) {
+  const minimum = viewportSize - displaySize + EDGE_GUARD_PX
+  const maximum = -EDGE_GUARD_PX
+  return Math.min(maximum, Math.max(minimum, offset))
 }
 
 function loadCanvasImage(canvas: CanvasNode, src: string) {

@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "菜单记录",
+  "disableScroll": true,
   "usingComponents": {
     "image-cropper": "/components/image-cropper/index"
   }

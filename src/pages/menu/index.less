@@ -58,14 +58,17 @@
   font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: normal;
-  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .view-switch__item--active {
   background: var(--ui-surface);
   color: #111;
   font-weight: 600;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, .08);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 .menu-section-row {
@@ -170,11 +173,12 @@
 
 .menu-toolbar__action:active,
 .add-button:active {
-  opacity: .58;
+  opacity: 0.58;
 }
 
 .content-scroll {
   min-height: 0;
+  height: 0;
   flex: 1;
   box-sizing: border-box;
 }
@@ -186,23 +190,25 @@
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16rpx;
+  gap: 24rpx;
 }
 
 .quick-card {
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 16rpx;
+  padding: 0;
   border: 1rpx solid var(--ui-border);
   border-radius: 34rpx;
   background: var(--ui-surface);
-  transition: opacity .16s ease, transform .16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .quick-card:active {
-  opacity: .72;
-  transform: scale(.985);
+  opacity: 0.72;
+  transform: scale(0.985);
 }
 
 .dish-image-frame {
@@ -242,21 +248,21 @@
 }
 
 .quick-card__image-frame {
-  border-radius: 26rpx;
+  border-radius: 33rpx 33rpx 0 0;
 }
 
 .quick-card__image-frame .dish-image {
-  border-radius: 24rpx;
+  border-radius: 33rpx 33rpx 0 0;
 }
 
 .quick-card__body {
-  padding: 10rpx 5rpx 7rpx;
+  padding: 16rpx 8rpx 15rpx;
 }
 
 .quick-card__name {
   overflow: hidden;
   color: #222;
-  font-size: var(--ui-font-size-base);
+  font-size: 23rpx;
   font-weight: 600;
   line-height: 1.35;
   text-align: center;
@@ -286,7 +292,7 @@
 }
 
 .sort-action--disabled {
-  opacity: .25;
+  opacity: 0.25;
   pointer-events: none;
 }
 

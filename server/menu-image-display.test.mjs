@@ -35,7 +35,8 @@ test("menu uploads one 3:2 crop and renders square browsing frames", async () =>
   assert.match(menuStyles, /\.dish-image-frame[^}]*padding-top:\s*100%/);
   assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(3/);
   assert.match(menuStyles, /\.quick-card[^}]*border-radius:\s*34rpx/);
-  assert.match(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*border-radius:\s*24rpx/);
+  assert.match(menuStyles, /\.quick-card[^}]*padding:\s*0/);
+  assert.match(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*border-radius:\s*33rpx 33rpx 0 0/);
   assert.doesNotMatch(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*transform:\s*scale/);
   assert.match(menuStyles, /\.quick-card__name[^}]*text-align:\s*center/);
   assert.match(menuStyles, /\.browse-scroll[^}]*background:\s*var\(--ui-page-background\)/);

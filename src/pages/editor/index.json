@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "编辑文案"
+  "navigationBarTitleText": "编辑文案",
+  "disableScroll": true
 }
