@@ -1427,7 +1427,7 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
       main_ingredients: ["虾", "蒜"],
       introduction: "同一道炒虾可以更换香草风味。",
       cooking_methods: ["炒"],
-      taste: "咸鲜",
+      taste: "香、鲜",
       flavor_options: ["紫苏", "九层塔", "紫苏"],
     },
   });
@@ -1436,8 +1436,17 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
   assert.deepEqual(response.json().data.dish.main_ingredients, ["虾", "蒜"]);
   assert.equal(response.json().data.dish.introduction, "同一道炒虾可以更换香草风味。");
   assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
-  assert.equal(response.json().data.dish.taste, "咸鲜");
+  assert.equal(response.json().data.dish.taste, "鲜、香");
   assert.deepEqual(response.json().data.dish.flavor_options, ["紫苏", "九层塔"]);
+
+  const invalidTasteResponse = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: { taste: "香辣" },
+  });
+  assert.equal(invalidTasteResponse.statusCode, 400);
+  assert.equal(invalidTasteResponse.json().error.code, "INVALID_TASTE");
 });
 
 test("home dish detail migration preserves historical rows with empty defaults", async () => {
@@ -1456,6 +1465,20 @@ test("home dish detail migration preserves historical rows with empty defaults",
     migration,
     /create function public\.create_dish_at_end\([\s\S]*p_recommended_items text\[\][\s\S]*language sql/i,
   );
+});
+
+test("dish taste migration stores only exact standard labels", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608040005_standardize_dish_taste.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /无法精确匹配的历史口味/);
+  assert.match(migration, /is_standard_dish_taste/);
+  assert.match(migration, /array\['清淡', '咸', '鲜', '香', '酸', '甜', '辣'\]/);
+  assert.doesNotMatch(migration, /like|position\s*\(/i);
 });
 
 test("menu place migration preserves legacy stores and backfills real dishes", async () => {
@@ -1505,7 +1528,7 @@ test("menu records can switch from a home dish to an outside store", async (t) =
     main_ingredients: ["番茄", "鸡蛋"],
     introduction: "家常快手菜。",
     cooking_methods: ["炒"],
-    taste: "酸甜",
+    taste: "酸、甜",
     flavor_options: ["少糖"],
     image_path: "dish.png",
     thumbnail_path: "dish-thumb.webp",
@@ -1549,7 +1572,7 @@ test("menu records can switch from a home dish to an outside store", async (t) =
   assert.deepEqual(response.json().data.dish.main_ingredients, ["番茄", "鸡蛋"]);
   assert.equal(response.json().data.dish.introduction, "家常快手菜。");
   assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
-  assert.equal(response.json().data.dish.taste, "酸甜");
+  assert.equal(response.json().data.dish.taste, "酸、甜");
   assert.deepEqual(response.json().data.dish.flavor_options, ["少糖"]);
 });
 

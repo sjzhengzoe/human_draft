@@ -42,44 +42,10 @@ export function normalizeCookingTypes(values: string[]): string[] {
 }
 
 export function normalizeTasteTags(value: string): string[] {
-  const matched = new Set<string>()
-  const unknown: string[] = []
-
-  splitAttributeValues([value]).forEach((item) => {
-    let hasMatch = false
-    if (item.includes("清淡")) {
-      matched.add("清淡")
-      hasMatch = true
-    }
-    if (item.includes("咸")) {
-      matched.add("咸")
-      hasMatch = true
-    }
-    if (item.includes("鲜")) {
-      matched.add("鲜")
-      hasMatch = true
-    }
-    if (item.includes("香")) {
-      matched.add("香")
-      hasMatch = true
-    }
-    if (item.includes("酸")) {
-      matched.add("酸")
-      hasMatch = true
-    }
-    if (item.includes("甜")) {
-      matched.add("甜")
-      hasMatch = true
-    }
-    if (/[辣麻]/.test(item)) {
-      matched.add("辣")
-      hasMatch = true
-    }
-    if (!hasMatch && !unknown.includes(item)) unknown.push(item)
-  })
-
-  return [
-    ...TASTE_OPTIONS.filter((item) => matched.has(item)),
-    ...unknown
-  ]
+  const selected = new Set(
+    splitAttributeValues([value]).filter((item) =>
+      TASTE_OPTIONS.includes(item)
+    )
+  )
+  return TASTE_OPTIONS.filter((item) => selected.has(item))
 }

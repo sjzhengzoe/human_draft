@@ -48,7 +48,8 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(editLogic, /cookingMethodOptions[\s\S]*filter\(\(option\) => option\.selected\)/);
   assert.match(attributes, /COOKING_TYPE_OPTIONS = \["煎炒", "蒸煮", "凉拌", "烤炸"\]/);
   assert.match(attributes, /TASTE_OPTIONS = \["清淡", "咸", "鲜", "香", "酸", "甜", "辣"\]/);
-  assert.match(attributes, /item\.includes\("香"\)[\s\S]*matched\.add\("香"\)/);
+  assert.match(attributes, /TASTE_OPTIONS\.includes\(item\)/);
+  assert.doesNotMatch(attributes, /item\.includes\("香"\)/);
   assert.match(menuPage, /displayMode === 'quick'/);
   assert.match(menuPage, /displayMode === 'browse'/);
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);

@@ -12,6 +12,8 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "dinner"]);
 const ALLOWED_RECORD_TYPES = new Set(["home", "outside"]);
+const TASTE_OPTIONS = ["清淡", "咸", "鲜", "香", "酸", "甜", "辣"];
+const ALLOWED_TASTES = new Set(TASTE_OPTIONS);
 const DEFAULT_MEAL_PERIODS = ["lunch", "dinner"];
 
 function isMissingMenuPlaceSchema(error) {
@@ -158,12 +160,29 @@ function normalizeIntroduction(value, useDefault = false) {
 }
 
 function normalizeTaste(value, useDefault = false) {
-  return normalizeOptionalText(value, {
+  const taste = normalizeOptionalText(value, {
     useDefault,
     maxLength: 120,
     code: "INVALID_TASTE",
     message: "口味不能超过 120 个字符。",
   });
+  if (!taste) return "";
+
+  const tags = taste
+    .split(/[\n，,、]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  assertCondition(
+    tags.length > 0
+      && tags.length <= TASTE_OPTIONS.length
+      && tags.every((tag) => ALLOWED_TASTES.has(tag))
+      && new Set(tags).size === tags.length,
+    400,
+    "INVALID_TASTE",
+    "请选择有效的口味特点。",
+  );
+  const selected = new Set(tags);
+  return TASTE_OPTIONS.filter((tag) => selected.has(tag)).join("、");
 }
 
 function publicUrlFor(supabase, path) {
