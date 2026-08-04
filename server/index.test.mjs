@@ -488,7 +488,7 @@ test("menu places expose stores first and their linked dishes separately", async
     main_ingredients: [],
     introduction: "",
     cooking_methods: [],
-    taste: "",
+    taste: [],
     flavor_options: [],
     image_path: "",
     thumbnail_path: null,
@@ -1401,7 +1401,7 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
     main_ingredients: [],
     introduction: "",
     cooking_methods: [],
-    taste: "",
+    taste: [],
     flavor_options: [],
     image_path: "dish.png",
     thumbnail_path: "dish-thumb.webp",
@@ -1426,7 +1426,7 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
     payload: {
       main_ingredients: ["虾", "蒜"],
       introduction: "同一道炒虾可以更换香草风味。",
-      cooking_methods: ["炒"],
+      cooking_methods: ["煎炒"],
       taste: "香、鲜",
       flavor_options: ["紫苏", "九层塔", "紫苏"],
     },
@@ -1435,9 +1435,11 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json().data.dish.main_ingredients, ["虾", "蒜"]);
   assert.equal(response.json().data.dish.introduction, "同一道炒虾可以更换香草风味。");
-  assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
+  assert.deepEqual(response.json().data.dish.cooking_methods, ["煎炒"]);
   assert.equal(response.json().data.dish.taste, "鲜、香");
   assert.deepEqual(response.json().data.dish.flavor_options, ["紫苏", "九层塔"]);
+  assert.deepEqual(dish.cooking_methods, ["cooking_01"]);
+  assert.deepEqual(dish.taste, ["taste_03", "taste_04"]);
 
   const invalidTasteResponse = await app.inject({
     method: "PUT",
@@ -1447,6 +1449,15 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
   });
   assert.equal(invalidTasteResponse.statusCode, 400);
   assert.equal(invalidTasteResponse.json().error.code, "INVALID_TASTE");
+
+  const invalidCookingResponse = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: { cooking_methods: ["炒"] },
+  });
+  assert.equal(invalidCookingResponse.statusCode, 400);
+  assert.equal(invalidCookingResponse.json().error.code, "INVALID_COOKING_METHODS");
 });
 
 test("home dish detail migration preserves historical rows with empty defaults", async () => {
@@ -1479,6 +1490,22 @@ test("dish taste migration stores only exact standard labels", async () => {
   assert.match(migration, /is_standard_dish_taste/);
   assert.match(migration, /array\['清淡', '咸', '鲜', '香', '酸', '甜', '辣'\]/);
   assert.doesNotMatch(migration, /like|position\s*\(/i);
+});
+
+test("menu attribute code migration decouples stored values from display labels", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608040006_menu_attribute_codes.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /when '煎炒' then 'cooking_01'/);
+  assert.match(migration, /when '香' then 'taste_04'/);
+  assert.match(migration, /alter column taste type text\[\]/i);
+  assert.match(migration, /is_standard_menu_codes/);
+  assert.match(migration, /p_taste text\[\]/);
+  assert.doesNotMatch(migration, /drop column|drop table|delete from public\.dishes/i);
 });
 
 test("menu place migration preserves legacy stores and backfills real dishes", async () => {
@@ -1527,8 +1554,8 @@ test("menu records can switch from a home dish to an outside store", async (t) =
     recommended_items: [],
     main_ingredients: ["番茄", "鸡蛋"],
     introduction: "家常快手菜。",
-    cooking_methods: ["炒"],
-    taste: "酸、甜",
+    cooking_methods: ["cooking_01"],
+    taste: ["taste_05", "taste_06"],
     flavor_options: ["少糖"],
     image_path: "dish.png",
     thumbnail_path: "dish-thumb.webp",
@@ -1571,7 +1598,7 @@ test("menu records can switch from a home dish to an outside store", async (t) =
   assert.deepEqual(response.json().data.dish.recommended_items, ["番茄锅", "虾滑"]);
   assert.deepEqual(response.json().data.dish.main_ingredients, ["番茄", "鸡蛋"]);
   assert.equal(response.json().data.dish.introduction, "家常快手菜。");
-  assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
+  assert.deepEqual(response.json().data.dish.cooking_methods, ["煎炒"]);
   assert.equal(response.json().data.dish.taste, "酸、甜");
   assert.deepEqual(response.json().data.dish.flavor_options, ["少糖"]);
 });

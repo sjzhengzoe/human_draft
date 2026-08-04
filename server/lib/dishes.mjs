@@ -12,8 +12,21 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "dinner"]);
 const ALLOWED_RECORD_TYPES = new Set(["home", "outside"]);
-const TASTE_OPTIONS = ["清淡", "咸", "鲜", "香", "酸", "甜", "辣"];
-const ALLOWED_TASTES = new Set(TASTE_OPTIONS);
+const COOKING_METHOD_OPTIONS = [
+  { code: "cooking_01", label: "煎炒" },
+  { code: "cooking_02", label: "蒸煮" },
+  { code: "cooking_03", label: "凉拌" },
+  { code: "cooking_04", label: "烤炸" },
+];
+const TASTE_OPTIONS = [
+  { code: "taste_01", label: "清淡" },
+  { code: "taste_02", label: "咸" },
+  { code: "taste_03", label: "鲜" },
+  { code: "taste_04", label: "香" },
+  { code: "taste_05", label: "酸" },
+  { code: "taste_06", label: "甜" },
+  { code: "taste_07", label: "辣" },
+];
 const DEFAULT_MEAL_PERIODS = ["lunch", "dinner"];
 
 function isMissingMenuPlaceSchema(error) {
@@ -131,13 +144,23 @@ function normalizeMainIngredients(value, useDefault = false) {
 }
 
 function normalizeCookingMethods(value, useDefault = false) {
-  return normalizeTextItems(value, {
+  const labels = normalizeTextItems(value, {
     useDefault,
-    maxItems: 10,
+    maxItems: COOKING_METHOD_OPTIONS.length,
     maxItemLength: 80,
     code: "INVALID_COOKING_METHODS",
     message: "烹饪方式格式无效。",
   });
+  const selected = new Set(labels);
+  assertCondition(
+    labels.every((label) => COOKING_METHOD_OPTIONS.some((option) => option.label === label)),
+    400,
+    "INVALID_COOKING_METHODS",
+    "请选择有效的烹饪类型。",
+  );
+  return COOKING_METHOD_OPTIONS
+    .filter((option) => selected.has(option.label))
+    .map((option) => option.code);
 }
 
 function normalizeFlavorOptions(value, useDefault = false) {
@@ -166,7 +189,7 @@ function normalizeTaste(value, useDefault = false) {
     code: "INVALID_TASTE",
     message: "口味不能超过 120 个字符。",
   });
-  if (!taste) return "";
+  if (!taste) return [];
 
   const tags = taste
     .split(/[\n，,、]/)
@@ -175,14 +198,24 @@ function normalizeTaste(value, useDefault = false) {
   assertCondition(
     tags.length > 0
       && tags.length <= TASTE_OPTIONS.length
-      && tags.every((tag) => ALLOWED_TASTES.has(tag))
+      && tags.every((tag) => TASTE_OPTIONS.some((option) => option.label === tag))
       && new Set(tags).size === tags.length,
     400,
     "INVALID_TASTE",
     "请选择有效的口味特点。",
   );
   const selected = new Set(tags);
-  return TASTE_OPTIONS.filter((tag) => selected.has(tag)).join("、");
+  return TASTE_OPTIONS
+    .filter((option) => selected.has(option.label))
+    .map((option) => option.code);
+}
+
+function enumLabels(codes, options) {
+  if (!Array.isArray(codes)) return [];
+  const selected = new Set(codes);
+  return options
+    .filter((option) => selected.has(option.code))
+    .map((option) => option.label);
 }
 
 function publicUrlFor(supabase, path) {
@@ -202,8 +235,8 @@ export function toDishResponse(supabase, dish) {
     recommended_items: Array.isArray(dish.recommended_items) ? dish.recommended_items : [],
     main_ingredients: Array.isArray(dish.main_ingredients) ? dish.main_ingredients : [],
     introduction: typeof dish.introduction === "string" ? dish.introduction : "",
-    cooking_methods: Array.isArray(dish.cooking_methods) ? dish.cooking_methods : [],
-    taste: typeof dish.taste === "string" ? dish.taste : "",
+    cooking_methods: enumLabels(dish.cooking_methods, COOKING_METHOD_OPTIONS),
+    taste: enumLabels(dish.taste, TASTE_OPTIONS).join("、"),
     flavor_options: Array.isArray(dish.flavor_options) ? dish.flavor_options : [],
     place_id: dish.place_id || null,
     place_sort_order: dish.place_sort_order ?? dish.sort_order ?? 0,
