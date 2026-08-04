@@ -53,6 +53,23 @@ const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
   dinner: "晚餐"
 }
 
+const BROWSE_VISIBLE_COUNT = 1
+const BROWSE_CARD_WIDTH_RPX = 632
+const BROWSE_CARD_GAP_RPX = 18
+const BROWSE_TRACK_GUTTER_RPX = 32
+const BROWSE_CARD_STRIDE_RPX = 650
+
+function getBrowseMetrics(itemCount: number) {
+  const windowWidth = wx.getSystemInfoSync().windowWidth
+  const rpxToPx = windowWidth / 750
+  const stride = BROWSE_CARD_STRIDE_RPX * rpxToPx
+  const trackWidthRpx = itemCount * BROWSE_CARD_WIDTH_RPX
+    + Math.max(itemCount - 1, 0) * BROWSE_CARD_GAP_RPX
+    + BROWSE_TRACK_GUTTER_RPX * 2
+  const maxScrollLeft = Math.max(trackWidthRpx * rpxToPx - windowWidth, 0)
+  return { stride, maxScrollLeft }
+}
+
 function toMenuDish(dish: Dish): MenuDish {
   const mealPeriods =
     Array.isArray(dish.meal_periods) && dish.meal_periods.length > 0
@@ -84,6 +101,49 @@ function recordTypeFromFilter(filter: string): RecordTypeFilter {
   return "all"
 }
 
+function defaultCategoryFilter(
+  recordType: RecordTypeFilter,
+  categories: Category[],
+  outsideCategories: DiningScene[]
+) {
+  if (recordType === "home" && categories[0]) return `home:${categories[0].id}`
+  if (recordType === "outside" && outsideCategories[0]) return `outside:${outsideCategories[0].id}`
+  return recordType
+}
+
+function resolveCategoryFilter(
+  filter: string,
+  categories: Category[],
+  outsideCategories: DiningScene[]
+) {
+  const recordType = recordTypeFromFilter(filter)
+  if (
+    recordType === "home"
+    && filter.startsWith("home:")
+    && categories.some((category) => filter === `home:${category.id}`)
+  ) return filter
+  if (
+    recordType === "outside"
+    && filter.startsWith("outside:")
+    && outsideCategories.some((category) => filter === `outside:${category.id}`)
+  ) return filter
+  return defaultCategoryFilter(recordType, categories, outsideCategories)
+}
+
+function getBrowsePosition(itemCount: number, requestedIndex: number) {
+  if (itemCount <= 0) {
+    return {
+      browseCurrentIndex: 0
+    }
+  }
+  const visibleCount = Math.min(BROWSE_VISIBLE_COUNT, itemCount)
+  const maxStartIndex = Math.max(itemCount - visibleCount, 0)
+  const currentIndex = Math.min(Math.max(requestedIndex, 0), maxStartIndex)
+  return {
+    browseCurrentIndex: currentIndex
+  }
+}
+
 function resetDragSession(): void {
   dragSourceIndex = -1
   dragTargetIndex = -1
@@ -102,9 +162,10 @@ Page({
     outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
     displayMode: "quick" as DisplayMode,
+    browseCurrentIndex: 0,
     browseScrollIntoView: "",
-    activeFilter: "all",
-    activeRecordType: "all" as RecordTypeFilter,
+    activeFilter: "home",
+    activeRecordType: "home" as RecordTypeFilter,
     canWrite: false,
     canReorder: false,
     sortEditing: false,
@@ -136,18 +197,6 @@ Page({
 
   async refreshData() {
     const generation = beginAsyncPageRequest(this)
-    const activeFilter = this.data.activeFilter
-    const homeCategoryId = activeFilter.startsWith("home:")
-      ? activeFilter.slice("home:".length)
-      : ""
-    const outsideCategoryId = activeFilter.startsWith("outside:")
-      ? activeFilter.slice("outside:".length)
-      : ""
-    const recordType = activeFilter === "home" || homeCategoryId
-      ? "home"
-      : activeFilter === "outside" || outsideCategoryId
-        ? "outside"
-        : undefined
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
       loading: showInitialLoading,
@@ -156,22 +205,42 @@ Page({
     })
     try {
       const session = await ensureLogin()
-      const [categories, outsideCategories, dishes] = await Promise.all([
+      const [categories, outsideCategories] = await Promise.all([
         listCategories(),
-        listDiningScenes(),
-        listDishes({
-          category_id: homeCategoryId || undefined,
-          outside_category_id: outsideCategoryId || undefined,
-          record_type: recordType,
-          sort: "custom",
-          page_size: 100
-        })
+        listDiningScenes()
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
+      const activeFilter = resolveCategoryFilter(
+        this.data.activeFilter,
+        categories,
+        outsideCategories
+      )
+      const homeCategoryId = activeFilter.startsWith("home:")
+        ? activeFilter.slice("home:".length)
+        : ""
+      const outsideCategoryId = activeFilter.startsWith("outside:")
+        ? activeFilter.slice("outside:".length)
+        : ""
+      const activeRecordType = recordTypeFromFilter(activeFilter)
+      const dishes = await listDishes({
+        category_id: homeCategoryId || undefined,
+        outside_category_id: outsideCategoryId || undefined,
+        record_type: activeRecordType === "all" ? undefined : activeRecordType,
+        sort: "custom",
+        page_size: 100
+      })
+      if (!isAsyncPageRequestCurrent(this, generation)) return
+      const browsePosition = getBrowsePosition(dishes.length, this.data.browseCurrentIndex)
       this.setData({
         categories,
         outsideCategories,
         dishes: dishes.map(toMenuDish),
+        activeFilter,
+        activeRecordType,
+        ...browsePosition,
+        browseScrollIntoView: this.data.displayMode === "browse" && dishes.length > 0
+          ? `browse-${dishes[browsePosition.browseCurrentIndex].id}`
+          : this.data.browseScrollIntoView,
         canWrite: session.user.can_write,
         canReorder: session.user.can_write,
         draggingIndex: -1,
@@ -200,6 +269,7 @@ Page({
     this.setData({
       activeFilter: filter,
       activeRecordType: recordTypeFromFilter(filter),
+      browseCurrentIndex: 0,
       browseScrollIntoView: "",
       sortEditing: false
     }, () => this.refreshData())
@@ -213,11 +283,17 @@ Page({
     }
     const recordType = String(event.currentTarget.dataset.type || "all") as RecordTypeFilter
     if (!["all", "home", "outside"].includes(recordType)) return
-    const filter = recordType
+    if (recordType === this.data.activeRecordType) return
+    const filter = defaultCategoryFilter(
+      recordType,
+      this.data.categories,
+      this.data.outsideCategories
+    )
     if (filter === this.data.activeFilter) return
     this.setData({
       activeFilter: filter,
       activeRecordType: recordType,
+      browseCurrentIndex: 0,
       browseScrollIntoView: "",
       sortEditing: false
     }, () => this.refreshData())
@@ -232,14 +308,21 @@ Page({
     const displayMode = String(event.currentTarget.dataset.mode || "quick") as DisplayMode
     if (displayMode !== "quick" && displayMode !== "browse") return
     if (displayMode === this.data.displayMode) return
-    this.setData({ displayMode, browseScrollIntoView: "" })
+    if (displayMode === "quick") {
+      this.setData({ displayMode })
+      return
+    }
+    const dish = this.data.dishes[this.data.browseCurrentIndex]
+    this.setData({ displayMode, browseScrollIntoView: "" }, () => {
+      if (dish) this.setData({ browseScrollIntoView: `browse-${dish.id}` })
+    })
   },
 
   async handleSortEditingToggle() {
     if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
     if (!this.data.sortEditing) {
       sortOriginalIds = this.data.dishes.map((dish) => dish.id)
-      this.setData({ sortEditing: true, displayMode: "quick", browseScrollIntoView: "" })
+      this.setData({ sortEditing: true, displayMode: "quick" })
       return
     }
 
@@ -308,10 +391,44 @@ Page({
       this.data.contentLoading ||
       Date.now() < suppressDishTapUntil
     ) return
-    const id = String(event.currentTarget.dataset.id || "")
-    if (!id) return
-    this.setData({ displayMode: "browse", browseScrollIntoView: "" }, () => {
-      this.setData({ browseScrollIntoView: `browse-${id}` })
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.dishes.length) return
+    const dish = this.data.dishes[index]
+    this.setData({
+      displayMode: "browse",
+      browseScrollIntoView: "",
+      ...getBrowsePosition(this.data.dishes.length, index)
+    }, () => {
+      this.setData({ browseScrollIntoView: `browse-${dish.id}` })
+    })
+  },
+
+  handleBrowseScroll(event: WechatMiniprogram.ScrollViewScroll) {
+    const { stride } = getBrowseMetrics(this.data.dishes.length)
+    const index = Math.round(event.detail.scrollLeft / Math.max(stride, 1))
+    const browsePosition = getBrowsePosition(this.data.dishes.length, index)
+    if (browsePosition.browseCurrentIndex !== this.data.browseCurrentIndex) {
+      this.setData(browsePosition)
+    }
+  },
+
+  handleBrowseScrollEnd(event: WechatMiniprogram.ScrollViewScroll) {
+    if (this.data.dishes.length <= 1) return
+    const { stride, maxScrollLeft } = getBrowseMetrics(this.data.dishes.length)
+    const index = getBrowsePosition(
+      this.data.dishes.length,
+      Math.round(event.detail.scrollLeft / Math.max(stride, 1))
+    ).browseCurrentIndex
+    const targetScrollLeft = Math.min(index * stride, maxScrollLeft)
+    if (Math.abs(event.detail.scrollLeft - targetScrollLeft) <= 2) return
+
+    const dish = this.data.dishes[index]
+    if (!dish) return
+    this.setData({
+      browseCurrentIndex: index,
+      browseScrollIntoView: ""
+    }, () => {
+      this.setData({ browseScrollIntoView: `browse-${dish.id}` })
     })
   },
 
