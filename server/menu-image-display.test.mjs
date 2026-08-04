@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("menu supports camera capture with one 3:2 crop and matching previews", async () => {
+test("menu supports camera capture with one 4:3 crop and matching previews", async () => {
   const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper] = await Promise.all([
     readFile(new URL("../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.less", import.meta.url), "utf8"),
@@ -16,9 +16,9 @@ test("menu supports camera capture with one 3:2 crop and matching previews", asy
   assert.match(page, /class="image-field__preview"[\s\S]*?mode="aspectFill"/);
   assert.match(page, /拍照或从相册选择/);
   assert.match(page, /shape="rectangle"/);
-  assert.match(page, /aspect-ratio="1\.5"/);
+  assert.match(page, /aspect-ratio="1\.333333"/);
   assert.match(page, /output-size="1536"/);
-  assert.match(styles, /\.image-field[^}]*aspect-ratio:\s*3\s*\/\s*2/);
+  assert.match(styles, /\.image-field[^}]*aspect-ratio:\s*4\s*\/\s*3/);
   assert.match(editLogic, /sourceType:\s*\["album", "camera"\]/);
   assert.match(menuPage, /displayMode === 'quick'/);
   assert.match(menuPage, /displayMode === 'browse'/);
@@ -49,12 +49,13 @@ test("menu supports camera capture with one 3:2 crop and matching previews", asy
   assert.match(menuPage, /scroll-y/);
   assert.doesNotMatch(menuPage, /左右滑动/);
   assert.doesNotMatch(menuPage, /browse-card__index/);
-  assert.match(menuPage, /mode="aspectFit"/);
-  assert.match(menuStyles, /\.dish-image-frame[^}]*padding-top:\s*100%/);
+  assert.doesNotMatch(menuPage, /mode="aspectFit"/);
+  assert.match(menuStyles, /\.dish-image-frame[^}]*aspect-ratio:\s*4\s*\/\s*3/);
   assert.match(menuPage, /class="dish-image-frame browse-card__image-frame"[\s\S]*?mode="aspectFill"/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*width:\s*480rpx/);
+  assert.match(menuStyles, /\.browse-card__image-frame[^}]*height:\s*360rpx/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*margin:\s*0 auto/);
-  assert.match(menuStyles, /\.browse-card__image-frame[^}]*padding-top:\s*320rpx/);
+  assert.match(menuStyles, /\.browse-card__image-frame[^}]*padding-top:\s*0/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*border-radius:\s*16rpx/);
   assert.match(menuStyles, /\.browse-card__body[^}]*padding:\s*30rpx 16rpx 6rpx/);
   assert.match(menuStyles, /\.browse-carousel[^}]*justify-content:\s*flex-start/);

@@ -15,7 +15,18 @@ type CanvasNode = {
 
 type CanvasContext = {
   clearRect: (x: number, y: number, width: number, height: number) => void
-  drawImage: (
+  save: () => void
+  restore: () => void
+  translate: (x: number, y: number) => void
+  rotate: (angle: number) => void
+  drawImage(
+    image: unknown,
+    destinationX: number,
+    destinationY: number,
+    destinationWidth: number,
+    destinationHeight: number
+  ): void
+  drawImage(
     image: unknown,
     sourceX: number,
     sourceY: number,
@@ -25,7 +36,7 @@ type CanvasContext = {
     destinationY: number,
     destinationWidth: number,
     destinationHeight: number
-  ) => void
+  ): void
 }
 
 type CropState = {
@@ -97,6 +108,8 @@ Component({
   data: {
     ready: false,
     processing: false,
+    rotating: false,
+    displaySrc: "",
     displayWidth: 0,
     displayHeight: 0,
     offsetX: 0,
@@ -109,7 +122,7 @@ Component({
 
   lifetimes: {
     ready() {
-      this.initializeCrop()
+      void this.initializeCrop()
     },
     detached() {
       cropStates.delete(this)
@@ -118,52 +131,58 @@ Component({
   },
 
   methods: {
-    initializeCrop() {
-      const src = this.properties.src
+    initializeCrop(requestedSrc?: string): Promise<boolean> {
+      const src = requestedSrc || this.properties.src
       if (!src) {
         this.triggerEvent("error", { message: "未选择图片" })
-        return
+        return Promise.resolve(false)
       }
 
-      wx.getImageInfo({
-        src,
-        success: (imageInfo) => {
-          const windowWidth = wx.getSystemInfoSync().windowWidth
-          const aspectRatio = Math.max(Number(this.properties.aspectRatio) || 1, 0.5)
-          const viewportWidth = (windowWidth * VIEWPORT_WIDTH_RPX) / 750
-          const viewportHeight = viewportWidth / aspectRatio
-          const stageSize = (windowWidth * STAGE_RPX) / 750
-          const frameLeft = (stageSize - viewportWidth) / 2
-          const frameTop = (stageSize - viewportHeight) / 2
-          const minScale = Math.max(
-            (viewportWidth + EDGE_GUARD_PX * 2) / imageInfo.width,
-            (viewportHeight + EDGE_GUARD_PX * 2) / imageInfo.height
-          )
-          const displayWidth = imageInfo.width * minScale
-          const displayHeight = imageInfo.height * minScale
-          const state: CropState = {
-            naturalWidth: imageInfo.width,
-            naturalHeight: imageInfo.height,
-            viewportWidth,
-            viewportHeight,
-            minScale,
-            scale: minScale,
-            offsetX: (viewportWidth - displayWidth) / 2,
-            offsetY: (viewportHeight - displayHeight) / 2
-          }
+      this.setData({ displaySrc: src, ready: false })
+      return new Promise((resolve) => {
+        wx.getImageInfo({
+          src,
+          success: (imageInfo) => {
+            const windowWidth = wx.getSystemInfoSync().windowWidth
+            const aspectRatio = Math.max(Number(this.properties.aspectRatio) || 1, 0.5)
+            const viewportWidth = (windowWidth * VIEWPORT_WIDTH_RPX) / 750
+            const viewportHeight = viewportWidth / aspectRatio
+            const stageSize = (windowWidth * STAGE_RPX) / 750
+            const frameLeft = (stageSize - viewportWidth) / 2
+            const frameTop = (stageSize - viewportHeight) / 2
+            const minScale = Math.max(
+              (viewportWidth + EDGE_GUARD_PX * 2) / imageInfo.width,
+              (viewportHeight + EDGE_GUARD_PX * 2) / imageInfo.height
+            )
+            const displayWidth = imageInfo.width * minScale
+            const displayHeight = imageInfo.height * minScale
+            const state: CropState = {
+              naturalWidth: imageInfo.width,
+              naturalHeight: imageInfo.height,
+              viewportWidth,
+              viewportHeight,
+              minScale,
+              scale: minScale,
+              offsetX: (viewportWidth - displayWidth) / 2,
+              offsetY: (viewportHeight - displayHeight) / 2
+            }
 
-          cropStates.set(this, state)
-          this.setData({
-            frameLeft,
-            frameTop,
-            frameWidth: viewportWidth,
-            frameHeight: viewportHeight
-          })
-          this.syncTransform(state, true)
-        },
-        fail: () => {
-          this.triggerEvent("error", { message: "无法读取图片，请重试" })
-        }
+            cropStates.set(this, state)
+            cropGestures.delete(this)
+            this.setData({
+              frameLeft,
+              frameTop,
+              frameWidth: viewportWidth,
+              frameHeight: viewportHeight
+            })
+            this.syncTransform(state, true)
+            resolve(true)
+          },
+          fail: () => {
+            this.triggerEvent("error", { message: "无法读取图片，请重试" })
+            resolve(false)
+          }
+        })
       })
     },
 
@@ -254,13 +273,45 @@ Component({
     },
 
     handleCancel() {
-      if (this.data.processing) return
+      if (this.data.processing || this.data.rotating) return
       this.triggerEvent("cancel")
+    },
+
+    async handleRotate() {
+      const state = cropStates.get(this)
+      if (!state || this.data.processing || this.data.rotating) return
+
+      this.setData({ rotating: true })
+      try {
+        const canvas = await this.getCanvas()
+        const currentSrc = this.data.displaySrc || this.properties.src
+        const image = await loadCanvasImage(canvas, currentSrc)
+        const outputWidth = state.naturalHeight
+        const outputHeight = state.naturalWidth
+
+        canvas.width = outputWidth
+        canvas.height = outputHeight
+        const ctx = canvas.getContext("2d")
+        ctx.clearRect(0, 0, outputWidth, outputHeight)
+        ctx.save()
+        ctx.translate(outputWidth, 0)
+        ctx.rotate(Math.PI / 2)
+        ctx.drawImage(image, 0, 0, state.naturalWidth, state.naturalHeight)
+        ctx.restore()
+
+        const rotatedSrc = await canvasToTempFilePath(canvas, outputWidth, outputHeight)
+        await this.initializeCrop(rotatedSrc)
+      } catch (error) {
+        console.error("旋转图片失败", error)
+        this.triggerEvent("error", { message: "图片旋转失败，请重试" })
+      } finally {
+        this.setData({ rotating: false })
+      }
     },
 
     async handleConfirm() {
       const state = cropStates.get(this)
-      if (!state || this.data.processing) return
+      if (!state || this.data.processing || this.data.rotating) return
 
       // Normalize once more before exporting so stale or rounded gesture data
       // can never request pixels outside the source image.
@@ -271,7 +322,10 @@ Component({
 
       try {
         const canvas = await this.getCanvas()
-        const image = await loadCanvasImage(canvas, this.properties.src)
+        const image = await loadCanvasImage(
+          canvas,
+          this.data.displaySrc || this.properties.src
+        )
         const outputWidth = Math.max(Number(this.properties.outputSize) || 1080, 320)
         const outputHeight = Math.max(
           Math.round(outputWidth / Math.max(Number(this.properties.aspectRatio) || 1, 0.5)),

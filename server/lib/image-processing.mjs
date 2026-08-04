@@ -6,7 +6,7 @@ export const IMAGE_COMPRESSION_PERCENT = 0;
 export const IMAGE_PROFILES = Object.freeze({
   dish: Object.freeze({
     original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 720, height: 480 }),
+    thumbnail: Object.freeze({ width: 720, height: 540 }),
   }),
   wardrobe: Object.freeze({
     original: Object.freeze({}),

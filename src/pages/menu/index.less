@@ -214,9 +214,10 @@
 .dish-image-frame {
   position: relative;
   width: 100%;
-  height: 0;
+  height: auto;
   overflow: hidden;
-  padding-top: 100%;
+  padding-top: 0;
+  aspect-ratio: 4 / 3;
   background: var(--ui-surface);
 }
 
@@ -350,8 +351,9 @@
 
 .browse-card__image-frame {
   width: 480rpx;
+  height: 360rpx;
   margin: 0 auto;
-  padding-top: 320rpx;
+  padding-top: 0;
   border-radius: 16rpx;
   background: var(--ui-surface);
 }

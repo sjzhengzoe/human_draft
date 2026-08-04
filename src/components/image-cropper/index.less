@@ -38,11 +38,39 @@
 }
 
 .crop-modal__hint {
-  margin-top: 24rpx;
+  margin-top: 16rpx;
   color: #777777;
   font-size: 24rpx;
   line-height: 1.4;
   text-align: center;
+}
+
+.crop-modal__tools {
+  display: flex;
+  justify-content: center;
+  margin-top: 20rpx;
+}
+
+.crop-modal__rotate {
+  display: inline-flex;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 22rpx !important;
+  border: 1rpx solid #d8d8d8;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #333333;
+  font-size: 22rpx;
+  line-height: normal;
+}
+
+.crop-modal__rotate::after {
+  border: 0;
 }
 
 .crop-modal__actions {

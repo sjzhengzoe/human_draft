@@ -39,7 +39,7 @@ test("compression level zero keeps the original dimensions and uses lossless Web
   );
   assert.deepEqual(
     { format: thumbnail.format, width: thumbnail.width, height: thumbnail.height },
-    { format: "webp", width: 640, height: 480 },
+    { format: "webp", width: 720, height: 540 },
   );
 });
 

@@ -14,7 +14,7 @@
     >
       <image
         class="crop-stage__image"
-        src="{{src}}"
+        src="{{displaySrc}}"
         mode="scaleToFill"
         style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{displayWidth}}px; height: {{displayHeight}}px; transform: translate3d({{offsetX}}px, {{offsetY}}px, 0);"
       />
@@ -23,11 +23,19 @@
         style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{frameWidth}}px; height: {{frameHeight}}px;"
       />
     </view>
+    <view class="crop-modal__tools">
+      <button
+        class="crop-modal__rotate"
+        loading="{{rotating}}"
+        disabled="{{processing || rotating || !ready}}"
+        bindtap="handleRotate"
+      >顺时针旋转 90°</button>
+    </view>
     <view class="crop-modal__hint">单指拖动，双指缩放，白框内为保留范围</view>
   </view>
   <view slot="actions" class="crop-modal__actions">
-    <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing}}" bindtap="handleCancel">取消</button>
-    <button class="crop-modal__button crop-modal__button--primary" loading="{{processing}}" disabled="{{processing || !ready}}" bindtap="handleConfirm">使用图片</button>
+    <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing || rotating}}" bindtap="handleCancel">取消</button>
+    <button class="crop-modal__button crop-modal__button--primary" loading="{{processing}}" disabled="{{processing || rotating || !ready}}" bindtap="handleConfirm">使用图片</button>
   </view>
 </app-dialog>
 

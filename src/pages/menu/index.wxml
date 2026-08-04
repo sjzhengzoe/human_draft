@@ -110,7 +110,7 @@
             wx:if="{{item.thumbnail_url || item.image_url}}"
             class="dish-image"
             src="{{item.thumbnail_url || item.image_url}}"
-            mode="aspectFit"
+            mode="aspectFill"
             lazy-load
           />
           <view wx:else class="dish-image-empty">暂无图片</view>
