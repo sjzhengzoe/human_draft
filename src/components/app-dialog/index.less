@@ -8,12 +8,14 @@
   justify-content: center;
   padding: 48rpx var(--ui-dialog-gutter);
   background: rgba(0, 0, 0, 0.48);
+  transition: padding-bottom 180ms ease-out;
 }
 
 .app-dialog__panel {
   display: flex;
   width: 100%;
   min-height: 420rpx;
+  max-height: 100%;
   box-sizing: border-box;
   flex-direction: column;
   overflow: hidden;
@@ -34,6 +36,7 @@
   flex: 1;
   flex-direction: column;
   justify-content: center;
+  overflow-y: auto;
   padding: 24rpx 48rpx 40rpx;
   text-align: center;
 }

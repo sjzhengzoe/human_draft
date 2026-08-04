@@ -231,6 +231,7 @@
         maxlength="120"
         placeholder="写下一个官方话题…"
         focus
+        adjust-position="{{false}}"
         bindinput="handleOfficialEditorInput"
       />
       <view class="topic-editor__count">{{officialEditorContent.length}} / 120</view>
@@ -255,6 +256,7 @@
         maxlength="120"
         placeholder="写下一个想聊的话题…"
         focus
+        adjust-position="{{false}}"
         bindinput="handleEditorInput"
       />
       <view class="topic-editor__count">{{editorContent.length}} / 120</view>

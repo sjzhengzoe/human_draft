@@ -52,17 +52,22 @@
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 
-  <view wx:if="{{showEditor}}" class="modal" bindtap="closeEditor">
-    <view class="modal-card" catchtap="noop">
-      <view class="modal-title">{{editingId ? '编辑活动' : '新增活动'}}</view>
-      <input class="modal-input" value="{{editorName}}" maxlength="120" placeholder="例如：红花湖骑行" focus bindinput="handleEditorNameInput" />
+  <app-dialog
+    wx:if="{{showEditor}}"
+    visible="{{true}}"
+    title="{{editingId ? '编辑活动' : '新增活动'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="activity-editor">
+      <input class="modal-input" value="{{editorName}}" maxlength="120" placeholder="例如：红花湖骑行" focus adjust-position="{{false}}" bindinput="handleEditorNameInput" />
       <view class="type-options">
         <view wx:for="{{activityTypes}}" wx:key="*this" class="type-option {{editorType === item ? 'type-option--active' : ''}}" data-type="{{item}}" bindtap="handleEditorTypeTap">{{item}}</view>
       </view>
-      <view class="modal-actions">
-        <button class="cancel-button" bindtap="closeEditor">取消</button>
-        <button class="save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
-      </view>
     </view>
-  </view>
+    <view slot="actions" class="modal-actions">
+      <button class="cancel-button" bindtap="closeEditor">取消</button>
+      <button class="save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+    </view>
+  </app-dialog>
 </view>
