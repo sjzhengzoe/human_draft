@@ -25,6 +25,17 @@ type RestCalendarCell = {
   isSelected: boolean
 }
 
+const CALENDAR_CAT_IMAGE = "/exercise/assets/calendar/happy-cat.png"
+const CALENDAR_DOG_IMAGE = "/exercise/assets/calendar/unhappy-dog.png"
+
+function selectionHint(cell?: RestCalendarCell) {
+  if (!cell) return "切换月份查看其他日期"
+  if (cell.restUsed) return "这一天已使用休息日权限完成"
+  if (cell.state === "completed") return "这一天已经完成，无需补卡"
+  if (!cell.canUseRestDay) return "该月休息日权限已用完"
+  return "可使用该月休息日权限完成补卡"
+}
+
 function shiftMonth(value: string, offset: number) {
   const [year, month] = value.split("-").map(Number)
   const shifted = new Date(Date.UTC(year, month - 1 + offset, 1))
@@ -51,9 +62,13 @@ Page({
     canGoPrevious: false,
     canGoNext: false,
     today: "",
+    calendarCatImage: CALENDAR_CAT_IMAGE,
+    calendarDogImage: CALENDAR_DOG_IMAGE,
     cells: [] as RestCalendarCell[],
     selectedDate: "",
     selectedDateLabel: "",
+    selectedCanUseRestDay: false,
+    selectedHint: "切换月份查看其他日期",
     confirmVisible: false,
     confirmContent: "",
     restDaysUsed: 0,
@@ -79,12 +94,16 @@ Page({
 
   applyCalendar(calendar: ExerciseRestCalendar, preserveSelection = false) {
     const eligible = calendar.month.days.filter((item) => item.can_use_rest_day)
+    const selectable = calendar.month.days.filter(
+      (item) => item.state === "completed" || item.state === "incomplete"
+    )
     const existingSelection = preserveSelection
-      ? eligible.find((item) => item.date === this.data.selectedDate)?.date || ""
+      ? selectable.find((item) => item.date === this.data.selectedDate)?.date || ""
       : ""
     const preferredDate = existingSelection
-      || eligible.find((item) => item.date === calendar.today)?.date
+      || selectable.find((item) => item.date === calendar.today)?.date
       || eligible[eligible.length - 1]?.date
+      || selectable[selectable.length - 1]?.date
       || ""
     const cells: RestCalendarCell[] = [
       ...Array.from({ length: calendar.month.first_weekday }, (_, index) => ({
@@ -111,6 +130,7 @@ Page({
     const incompleteDays = calendar.month.days.filter(
       (item) => item.state === "incomplete"
     ).length
+    const selectedCell = cells.find((item) => item.date === preferredDate)
     let emptyMessage = ""
     if (incompleteDays === 0) {
       emptyMessage = "本月全部完成，无需补卡"
@@ -129,6 +149,8 @@ Page({
       cells,
       selectedDate: preferredDate,
       selectedDateLabel: preferredDate ? displayDate(preferredDate, calendar.today) : "",
+      selectedCanUseRestDay: Boolean(selectedCell?.canUseRestDay),
+      selectedHint: selectionHint(selectedCell),
       restDaysUsed: calendar.month.rest_days.used,
       restDaysTotal: calendar.month.rest_days.total,
       restDaysRemaining: calendar.month.rest_days.remaining,
@@ -187,11 +209,7 @@ Page({
     if (this.data.busy || this.data.calendarLoading) return
     const date = String(event.currentTarget.dataset.date || "")
     const cell = this.data.cells.find((item) => item.date === date)
-    if (!cell || cell.state !== "incomplete") return
-    if (!cell.canUseRestDay) {
-      wx.showToast({ title: "这个月的休息日权限已用完", icon: "none" })
-      return
-    }
+    if (!cell || (cell.state !== "completed" && cell.state !== "incomplete")) return
     const cells = this.data.cells.map((item) => ({
       ...item,
       isSelected: item.date === date
@@ -199,12 +217,14 @@ Page({
     this.setData({
       cells,
       selectedDate: date,
-      selectedDateLabel: displayDate(date, this.data.today)
+      selectedDateLabel: displayDate(date, this.data.today),
+      selectedCanUseRestDay: cell.canUseRestDay,
+      selectedHint: selectionHint(cell)
     })
   },
 
   handleUseRestDay() {
-    if (this.data.busy || !this.data.selectedDate) return
+    if (this.data.busy || !this.data.selectedDate || !this.data.selectedCanUseRestDay) return
     const remaining = Math.max(0, this.data.restDaysRemaining - 1)
     this.setData({
       confirmVisible: true,
@@ -218,7 +238,7 @@ Page({
   },
 
   async handleConfirm() {
-    if (this.data.busy || !this.data.selectedDate) return
+    if (this.data.busy || !this.data.selectedDate || !this.data.selectedCanUseRestDay) return
     const selectedLabel = this.data.selectedDateLabel
     this.setData({ confirmVisible: false, busy: true })
     try {

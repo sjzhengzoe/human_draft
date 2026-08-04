@@ -59,7 +59,17 @@
         data-date="{{item.date}}"
         bindtap="handleDayTap"
       >
-        <view wx:if="{{item.day}}" class="calendar-cell__day">{{item.day}}</view>
+        <view
+          wx:if="{{item.state === 'completed' || item.state === 'incomplete'}}"
+          class="calendar-cell__pet-frame"
+        >
+          <image
+            class="calendar-cell__pet"
+            src="{{item.state === 'completed' ? calendarCatImage : calendarDogImage}}"
+            mode="aspectFill"
+          />
+        </view>
+        <view wx:elif="{{item.day}}" class="calendar-cell__day">{{item.day}}</view>
         <view wx:if="{{item.restUsed}}" class="calendar-cell__mark">休</view>
       </view>
     </view>
@@ -71,21 +81,21 @@
         该月休息权限还剩 <text>{{restDaysRemaining}}</text>/{{restDaysTotal}} 天
       </view>
       <view class="calendar-legend">
-        <view><text class="legend-dot legend-dot--open" />未完成</view>
-        <view><text class="legend-dot legend-dot--done" />已完成</view>
-        <view><text class="legend-dot legend-dot--rest" />已休息</view>
+        <view><image class="legend-pet" src="{{calendarDogImage}}" mode="aspectFill" />未完成</view>
+        <view><image class="legend-pet" src="{{calendarCatImage}}" mode="aspectFill" />已完成</view>
+        <view><text class="legend-rest">休</text>已休息</view>
       </view>
     </view>
   </view>
 
   <view class="selection-card">
     <view class="selection-copy">
-      <view class="selection-copy__title">{{selectedDate ? selectedDateLabel : '暂无可补卡日期'}}</view>
-      <view class="selection-copy__hint">{{selectedDate ? '使用后计入所选月份的休息额度' : '切换月份查看其他未完成日期'}}</view>
+      <view class="selection-copy__title">{{selectedDate ? selectedDateLabel : '暂无可查看日期'}}</view>
+      <view class="selection-copy__hint">{{selectedHint}}</view>
     </view>
     <button
       class="use-button"
-      disabled="{{busy || !selectedDate}}"
+      disabled="{{busy || !selectedCanUseRestDay}}"
       loading="{{busy}}"
       bindtap="handleUseRestDay"
     >使用休息日权限</button>
