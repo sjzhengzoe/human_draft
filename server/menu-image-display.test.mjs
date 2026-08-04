@@ -65,10 +65,14 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuStyles, /\.browse-slide-scroll[^}]*height:\s*100%/);
   assert.match(menuStyles, /\.browse-card[^}]*width:\s*560rpx/);
   assert.match(menuStyles, /\.browse-card[^}]*margin:\s*0 auto/);
-  assert.match(menuStyles, /\.browse-card[^}]*padding:\s*24rpx/);
+  assert.match(menuStyles, /\.browse-card[^}]*padding:\s*40rpx 24rpx 24rpx/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*color:\s*#111/);
   assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(3/);
+  assert.match(
+    menuStyles,
+    /\.content-scroll--quick[^}]*padding:\s*var\(--ui-page-gutter\) var\(--ui-page-gutter\)/,
+  );
   assert.match(menuStyles, /\.quick-card[^}]*border-radius:\s*34rpx/);
   assert.match(menuStyles, /\.quick-card[^}]*padding:\s*0/);
   assert.match(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*border-radius:\s*33rpx 33rpx 0 0/);
