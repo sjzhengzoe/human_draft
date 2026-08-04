@@ -79,6 +79,26 @@
   margin-top: 32rpx;
 }
 
+.record-filter-group,
+.category-filter-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.record-filter-group {
+  flex: 1;
+}
+
+.menu-filter-label {
+  flex: 0 0 auto;
+  color: #888;
+  font-size: 21rpx;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
 .record-filter {
   display: flex;
   align-items: center;
@@ -109,9 +129,14 @@
 }
 
 .category-scroll {
-  width: 100%;
-  margin-top: 19rpx;
+  width: auto;
+  min-width: 0;
+  flex: 1;
   white-space: nowrap;
+}
+
+.category-filter-row {
+  margin-top: 19rpx;
 }
 
 .category-list {

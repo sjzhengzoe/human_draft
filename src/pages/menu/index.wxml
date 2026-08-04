@@ -25,17 +25,20 @@
     </view>
 
     <view class="menu-section-row">
-      <view class="record-filter" role="tablist" aria-label="菜单类型">
-        <view
-          class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}"
-          data-type="home"
-          bindtap="handleRecordTypeTap"
-        >在家</view>
-        <view
-          class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}"
-          data-type="outside"
-          bindtap="handleRecordTypeTap"
-        >外食</view>
+      <view class="record-filter-group">
+        <view class="menu-filter-label">用餐场景</view>
+        <view class="record-filter" role="tablist" aria-label="用餐场景">
+          <view
+            class="record-filter__item {{activeRecordType === 'home' ? 'record-filter__item--active' : ''}}"
+            data-type="home"
+            bindtap="handleRecordTypeTap"
+          >在家</view>
+          <view
+            class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}"
+            data-type="outside"
+            bindtap="handleRecordTypeTap"
+          >外食</view>
+        </view>
       </view>
       <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddTap">
         <app-icon name="plus-white" size="20" />
@@ -43,26 +46,29 @@
       </button>
     </view>
 
-    <scroll-view wx:if="{{activeRecordType !== 'all'}}" class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="category-list">
-        <view
-          wx:if="{{activeRecordType === 'home'}}"
-          wx:for="{{categories}}"
-          wx:key="id"
-          class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}"
-          data-filter="home:{{item.id}}"
-          bindtap="handleFilterTap"
-        >{{item.name}}</view>
-        <view
-          wx:if="{{activeRecordType === 'outside'}}"
-          wx:for="{{outsideCategories}}"
-          wx:key="id"
-          class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}"
-          data-filter="outside:{{item.id}}"
-          bindtap="handleFilterTap"
-        >{{item.name}}</view>
-      </view>
-    </scroll-view>
+    <view wx:if="{{activeRecordType !== 'all'}}" class="category-filter-row">
+      <view class="menu-filter-label">{{activeRecordType === 'outside' ? '外食分类' : '菜品分类'}}</view>
+      <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="category-list">
+          <view
+            wx:if="{{activeRecordType === 'home'}}"
+            wx:for="{{categories}}"
+            wx:key="id"
+            class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}"
+            data-filter="home:{{item.id}}"
+            bindtap="handleFilterTap"
+          >{{item.name}}</view>
+          <view
+            wx:if="{{activeRecordType === 'outside'}}"
+            wx:for="{{outsideCategories}}"
+            wx:key="id"
+            class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}"
+            data-filter="outside:{{item.id}}"
+            bindtap="handleFilterTap"
+          >{{item.name}}</view>
+        </view>
+      </scroll-view>
+    </view>
 
     <view wx:if="{{displayMode === 'quick'}}" class="menu-toolbar">
       <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap">
@@ -197,14 +203,14 @@
               >{{item.introduction}}</view>
 
               <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row browse-card__record-row">
-                <view class="browse-card__attribute-label">记录类型</view>
+                <view class="browse-card__attribute-label">用餐场景</view>
                 <view class="browse-card__attribute-tags">
                   <view class="browse-card__black-tag">{{item.recordTypeLabel}}</view>
                 </view>
               </view>
 
               <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row">
-                <view class="browse-card__attribute-label">分类</view>
+                <view class="browse-card__attribute-label">菜品分类</view>
                 <view class="browse-card__attribute-tags">
                   <view class="browse-card__black-tag">{{item.displayCategory}}</view>
                 </view>

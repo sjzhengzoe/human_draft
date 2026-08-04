@@ -39,8 +39,10 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.doesNotMatch(menuPage, /browse-card__edit|handleDishImageTap/);
   assert.match(
     menuPage,
-    /browse-card__name[\s\S]*browse-card__title-introduction[\s\S]*browse-card__record-row[\s\S]*记录类型[\s\S]*分类[\s\S]*browse-card__meal-row[\s\S]*主要食材[\s\S]*烹饪方式[\s\S]*口味[\s\S]*衍生菜系/,
+    /browse-card__name[\s\S]*browse-card__title-introduction[\s\S]*browse-card__record-row[\s\S]*用餐场景[\s\S]*菜品分类[\s\S]*browse-card__meal-row[\s\S]*主要食材[\s\S]*烹饪方式[\s\S]*口味[\s\S]*衍生菜系/,
   );
+  assert.match(menuPage, /menu-filter-label">用餐场景/);
+  assert.match(menuPage, /activeRecordType === 'outside' \? '外食分类' : '菜品分类'/);
   assert.match(menuPage, /wx:if="\{\{item\.record_type === 'home' && item\.introduction\}\}"/);
   assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid #e8e8e8/);
   assert.match(menuPage, /class="browse-slide-scroll"[\s\S]*scroll-y/);
