@@ -43,6 +43,11 @@ export async function createDish(input: {
   imagePath: string
   mealPeriods: MealPeriod[]
   recommendedItems?: string[]
+  mainIngredients?: string[]
+  introduction?: string
+  cookingMethods?: string[]
+  taste?: string
+  flavorOptions?: string[]
 }): Promise<Dish> {
   const data = await upload<{ dish: Dish }>({
     path: "/api/dishes",
@@ -53,7 +58,12 @@ export async function createDish(input: {
       category_id: input.categoryId || "",
       outside_category_id: input.outsideCategoryId || "",
       meal_periods: JSON.stringify(input.mealPeriods),
-      recommended_items: JSON.stringify(input.recommendedItems || [])
+      recommended_items: JSON.stringify(input.recommendedItems || []),
+      main_ingredients: JSON.stringify(input.mainIngredients || []),
+      introduction: input.introduction || "",
+      cooking_methods: JSON.stringify(input.cookingMethods || []),
+      taste: input.taste || "",
+      flavor_options: JSON.stringify(input.flavorOptions || [])
     }
   })
   return data.dish
@@ -68,6 +78,11 @@ export async function updateDish(
     outside_category_id?: string | null
     meal_periods?: MealPeriod[]
     recommended_items?: string[]
+    main_ingredients?: string[]
+    introduction?: string
+    cooking_methods?: string[]
+    taste?: string
+    flavor_options?: string[]
   }
 ): Promise<Dish> {
   const data = await request<{ dish: Dish }>({

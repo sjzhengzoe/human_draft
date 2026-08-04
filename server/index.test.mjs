@@ -1306,6 +1306,94 @@ test("dish meal-period migration defaults existing dishes to lunch and dinner", 
   assert.match(migration, /p_meal_periods text\[\]/i);
 });
 
+test("home dish details accept ingredients, introduction, methods, taste, and flavor options", async (t) => {
+  const dish = {
+    id: SOURCE_ID,
+    user_id: USER_ID,
+    name: "炒虾",
+    record_type: "home",
+    category_id: TARGET_ID,
+    outside_category_id: null,
+    categories: { id: TARGET_ID, name: "荤菜" },
+    recommended_items: [],
+    main_ingredients: [],
+    introduction: "",
+    cooking_methods: [],
+    taste: "",
+    flavor_options: [],
+    image_path: "dish.png",
+    thumbnail_path: "dish-thumb.webp",
+    meal_periods: ["lunch", "dinner"],
+    printed_at: null,
+    sort_order: 1000,
+    created_at: "2026-08-04T00:00:00.000Z",
+    updated_at: "2026-08-04T00:00:00.000Z",
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ dishes: [dish] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/dishes/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: {
+      main_ingredients: ["虾", "蒜"],
+      introduction: "同一道炒虾可以更换香草风味。",
+      cooking_methods: ["炒"],
+      taste: "咸鲜",
+      flavor_options: ["紫苏", "九层塔", "紫苏"],
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().data.dish.main_ingredients, ["虾", "蒜"]);
+  assert.equal(response.json().data.dish.introduction, "同一道炒虾可以更换香草风味。");
+  assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
+  assert.equal(response.json().data.dish.taste, "咸鲜");
+  assert.deepEqual(response.json().data.dish.flavor_options, ["紫苏", "九层塔"]);
+});
+
+test("home dish detail migration preserves historical rows with empty defaults", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608040002_dish_home_details.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists main_ingredients text\[\]/i);
+  assert.match(migration, /introduction = coalesce\(introduction, ''\)/i);
+  assert.match(migration, /flavor_options = coalesce\(flavor_options, '\{\}'\)/i);
+  assert.match(migration, /p_flavor_options text\[\]/i);
+  assert.match(
+    migration,
+    /create function public\.create_dish_at_end\([\s\S]*p_recommended_items text\[\][\s\S]*language sql/i,
+  );
+});
+
+test("dish ordering migration backfills newest-first and inserts new dishes first", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608040003_dishes_newest_first.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /partition by user_id[\s\S]*order by created_at desc, id desc/i);
+  assert.match(migration, /set constraints dishes_user_sort_order_unique deferred/i);
+  assert.match(
+    migration,
+    /select coalesce\(min\(sort_order\) - 1000, 1000\)[\s\S]*where user_id = new\.user_id/i,
+  );
+  assert.match(migration, /before insert on public\.dishes/i);
+  assert.match(migration, /hashtextextended\('dishes:' \|\| new\.user_id::text, 0\)/i);
+});
+
 test("menu records can switch from a home dish to an outside store", async (t) => {
   const dish = {
     id: SOURCE_ID,
@@ -1315,6 +1403,11 @@ test("menu records can switch from a home dish to an outside store", async (t) =
     category_id: TARGET_ID,
     categories: { id: TARGET_ID, name: "半荤" },
     recommended_items: [],
+    main_ingredients: ["番茄", "鸡蛋"],
+    introduction: "家常快手菜。",
+    cooking_methods: ["炒"],
+    taste: "酸甜",
+    flavor_options: ["少糖"],
     image_path: "dish.png",
     thumbnail_path: "dish-thumb.webp",
     meal_periods: ["lunch", "dinner"],
@@ -1354,6 +1447,11 @@ test("menu records can switch from a home dish to an outside store", async (t) =
   assert.equal(response.json().data.dish.category_id, null);
   assert.equal(response.json().data.dish.outside_category_id, DINING_ID);
   assert.deepEqual(response.json().data.dish.recommended_items, ["番茄锅", "虾滑"]);
+  assert.deepEqual(response.json().data.dish.main_ingredients, ["番茄", "鸡蛋"]);
+  assert.equal(response.json().data.dish.introduction, "家常快手菜。");
+  assert.deepEqual(response.json().data.dish.cooking_methods, ["炒"]);
+  assert.equal(response.json().data.dish.taste, "酸甜");
+  assert.deepEqual(response.json().data.dish.flavor_options, ["少糖"]);
 });
 
 test("unified menu migration preserves stores as outside records", async () => {

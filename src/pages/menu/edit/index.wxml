@@ -72,6 +72,61 @@
       </picker>
     </view>
 
+    <view wx:if="{{recordType === 'home'}}" class="field">
+      <view class="field__label">主要食材（可不填，每行一个）</view>
+      <textarea
+        class="field__textarea field__textarea--compact"
+        value="{{mainIngredientsText}}"
+        maxlength="2400"
+        placeholder="例如：&#10;虾&#10;紫苏"
+        bindinput="handleMainIngredientsInput"
+      />
+    </view>
+
+    <view wx:if="{{recordType === 'home'}}" class="field">
+      <view class="field__label">介绍（可不填）</view>
+      <textarea
+        class="field__textarea"
+        value="{{introduction}}"
+        maxlength="1000"
+        placeholder="简单介绍这道菜"
+        bindinput="handleIntroductionInput"
+      />
+    </view>
+
+    <view wx:if="{{recordType === 'home'}}" class="field">
+      <view class="field__label">烹饪方式（可不填，多个用顿号分隔）</view>
+      <input
+        class="field__input"
+        value="{{cookingMethodsText}}"
+        maxlength="800"
+        placeholder="例如：炒、焖"
+        bindinput="handleCookingMethodsInput"
+      />
+    </view>
+
+    <view wx:if="{{recordType === 'home'}}" class="field">
+      <view class="field__label">口味（可不填）</view>
+      <input
+        class="field__input"
+        value="{{taste}}"
+        maxlength="120"
+        placeholder="例如：咸鲜、微辣"
+        bindinput="handleTasteInput"
+      />
+    </view>
+
+    <view wx:if="{{recordType === 'home'}}" class="field">
+      <view class="field__label">衍生菜系（可不填，每行一个）</view>
+      <textarea
+        class="field__textarea field__textarea--compact"
+        value="{{flavorOptionsText}}"
+        maxlength="2400"
+        placeholder="例如：&#10;紫苏&#10;九层塔"
+        bindinput="handleFlavorOptionsInput"
+      />
+    </view>
+
     <view wx:if="{{recordType === 'outside'}}" class="field">
       <view class="field__label">分类</view>
       <picker mode="selector" range="{{outsideCategoryNames}}" value="{{outsideCategoryIndex}}" bindchange="handleOutsideCategoryChange">

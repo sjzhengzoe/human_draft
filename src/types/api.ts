@@ -45,6 +45,11 @@ export type Dish = {
   outside_category_id: string | null
   outside_category: Pick<Category, "id" | "name"> | null
   recommended_items: string[]
+  main_ingredients: string[]
+  introduction: string
+  cooking_methods: string[]
+  taste: string
+  flavor_options: string[]
   image_path: string
   thumbnail_path: string | null
   image_url: string

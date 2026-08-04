@@ -41,33 +41,10 @@ type MenuDish = Dish & {
   displayCategory: string
 }
 
-const MEAL_PERIOD_LABELS: Record<MealPeriod, string> = {
-  breakfast: "早",
-  lunch: "午",
-  dinner: "晚"
-}
-
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
   breakfast: "早餐",
   lunch: "午餐",
   dinner: "晚餐"
-}
-
-const BROWSE_VISIBLE_COUNT = 1
-const BROWSE_CARD_WIDTH_RPX = 632
-const BROWSE_CARD_GAP_RPX = 18
-const BROWSE_TRACK_GUTTER_RPX = 32
-const BROWSE_CARD_STRIDE_RPX = 650
-
-function getBrowseMetrics(itemCount: number) {
-  const windowWidth = wx.getSystemInfoSync().windowWidth
-  const rpxToPx = windowWidth / 750
-  const stride = BROWSE_CARD_STRIDE_RPX * rpxToPx
-  const trackWidthRpx = itemCount * BROWSE_CARD_WIDTH_RPX
-    + Math.max(itemCount - 1, 0) * BROWSE_CARD_GAP_RPX
-    + BROWSE_TRACK_GUTTER_RPX * 2
-  const maxScrollLeft = Math.max(trackWidthRpx * rpxToPx - windowWidth, 0)
-  return { stride, maxScrollLeft }
 }
 
 function toMenuDish(dish: Dish): MenuDish {
@@ -83,10 +60,10 @@ function toMenuDish(dish: Dish): MenuDish {
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
     displayCategory,
     mealPeriodTags: mealPeriods
-      .filter((key) => Boolean(MEAL_PERIOD_LABELS[key]))
+      .filter((key) => Boolean(MEAL_PERIOD_TEXT[key]))
       .map((key) => ({
         key,
-        label: MEAL_PERIOD_LABELS[key]
+        label: MEAL_PERIOD_TEXT[key]
       })),
     mealPeriodText: mealPeriods
       .filter((key) => Boolean(MEAL_PERIOD_TEXT[key]))
@@ -136,9 +113,7 @@ function getBrowsePosition(itemCount: number, requestedIndex: number) {
       browseCurrentIndex: 0
     }
   }
-  const visibleCount = Math.min(BROWSE_VISIBLE_COUNT, itemCount)
-  const maxStartIndex = Math.max(itemCount - visibleCount, 0)
-  const currentIndex = Math.min(Math.max(requestedIndex, 0), maxStartIndex)
+  const currentIndex = Math.min(Math.max(requestedIndex, 0), itemCount - 1)
   return {
     browseCurrentIndex: currentIndex
   }
@@ -163,7 +138,6 @@ Page({
     dishes: [] as MenuDish[],
     displayMode: "quick" as DisplayMode,
     browseCurrentIndex: 0,
-    browseScrollIntoView: "",
     activeFilter: "home",
     activeRecordType: "home" as RecordTypeFilter,
     canWrite: false,
@@ -238,9 +212,6 @@ Page({
         activeFilter,
         activeRecordType,
         ...browsePosition,
-        browseScrollIntoView: this.data.displayMode === "browse" && dishes.length > 0
-          ? `browse-${dishes[browsePosition.browseCurrentIndex].id}`
-          : this.data.browseScrollIntoView,
         canWrite: session.user.can_write,
         canReorder: session.user.can_write,
         draggingIndex: -1,
@@ -270,7 +241,6 @@ Page({
       activeFilter: filter,
       activeRecordType: recordTypeFromFilter(filter),
       browseCurrentIndex: 0,
-      browseScrollIntoView: "",
       sortEditing: false
     }, () => this.refreshData())
   },
@@ -294,7 +264,6 @@ Page({
       activeFilter: filter,
       activeRecordType: recordType,
       browseCurrentIndex: 0,
-      browseScrollIntoView: "",
       sortEditing: false
     }, () => this.refreshData())
   },
@@ -312,10 +281,7 @@ Page({
       this.setData({ displayMode })
       return
     }
-    const dish = this.data.dishes[this.data.browseCurrentIndex]
-    this.setData({ displayMode, browseScrollIntoView: "" }, () => {
-      if (dish) this.setData({ browseScrollIntoView: `browse-${dish.id}` })
-    })
+    this.setData({ displayMode })
   },
 
   async handleSortEditingToggle() {
@@ -399,50 +365,18 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
   },
 
-  handleBrowseScroll(event: WechatMiniprogram.ScrollViewScroll) {
-    const { stride } = getBrowseMetrics(this.data.dishes.length)
-    const index = Math.round(event.detail.scrollLeft / Math.max(stride, 1))
+  handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
+    const index = Number(event.detail.current)
     const browsePosition = getBrowsePosition(this.data.dishes.length, index)
     if (browsePosition.browseCurrentIndex !== this.data.browseCurrentIndex) {
       this.setData(browsePosition)
     }
   },
 
-  handleBrowseScrollEnd(event: WechatMiniprogram.ScrollViewScroll) {
-    if (this.data.dishes.length <= 1) return
-    const { stride, maxScrollLeft } = getBrowseMetrics(this.data.dishes.length)
-    const index = getBrowsePosition(
-      this.data.dishes.length,
-      Math.round(event.detail.scrollLeft / Math.max(stride, 1))
-    ).browseCurrentIndex
-    const targetScrollLeft = Math.min(index * stride, maxScrollLeft)
-    if (Math.abs(event.detail.scrollLeft - targetScrollLeft) <= 2) return
-
-    const dish = this.data.dishes[index]
-    if (!dish) return
-    this.setData({
-      browseCurrentIndex: index,
-      browseScrollIntoView: ""
-    }, () => {
-      this.setData({ browseScrollIntoView: `browse-${dish.id}` })
-    })
-  },
-
   handleEditDishTap(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canWrite || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
-  },
-
-  handleDishImageTap(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || "")
-    const currentDish = this.data.dishes.find((dish) => dish.id === id)
-    const current = currentDish?.image_url || currentDish?.thumbnail_url || ""
-    if (!current) return
-    const urls = this.data.dishes
-      .map((dish) => dish.image_url || dish.thumbnail_url || "")
-      .filter(Boolean)
-    wx.previewImage({ current, urls })
   },
 
   handleMove(event: WechatMiniprogram.TouchEvent) {

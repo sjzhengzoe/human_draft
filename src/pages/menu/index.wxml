@@ -146,29 +146,32 @@
   <view wx:elif="{{dishes.length === 0}}" class="browse-state state-block">当前筛选还没有记录</view>
 
   <view wx:else class="browse-carousel">
-    <scroll-view
-      class="browse-scroll"
-      scroll-x
-      enhanced
-      enable-flex
-      bounces="{{true}}"
-      scroll-with-animation
-      show-scrollbar="{{false}}"
-      scroll-into-view="{{browseScrollIntoView}}"
-      bindscroll="handleBrowseScroll"
-      bindscrollend="handleBrowseScrollEnd"
+    <swiper
+      class="browse-swiper"
+      current="{{browseCurrentIndex}}"
+      circular="{{false}}"
+      display-multiple-items="1"
+      acceleration="{{false}}"
+      duration="160"
+      bindchange="handleBrowseChange"
     >
-      <view class="browse-track">
-        <view wx:for="{{dishes}}" wx:key="id" id="browse-{{item.id}}" class="browse-card">
-            <view class="browse-card__eyebrow">
-              <view class="browse-card__category">{{item.displayCategory}}</view>
-              <view>{{index + 1}}</view>
-            </view>
-
+      <swiper-item wx:for="{{dishes}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
+        <scroll-view
+          class="browse-slide-scroll"
+          scroll-y
+          enhanced
+          bounces="{{true}}"
+          show-scrollbar="{{false}}"
+        >
+          <view
+            class="browse-card"
+            data-id="{{item.id}}"
+            bindtap="handleEditDishTap"
+            role="button"
+            aria-label="编辑{{item.name}}"
+          >
             <view
               class="dish-image-frame browse-card__image-frame"
-              data-id="{{item.id}}"
-              catchtap="handleDishImageTap"
             >
               <image
                 wx:if="{{item.thumbnail_url || item.image_url}}"
@@ -182,25 +185,134 @@
 
             <view class="browse-card__body">
               <view class="browse-card__title-row">
-                <view class="browse-card__name">{{item.name}}</view>
-                <view
-                  wx:if="{{canWrite}}"
-                  class="browse-card__edit"
-                  data-id="{{item.id}}"
-                  bindtap="handleEditDishTap"
-                  role="button"
-                  aria-label="编辑{{item.name}}"
-                ><app-icon name="pencil" size="24" /></view>
+                <view class="browse-card__title-copy">
+                  <view wx:if="{{item.record_type === 'outside'}}" class="browse-card__category">{{item.displayCategory}}</view>
+                  <view class="browse-card__name">{{item.name}}</view>
+                </view>
               </view>
-              <view wx:if="{{item.mealPeriodText}}" class="browse-card__meal-text">适合{{item.mealPeriodText}}</view>
+
               <view
-                wx:if="{{item.record_type === 'outside' && item.recommended_items.length}}"
+                wx:if="{{item.record_type === 'home' && item.introduction}}"
+                class="browse-card__title-introduction"
+              >{{item.introduction}}</view>
+
+              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row browse-card__record-row">
+                <view class="browse-card__attribute-label">记录类型</view>
+                <view class="browse-card__attribute-tags">
+                  <view class="browse-card__black-tag">{{item.recordTypeLabel}}</view>
+                </view>
+              </view>
+
+              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row">
+                <view class="browse-card__attribute-label">分类</view>
+                <view class="browse-card__attribute-tags">
+                  <view class="browse-card__black-tag">{{item.displayCategory}}</view>
+                </view>
+              </view>
+
+              <view wx:if="{{item.record_type === 'home'}}" class="browse-card__attribute-row browse-card__meal-row">
+                <view class="browse-card__attribute-label">适用餐次</view>
+                <view wx:if="{{item.mealPeriodTags.length}}" class="browse-card__attribute-tags">
+                  <view
+                    wx:for="{{item.mealPeriodTags}}"
+                    wx:key="key"
+                    wx:for-item="mealTag"
+                    class="browse-card__black-tag"
+                  >{{mealTag.label}}</view>
+                </view>
+                <view wx:else class="browse-card__attribute-empty">-</view>
+              </view>
+
+              <view wx:else class="browse-card__summary">
+                <text>{{item.recordTypeLabel}}</text>
+                <text wx:if="{{item.mealPeriodText}}"> · 适合{{item.mealPeriodText}}</text>
+              </view>
+
+              <view
+                wx:if="{{item.record_type === 'home'}}"
+                class="browse-card__home-section"
+              >
+                <view class="browse-card__attribute-row">
+                  <view class="browse-card__attribute-label">主要食材</view>
+                  <view wx:if="{{item.main_ingredients.length}}" class="browse-card__attribute-tags">
+                    <view
+                      wx:for="{{item.main_ingredients}}"
+                      wx:key="*this"
+                      wx:for-item="ingredient"
+                      class="browse-card__black-tag"
+                    >{{ingredient}}</view>
+                  </view>
+                  <view wx:else class="browse-card__attribute-empty">-</view>
+                </view>
+              </view>
+
+              <view
+                wx:if="{{item.record_type === 'home'}}"
+                class="browse-card__home-section"
+              >
+                <view class="browse-card__attribute-row">
+                  <view class="browse-card__attribute-label">烹饪方式</view>
+                  <view wx:if="{{item.cooking_methods.length}}" class="browse-card__attribute-tags">
+                    <view
+                      wx:for="{{item.cooking_methods}}"
+                      wx:key="*this"
+                      wx:for-item="method"
+                      class="browse-card__black-tag"
+                    >{{method}}</view>
+                  </view>
+                  <view wx:else class="browse-card__attribute-empty">-</view>
+                </view>
+              </view>
+
+              <view
+                wx:if="{{item.record_type === 'home'}}"
+                class="browse-card__home-section"
+              >
+                <view class="browse-card__attribute-row">
+                  <view class="browse-card__attribute-label">口味</view>
+                  <view wx:if="{{item.taste}}" class="browse-card__attribute-tags">
+                    <view class="browse-card__black-tag">{{item.taste}}</view>
+                  </view>
+                  <view wx:else class="browse-card__attribute-empty">-</view>
+                </view>
+                <view class="browse-card__attribute-row">
+                  <view class="browse-card__attribute-label">衍生菜系</view>
+                  <view wx:if="{{item.flavor_options.length}}" class="browse-card__attribute-tags">
+                    <view
+                      wx:for="{{item.flavor_options}}"
+                      wx:key="*this"
+                      wx:for-item="flavor"
+                      class="browse-card__black-tag"
+                    >{{flavor}}</view>
+                  </view>
+                  <view wx:else class="browse-card__attribute-empty">-</view>
+                </view>
+              </view>
+
+              <view
+                wx:if="{{item.record_type === 'outside'}}"
                 class="browse-card__recommendations"
-              >推荐 · {{item.recommended_items[0]}}</view>
+              >
+                <view class="browse-card__detail-label">推荐菜品</view>
+                <view wx:if="{{item.recommended_items.length}}" class="browse-card__recommendation-list">
+                  <view
+                    wx:for="{{item.recommended_items}}"
+                    wx:key="*this"
+                    wx:for-item="recommendation"
+                    wx:for-index="recommendationIndex"
+                    class="browse-card__recommendation-item"
+                  >
+                    <text class="browse-card__recommendation-number">{{recommendationIndex + 1}}</text>
+                    <text>{{recommendation}}</text>
+                  </view>
+                </view>
+                <view wx:else class="browse-card__empty-value browse-card__empty-value--ticket">-</view>
+              </view>
             </view>
           </view>
-      </view>
-    </scroll-view>
+        </scroll-view>
+      </swiper-item>
+    </swiper>
   </view>
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />

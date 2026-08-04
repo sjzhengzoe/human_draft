@@ -261,9 +261,9 @@
 
 .quick-card__name {
   overflow: hidden;
-  color: #222;
+  color: #555;
   font-size: 23rpx;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.35;
   text-align: center;
   text-overflow: ellipsis;
@@ -309,86 +309,89 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   box-sizing: border-box;
-  padding: 18rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  padding: 26rpx 0 calc(24rpx + env(safe-area-inset-bottom));
   background: var(--ui-page-background);
 }
 
-.browse-scroll {
+.browse-swiper {
   width: 100%;
-  height: 820rpx;
-  flex: 0 0 820rpx;
-  white-space: nowrap;
+  min-height: 0;
+  height: 0;
+  flex: 1;
   background: var(--ui-page-background);
 }
 
-.browse-track {
-  display: inline-flex;
-  min-width: 100%;
+.browse-slide {
+  min-width: 0;
   height: 100%;
   box-sizing: border-box;
-  align-items: center;
-  gap: 18rpx;
-  padding: 0 var(--ui-page-gutter);
+  overflow: hidden;
+}
+
+.browse-slide-scroll {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .browse-card {
-  width: 632rpx;
-  flex: 0 0 632rpx;
+  width: 560rpx;
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 18rpx;
+  margin: 0 auto;
+  padding: 24rpx;
   border: 1rpx solid var(--ui-border);
   border-radius: 18rpx;
   background: var(--ui-surface);
 }
 
-.browse-card__eyebrow {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-  margin-bottom: 14rpx;
-  color: #888;
-  font-size: 19rpx;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.browse-card__category {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .browse-card__image-frame {
-  border-radius: 16rpx;
+  width: 452rpx;
+  margin: 0 auto;
+  padding-top: 452rpx;
+  border-radius: 50%;
   background: var(--ui-surface);
 }
 
 .browse-card__body {
-  padding: 18rpx 3rpx 3rpx;
+  padding: 24rpx 5rpx 6rpx;
 }
 
 .browse-card__title-row {
   display: flex;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16rpx;
+}
+
+.browse-card__title-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.browse-card__category {
+  min-width: 0;
+  overflow: hidden;
+  color: #888;
+  font-size: 21rpx;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .browse-card__name {
   display: -webkit-box;
   min-width: 0;
   min-height: 0;
+  margin-top: 0;
   overflow: hidden;
   color: #1d1d1d;
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 700;
   line-height: 1.3;
   word-break: break-all;
@@ -396,37 +399,144 @@
   -webkit-line-clamp: 2;
 }
 
-.browse-card__edit {
-  display: flex;
-  width: 54rpx;
-  height: 54rpx;
-  flex: 0 0 54rpx;
-  align-items: center;
-  justify-content: center;
-  border: 1rpx solid #ddd;
-  border-radius: 50%;
-  background: var(--ui-surface);
-  color: #666;
+.browse-card__category + .browse-card__name {
+  margin-top: 5rpx;
 }
 
-.browse-card__meal-text {
-  margin-top: 10rpx;
-  overflow: hidden;
-  color: #888;
+.browse-card__title-introduction {
+  margin-top: 12rpx;
+  color: #555;
+  font-size: 23rpx;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.browse-card__summary {
+  margin-top: 18rpx;
+  color: #777;
+  font-size: 23rpx;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.browse-card__record-row {
+  margin-top: 26rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid #e8e8e8;
+}
+
+.browse-card__black-tag {
+  display: inline-flex;
+  min-height: 42rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 6rpx 14rpx;
+  border: 1rpx solid #d8d8d8;
+  border-radius: 999rpx;
+  background: var(--ui-surface);
+  color: #111;
+  font-size: 21rpx;
+  font-weight: 600;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.browse-card__home-section,
+.browse-card__recommendations {
+  margin-top: 26rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid #e8e8e8;
+  white-space: normal;
+}
+
+.browse-card__attribute-row {
+  display: grid;
+  grid-template-columns: 132rpx minmax(0, 1fr);
+  align-items: start;
+  gap: 24rpx;
+}
+
+.browse-card__attribute-row + .browse-card__attribute-row {
+  margin-top: 20rpx;
+}
+
+.browse-card__attribute-label {
+  padding-top: 5rpx;
+  color: #777;
   font-size: 23rpx;
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.browse-card__attribute-tags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.browse-card__attribute-empty {
+  min-width: 0;
+  padding-top: 4rpx;
+  color: #999;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.browse-card__detail-label {
+  color: #888;
+  font-size: 21rpx;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.browse-card__empty-value {
+  margin-top: 9rpx;
+  color: #999;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.browse-card__empty-value--ticket {
+  padding: 12rpx 2rpx;
+  border-top: 1rpx dashed #d8d8d8;
+  border-bottom: 1rpx dashed #d8d8d8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .browse-card__recommendations {
+  border-top-style: dashed;
+}
+
+.browse-card__recommendation-list {
+  display: flex;
+  flex-direction: column;
   margin-top: 12rpx;
-  overflow: hidden;
-  color: #777;
-  font-size: 22rpx;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-top: 1rpx dashed #d8d8d8;
+  border-bottom: 1rpx dashed #d8d8d8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.browse-card__recommendation-item {
+  display: grid;
+  grid-template-columns: 42rpx minmax(0, 1fr);
+  gap: 10rpx;
+  padding: 12rpx 2rpx;
+  border-bottom: 1rpx dotted #dedede;
+  color: #333;
+  font-size: 24rpx;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.browse-card__recommendation-item:last-child {
+  border-bottom: 0;
+}
+
+.browse-card__recommendation-number {
+  color: #999;
+  font-variant-numeric: tabular-nums;
 }
 
 .browse-state {

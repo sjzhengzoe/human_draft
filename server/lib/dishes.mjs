@@ -71,6 +71,94 @@ function normalizeRecommendedItems(value, useDefault = false) {
   return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
 }
 
+function normalizeTextItems(
+  value,
+  {
+    useDefault = false,
+    maxItems,
+    maxItemLength,
+    code,
+    message,
+  },
+) {
+  let items = value;
+  if (typeof items === "string") {
+    try {
+      items = JSON.parse(items);
+    } catch (_error) {
+      items = items.split(/[\n，,、]/);
+    }
+  }
+  if (items === undefined && useDefault) return [];
+  assertCondition(
+    Array.isArray(items)
+      && items.length <= maxItems
+      && items.every(
+        (item) => typeof item === "string" && item.trim().length <= maxItemLength,
+      ),
+    400,
+    code,
+    message,
+  );
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
+function normalizeOptionalText(value, { useDefault = false, maxLength, code, message }) {
+  if (value === undefined && useDefault) return "";
+  assertCondition(typeof value === "string", 400, code, message);
+  const text = value.trim();
+  assertCondition(text.length <= maxLength, 400, code, message);
+  return text;
+}
+
+function normalizeMainIngredients(value, useDefault = false) {
+  return normalizeTextItems(value, {
+    useDefault,
+    maxItems: 30,
+    maxItemLength: 80,
+    code: "INVALID_MAIN_INGREDIENTS",
+    message: "主要食材格式无效。",
+  });
+}
+
+function normalizeCookingMethods(value, useDefault = false) {
+  return normalizeTextItems(value, {
+    useDefault,
+    maxItems: 10,
+    maxItemLength: 80,
+    code: "INVALID_COOKING_METHODS",
+    message: "烹饪方式格式无效。",
+  });
+}
+
+function normalizeFlavorOptions(value, useDefault = false) {
+  return normalizeTextItems(value, {
+    useDefault,
+    maxItems: 30,
+    maxItemLength: 80,
+    code: "INVALID_FLAVOR_OPTIONS",
+    message: "衍生菜系格式无效。",
+  });
+}
+
+function normalizeIntroduction(value, useDefault = false) {
+  return normalizeOptionalText(value, {
+    useDefault,
+    maxLength: 1000,
+    code: "INVALID_INTRODUCTION",
+    message: "介绍不能超过 1000 个字符。",
+  });
+}
+
+function normalizeTaste(value, useDefault = false) {
+  return normalizeOptionalText(value, {
+    useDefault,
+    maxLength: 120,
+    code: "INVALID_TASTE",
+    message: "口味不能超过 120 个字符。",
+  });
+}
+
 function publicUrlFor(supabase, path) {
   if (!path) return "";
   return supabase.storage.from(config.dishBucket).getPublicUrl(path).data.publicUrl;
@@ -86,6 +174,11 @@ export function toDishResponse(supabase, dish) {
     outside_category_id: dish.outside_category_id || null,
     outside_category: dish.outside_category || null,
     recommended_items: Array.isArray(dish.recommended_items) ? dish.recommended_items : [],
+    main_ingredients: Array.isArray(dish.main_ingredients) ? dish.main_ingredients : [],
+    introduction: typeof dish.introduction === "string" ? dish.introduction : "",
+    cooking_methods: Array.isArray(dish.cooking_methods) ? dish.cooking_methods : [],
+    taste: typeof dish.taste === "string" ? dish.taste : "",
+    flavor_options: Array.isArray(dish.flavor_options) ? dish.flavor_options : [],
     image_path: dish.image_path,
     thumbnail_path: dish.thumbnail_path,
     image_url: publicUrlFor(supabase, dish.image_path),
@@ -310,6 +403,19 @@ export async function createDish(supabase, userId, fields, image) {
   const recommendedItems = recordType === "outside"
     ? normalizeRecommendedItems(fields.recommended_items, true)
     : [];
+  const mainIngredients = recordType === "home"
+    ? normalizeMainIngredients(fields.main_ingredients, true)
+    : [];
+  const introduction = recordType === "home"
+    ? normalizeIntroduction(fields.introduction, true)
+    : "";
+  const cookingMethods = recordType === "home"
+    ? normalizeCookingMethods(fields.cooking_methods, true)
+    : [];
+  const taste = recordType === "home" ? normalizeTaste(fields.taste, true) : "";
+  const flavorOptions = recordType === "home"
+    ? normalizeFlavorOptions(fields.flavor_options, true)
+    : [];
   const category = recordType === "home" && categoryId
     ? await assertCategoryExists(supabase, userId, categoryId)
     : null;
@@ -331,6 +437,11 @@ export async function createDish(supabase, userId, fields, image) {
       p_thumbnail_path: paths.thumbnailPath,
       p_meal_periods: mealPeriods,
       p_recommended_items: recommendedItems,
+      p_main_ingredients: mainIngredients,
+      p_introduction: introduction,
+      p_cooking_methods: cookingMethods,
+      p_taste: taste,
+      p_flavor_options: flavorOptions,
     })
     .single();
 
@@ -378,6 +489,21 @@ export async function updateDish(supabase, userId, dishId, body) {
       changes.recommended_items = [];
     }
     if (existing.outside_category_id !== null) changes.outside_category_id = null;
+    if (body.main_ingredients !== undefined) {
+      changes.main_ingredients = normalizeMainIngredients(body.main_ingredients);
+    }
+    if (body.introduction !== undefined) {
+      changes.introduction = normalizeIntroduction(body.introduction);
+    }
+    if (body.cooking_methods !== undefined) {
+      changes.cooking_methods = normalizeCookingMethods(body.cooking_methods);
+    }
+    if (body.taste !== undefined) {
+      changes.taste = normalizeTaste(body.taste);
+    }
+    if (body.flavor_options !== undefined) {
+      changes.flavor_options = normalizeFlavorOptions(body.flavor_options);
+    }
   } else {
     const outsideCategoryId = body.outside_category_id === undefined
       ? existing.outside_category_id

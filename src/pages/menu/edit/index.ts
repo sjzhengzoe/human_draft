@@ -30,6 +30,15 @@ const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
   { key: "dinner", label: "晚餐", selected: true }
 ]
 
+function parseTextItems(value: string): string[] {
+  return [...new Set(
+    value
+      .split(/[\n，,、]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )]
+}
+
 Page({
   data: {
     dishId: "",
@@ -42,6 +51,11 @@ Page({
     recordType: "home" as MenuRecordType,
     name: "",
     recommendedText: "",
+    mainIngredientsText: "",
+    introduction: "",
+    cookingMethodsText: "",
+    taste: "",
+    flavorOptionsText: "",
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
@@ -103,6 +117,11 @@ Page({
           recordType: dish.record_type,
           name: dish.name,
           recommendedText: dish.recommended_items.join("\n"),
+          mainIngredientsText: dish.main_ingredients.join("\n"),
+          introduction: dish.introduction,
+          cookingMethodsText: dish.cooking_methods.join("、"),
+          taste: dish.taste,
+          flavorOptionsText: dish.flavor_options.join("\n"),
           mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({
             ...option,
             selected: dish.meal_periods.includes(option.key)
@@ -143,6 +162,26 @@ Page({
 
   handleRecommendedInput(event: WechatMiniprogram.Input) {
     this.setData({ recommendedText: event.detail.value })
+  },
+
+  handleMainIngredientsInput(event: WechatMiniprogram.Input) {
+    this.setData({ mainIngredientsText: event.detail.value })
+  },
+
+  handleIntroductionInput(event: WechatMiniprogram.Input) {
+    this.setData({ introduction: event.detail.value })
+  },
+
+  handleCookingMethodsInput(event: WechatMiniprogram.Input) {
+    this.setData({ cookingMethodsText: event.detail.value })
+  },
+
+  handleTasteInput(event: WechatMiniprogram.Input) {
+    this.setData({ taste: event.detail.value })
+  },
+
+  handleFlavorOptionsInput(event: WechatMiniprogram.Input) {
+    this.setData({ flavorOptionsText: event.detail.value })
   },
 
   updatePageTitle(recordType: MenuRecordType) {
@@ -275,10 +314,12 @@ Page({
     const mealPeriods = this.data.mealOptions
       .filter((option) => option.selected)
       .map((option) => option.key)
-    const recommendedItems = this.data.recommendedText
-      .split(/[\n，,、]/)
-      .map((item) => item.trim())
-      .filter(Boolean)
+    const recommendedItems = parseTextItems(this.data.recommendedText)
+    const mainIngredients = parseTextItems(this.data.mainIngredientsText)
+    const introduction = this.data.introduction.trim()
+    const cookingMethods = parseTextItems(this.data.cookingMethodsText)
+    const taste = this.data.taste.trim()
+    const flavorOptions = parseTextItems(this.data.flavorOptionsText)
     if (!name) {
       wx.showToast({ title: recordType === "outside" ? "请填写店铺名" : "请填写菜名", icon: "none" })
       return
@@ -310,7 +351,14 @@ Page({
           category_id: recordType === "home" ? category.id : null,
           outside_category_id: recordType === "outside" ? outsideCategory.id : null,
           meal_periods: mealPeriods,
-          recommended_items: recordType === "outside" ? recommendedItems : []
+          recommended_items: recordType === "outside" ? recommendedItems : [],
+          ...(recordType === "home" ? {
+            main_ingredients: mainIngredients,
+            introduction,
+            cooking_methods: cookingMethods,
+            taste,
+            flavor_options: flavorOptions
+          } : {})
         })
         if (this.data.selectedImagePath) {
           await replaceDishImage(this.data.dishId, this.data.selectedImagePath)
@@ -323,7 +371,12 @@ Page({
           outsideCategoryId: recordType === "outside" ? outsideCategory.id : undefined,
           imagePath: this.data.selectedImagePath,
           mealPeriods,
-          recommendedItems: recordType === "outside" ? recommendedItems : []
+          recommendedItems: recordType === "outside" ? recommendedItems : [],
+          mainIngredients: recordType === "home" ? mainIngredients : [],
+          introduction: recordType === "home" ? introduction : "",
+          cookingMethods: recordType === "home" ? cookingMethods : [],
+          taste: recordType === "home" ? taste : "",
+          flavorOptions: recordType === "home" ? flavorOptions : []
         })
       }
       if (!isAsyncPageActive(this)) return
