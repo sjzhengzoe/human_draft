@@ -50,13 +50,13 @@
         wx:if="{{selectedImagePath || currentImageUrl}}"
         class="image-field__preview"
         src="{{selectedImagePath || currentImageUrl}}"
-        mode="aspectFit"
+        mode="aspectFill"
       />
       <view wx:else class="image-field__empty">
         <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
-        <view>选择{{recordType === 'outside' ? '店铺' : '菜品'}}图片并裁剪</view>
+        <view>拍照或从相册选择{{recordType === 'outside' ? '店铺' : '菜品'}}图片</view>
       </view>
-      <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换并裁剪' : '选择并裁剪')}}</view>
+      <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换图片' : '拍照或选择')}}</view>
     </view>
 
     <view class="field">
@@ -191,7 +191,7 @@
   shape="rectangle"
   aspect-ratio="1.5"
   output-size="1536"
-  title="裁剪为横图"
+  title="裁剪为 3:2 横图"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"
