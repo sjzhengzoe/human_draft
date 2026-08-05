@@ -155,11 +155,6 @@
             </view>
             <view class="browse-card__body">
               <view class="browse-card__name">{{item.name}}</view>
-              <view class="store-browse-card__meta">
-                <view class="store-browse-card__tag">外食</view>
-                <view class="store-browse-card__tag">{{item.outside_category.name || '未分类'}}</view>
-                <view class="store-browse-card__tag">{{item.dish_count}} 道菜</view>
-              </view>
               <view class="browse-card__home-section store-ticket">
                 <view class="browse-card__detail-label">店内菜品</view>
                 <view wx:if="{{item.preview_dishes.length}}" class="browse-card__recommendation-list">
