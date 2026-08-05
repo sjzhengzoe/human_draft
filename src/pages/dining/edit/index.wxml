@@ -22,7 +22,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field-label">店铺名</view>
-      <input class="field-input" value="{{name}}" maxlength="120" placeholder="输入店铺名称" bindinput="handleNameInput" />
+      <app-input custom-class="field-input" value="{{name}}" maxlength="120" placeholder="输入店铺名称" bindinput="handleNameInput" />
     </view>
     <view class="field">
       <view class="field-label">所属场景</view>

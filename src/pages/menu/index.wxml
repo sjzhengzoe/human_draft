@@ -64,13 +64,28 @@
       </view>
     </view>
 
-    <view wx:else class="store-grid">
-      <view wx:for="{{outsidePlaces}}" wx:key="id" class="store-card" data-id="{{item.id}}" bindtap="handlePlaceTap">
-        <image wx:if="{{item.thumbnail_url || item.image_url}}" class="store-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
-        <view wx:else class="store-card__image store-card__image--empty">暂无图片</view>
-        <view class="store-card__body">
-          <view class="store-card__name">{{item.name}}</view>
-          <view class="store-card__meta">{{item.outside_category.name || '未分类'}} · {{item.dish_count}} 道菜</view>
+    <view wx:else class="outside-store-list">
+      <view wx:for="{{outsidePlaces}}" wx:key="id" wx:for-item="place" class="outside-store">
+        <view class="outside-store__header" data-id="{{place.id}}" bindtap="handlePlaceTap" role="button" aria-label="查看{{place.name}}">
+          <image wx:if="{{place.thumbnail_url || place.image_url}}" class="outside-store__image" src="{{place.thumbnail_url || place.image_url}}" mode="aspectFill" lazy-load />
+          <view wx:else class="outside-store__image outside-store__image--empty">暂无图片</view>
+          <view class="outside-store__copy">
+            <view class="outside-store__name">{{place.name}}</view>
+            <view class="outside-store__meta">{{place.dish_count}} 道菜</view>
+          </view>
+          <app-icon name="chevron-right" size="30" />
+        </view>
+
+        <view wx:if="{{place.dishes.length}}" class="quick-grid outside-store__dish-grid">
+          <view wx:for="{{place.dishes}}" wx:key="id" wx:for-item="dish" class="quick-card" data-id="{{dish.id}}" bindtap="handleDishTap">
+            <view class="dish-image-frame quick-card__image-frame">
+              <image wx:if="{{dish.thumbnail_url || dish.image_url}}" class="dish-image" src="{{dish.thumbnail_url || dish.image_url}}" mode="aspectFill" lazy-load />
+              <view wx:else class="dish-image-empty">暂无图片</view>
+            </view>
+            <view class="quick-card__body">
+              <view class="quick-card__name">{{dish.name}}</view>
+            </view>
+          </view>
         </view>
       </view>
     </view>

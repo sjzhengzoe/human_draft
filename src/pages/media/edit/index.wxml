@@ -22,7 +22,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field-label">名称</view>
-      <input class="field-input" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
+      <app-input custom-class="field-input" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
     </view>
     <view class="field">
       <view class="field-label">分类</view>

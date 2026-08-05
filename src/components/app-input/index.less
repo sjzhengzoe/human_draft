@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-input__control,
+.app-input__display {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: var(--ui-font-family);
+}
+
+.app-input__display {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-input__placeholder,
+.app-input__display--placeholder {
+  color: #999994;
+  font-family: var(--ui-font-family);
+  font-weight: inherit;
+}
+
+.app-input__display--disabled {
+  opacity: 0.55;
+}

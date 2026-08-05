@@ -515,6 +515,7 @@ test("menu places expose stores first and their linked dishes separately", async
   assert.equal(placeResponse.statusCode, 200);
   assert.equal(placeResponse.json().data.items[0].name, "街角面馆");
   assert.equal(placeResponse.json().data.items[0].dish_count, 1);
+  assert.equal(placeResponse.json().data.items[0].dishes[0].name, "牛肉面");
   assert.equal(placeResponse.json().data.items[0].preview_dishes[0].name, "牛肉面");
 
   const dishResponse = await app.inject({

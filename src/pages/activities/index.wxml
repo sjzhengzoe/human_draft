@@ -60,7 +60,7 @@
     custom-actions="{{true}}"
   >
     <view slot="body" class="activity-editor">
-      <input class="modal-input" value="{{editorName}}" maxlength="120" placeholder="例如：红花湖骑行" focus adjust-position="{{false}}" bindinput="handleEditorNameInput" />
+      <app-input custom-class="modal-input" value="{{editorName}}" maxlength="120" placeholder="例如：红花湖骑行" focus adjust-position="{{false}}" bindinput="handleEditorNameInput" />
       <view class="type-options">
         <view wx:for="{{activityTypes}}" wx:key="*this" class="type-option {{editorType === item ? 'type-option--active' : ''}}" data-type="{{item}}" bindtap="handleEditorTypeTap">{{item}}</view>
       </view>

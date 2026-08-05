@@ -25,6 +25,7 @@ function toPreviewDish(supabase, dish) {
 }
 
 export function toMenuPlaceResponse(supabase, place, dishes = []) {
+  const menuDishes = dishes.map((dish) => toPreviewDish(supabase, dish));
   return {
     id: place.id,
     name: place.name,
@@ -38,7 +39,8 @@ export function toMenuPlaceResponse(supabase, place, dishes = []) {
     sort_order: place.sort_order ?? 0,
     source_dish_id: place.source_dish_id || null,
     dish_count: dishes.length,
-    preview_dishes: dishes.slice(0, 5).map((dish) => toPreviewDish(supabase, dish)),
+    dishes: menuDishes,
+    preview_dishes: menuDishes.slice(0, 5),
     created_at: place.created_at,
     updated_at: place.updated_at,
   };

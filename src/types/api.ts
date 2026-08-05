@@ -56,6 +56,7 @@ export type MenuPlace = {
   sort_order: number
   source_dish_id: string | null
   dish_count: number
+  dishes: MenuPlaceDishPreview[]
   preview_dishes: MenuPlaceDishPreview[]
   created_at: string
   updated_at: string

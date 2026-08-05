@@ -23,8 +23,8 @@
     <view class="form-card">
       <view class="field">
         <view class="field__label">分类名称</view>
-        <input
-          class="field__input"
+        <app-input
+          custom-class="field__input"
           value="{{name}}"
           maxlength="40"
           placeholder="例如：T 恤、长裤、短上衣"
@@ -54,8 +54,8 @@
       <view wx:if="{{fields.length === 0}}" class="attribute-empty">暂无属性，也可以保存为空白分类。</view>
       <view wx:else class="attribute-list">
         <view wx:for="{{fields}}" wx:key="index" class="attribute-row">
-          <input
-            class="attribute-input"
+          <app-input
+            custom-class="attribute-input"
             value="{{item.name}}"
             maxlength="40"
             placeholder="属性名称"

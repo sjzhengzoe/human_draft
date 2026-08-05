@@ -42,8 +42,8 @@
     </view>
 
     <view class="favorite-search">
-      <input
-        class="favorite-search__input"
+      <app-input
+        custom-class="favorite-search__input"
         value="{{keyword}}"
         placeholder="搜索作品名"
         confirm-type="search"

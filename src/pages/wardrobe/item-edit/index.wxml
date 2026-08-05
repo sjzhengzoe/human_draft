@@ -37,8 +37,8 @@
 
       <view class="field">
         <view class="field__label">名称</view>
-        <input
-          class="field__input"
+        <app-input
+          custom-class="field__input"
           value="{{name}}"
           maxlength="80"
           placeholder="例如：白色基础 T 恤"
@@ -64,8 +64,8 @@
       <view wx:else class="size-list">
         <view wx:for="{{formFields}}" wx:key="id" class="size-field">
           <view class="size-field__label">{{item.name}}</view>
-          <input
-            class="size-field__input"
+          <app-input
+            custom-class="size-field__input"
             value="{{item.value}}"
             maxlength="120"
             placeholder="填写{{item.name}}"

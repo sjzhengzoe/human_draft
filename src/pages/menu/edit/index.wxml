@@ -27,13 +27,13 @@
           <view>拍照或从相册选择菜品图片</view>
           <view wx:if="{{recordType === 'outside'}}" class="image-field__optional">外食菜品可暂不添加</view>
         </view>
-        <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换图片' : '拍照或选择')}}</view>
       </view>
 
-      <view class="field">
-        <view class="field__label">菜名</view>
-        <input
-          class="field__input"
+      <view class="field field--inline field--name">
+        <view class="field__label">菜品名称<text class="field__required">*</text></view>
+        <app-input
+          custom-class="field__input"
+          font-size="21rpx"
           value="{{name}}"
           maxlength="120"
           placeholder="例如：番茄炒鸡蛋"
@@ -41,43 +41,52 @@
         />
       </view>
 
-      <view class="field">
-        <view class="field__label">介绍（可不填）</view>
-        <textarea
-          class="field__textarea"
+      <view class="field field--inline field--introduction">
+        <view class="field__label">菜品介绍</view>
+        <app-input
+          custom-class="field__input"
+          font-size="21rpx"
           value="{{introduction}}"
           maxlength="1000"
+          confirm-type="done"
           placeholder="简单介绍这道菜"
           bindinput="handleIntroductionInput"
         />
       </view>
 
       <view class="field field--inline field--section-start">
-        <view class="field__label">用餐场景</view>
+        <view class="field__label">用餐场景<text class="field__required">*</text></view>
         <view class="field__choices">
           <view class="choice-option choice-option--selected">{{recordType === 'outside' ? '外食' : '在家'}}</view>
         </view>
       </view>
 
       <view wx:if="{{recordType === 'outside'}}" class="field field--inline">
-        <view class="field__label">所属店铺</view>
+        <view class="field__label">所属店铺<text class="field__required">*</text></view>
         <view class="field__choices">
           <view class="choice-option choice-option--selected">{{placeName}}</view>
         </view>
       </view>
 
       <view class="field field--inline">
-        <view class="field__label">菜品分类</view>
-        <picker class="field__control" mode="selector" range="{{categoryNames}}" value="{{categoryIndex}}" bindchange="handleCategoryChange">
-          <view class="field__picker">
-            <text>{{categoryNames[categoryIndex] || '请选择分类'}}</text>
-            <view class="field__arrow"><app-icon name="chevron-right" size="28" /></view>
+        <view class="field__label">菜品分类<text class="field__required">*</text></view>
+        <view class="meal-period-options" role="radiogroup" aria-label="菜品分类">
+          <view
+            wx:for="{{categoryNames}}"
+            wx:key="*this"
+            class="meal-period-option {{index === categoryIndex ? 'meal-period-option--selected' : ''}}"
+            data-index="{{index}}"
+            bindtap="handleCategoryTap"
+            role="radio"
+            aria-checked="{{index === categoryIndex}}"
+          >
+            <view class="meal-period-option__label">{{item}}</view>
           </view>
-        </picker>
+        </view>
       </view>
 
       <view class="field field--inline meal-period-field">
-        <view class="field__label">适用餐次</view>
+        <view class="field__label">适用餐次<text class="field__required">*</text></view>
         <view class="meal-period-options">
           <view
             wx:for="{{mealOptions}}"
@@ -93,15 +102,31 @@
         </view>
       </view>
 
-      <view class="field field--section-start">
-        <view class="field__label">主要食材（可不填，每行一个）</view>
-        <textarea
-          class="field__textarea field__textarea--compact"
-          value="{{mainIngredientsText}}"
-          maxlength="2400"
-          placeholder="例如：&#10;虾&#10;紫苏"
-          bindinput="handleMainIngredientsInput"
-        />
+      <view class="field field--inline field--section-start">
+        <view class="field__label">主要食材</view>
+        <view class="item-field__content">
+          <view wx:if="{{mainIngredients.length}}" class="item-list">
+            <view wx:for="{{mainIngredients}}" wx:key="*this" class="item-chip">
+              <text class="item-chip__label">{{item}}</text>
+              <view class="item-chip__remove" data-index="{{index}}" catchtap="handleRemoveMainIngredient" role="button" aria-label="删除{{item}}">
+                <app-icon name="x-muted" size="18" />
+              </view>
+            </view>
+          </view>
+          <view class="item-entry">
+            <app-input
+              custom-class="item-entry__input"
+              font-size="21rpx"
+              value="{{mainIngredientInput}}"
+              maxlength="80"
+              confirm-type="done"
+              placeholder="输入食材，例如：虾仁"
+              bindconfirm="handleAddMainIngredient"
+              bindinput="handleMainIngredientsInput"
+            />
+            <button class="item-entry__add" bindtap="handleAddMainIngredient">添加</button>
+          </view>
+        </view>
       </view>
 
       <view class="field field--inline field--section-start">
@@ -134,15 +159,31 @@
         </view>
       </view>
 
-      <view class="field">
-        <view class="field__label">衍生菜系（可不填，每行一个）</view>
-        <textarea
-          class="field__textarea field__textarea--compact"
-          value="{{flavorOptionsText}}"
-          maxlength="2400"
-          placeholder="例如：&#10;紫苏炒虾&#10;九层塔炒虾"
-          bindinput="handleFlavorOptionsInput"
-        />
+      <view class="field field--inline">
+        <view class="field__label">衍生菜系</view>
+        <view class="item-field__content">
+          <view wx:if="{{flavorOptions.length}}" class="item-list">
+            <view wx:for="{{flavorOptions}}" wx:key="*this" class="item-chip">
+              <text class="item-chip__label">{{item}}</text>
+              <view class="item-chip__remove" data-index="{{index}}" catchtap="handleRemoveFlavorOption" role="button" aria-label="删除{{item}}">
+                <app-icon name="x-muted" size="18" />
+              </view>
+            </view>
+          </view>
+          <view class="item-entry">
+            <app-input
+              custom-class="item-entry__input"
+              font-size="21rpx"
+              value="{{flavorOptionInput}}"
+              maxlength="80"
+              confirm-type="done"
+              placeholder="输入衍生菜，例如：紫苏炒虾"
+              bindconfirm="handleAddFlavorOption"
+              bindinput="handleFlavorOptionsInput"
+            />
+            <button class="item-entry__add" bindtap="handleAddFlavorOption">添加</button>
+          </view>
+        </view>
       </view>
     </view>
 

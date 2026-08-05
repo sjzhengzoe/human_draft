@@ -1,4 +1,5 @@
 import { ensureLogin } from "../../../services/auth"
+import { initializeUIFont } from "../../../services/ui-font"
 import {
   createDish,
   deleteDish,
@@ -49,15 +50,6 @@ function buildChoiceOptions(defaults: string[], selectedValues: string[]): Choic
   }))
 }
 
-function parseTextItems(value: string): string[] {
-  return [...new Set(
-    value
-      .split(/[\n，,、]/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-  )]
-}
-
 Page({
   data: {
     dishId: "",
@@ -65,14 +57,16 @@ Page({
     placeName: "",
     categories: [] as Category[],
     categoryNames: [] as string[],
-    categoryIndex: 0,
+    categoryIndex: -1,
     recordType: "home" as MenuRecordType,
     name: "",
-    mainIngredientsText: "",
+    mainIngredients: [] as string[],
+    mainIngredientInput: "",
     introduction: "",
     cookingMethodOptions: buildChoiceOptions(COOKING_TYPE_OPTIONS, []),
     tasteOptions: buildChoiceOptions(TASTE_OPTIONS, []),
-    flavorOptionsText: "",
+    flavorOptions: [] as string[],
+    flavorOptionInput: "",
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
@@ -107,7 +101,10 @@ Page({
   async loadData() {
     const generation = beginAsyncPageRequest(this)
     try {
-      const session = await ensureLogin()
+      const [, session] = await Promise.all([
+        initializeUIFont().catch(() => undefined),
+        ensureLogin()
+      ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
       if (!session.user.can_write) {
         wx.showToast({ title: "当前账号只有查看权限", icon: "none" })
@@ -123,21 +120,18 @@ Page({
         if (!dish.place_id) throw new Error("这条旧记录还没有关联用餐地点")
         const place = await getMenuPlace(dish.place_id)
         if (!isAsyncPageRequestCurrent(this, generation)) return
-        const categoryOffset = place.place_type === "outside" ? 1 : 0
         const foundCategoryIndex = categories.findIndex(
           (category) => category.id === dish.category_id
         )
         this.setData({
           categories,
-          categoryNames: place.place_type === "outside"
-            ? ["暂不分类", ...categories.map((category) => category.name)]
-            : categories.map((category) => category.name),
-          categoryIndex: foundCategoryIndex >= 0 ? foundCategoryIndex + categoryOffset : 0,
+          categoryNames: categories.map((category) => category.name),
+          categoryIndex: foundCategoryIndex,
           placeId: place.id,
           placeName: place.name,
           recordType: place.place_type,
           name: dish.name,
-          mainIngredientsText: dish.main_ingredients.join("\n"),
+          mainIngredients: dish.main_ingredients,
           introduction: dish.introduction,
           cookingMethodOptions: buildChoiceOptions(
             COOKING_TYPE_OPTIONS,
@@ -147,7 +141,7 @@ Page({
             TASTE_OPTIONS,
             normalizeTasteTags(dish.taste)
           ),
-          flavorOptionsText: dish.flavor_options.join("\n"),
+          flavorOptions: dish.flavor_options,
           mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({
             ...option,
             selected: dish.meal_periods.includes(option.key)
@@ -160,13 +154,10 @@ Page({
           ? await getMenuPlace(this.data.placeId)
           : (await listMenuPlaces({ place_type: "home" }))[0]
         if (!place) throw new Error("没有可用的用餐地点")
-        const isOutside = place.place_type === "outside"
         this.setData({
           categories,
-          categoryNames: isOutside
-            ? ["暂不分类", ...categories.map((category) => category.name)]
-            : categories.map((category) => category.name),
-          categoryIndex: 0,
+          categoryNames: categories.map((category) => category.name),
+          categoryIndex: -1,
           placeId: place.id,
           placeName: place.name,
           recordType: place.place_type,
@@ -193,7 +184,32 @@ Page({
   },
 
   handleMainIngredientsInput(event: WechatMiniprogram.Input) {
-    this.setData({ mainIngredientsText: event.detail.value })
+    this.setData({ mainIngredientInput: event.detail.value })
+  },
+
+  handleAddMainIngredient() {
+    const ingredient = this.data.mainIngredientInput.trim()
+    if (!ingredient) return
+    if (this.data.mainIngredients.includes(ingredient)) {
+      wx.showToast({ title: "这个食材已经添加过了", icon: "none" })
+      return
+    }
+    if (this.data.mainIngredients.length >= 30) {
+      wx.showToast({ title: "最多添加 30 个主要食材", icon: "none" })
+      return
+    }
+    this.setData({
+      mainIngredients: [...this.data.mainIngredients, ingredient],
+      mainIngredientInput: ""
+    })
+  },
+
+  handleRemoveMainIngredient(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.mainIngredients.length) return
+    this.setData({
+      mainIngredients: this.data.mainIngredients.filter((_, itemIndex) => itemIndex !== index)
+    })
   },
 
   handleIntroductionInput(event: WechatMiniprogram.Input) {
@@ -221,11 +237,38 @@ Page({
   },
 
   handleFlavorOptionsInput(event: WechatMiniprogram.Input) {
-    this.setData({ flavorOptionsText: event.detail.value })
+    this.setData({ flavorOptionInput: event.detail.value })
   },
 
-  handleCategoryChange(event: WechatMiniprogram.PickerChange) {
-    this.setData({ categoryIndex: Number(event.detail.value) })
+  handleAddFlavorOption() {
+    const flavorOption = this.data.flavorOptionInput.trim()
+    if (!flavorOption) return
+    if (this.data.flavorOptions.includes(flavorOption)) {
+      wx.showToast({ title: "这道衍生菜已经添加过了", icon: "none" })
+      return
+    }
+    if (this.data.flavorOptions.length >= 30) {
+      wx.showToast({ title: "最多添加 30 道衍生菜", icon: "none" })
+      return
+    }
+    this.setData({
+      flavorOptions: [...this.data.flavorOptions, flavorOption],
+      flavorOptionInput: ""
+    })
+  },
+
+  handleRemoveFlavorOption(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.flavorOptions.length) return
+    this.setData({
+      flavorOptions: this.data.flavorOptions.filter((_, itemIndex) => itemIndex !== index)
+    })
+  },
+
+  handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.categoryNames.length) return
+    if (index !== this.data.categoryIndex) this.setData({ categoryIndex: index })
   },
 
   handleMealPeriodTap(event: WechatMiniprogram.TouchEvent) {
@@ -295,14 +338,17 @@ Page({
     if (this.data.loading || this.data.saving || this.data.deleting || this.data.selectingImage) return
     const name = this.data.name.trim()
     const recordType = this.data.recordType
-    const categoryOffset = recordType === "outside" ? 1 : 0
-    const category = this.data.categoryIndex >= categoryOffset
-      ? this.data.categories[this.data.categoryIndex - categoryOffset]
+    const category = this.data.categoryIndex >= 0
+      ? this.data.categories[this.data.categoryIndex]
       : undefined
     const mealPeriods = this.data.mealOptions
       .filter((option) => option.selected)
       .map((option) => option.key)
-    const mainIngredients = parseTextItems(this.data.mainIngredientsText)
+    const pendingMainIngredient = this.data.mainIngredientInput.trim()
+    const mainIngredients = pendingMainIngredient
+      && !this.data.mainIngredients.includes(pendingMainIngredient)
+      ? [...this.data.mainIngredients, pendingMainIngredient]
+      : [...this.data.mainIngredients]
     const introduction = this.data.introduction.trim()
     const cookingMethods = this.data.cookingMethodOptions
       .filter((option) => option.selected)
@@ -311,13 +357,25 @@ Page({
       .filter((option) => option.selected)
       .map((option) => option.value)
       .join("、")
-    const flavorOptions = parseTextItems(this.data.flavorOptionsText)
+    const pendingFlavorOption = this.data.flavorOptionInput.trim()
+    const flavorOptions = pendingFlavorOption
+      && !this.data.flavorOptions.includes(pendingFlavorOption)
+      ? [...this.data.flavorOptions, pendingFlavorOption]
+      : [...this.data.flavorOptions]
 
     if (!name) {
-      wx.showToast({ title: "请填写菜名", icon: "none" })
+      wx.showToast({ title: "请填写菜品名称", icon: "none" })
       return
     }
-    if (recordType === "home" && !category) {
+    if (mainIngredients.length > 30) {
+      wx.showToast({ title: "最多添加 30 个主要食材", icon: "none" })
+      return
+    }
+    if (flavorOptions.length > 30) {
+      wx.showToast({ title: "最多添加 30 道衍生菜", icon: "none" })
+      return
+    }
+    if (!category) {
       wx.showToast({ title: "请选择分类", icon: "none" })
       return
     }

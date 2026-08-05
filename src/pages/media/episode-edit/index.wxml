@@ -15,7 +15,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field-label">单集标题</view>
-      <input class="field-input" name="title" value="{{title}}" maxlength="120" placeholder="例如：真相" bindinput="handleTitleInput" />
+      <app-input custom-class="field-input" name="title" value="{{title}}" maxlength="120" placeholder="例如：真相" bindinput="handleTitleInput" />
     </view>
     <view class="field">
       <view class="field-label field-label--primary">整集概括</view>
@@ -76,8 +76,9 @@
                 wx:key="id"
                 class="timeline-dialogue-row"
               >
-                <input
-                  class="timeline-dialogue-speaker"
+                <app-input
+                  class="timeline-dialogue-speaker-host"
+                  custom-class="timeline-dialogue-speaker"
                   name="dialogue_speaker_{{noteIndex}}_{{dialogueIndex}}"
                   value="{{dialogue.speaker}}"
                   maxlength="40"

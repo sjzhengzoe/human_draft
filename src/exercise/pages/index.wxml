@@ -128,7 +128,8 @@
   >
     <view slot="body" class="minutes-dialog-body">
       <view class="minutes-dialog-input">
-        <input
+        <app-input
+          custom-class="minutes-dialog-control"
           type="number"
           value="{{minutesInput}}"
           maxlength="5"

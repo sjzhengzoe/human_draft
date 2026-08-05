@@ -37,12 +37,14 @@ function normalizeDish(dish: Dish): Dish {
 }
 
 function normalizeMenuPlace(place: MenuPlace): MenuPlace {
+  const previewDishes = Array.isArray(place.preview_dishes) ? place.preview_dishes : []
   return {
     ...place,
     image_url: typeof place.image_url === "string" ? place.image_url : "",
     thumbnail_url: typeof place.thumbnail_url === "string" ? place.thumbnail_url : "",
     dish_count: Number(place.dish_count || 0),
-    preview_dishes: Array.isArray(place.preview_dishes) ? place.preview_dishes : []
+    dishes: Array.isArray(place.dishes) ? place.dishes : previewDishes,
+    preview_dishes: previewDishes
   }
 }
 

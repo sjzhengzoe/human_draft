@@ -22,7 +22,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field__label">场景名称</view>
-      <input class="field__input" value="{{name}}" maxlength="80" placeholder="例如：成都三日游" bindinput="handleNameInput" />
+      <app-input custom-class="field__input" value="{{name}}" maxlength="80" placeholder="例如：成都三日游" bindinput="handleNameInput" />
     </view>
   </view>
   <view class="footer-actions">

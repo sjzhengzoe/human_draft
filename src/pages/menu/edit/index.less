@@ -7,18 +7,30 @@
 .image-field__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; font-size: var(--ui-font-size-base); }
 .image-field__plus { margin-bottom: 12rpx; color: #333; font-size: 64rpx; font-weight: 300; }
 .image-field__optional { margin-top: 8rpx; color: #aaa; font-size: 21rpx; }
-.image-field__hint { position: absolute; right: 20rpx; bottom: 20rpx; padding: 10rpx 18rpx; border-radius: 24rpx; background: rgba(17, 17, 17, .78); color: #fff; font-size: 22rpx; }
 .field { padding: 25rpx 28rpx; }
-.field--section-start { margin-top: 3rpx; padding-top: 28rpx; border-top: 1rpx solid #e8e8e8; }
-.field--inline { display: grid; grid-template-columns: 132rpx minmax(0, 1fr); align-items: start; gap: 24rpx; }
+.field--inline.field--section-start { margin-top: 3rpx; padding-top: 24rpx; border-top: 1rpx solid #e8e8e8; }
+.field--inline { display: grid; grid-template-columns: 132rpx minmax(0, 1fr); align-items: start; gap: 24rpx; padding: 22rpx 28rpx; }
 .field--inline .field__label { margin-bottom: 0; padding-top: 7rpx; }
+.field--inline.field--name,
+.field--inline.field--introduction { align-items: center; }
+.field--name .field__label,
+.field--introduction .field__label { padding-top: 0; }
 .field__label { margin-bottom: 12rpx; color: #777; font-size: 23rpx; }
-.field__input { height: 58rpx; color: #161616; font-size: var(--ui-font-size-base); }
-.field__textarea { width: 100%; height: 190rpx; box-sizing: border-box; padding: 14rpx 16rpx; border: 1rpx solid #e5e5e5; border-radius: 12rpx; background: #fafafa; color: #161616; font-size: var(--ui-font-size-base); line-height: 1.6; }
-.field__textarea--compact { height: 150rpx; }
-.field__control { min-width: 0; }
-.field__picker { display: inline-flex; min-height: 42rpx; box-sizing: border-box; align-items: center; gap: 5rpx; padding: 6rpx 10rpx 6rpx 14rpx; border: 2rpx solid #d4d4d4; border-radius: 999rpx; background: var(--ui-surface); color: #111; font-size: 21rpx; font-weight: 600; line-height: normal; }
-.field__arrow { display: flex; align-items: center; color: #777; }
+.field__required { margin-left: 5rpx; color: #c9342f; font-weight: 650; }
+.field__input { width: 100%; height: 50rpx; box-sizing: border-box; padding: 0 0 7rpx; border: 0; border-bottom: 1rpx solid #dedede; background: transparent; color: #161616; font-size: 21rpx; }
+.field__input,
+.item-entry__input { font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: normal; }
+.item-field__content { min-width: 0; }
+.item-entry { display: flex; min-width: 0; align-items: center; gap: 10rpx; box-sizing: border-box; padding: 0 0 7rpx; border: 0; border-bottom: 1rpx solid #dedede; border-radius: 0; background: transparent; }
+.item-entry__input { min-width: 0; height: 52rpx; flex: 1; box-sizing: border-box; padding: 0; border: 0; background: transparent; color: #161616; font-size: 21rpx; }
+.item-entry__add { display: flex; width: auto !important; min-width: 0 !important; height: 48rpx; box-sizing: border-box; align-items: center; justify-content: center; margin: 0 !important; padding: 0 19rpx !important; border-radius: 999rpx; background: #111; color: #fff; font-size: 21rpx; font-weight: 600; line-height: normal; }
+.item-entry__add::after { border: 0; }
+.item-entry__add:active { opacity: .65; }
+.item-list { display: flex; flex-wrap: wrap; gap: 10rpx; margin-bottom: 14rpx; }
+.item-chip { display: inline-flex; min-width: 0; min-height: 44rpx; box-sizing: border-box; align-items: center; gap: 7rpx; padding: 6rpx 9rpx 6rpx 14rpx; border: 2rpx solid #d4d4d4; border-radius: 999rpx; background: var(--ui-surface); color: #222; font-size: 21rpx; line-height: normal; }
+.item-chip__label { max-width: 480rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-chip__remove { display: flex; width: 30rpx; height: 30rpx; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 999rpx; }
+.item-chip__remove:active { background: #eee; }
 .field__choices,
 .meal-period-options { display: flex; min-width: 0; flex-wrap: wrap; gap: 10rpx; }
 .choice-option,
@@ -27,7 +39,7 @@
 .meal-period-option:active { opacity: .7; transform: scale(.97); }
 .choice-option--selected,
 .meal-period-option--selected { border-color: #111; background: var(--ui-surface); color: #111; font-weight: 600; }
-.meal-period-field { padding-bottom: 26rpx; }
+.meal-period-field { padding-bottom: 22rpx; }
 .meal-period-option__label { font-size: 21rpx; line-height: normal; }
 .footer-actions { margin-top: 28rpx; }
 .save-button, .delete-button { display: flex; height: 92rpx; align-items: center; justify-content: center; gap: 9rpx; border-radius: 46rpx; font-size: var(--ui-font-size-base); line-height: normal; }

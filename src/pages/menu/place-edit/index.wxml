@@ -18,7 +18,7 @@
       </view>
       <view class="field">
         <view class="field__label">店铺名</view>
-        <input class="field__input" value="{{name}}" maxlength="120" placeholder="例如：海底捞" bindinput="handleNameInput" />
+        <app-input custom-class="field__input" value="{{name}}" maxlength="120" placeholder="例如：海底捞" bindinput="handleNameInput" />
       </view>
       <view class="field field--inline field--section-start">
         <view class="field__label">用餐场景</view>

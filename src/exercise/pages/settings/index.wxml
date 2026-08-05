@@ -13,7 +13,7 @@
         <view class="field__label">每日运动分钟数</view>
       </view>
       <view class="number-input">
-        <input type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
+        <app-input custom-class="number-input__control" type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
         <text>分钟</text>
       </view>
     </view>
@@ -23,7 +23,7 @@
         <view class="field__label">每月休息天数</view>
       </view>
       <view class="number-input">
-        <input type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
+        <app-input custom-class="number-input__control" type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
         <text>天</text>
       </view>
     </view>

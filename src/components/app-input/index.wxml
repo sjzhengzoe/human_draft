@@ -1,0 +1,31 @@
+<input
+  wx:if="{{editing}}"
+  class="app-input__control custom-class"
+  style="font-family: HumanDraftUI, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: {{fontSize}};"
+  always-embed="{{true}}"
+  type="{{type}}"
+  name="{{name}}"
+  value="{{localValue}}"
+  maxlength="{{maxlength}}"
+  placeholder="{{placeholder}}"
+  placeholder-class="app-input__placeholder"
+  placeholder-style="font-family: HumanDraftUI, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: {{fontSize}};"
+  confirm-type="{{confirmType}}"
+  confirm-hold="{{confirmHold}}"
+  focus="{{nativeFocus}}"
+  adjust-position="{{adjustPosition}}"
+  cursor-spacing="{{cursorSpacing}}"
+  disabled="{{disabled}}"
+  bindinput="handleInput"
+  bindfocus="handleFocus"
+  bindblur="handleBlur"
+  bindconfirm="handleConfirm"
+/>
+<view
+  wx:else
+  class="app-input__display custom-class {{localValue ? '' : 'app-input__display--placeholder'}} {{disabled ? 'app-input__display--disabled' : ''}}"
+  style="font-size: {{fontSize}};"
+  role="textbox"
+  aria-disabled="{{disabled}}"
+  bindtap="handleActivate"
+>{{localValue || placeholder}}</view>
