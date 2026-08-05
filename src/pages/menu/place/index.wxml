@@ -66,12 +66,8 @@
           <view wx:else class="dish-row__image dish-row__image--empty">暂无图片</view>
           <view class="dish-row__body">
             <view class="dish-row__name">{{item.name}}</view>
-            <view class="dish-row__tags">
-              <view class="store-tag">{{item.categoryText}}</view>
-              <view wx:if="{{item.mealText}}" class="store-tag">{{item.mealText}}</view>
-            </view>
+            <view class="dish-row__description">{{item.introduction || '暂无描述'}}</view>
           </view>
-          <app-icon wx:if="{{canWrite}}" name="chevron-right" size="30" />
         </view>
       </view>
       <view wx:else class="empty-dishes">

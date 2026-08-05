@@ -1,6 +1,6 @@
 import { ensureLogin } from "../../../services/auth"
 import { getMenuPlace, listDishes } from "../../../services/menu"
-import type { Dish, MealPeriod, MenuPlace } from "../../../types/api"
+import type { Dish, MenuPlace } from "../../../types/api"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -8,28 +8,11 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 
-type StoreDish = Dish & { mealText: string; categoryText: string }
-
-const MEAL_TEXT: Record<MealPeriod, string> = {
-  breakfast: "早餐",
-  lunch: "午餐",
-  afternoon_tea: "下午茶",
-  dinner: "晚餐"
-}
-
-function toStoreDish(dish: Dish): StoreDish {
-  return {
-    ...dish,
-    mealText: dish.meal_periods.map((period) => MEAL_TEXT[period]).filter(Boolean).join("、"),
-    categoryText: dish.category?.name || "未分类"
-  }
-}
-
 Page({
   data: {
     placeId: "",
     place: null as MenuPlace | null,
-    dishes: [] as StoreDish[],
+    dishes: [] as Dish[],
     canWrite: false,
     loading: true,
     errorMessage: ""
@@ -66,7 +49,7 @@ Page({
       wx.setNavigationBarTitle({ title: place.name })
       this.setData({
         place,
-        dishes: dishes.map(toStoreDish),
+        dishes,
         canWrite: session.user.can_write
       })
     } catch (error) {
