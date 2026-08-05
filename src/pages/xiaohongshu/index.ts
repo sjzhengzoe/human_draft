@@ -2,6 +2,10 @@ import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
 import {
+  cacheTextCardPreview,
+  getCachedTextCardPreview,
+} from "../../services/text-card-preview-cache";
+import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
@@ -15,6 +19,7 @@ import {
     | "export";
   type CopyMode = "xiaohongshu" | "douyin";
   type RenderQuality = "preview" | "export";
+  type RenderProgress = (completed: number, total: number) => void;
 
   type Slide = {
     order: string;
@@ -110,6 +115,7 @@ import {
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
+  const PREVIEW_CACHE_VERSION = "xiaohongshu-v2";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
   const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
@@ -206,6 +212,7 @@ import {
       isRenderingCards: false,
       renderError: false,
       renderErrorMessage: "生成失败，请重试",
+      renderProgressText: "",
       showClearUndo: false,
       canvasReady: false,
     },
@@ -234,10 +241,13 @@ import {
       },
       ready() {
         this.setData({ canvasReady: true }, () => {
-          this.refreshRenderedImages();
+          if (!this.data.renderedImageUrls.length) {
+            this.refreshRenderedImages();
+          }
         });
       },
       detached() {
+        renderRequestId += 1;
         if (clearUndoTimer) clearTimeout(clearUndoTimer);
         clearUndoTimer = undefined;
         clearUndoSnapshot = undefined;
@@ -258,6 +268,7 @@ import {
     },
     methods: {
       handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+        if (this.data.isGenerating) return;
         const template = event.currentTarget.dataset.template;
         if (template !== "douyin2" && template !== "douyin3") return;
 
@@ -397,7 +408,7 @@ import {
               getContentSlides(nextContent).length - 1,
               0,
             );
-            if (!(await this.ensureSafeContent(nextContent))) return;
+            if (!(await this.ensureSafeContent(result.data))) return;
 
             this.finalizeClearUndo();
             this.syncContent(nextContent, nextActiveIndex);
@@ -459,9 +470,7 @@ import {
         });
       },
 
-      async handleCopyContent(mode: CopyMode) {
-        if (!(await this.ensureSafeContent(this.data.content))) return;
-
+      handleCopyContent(mode: CopyMode) {
         const text =
           mode === "xiaohongshu"
             ? getXiaohongshuCopyableContent(this.data.content)
@@ -489,15 +498,16 @@ import {
       async handleSaveImages() {
         if (this.data.isGenerating) return;
         if (!this.data.hasCustomContent) return;
-        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
-        wx.showLoading({ title: "保存中" });
+        const total = this.data.slides.length + COMBINED_FONT_OPTIONS.length;
+        wx.showLoading({ title: `生成 0/${total}`, mask: true });
 
         try {
-          const urls = await this.generateExportImages();
+          const urls = await this.generateExportImages((completed, count) => {
+            wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
+          });
           if (!urls.length) {
-            wx.hideLoading();
             wx.showToast({
               title: "暂无内容",
               icon: "none",
@@ -505,18 +515,17 @@ import {
             return;
           }
 
-          for (const url of urls) {
+          for (const [index, url] of urls.entries()) {
+            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
             await saveImageToPhotosAlbum(url);
           }
 
-          wx.hideLoading();
           wx.showToast({
             title: "已保存",
             icon: "success",
           });
         } catch (error) {
           console.error("保存图片失败", error);
-          wx.hideLoading();
           wx.showToast({
             title: "保存失败",
             icon: "none",
@@ -531,20 +540,30 @@ import {
         if (!this.data.canvasReady || !this.data.slides.length) return;
 
         const requestId = ++renderRequestId;
+        const previewSignature = getPreviewSignature(this.data.content);
         this.setData({
           isRenderingCards: true,
           renderError: false,
           renderErrorMessage: "生成失败，请重试",
+          renderProgressText: `0/${this.data.previewCount}`,
         });
 
         try {
-          const urls = await this.renderSlidesToImages(requestId);
+          const urls = await this.renderSlidesToImages(
+            requestId,
+            (completed, total) => {
+              if (requestId === renderRequestId) {
+                this.setData({ renderProgressText: `${completed}/${total}` });
+              }
+            },
+          );
           if (requestId !== renderRequestId) return;
 
           this.setData({
             renderedImageUrls: urls,
             renderError: false,
           });
+          cacheTextCardPreview("xiaohongshu", previewSignature, urls);
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
@@ -555,7 +574,7 @@ import {
           }
         } finally {
           if (requestId === renderRequestId) {
-            this.setData({ isRenderingCards: false });
+            this.setData({ isRenderingCards: false, renderProgressText: "" });
           }
         }
       },
@@ -565,22 +584,27 @@ import {
         this.refreshRenderedImages();
       },
 
-      renderSlidesToImages(requestId: number): Promise<string[]> {
-        return this.generateImages("preview", requestId);
+      renderSlidesToImages(
+        requestId: number,
+        onProgress?: RenderProgress,
+      ): Promise<string[]> {
+        return this.generateImages("preview", requestId, onProgress);
       },
 
-      generateExportImages(): Promise<string[]> {
-        return this.generateImages("export");
+      generateExportImages(onProgress?: RenderProgress): Promise<string[]> {
+        return this.generateImages("export", undefined, onProgress);
       },
 
       generateImages(
         quality: RenderQuality,
         previewRequestId?: number,
+        onProgress?: RenderProgress,
       ): Promise<string[]> {
         const slides = this.data.slides;
         const metrics = createCanvasMetrics(quality);
         const isStalePreview = () =>
           quality === "preview" && previewRequestId !== renderRequestId;
+        const total = slides.length + COMBINED_FONT_OPTIONS.length;
 
         return enqueueRender(async () => {
           if (isStalePreview()) return [];
@@ -609,6 +633,7 @@ import {
                 metrics,
               ),
             );
+            onProgress?.(urls.length, total);
           }
 
           for (const fontOption of COMBINED_FONT_OPTIONS) {
@@ -622,6 +647,7 @@ import {
                 metrics,
               ),
             );
+            onProgress?.(urls.length, total);
           }
 
           return urls;
@@ -778,6 +804,18 @@ import {
           Math.max(activeIndex, 0),
           Math.max(previewCount - 1, 0),
         );
+        const cachedUrls = slides.length
+          ? getCachedTextCardPreview(
+              "xiaohongshu",
+              getPreviewSignature(content),
+            )
+          : undefined;
+        const renderedImageUrls =
+          cachedUrls ||
+          (slides.length &&
+          this.data.renderedImageUrls.length > nextActiveIndex
+            ? this.data.renderedImageUrls.slice(0, previewCount)
+            : []);
         renderRequestId += 1;
 
         this.setData(
@@ -786,15 +824,16 @@ import {
             hasCustomContent,
             isExampleContent,
             slides,
-            renderedImageUrls: [],
+            renderedImageUrls,
             isRenderingCards: false,
             renderError: false,
             renderErrorMessage: "生成失败，请重试",
+            renderProgressText: "",
             previewCount,
             activeIndex: nextActiveIndex,
           },
           () => {
-            this.refreshRenderedImages();
+            if (!cachedUrls) this.refreshRenderedImages();
           },
         );
 
@@ -830,6 +869,10 @@ import {
     const body = getXiaohongshuCopyableBody(content);
 
     return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
+  }
+
+  function getPreviewSignature(content: string) {
+    return `${PREVIEW_CACHE_VERSION}\u0000${content}`;
   }
 
   function getDouyinCopyableContent(content: string) {

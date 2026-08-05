@@ -2,11 +2,22 @@ import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
 import {
+  cacheTextCardPreview,
+  getCachedTextCardPreview,
+} from "../../services/text-card-preview-cache";
+import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
+  type RenderQuality = "preview" | "export";
+  type RenderProgress = (completed: number, total: number) => void;
+
+  type CanvasMetrics = {
+    width: number;
+    scale: number;
+  };
 
   type TextPart = {
     text: string;
@@ -88,6 +99,7 @@ import {
     fillRect: (x: number, y: number, width: number, height: number) => void;
     fillText: (text: string, x: number, y: number) => void;
     measureText: (text: string) => { width: number };
+    scale: (x: number, y: number) => void;
     save: () => void;
     restore: () => void;
     beginPath: () => void;
@@ -99,12 +111,6 @@ import {
       endAngle: number,
     ) => void;
     clip: () => void;
-    getImageData?: (
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ) => { data: Uint8ClampedArray };
   };
 
   const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.douyin3;
@@ -113,8 +119,10 @@ import {
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin3ExportCanvas";
+  const PREVIEW_CACHE_VERSION = "douyin3-v2";
   const BASE_CANVAS_WIDTH = 300;
   const CANVAS_WIDTH = 2160;
+  const PREVIEW_CANVAS_WIDTH = 1080;
   const CANVAS_SCALE = CANVAS_WIDTH / BASE_CANVAS_WIDTH;
   const TEMPLATE_ONE_FONT_SIZE = (40 / 1080) * BASE_CANVAS_WIDTH;
   const TEMPLATE_THREE_LINE_HEIGHT = (68 / 1080) * BASE_CANVAS_WIDTH;
@@ -193,6 +201,7 @@ import {
       isRenderingCards: false,
       renderError: false,
       renderErrorMessage: "生成失败，请重试",
+      renderProgressText: "",
       showClearUndo: false,
       canvasReady: false,
       selectedImagePaths: [] as string[],
@@ -239,10 +248,13 @@ import {
       },
       ready() {
         this.setData({ canvasReady: true }, () => {
-          this.refreshRenderedImages();
+          if (!this.data.renderedImageUrls.length) {
+            this.refreshRenderedImages();
+          }
         });
       },
       detached() {
+        renderRequestId += 1;
         if (clearUndoTimer) clearTimeout(clearUndoTimer);
         if (clearUndoSnapshot) {
           clearUndoSnapshot.imagePaths.filter(Boolean).forEach(removeLocalImageFile);
@@ -266,6 +278,7 @@ import {
     },
     methods: {
       handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+        if (this.data.isGenerating || this.data.selectingImage) return;
         const template = event.currentTarget.dataset.template;
         if (template !== "xiaohongshu" && template !== "douyin2") return;
 
@@ -288,7 +301,13 @@ import {
       loadDouyin3Font() {
         ensureDouyin3FontLoaded()
           .then(() => {
-            this.refreshRenderedImages();
+            if (
+              this.data.canvasReady &&
+              !this.data.isRenderingCards &&
+              !this.data.renderedImageUrls.length
+            ) {
+              this.refreshRenderedImages();
+            }
           })
           .catch((error) => {
             console.warn("加载模板三方正兰亭黑 ExtraLight 失败，使用系统字体回退", error);
@@ -492,7 +511,7 @@ import {
               ? this.data.content
               : "";
             const content = appendPastedContent(currentContent, pastedContent);
-            if (!(await this.ensureSafeContent(content))) return;
+            if (!(await this.ensureSafeContent(pastedContent))) return;
 
             this.finalizeClearUndo();
             this.syncContent(content);
@@ -510,9 +529,8 @@ import {
         });
       },
 
-      async handleCopyContent() {
+      handleCopyContent() {
         if (!this.data.hasCustomContent) return;
-        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         const text = getCopyableContent(this.data.content);
         if (!text) return;
@@ -537,17 +555,21 @@ import {
       async handleSaveImages() {
         if (this.data.isGenerating) return;
         if (!this.data.hasCustomContent) return;
-        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
-        wx.showLoading({ title: "保存中" });
+        const total = this.data.pages.length;
+        wx.showLoading({ title: `生成 0/${total}`, mask: true });
 
         try {
           const urls = await this.renderPagesToImages(
+            "export",
             this.data.selectedImagePaths,
+            undefined,
+            (completed, count) => {
+              wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
+            },
           );
           if (!urls.length) {
-            wx.hideLoading();
             wx.showToast({
               title: "暂无内容",
               icon: "none",
@@ -555,18 +577,17 @@ import {
             return;
           }
 
-          for (const url of urls) {
+          for (const [index, url] of urls.entries()) {
+            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
             await saveImageToPhotosAlbum(url);
           }
 
-          wx.hideLoading();
           wx.showToast({
             title: "已保存",
             icon: "success",
           });
         } catch (error) {
           console.error("保存图片失败", error);
-          wx.hideLoading();
           wx.showToast({
             title: "保存失败",
             icon: "none",
@@ -581,20 +602,32 @@ import {
         if (!this.data.canvasReady || !this.data.pages.length) return;
 
         const requestId = ++renderRequestId;
+        const previewSignature = getPreviewSignature(this.data.content);
         this.setData({
           isRenderingCards: true,
           renderError: false,
           renderErrorMessage: "生成失败，请重试",
+          renderProgressText: `0/${this.data.pages.length}`,
         });
 
         try {
-          const urls = await this.renderPagesToImages();
+          const urls = await this.renderPagesToImages(
+            "preview",
+            [],
+            requestId,
+            (completed, total) => {
+              if (requestId === renderRequestId) {
+                this.setData({ renderProgressText: `${completed}/${total}` });
+              }
+            },
+          );
           if (requestId !== renderRequestId) return;
 
           this.setData({
             renderedImageUrls: urls,
             renderError: false,
           });
+          cacheTextCardPreview("douyin3", previewSignature, urls);
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
@@ -605,7 +638,7 @@ import {
           }
         } finally {
           if (requestId === renderRequestId) {
-            this.setData({ isRenderingCards: false });
+            this.setData({ isRenderingCards: false, renderProgressText: "" });
           }
         }
       },
@@ -615,10 +648,20 @@ import {
         this.refreshRenderedImages();
       },
 
-      renderPagesToImages(circleImagePaths: string[] = []): Promise<string[]> {
+      renderPagesToImages(
+        quality: RenderQuality,
+        circleImagePaths: string[] = [],
+        previewRequestId?: number,
+        onProgress?: RenderProgress,
+      ): Promise<string[]> {
         const pages = this.data.pages;
+        const metrics = createCanvasMetrics(quality);
+        const isStalePreview = () =>
+          quality === "preview" && previewRequestId !== renderRequestId;
 
         return enqueueRender(async () => {
+          if (isStalePreview()) return [];
+
           try {
             await ensureDouyin3FontLoaded();
           } catch (error) {
@@ -626,14 +669,23 @@ import {
           }
 
           const urls: string[] = [];
+          if (!pages.length || isStalePreview()) return urls;
+
+          const canvas = await this.getExportCanvas();
+          const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
           for (const [index, page] of pages.entries()) {
+            if (isStalePreview()) return [];
             urls.push(
               await this.generatePageImage(
                 page,
                 circleImagePaths[index] || "",
+                canvas,
+                backgroundImage,
+                metrics,
               ),
             );
+            onProgress?.(urls.length, pages.length);
           }
 
           return urls;
@@ -643,22 +695,28 @@ import {
       async generatePageImage(
         page: Paragraph[],
         circleImagePath = "",
+        canvas: Canvas2DNode,
+        backgroundImage: CanvasImage,
+        metrics: CanvasMetrics,
       ): Promise<string> {
-        const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
-        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
         const circleImage = circleImagePath
           ? await loadCanvasImage(canvas, circleImagePath)
           : undefined;
-        canvas.width = CANVAS_WIDTH;
+        canvas.width = metrics.width;
         canvas.height = Math.ceil(
-          Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) * 2,
+          Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) *
+            2 *
+            metrics.scale,
         );
+        ctx.scale(metrics.scale, metrics.scale);
         const layout = createPageLayout(page, ctx);
-        const canvasHeight = getCanvasHeight(ctx, layout);
+        const canvasHeight = getCanvasHeight(layout);
+        const outputHeight = Math.ceil(canvasHeight * metrics.scale);
 
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = canvasHeight;
+        canvas.width = metrics.width;
+        canvas.height = outputHeight;
+        ctx.scale(metrics.scale, metrics.scale);
 
         ctx.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
         ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, canvasHeight);
@@ -688,7 +746,7 @@ import {
           drawCircleImage(ctx, circleImage);
         }
 
-        return canvasToTempFilePath(canvas, canvasHeight);
+        return canvasToTempFilePath(canvas, metrics.width, outputHeight);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -755,6 +813,15 @@ import {
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
         );
+        const cachedUrls = pages.length
+          ? getCachedTextCardPreview("douyin3", getPreviewSignature(content))
+          : undefined;
+        const renderedImageUrls =
+          cachedUrls ||
+          (pages.length &&
+          this.data.renderedImageUrls.length > nextActiveIndex
+            ? this.data.renderedImageUrls.slice(0, pages.length)
+            : []);
         renderRequestId += 1;
 
         this.setData(
@@ -765,14 +832,15 @@ import {
             pages,
             pageKeys,
             selectedImagePaths,
-            renderedImageUrls: [],
+            renderedImageUrls,
             isRenderingCards: false,
             renderError: false,
             renderErrorMessage: "生成失败，请重试",
+            renderProgressText: "",
             activeIndex: nextActiveIndex,
           },
           () => {
-            this.refreshRenderedImages();
+            if (!cachedUrls) this.refreshRenderedImages();
           },
         );
 
@@ -824,6 +892,10 @@ import {
     if (!bodyLines.length) return DOUYIN_TAGS;
 
     return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
+  }
+
+  function getPreviewSignature(content: string) {
+    return `${PREVIEW_CACHE_VERSION}\u0000${content}`;
   }
 
   function getParagraphs(text: string) {
@@ -1048,11 +1120,10 @@ import {
     return lines.length ? lines : [{ parts, justify: false }];
   }
 
-  function getCanvasHeight(ctx: Canvas2DContext, layout: LayoutItem[]) {
+  function getCanvasHeight(layout: LayoutItem[]) {
     let y = CANVAS_TEXT_TOP;
     let lastLine:
       | {
-          line: LayoutLine;
           item: Extract<LayoutItem, { type: "text" }>;
           y: number;
         }
@@ -1064,8 +1135,8 @@ import {
         return;
       }
 
-      item.lines.forEach((line) => {
-        lastLine = { line, item, y };
+      item.lines.forEach(() => {
+        lastLine = { item, y };
         y += item.lineHeight;
       });
 
@@ -1076,51 +1147,10 @@ import {
       return Math.ceil(CANVAS_TEXT_TOP + CANVAS_BOTTOM_SAFE);
     }
 
-    const inkHeight = measureLineInkHeight(ctx, lastLine.line, lastLine.item);
-    return Math.ceil(lastLine.y + inkHeight + CANVAS_BOTTOM_SAFE);
-  }
-
-  function measureLineInkHeight(
-    ctx: Canvas2DContext,
-    line: LayoutLine,
-    item: Extract<LayoutItem, { type: "text" }>,
-  ) {
-    const fallbackHeight = item.isTitle
+    const inkHeight = lastLine.item.isTitle
       ? CANVAS_TITLE_FONT_SIZE
       : CANVAS_BODY_FONT_SIZE;
-    if (!ctx.getImageData) return fallbackHeight;
-
-    const measurementHeight = Math.ceil(
-      Math.max(CANVAS_TITLE_LINE_HEIGHT, CANVAS_BODY_LINE_HEIGHT) * 2,
-    );
-
-    try {
-      ctx.clearRect(0, 0, CANVAS_WIDTH, measurementHeight);
-      ctx.fillStyle = "#000000";
-      ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      drawPartsLine(ctx, line, CANVAS_PADDING_LEFT, 0, item);
-
-      const pixels = ctx.getImageData(
-        0,
-        0,
-        CANVAS_WIDTH,
-        measurementHeight,
-      ).data;
-
-      for (let row = measurementHeight - 1; row >= 0; row -= 1) {
-        const rowStart = row * CANVAS_WIDTH * 4;
-        const rowEnd = rowStart + CANVAS_WIDTH * 4;
-
-        for (let offset = rowStart + 3; offset < rowEnd; offset += 4) {
-          if (pixels[offset] > 0) return row + 1;
-        }
-      }
-    } catch (error) {
-      console.warn("测量文字可见范围失败，使用字号回退", error);
-    }
-
-    return fallbackHeight;
+    return Math.ceil(lastLine.y + inkHeight + CANVAS_BOTTOM_SAFE);
   }
 
   function drawPartsLine(
@@ -1197,6 +1227,15 @@ import {
 
   function scaleCanvasValue(value: number) {
     return Math.round(value * CANVAS_SCALE);
+  }
+
+  function createCanvasMetrics(quality: RenderQuality): CanvasMetrics {
+    const width = quality === "preview" ? PREVIEW_CANVAS_WIDTH : CANVAS_WIDTH;
+
+    return {
+      width,
+      scale: width / CANVAS_WIDTH,
+    };
   }
 
   function saveImageToPhotosAlbum(filePath: string) {
@@ -1281,13 +1320,17 @@ import {
     });
   }
 
-  function canvasToTempFilePath(canvas: Canvas2DNode, canvasHeight: number) {
+  function canvasToTempFilePath(
+    canvas: Canvas2DNode,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) {
     return new Promise<string>((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas,
-        width: CANVAS_WIDTH,
+        width: canvasWidth,
         height: canvasHeight,
-        destWidth: CANVAS_WIDTH,
+        destWidth: canvasWidth,
         destHeight: canvasHeight,
         fileType: "png",
         success: (result) => resolve(result.tempFilePath),

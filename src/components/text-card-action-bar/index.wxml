@@ -6,7 +6,7 @@
   <view
     wx:for="{{actions}}"
     wx:key="key"
-    class="action-bar__item {{item.disabled ? 'action-bar__item--disabled' : ''}}"
+    class="action-bar__item {{item.primary ? 'action-bar__item--primary' : ''}} {{item.disabled ? 'action-bar__item--disabled' : ''}}"
     hover-class="{{item.disabled ? 'none' : 'action-bar__item--hover'}}"
     hover-stay-time="80"
     data-key="{{item.key}}"
@@ -15,7 +15,28 @@
     aria-disabled="{{item.disabled}}"
     bindtap="handleActionTap"
   >
-    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="28" /></view>
+    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="28" inverse="{{item.primary && !item.disabled}}" /></view>
     <view class="action-bar__label">{{item.label}}</view>
   </view>
 </view>
+
+<app-dialog
+  visible="{{showMoreDialog}}"
+  title="更多操作"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body" class="action-more">
+    <button class="action-more__item" data-key="copy" bindtap="handleMoreActionTap">
+      <app-icon name="copy" size="30" />
+      <text>复制文案</text>
+    </button>
+    <button class="action-more__item action-more__item--danger" data-key="clear" bindtap="handleMoreActionTap">
+      <app-icon name="eraser" size="30" />
+      <text>清空内容</text>
+    </button>
+  </view>
+  <view slot="actions" class="action-more__actions">
+    <button class="action-more__cancel" bindtap="closeMoreDialog">取消</button>
+  </view>
+</app-dialog>

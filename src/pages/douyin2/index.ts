@@ -2,11 +2,23 @@ import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
 import {
+  cacheTextCardPreview,
+  getCachedTextCardPreview,
+} from "../../services/text-card-preview-cache";
+import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
+  type RenderQuality = "preview" | "export";
+  type RenderProgress = (completed: number, total: number) => void;
+
+  type CanvasMetrics = {
+    width: number;
+    height: number;
+    scale: number;
+  };
 
   type TextPart = {
     text: string;
@@ -61,6 +73,7 @@ import {
     fillRect: (x: number, y: number, width: number, height: number) => void;
     fillText: (text: string, x: number, y: number) => void;
     measureText: (text: string) => { width: number };
+    scale: (x: number, y: number) => void;
   };
 
   const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.douyin2;
@@ -68,9 +81,11 @@ import {
   const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin2ExportCanvas";
+  const PREVIEW_CACHE_VERSION = "douyin2-v2";
   const BASE_CANVAS_WIDTH = 300;
   const BASE_CANVAS_HEIGHT = 400;
   const CANVAS_WIDTH = 2160;
+  const PREVIEW_CANVAS_WIDTH = 1080;
   const CANVAS_SCALE = CANVAS_WIDTH / BASE_CANVAS_WIDTH;
   const CANVAS_HEIGHT = Math.round(BASE_CANVAS_HEIGHT * CANVAS_SCALE);
   const CANVAS_PADDING_LEFT = scaleCanvasValue(22);
@@ -142,6 +157,7 @@ import {
       isRenderingCards: false,
       renderError: false,
       renderErrorMessage: "生成失败，请重试",
+      renderProgressText: "",
       showClearUndo: false,
       canvasReady: false,
     },
@@ -170,10 +186,13 @@ import {
       },
       ready() {
         this.setData({ canvasReady: true }, () => {
-          this.refreshRenderedImages();
+          if (!this.data.renderedImageUrls.length) {
+            this.refreshRenderedImages();
+          }
         });
       },
       detached() {
+        renderRequestId += 1;
         if (clearUndoTimer) clearTimeout(clearUndoTimer);
         clearUndoTimer = undefined;
         clearUndoSnapshot = undefined;
@@ -194,6 +213,7 @@ import {
     },
     methods: {
       handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+        if (this.data.isGenerating) return;
         const template = event.currentTarget.dataset.template;
         if (template !== "xiaohongshu" && template !== "douyin3") return;
 
@@ -216,7 +236,13 @@ import {
       loadDouyin2Font() {
         ensureDouyin2FontLoaded()
           .then(() => {
-            this.refreshRenderedImages();
+            if (
+              this.data.canvasReady &&
+              !this.data.isRenderingCards &&
+              !this.data.renderedImageUrls.length
+            ) {
+              this.refreshRenderedImages();
+            }
           })
           .catch((error) => {
             console.warn("加载抖音 2 字体失败，使用系统字体回退", error);
@@ -319,7 +345,7 @@ import {
               ? this.data.content
               : "";
             const content = appendPastedContent(currentContent, pastedContent);
-            if (!(await this.ensureSafeContent(content))) return;
+            if (!(await this.ensureSafeContent(pastedContent))) return;
 
             this.finalizeClearUndo();
             this.syncContent(content);
@@ -337,9 +363,8 @@ import {
         });
       },
 
-      async handleCopyContent() {
+      handleCopyContent() {
         if (!this.data.hasCustomContent) return;
-        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         const text = getCopyableContent(this.data.content);
         if (!text) return;
@@ -364,15 +389,20 @@ import {
       async handleSaveImages() {
         if (this.data.isGenerating) return;
         if (!this.data.hasCustomContent) return;
-        if (!(await this.ensureSafeContent(this.data.content))) return;
 
         this.setData({ isGenerating: true });
-        wx.showLoading({ title: "保存中" });
+        const total = this.data.pages.length;
+        wx.showLoading({ title: `生成 0/${total}`, mask: true });
 
         try {
-          const urls = await this.renderPagesToImages();
+          const urls = await this.renderPagesToImages(
+            "export",
+            undefined,
+            (completed, count) => {
+              wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
+            },
+          );
           if (!urls.length) {
-            wx.hideLoading();
             wx.showToast({
               title: "暂无内容",
               icon: "none",
@@ -380,18 +410,17 @@ import {
             return;
           }
 
-          for (const url of urls) {
+          for (const [index, url] of urls.entries()) {
+            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
             await saveImageToPhotosAlbum(url);
           }
 
-          wx.hideLoading();
           wx.showToast({
             title: "已保存",
             icon: "success",
           });
         } catch (error) {
           console.error("保存图片失败", error);
-          wx.hideLoading();
           wx.showToast({
             title: "保存失败",
             icon: "none",
@@ -406,20 +435,31 @@ import {
         if (!this.data.canvasReady || !this.data.pages.length) return;
 
         const requestId = ++renderRequestId;
+        const previewSignature = getPreviewSignature(this.data.content);
         this.setData({
           isRenderingCards: true,
           renderError: false,
           renderErrorMessage: "生成失败，请重试",
+          renderProgressText: `0/${this.data.pages.length}`,
         });
 
         try {
-          const urls = await this.renderPagesToImages();
+          const urls = await this.renderPagesToImages(
+            "preview",
+            requestId,
+            (completed, total) => {
+              if (requestId === renderRequestId) {
+                this.setData({ renderProgressText: `${completed}/${total}` });
+              }
+            },
+          );
           if (requestId !== renderRequestId) return;
 
           this.setData({
             renderedImageUrls: urls,
             renderError: false,
           });
+          cacheTextCardPreview("douyin2", previewSignature, urls);
         } catch (error) {
           if (requestId === renderRequestId) {
             console.error("生成页面卡片失败", error);
@@ -430,7 +470,7 @@ import {
           }
         } finally {
           if (requestId === renderRequestId) {
-            this.setData({ isRenderingCards: false });
+            this.setData({ isRenderingCards: false, renderProgressText: "" });
           }
         }
       },
@@ -440,10 +480,19 @@ import {
         this.refreshRenderedImages();
       },
 
-      renderPagesToImages(): Promise<string[]> {
+      renderPagesToImages(
+        quality: RenderQuality,
+        previewRequestId?: number,
+        onProgress?: RenderProgress,
+      ): Promise<string[]> {
         const pages = this.data.pages;
+        const metrics = createCanvasMetrics(quality);
+        const isStalePreview = () =>
+          quality === "preview" && previewRequestId !== renderRequestId;
 
         return enqueueRender(async () => {
+          if (isStalePreview()) return [];
+
           try {
             await ensureDouyin2FontLoaded();
           } catch (error) {
@@ -451,22 +500,41 @@ import {
           }
 
           const urls: string[] = [];
+          if (!pages.length || isStalePreview()) return urls;
+
+          const canvas = await this.getExportCanvas();
+          const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
           for (const [index, page] of pages.entries()) {
-            urls.push(await this.generatePageImage(page, index));
+            if (isStalePreview()) return [];
+            urls.push(
+              await this.generatePageImage(
+                page,
+                index,
+                canvas,
+                backgroundImage,
+                metrics,
+              ),
+            );
+            onProgress?.(urls.length, pages.length);
           }
 
           return urls;
         });
       },
 
-      async generatePageImage(page: Paragraph[], pageIndex: number): Promise<string> {
-        const canvas = await this.getExportCanvas();
+      async generatePageImage(
+        page: Paragraph[],
+        pageIndex: number,
+        canvas: Canvas2DNode,
+        backgroundImage: unknown,
+        metrics: CanvasMetrics,
+      ): Promise<string> {
         const ctx = canvas.getContext("2d");
-        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+        canvas.width = metrics.width;
+        canvas.height = metrics.height;
+        ctx.scale(metrics.scale, metrics.scale);
 
         ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -500,7 +568,7 @@ import {
           y += item.afterGap;
         });
 
-        return canvasToTempFilePath(canvas);
+        return canvasToTempFilePath(canvas, metrics);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -531,6 +599,15 @@ import {
           Math.max(activeIndex, 0),
           Math.max(pages.length - 1, 0),
         );
+        const cachedUrls = pages.length
+          ? getCachedTextCardPreview("douyin2", getPreviewSignature(content))
+          : undefined;
+        const renderedImageUrls =
+          cachedUrls ||
+          (pages.length &&
+          this.data.renderedImageUrls.length > nextActiveIndex
+            ? this.data.renderedImageUrls.slice(0, pages.length)
+            : []);
         renderRequestId += 1;
 
         this.setData(
@@ -539,14 +616,15 @@ import {
             hasCustomContent,
             isExampleContent,
             pages,
-            renderedImageUrls: [],
+            renderedImageUrls,
             isRenderingCards: false,
             renderError: false,
             renderErrorMessage: "生成失败，请重试",
+            renderProgressText: "",
             activeIndex: nextActiveIndex,
           },
           () => {
-            this.refreshRenderedImages();
+            if (!cachedUrls) this.refreshRenderedImages();
           },
         );
 
@@ -597,6 +675,10 @@ import {
     if (!bodyLines.length) return DOUYIN_TAGS;
 
     return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
+  }
+
+  function getPreviewSignature(content: string) {
+    return `${PREVIEW_CACHE_VERSION}\u0000${content}`;
   }
 
   function getPages(content: string) {
@@ -826,6 +908,17 @@ import {
     return Math.round(value * CANVAS_SCALE);
   }
 
+  function createCanvasMetrics(quality: RenderQuality): CanvasMetrics {
+    const width = quality === "preview" ? PREVIEW_CANVAS_WIDTH : CANVAS_WIDTH;
+    const scale = width / CANVAS_WIDTH;
+
+    return {
+      width,
+      height: Math.round(CANVAS_HEIGHT * scale),
+      scale,
+    };
+  }
+
   function saveImageToPhotosAlbum(filePath: string) {
     return new Promise<void>((resolve, reject) => {
       wx.saveImageToPhotosAlbum({
@@ -846,14 +939,17 @@ import {
     });
   }
 
-  function canvasToTempFilePath(canvas: Canvas2DNode) {
+  function canvasToTempFilePath(
+    canvas: Canvas2DNode,
+    metrics: CanvasMetrics,
+  ) {
     return new Promise<string>((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        destWidth: CANVAS_WIDTH,
-        destHeight: CANVAS_HEIGHT,
+        width: metrics.width,
+        height: metrics.height,
+        destWidth: metrics.width,
+        destHeight: metrics.height,
         fileType: "png",
         success: (result) => resolve(result.tempFilePath),
         fail: reject,

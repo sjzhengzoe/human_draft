@@ -4,7 +4,7 @@
   </view>
 
 <view class="page">
-  <view class="template-switch" role="tablist" aria-label="选择图文模板">
+  <view class="template-switch {{isGenerating || selectingImage ? 'template-switch--disabled' : ''}}" role="tablist" aria-label="选择图文模板" aria-disabled="{{isGenerating || selectingImage}}">
     <view
       class="template-switch__item"
       role="tab"
@@ -58,7 +58,15 @@
   >
     <swiper-item wx:for="{{renderedImageUrls}}" wx:key="*this" class="card-slide">
       <view class="card-item">
-        <image class="card-image" src="{{item}}" mode="widthFix" show-menu-by-longpress />
+        <image class="card-image" src="{{item}}" mode="widthFix" />
+        <view wx:if="{{renderError}}" class="card-preview-overlay">
+          <view class="card-preview-overlay__title">{{renderErrorMessage}}</view>
+          <button class="card-preview-overlay__retry" bindtap="retryPreview">重新生成</button>
+        </view>
+        <view wx:elif="{{isRenderingCards}}" class="card-preview-overlay">
+          <view class="card-preview-overlay__spinner" />
+          <view class="card-preview-overlay__title">正在更新预览 {{renderProgressText}}</view>
+        </view>
         <view
           wx:if="{{!isExampleContent}}"
           class="circle-image-picker {{selectedImagePaths[index] ? 'circle-image-picker--selected' : ''}} {{selectingImage && selectingImageIndex === index ? 'circle-image-picker--loading' : ''}}"
@@ -94,15 +102,15 @@
     <swiper-item wx:elif="{{!renderedImageUrls.length}}" class="card-slide">
       <view class="card-item card-item--preview-loading">
         <view class="card-loading">
-          <view class="card-loading__title">正在生成短句卡片</view>
-          <view class="card-loading__desc">正在同步预览和导出样式</view>
+          <view class="card-loading__title">正在生成预览 {{renderProgressText}}</view>
+          <view class="card-loading__desc">完成后可导出高清图片</view>
         </view>
       </view>
     </swiper-item>
   </swiper>
 
   <view class="page-count" wx:if="{{pages.length}}">
-    {{activeIndex + 1}} / {{pages.length}}
+    预览 · {{activeIndex + 1}} / {{pages.length}}
   </view>
 
   <text-card-action-bar
