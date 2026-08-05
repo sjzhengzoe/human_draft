@@ -27,7 +27,7 @@ test("template pages distinguish examples and expose safe action states", async 
     assert.match(template, /has-content=/);
     assert.match(template, /export-ready=/);
     assert.match(template, /重新生成/);
-    assert.match(template, /图文分卡/);
+    assert.match(template, /图文创作/);
   }
 
   const editor = await readFile(
@@ -45,7 +45,7 @@ test("template pages distinguish examples and expose safe action states", async 
   assert.match(editorTemplate, /custom-back=/);
   assert.match(editorTemplate, /app-dialog/);
   assert.match(editorTemplate, /characterCount/);
-  assert.match(editorTemplate, /formatHint/);
+  assert.match(editorTemplate, /maxlength=/);
 
   const actionBar = await readFile(
     new URL("src/components/text-card-action-bar/index.ts", projectRoot),

@@ -1,4 +1,6 @@
 import { checkTextContent } from "../../services/content-security";
+import { APP_FONTS } from "../../config/fonts";
+import { loadAppFont } from "../../services/font-loader";
 import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
@@ -80,9 +82,7 @@ import {
   const CANVAS_SPACER_HEIGHT = scaleCanvasValue(13);
   const CANVAS_TITLE_BOTTOM_GAP = scaleCanvasValue(9);
   const CANVAS_TITLE_NEXT_GAP = scaleCanvasValue(20);
-  const DOUYIN2_FONT_FAMILY = "FangzhengBoyaFangkansong";
-  const DOUYIN2_FONT_URL =
-    "https://gufeifei.cn/fonts/fangzhengboyafangkansong.woff2?v=20260705";
+  const DOUYIN2_FONT_FAMILY = APP_FONTS.ui.family;
   const CANVAS_TEXT_FONT_FAMILY = `"${DOUYIN2_FONT_FAMILY}", "Songti SC", STSong, "Noto Serif CJK SC", serif`;
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
@@ -125,7 +125,6 @@ import {
     "这里填写第三张卡片的内容",
   ].join("\n");
 
-  let douyin2FontPromise: Promise<void> | undefined;
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
   let clearUndoSnapshot: ClearSnapshot | undefined;
@@ -863,29 +862,7 @@ import {
   }
 
   function ensureDouyin2FontLoaded() {
-    if (douyin2FontPromise) return douyin2FontPromise;
-
-    douyin2FontPromise = new Promise<void>((resolve, reject) => {
-      wx.loadFontFace({
-        family: DOUYIN2_FONT_FAMILY,
-        source: `url("${DOUYIN2_FONT_URL}")`,
-        desc: {
-          style: "normal",
-          weight: "normal",
-        },
-        global: true,
-        scopes: ["webview", "native"],
-        success: () => {
-          setTimeout(resolve, 80);
-        },
-        fail: (error) => {
-          douyin2FontPromise = undefined;
-          reject(error);
-        },
-      });
-    });
-
-    return douyin2FontPromise;
+    return loadAppFont(APP_FONTS.ui);
   }
 
   function enqueueRender<T>(task: () => Promise<T>) {

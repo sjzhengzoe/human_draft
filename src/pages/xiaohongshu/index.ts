@@ -1,4 +1,6 @@
 import { checkTextContent } from "../../services/content-security";
+import { APP_FONTS } from "../../config/fonts";
+import { loadAppFont } from "../../services/font-loader";
 import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
@@ -12,6 +14,7 @@ import {
     | "clear"
     | "export";
   type CopyMode = "xiaohongshu" | "douyin";
+  type RenderQuality = "preview" | "export";
 
   type Slide = {
     order: string;
@@ -20,8 +23,24 @@ import {
 
   type CombinedFontOption = {
     family: string;
-    url: string;
-    fontSize: number;
+  };
+
+  type CanvasMetrics = {
+    width: number;
+    height: number;
+    textFont: string;
+    textX: number;
+    safeY: number;
+    lineHeight: number;
+    orderBodyGap: number;
+    paragraphGap: number;
+    textMaxWidth: number;
+    combinedPaddingLeft: number;
+    combinedPaddingRight: number;
+    combinedSafeY: number;
+    combinedFontSize: number;
+    combinedOrderBottomGap: number;
+    combinedSectionGap: number;
   };
 
   type CanvasTextLine = {
@@ -93,34 +112,13 @@ import {
   const CANVAS_ID = "xiaohongshuExportCanvas";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
-  const CANVAS_WIDTH = 2880;
-  const CANVAS_SCALE = CANVAS_WIDTH / BASE_CANVAS_WIDTH;
-  const CANVAS_HEIGHT = Math.round(BASE_CANVAS_HEIGHT * CANVAS_SCALE);
-  const RED3_FONT_FAMILY = "Red3GB2312";
-  const RED3_FONT_URL =
-    "https://www.gufeifei.cn/fonts/red3-gb2312.woff2?v=20260705";
-  const CANVAS_FONT_SIZE = scaleCanvasValue(40);
-  const CANVAS_TEXT_FONT = `normal ${CANVAS_FONT_SIZE}px "${RED3_FONT_FAMILY}", "Songti SC", STSong, "Noto Serif CJK SC", serif`;
-  const CANVAS_TEXT_X = scaleCanvasValue(80);
-  const CANVAS_SAFE_Y = scaleCanvasValue(100);
-  const CANVAS_LINE_HEIGHT = scaleCanvasValue(62);
-  const CANVAS_ORDER_BODY_GAP = scaleCanvasValue(54);
-  const CANVAS_PARAGRAPH_GAP = scaleCanvasValue(32);
-  const CANVAS_TEXT_MAX_WIDTH = CANVAS_WIDTH - CANVAS_TEXT_X * 2;
+  const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
+  const EXPORT_CANVAS_WIDTH = 2880;
+  const RED3_FONT_FAMILY = APP_FONTS.red3.family;
   const SECOND_THEME_BASE_WIDTH = 300;
-  const SECOND_THEME_SCALE = CANVAS_WIDTH / SECOND_THEME_BASE_WIDTH;
-  const SECOND_THEME_PADDING_LEFT = scaleSecondThemeValue(22);
-  const SECOND_THEME_PADDING_RIGHT = scaleSecondThemeValue(49);
-  const SECOND_THEME_SAFE_Y = scaleSecondThemeValue(38);
-  const SECOND_THEME_BODY_FONT_SIZE = CANVAS_FONT_SIZE;
-  const SECOND_THEME_BODY_LINE_HEIGHT = CANVAS_LINE_HEIGHT;
-  const SECOND_THEME_ORDER_BOTTOM_GAP = scaleSecondThemeValue(3);
-  const SECOND_THEME_SECTION_GAP = SECOND_THEME_BODY_LINE_HEIGHT;
   const COMBINED_FONT_OPTIONS: CombinedFontOption[] = [
     {
       family: RED3_FONT_FAMILY,
-      url: RED3_FONT_URL,
-      fontSize: SECOND_THEME_BODY_FONT_SIZE,
     },
   ];
   const XIAOHONGSHU_BLANK_LINE = "\u2800";
@@ -190,8 +188,6 @@ import {
     "这里填写第三张卡片的内容",
   ].join("\n");
 
-  let red3FontPromise: Promise<void> | undefined;
-  const combinedFontPromises = new Map<string, Promise<void>>();
   let renderRequestId = 0;
   let renderChain = Promise.resolve();
   let clearUndoSnapshot: ClearSnapshot | undefined;
@@ -542,7 +538,7 @@ import {
         });
 
         try {
-          const urls = await this.renderSlidesToImages();
+          const urls = await this.renderSlidesToImages(requestId);
           if (requestId !== renderRequestId) return;
 
           this.setData({
@@ -569,12 +565,26 @@ import {
         this.refreshRenderedImages();
       },
 
-      renderSlidesToImages(): Promise<string[]> {
-        return this.generateExportImages();
+      renderSlidesToImages(requestId: number): Promise<string[]> {
+        return this.generateImages("preview", requestId);
       },
 
       generateExportImages(): Promise<string[]> {
+        return this.generateImages("export");
+      },
+
+      generateImages(
+        quality: RenderQuality,
+        previewRequestId?: number,
+      ): Promise<string[]> {
+        const slides = this.data.slides;
+        const metrics = createCanvasMetrics(quality);
+        const isStalePreview = () =>
+          quality === "preview" && previewRequestId !== renderRequestId;
+
         return enqueueRender(async () => {
+          if (isStalePreview()) return [];
+
           try {
             await ensureRed3FontLoaded();
           } catch (error) {
@@ -583,23 +593,33 @@ import {
 
           const urls: string[] = [];
 
-          if (!this.data.slides.length) return urls;
+          if (!slides.length || isStalePreview()) return urls;
 
-          for (const [index, slide] of this.data.slides.entries()) {
-            urls.push(await this.generateSlideImage(slide, index));
+          const canvas = await this.getExportCanvas();
+          const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
+
+          for (const [index, slide] of slides.entries()) {
+            if (isStalePreview()) return [];
+            urls.push(
+              await this.generateSlideImage(
+                slide,
+                index,
+                canvas,
+                backgroundImage,
+                metrics,
+              ),
+            );
           }
 
           for (const fontOption of COMBINED_FONT_OPTIONS) {
-            try {
-              await ensureCombinedFontLoaded(fontOption);
-            } catch (error) {
-              console.warn("合并图字体不可用，使用系统字体回退", error);
-            }
+            if (isStalePreview()) return [];
             urls.push(
               await this.generateCombinedImage(
-                this.data.slides,
+                slides,
                 fontOption.family,
-                fontOption.fontSize,
+                canvas,
+                backgroundImage,
+                metrics,
               ),
             );
           }
@@ -608,76 +628,80 @@ import {
         });
       },
 
-      async generateSlideImage(slide: Slide, slideIndex: number): Promise<string> {
-        const canvas = await this.getExportCanvas();
+      async generateSlideImage(
+        slide: Slide,
+        slideIndex: number,
+        canvas: Canvas2DNode,
+        backgroundImage: unknown,
+        metrics: CanvasMetrics,
+      ): Promise<string> {
         const ctx = canvas.getContext("2d");
 
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+        canvas.width = metrics.width;
+        canvas.height = metrics.height;
 
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
-        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.clearRect(0, 0, metrics.width, metrics.height);
+        ctx.drawImage(backgroundImage, 0, 0, metrics.width, metrics.height);
         ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, metrics.width, metrics.height);
         ctx.fillStyle = "#1a1a1a";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
-        ctx.font = CANVAS_TEXT_FONT;
+        ctx.font = metrics.textFont;
 
         const paragraphLines = slide.paragraphs.map((paragraph) =>
           paragraph
             .split("\n")
-            .flatMap((line) => wrapLine(line, ctx, CANVAS_TEXT_MAX_WIDTH)),
+            .flatMap((line) => wrapLine(line, ctx, metrics.textMaxWidth)),
         );
-        const textBlockHeight = getCanvasTextBlockHeight(paragraphLines);
-        if (textBlockHeight > CANVAS_HEIGHT - CANVAS_SAFE_Y * 2) {
+        const textBlockHeight = getCanvasTextBlockHeight(paragraphLines, metrics);
+        if (textBlockHeight > metrics.height - metrics.safeY * 2) {
           throw new Error(`第 ${slideIndex + 1} 页内容过长，请精简后重试`);
         }
         const textTop = Math.max(
-          CANVAS_SAFE_Y,
-          Math.round((CANVAS_HEIGHT - textBlockHeight) / 2),
+          metrics.safeY,
+          Math.round((metrics.height - textBlockHeight) / 2),
         );
 
-        ctx.fillText(slide.order, CANVAS_TEXT_X, textTop);
+        ctx.fillText(slide.order, metrics.textX, textTop);
 
-        let y = textTop + CANVAS_LINE_HEIGHT + CANVAS_ORDER_BODY_GAP;
+        let y = textTop + metrics.lineHeight + metrics.orderBodyGap;
         paragraphLines.forEach((lines) => {
           lines.forEach((line) => {
-            if (y <= CANVAS_HEIGHT - CANVAS_SAFE_Y) {
+            if (y <= metrics.height - metrics.safeY) {
               drawCanvasTextLine(
                 ctx,
                 line,
-                CANVAS_TEXT_X,
+                metrics.textX,
                 y,
-                CANVAS_TEXT_MAX_WIDTH,
+                metrics.textMaxWidth,
               );
             }
-            y += CANVAS_LINE_HEIGHT;
+            y += metrics.lineHeight;
           });
 
-          y += CANVAS_PARAGRAPH_GAP;
+          y += metrics.paragraphGap;
         });
 
-        return canvasToTempFilePath(canvas);
+        return canvasToTempFilePath(canvas, metrics);
       },
 
       async generateCombinedImage(
         slides: Slide[],
         fontFamily: string,
-        fontSize: number,
+        canvas: Canvas2DNode,
+        backgroundImage: unknown,
+        metrics: CanvasMetrics,
       ): Promise<string> {
-        const canvas = await this.getExportCanvas();
         const ctx = canvas.getContext("2d");
-        const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
+        canvas.width = metrics.width;
+        canvas.height = metrics.height;
 
-        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.clearRect(0, 0, metrics.width, metrics.height);
+        ctx.drawImage(backgroundImage, 0, 0, metrics.width, metrics.height);
         ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, metrics.width, metrics.height);
         ctx.fillStyle = "#000000";
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
@@ -685,32 +709,32 @@ import {
         const layout = createCombinedLayout(
           slides,
           fontFamily,
-          fontSize,
           ctx,
+          metrics,
         );
-        if (layout.height > CANVAS_HEIGHT - SECOND_THEME_SAFE_Y * 2) {
+        if (layout.height > metrics.height - metrics.combinedSafeY * 2) {
           throw new Error("合并版内容过长，请减少卡片或精简文案");
         }
         const textTop = Math.max(
-          SECOND_THEME_SAFE_Y,
-          Math.round((CANVAS_HEIGHT - layout.height) / 2),
+          metrics.combinedSafeY,
+          Math.round((metrics.height - layout.height) / 2),
         );
         let y = textTop;
 
         ctx.font = layout.font;
         layout.sections.forEach((section, index) => {
-          ctx.fillText(section.order, SECOND_THEME_PADDING_LEFT, y);
+          ctx.fillText(section.order, metrics.combinedPaddingLeft, y);
           y += layout.lineHeight + layout.orderBottomGap;
 
           section.lines.forEach((line) => {
             drawCanvasTextLine(
               ctx,
               line,
-              SECOND_THEME_PADDING_LEFT,
+              metrics.combinedPaddingLeft,
               y,
-              CANVAS_WIDTH -
-                SECOND_THEME_PADDING_LEFT -
-                SECOND_THEME_PADDING_RIGHT,
+              metrics.width -
+                metrics.combinedPaddingLeft -
+                metrics.combinedPaddingRight,
             );
             y += layout.lineHeight;
           });
@@ -720,7 +744,7 @@ import {
           }
         });
 
-        return canvasToTempFilePath(canvas);
+        return canvasToTempFilePath(canvas, metrics);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -1033,26 +1057,26 @@ import {
   function createCombinedLayout(
     slides: Slide[],
     fontFamily: string,
-    fontSize: number,
     ctx: Canvas2DContext,
+    metrics: CanvasMetrics,
   ) {
-    return buildCombinedLayout(slides, fontFamily, fontSize, ctx);
+    return buildCombinedLayout(slides, fontFamily, ctx, metrics);
   }
 
   function buildCombinedLayout(
     slides: Slide[],
     fontFamily: string,
-    fontSize: number,
     ctx: Canvas2DContext,
+    metrics: CanvasMetrics,
   ): CombinedLayout {
-    const lineHeight = SECOND_THEME_BODY_LINE_HEIGHT;
-    const orderBottomGap = SECOND_THEME_ORDER_BOTTOM_GAP;
-    const sectionGap = SECOND_THEME_SECTION_GAP;
+    const lineHeight = metrics.lineHeight;
+    const orderBottomGap = metrics.combinedOrderBottomGap;
+    const sectionGap = metrics.combinedSectionGap;
     const maxTextWidth =
-      CANVAS_WIDTH -
-      SECOND_THEME_PADDING_LEFT -
-      SECOND_THEME_PADDING_RIGHT;
-    const font = `normal ${fontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
+      metrics.width -
+      metrics.combinedPaddingLeft -
+      metrics.combinedPaddingRight;
+    const font = `normal ${metrics.combinedFontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
     ctx.font = font;
     const sections = slides.map((slide) => {
       const body = getCombinedBody(slide.paragraphs);
@@ -1160,23 +1184,51 @@ import {
     return lines;
   }
 
-  function getCanvasTextBlockHeight(paragraphLines: CanvasTextLine[][]) {
+  function getCanvasTextBlockHeight(
+    paragraphLines: CanvasTextLine[][],
+    metrics: CanvasMetrics,
+  ) {
     const bodyHeight = paragraphLines.reduce((total, lines, index) => {
       const gap =
-        index === paragraphLines.length - 1 ? 0 : CANVAS_PARAGRAPH_GAP;
+        index === paragraphLines.length - 1 ? 0 : metrics.paragraphGap;
 
-      return total + lines.length * CANVAS_LINE_HEIGHT + gap;
+      return total + lines.length * metrics.lineHeight + gap;
     }, 0);
 
-    return CANVAS_LINE_HEIGHT + CANVAS_ORDER_BODY_GAP + bodyHeight;
+    return metrics.lineHeight + metrics.orderBodyGap + bodyHeight;
   }
 
-  function scaleCanvasValue(value: number) {
-    return Math.round(value * CANVAS_SCALE);
-  }
+  function createCanvasMetrics(quality: RenderQuality): CanvasMetrics {
+    const width =
+      quality === "preview" ? PREVIEW_CANVAS_WIDTH : EXPORT_CANVAS_WIDTH;
+    const canvasScale = width / BASE_CANVAS_WIDTH;
+    const secondThemeScale = width / SECOND_THEME_BASE_WIDTH;
+    const scaleCanvasValue = (value: number) =>
+      Math.round(value * canvasScale);
+    const scaleSecondThemeValue = (value: number) =>
+      Math.round(value * secondThemeScale);
+    const height = Math.round(BASE_CANVAS_HEIGHT * canvasScale);
+    const textX = scaleCanvasValue(80);
+    const lineHeight = scaleCanvasValue(62);
+    const combinedFontSize = scaleCanvasValue(40);
 
-  function scaleSecondThemeValue(value: number) {
-    return Math.round(value * SECOND_THEME_SCALE);
+    return {
+      width,
+      height,
+      textFont: `normal ${combinedFontSize}px "${RED3_FONT_FAMILY}", "Songti SC", STSong, "Noto Serif CJK SC", serif`,
+      textX,
+      safeY: scaleCanvasValue(100),
+      lineHeight,
+      orderBodyGap: scaleCanvasValue(54),
+      paragraphGap: scaleCanvasValue(32),
+      textMaxWidth: width - textX * 2,
+      combinedPaddingLeft: scaleSecondThemeValue(22),
+      combinedPaddingRight: scaleSecondThemeValue(49),
+      combinedSafeY: scaleSecondThemeValue(38),
+      combinedFontSize,
+      combinedOrderBottomGap: scaleSecondThemeValue(3),
+      combinedSectionGap: lineHeight,
+    };
   }
 
   function saveImageToPhotosAlbum(filePath: string) {
@@ -1199,14 +1251,17 @@ import {
     });
   }
 
-  function canvasToTempFilePath(canvas: Canvas2DNode) {
+  function canvasToTempFilePath(
+    canvas: Canvas2DNode,
+    metrics: CanvasMetrics,
+  ) {
     return new Promise<string>((resolve, reject) => {
       wx.canvasToTempFilePath({
         canvas,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        destWidth: CANVAS_WIDTH,
-        destHeight: CANVAS_HEIGHT,
+        width: metrics.width,
+        height: metrics.height,
+        destWidth: metrics.width,
+        destHeight: metrics.height,
         fileType: "png",
         success: (result) => resolve(result.tempFilePath),
         fail: reject,
@@ -1215,57 +1270,7 @@ import {
   }
 
   function ensureRed3FontLoaded() {
-    if (red3FontPromise) return red3FontPromise;
-
-    red3FontPromise = new Promise<void>((resolve, reject) => {
-      wx.loadFontFace({
-        family: RED3_FONT_FAMILY,
-        source: `url("${RED3_FONT_URL}")`,
-        desc: {
-          style: "normal",
-          weight: "normal",
-        },
-        global: true,
-        scopes: ["webview", "native"],
-        success: () => {
-          setTimeout(resolve, 80);
-        },
-        fail: (error) => {
-          red3FontPromise = undefined;
-          reject(error);
-        },
-      });
-    });
-
-    return red3FontPromise;
-  }
-
-  function ensureCombinedFontLoaded(fontOption: CombinedFontOption) {
-    const cachedPromise = combinedFontPromises.get(fontOption.family);
-    if (cachedPromise) return cachedPromise;
-
-    const fontPromise = new Promise<void>((resolve, reject) => {
-      wx.loadFontFace({
-        family: fontOption.family,
-        source: `url("${fontOption.url}")`,
-        desc: {
-          style: "normal",
-          weight: "normal",
-        },
-        global: true,
-        scopes: ["webview", "native"],
-        success: () => {
-          setTimeout(resolve, 80);
-        },
-        fail: (error) => {
-          combinedFontPromises.delete(fontOption.family);
-          reject(error);
-        },
-      });
-    });
-
-    combinedFontPromises.set(fontOption.family, fontPromise);
-    return fontPromise;
+    return loadAppFont(APP_FONTS.red3);
   }
 
   function enqueueRender<T>(task: () => Promise<T>) {

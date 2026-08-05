@@ -1,4 +1,6 @@
+import { APP_FONTS } from "../../../config/fonts"
 import { ensureLogin } from "../../../services/auth"
+import { loadAppFont } from "../../../services/font-loader"
 import { listCategories, listDishes, updatePrintStatus } from "../../../services/menu"
 import type { Category, Dish } from "../../../types/api"
 import {
@@ -53,10 +55,8 @@ const CARD_WIDTH = 1748
 const CARD_HEIGHT = 1240
 const CARD_OFFSET_X = (A4_WIDTH - CARD_WIDTH * 2) / 2
 const WEB_ASSET_ORIGIN = "https://gufeifei.cn"
-const DISH_FONT_FAMILY = "MenuDishName"
-const META_FONT_FAMILY = "MenuMetaText"
-const DISH_FONT_URL = `${WEB_ASSET_ORIGIN}/fonts/fangzhengboyafangkansong.woff2?v=20260705`
-const META_FONT_URL = `${WEB_ASSET_ORIGIN}/fonts/FZLTHProGlobal-Semibold.woff2?v=20260705`
+const DISH_FONT_FAMILY = APP_FONTS.ui.family
+const META_FONT_FAMILY = APP_FONTS.lantingSemibold.family
 const BASIC_A6_BACKGROUND_URL = encodeURI(
   `${WEB_ASSET_ORIGIN}/菜谱背景图/基础极简01.png`
 )
@@ -79,8 +79,6 @@ const EYEBROW_BOTTOM_MARGIN = (1.9 * 300) / 25.4
 const META_TOP_MARGIN = (2.1 * 300) / 25.4
 const DISH_NAME_LINE_HEIGHT = DISH_NAME_FONT_SIZE * 1.15
 
-let printFontsPromise: Promise<void> | undefined
-
 function downloadCanvasAsset(url: string, errorMessage: string): Promise<string> {
   return new Promise((resolve, reject) => {
     wx.downloadFile({
@@ -94,32 +92,15 @@ function downloadCanvasAsset(url: string, errorMessage: string): Promise<string>
   })
 }
 
-function loadPrintFont(family: string, url: string, weight: "normal" | "600"): Promise<void> {
-  return new Promise((resolve, reject) => {
-    wx.loadFontFace({
-      family,
-      source: `url("${url}")`,
-      desc: { style: "normal", weight },
-      global: true,
-      scopes: ["webview", "native"],
-      success: () => setTimeout(resolve, 80),
-      fail: () => reject(new Error("Web 菜单字体加载失败，请检查网络后重试"))
-    })
-  })
-}
-
-function ensurePrintFontsLoaded(): Promise<void> {
-  if (printFontsPromise) return printFontsPromise
-  printFontsPromise = Promise.all([
-    loadPrintFont(DISH_FONT_FAMILY, DISH_FONT_URL, "normal"),
-    loadPrintFont(META_FONT_FAMILY, META_FONT_URL, "600")
-  ])
-    .then(() => undefined)
-    .catch((error: unknown) => {
-      printFontsPromise = undefined
-      throw error
-    })
-  return printFontsPromise
+async function ensurePrintFontsLoaded(): Promise<void> {
+  try {
+    await Promise.all([
+      loadAppFont(APP_FONTS.ui),
+      loadAppFont(APP_FONTS.lantingSemibold)
+    ])
+  } catch {
+    throw new Error("Web 菜单字体加载失败，请检查网络后重试")
+  }
 }
 
 function loadCanvasImage(canvas: Canvas2DNode, src: string): Promise<CanvasImage> {
