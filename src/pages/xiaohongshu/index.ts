@@ -116,13 +116,10 @@ import {
   const SECOND_THEME_BODY_LINE_HEIGHT = CANVAS_LINE_HEIGHT;
   const SECOND_THEME_ORDER_BOTTOM_GAP = scaleSecondThemeValue(3);
   const SECOND_THEME_SECTION_GAP = SECOND_THEME_BODY_LINE_HEIGHT;
-  const SECOND_THEME_FONT_FAMILY = "FangzhengLantingheiExtralight";
-  const SECOND_THEME_FONT_URL =
-    "https://gufeifei.cn/fonts/FZLTHProGlobal-Extralight.woff2?v=20260802";
   const COMBINED_FONT_OPTIONS: CombinedFontOption[] = [
     {
-      family: SECOND_THEME_FONT_FAMILY,
-      url: SECOND_THEME_FONT_URL,
+      family: RED3_FONT_FAMILY,
+      url: RED3_FONT_URL,
       fontSize: SECOND_THEME_BODY_FONT_SIZE,
     },
   ];
