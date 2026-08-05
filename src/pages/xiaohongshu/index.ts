@@ -110,7 +110,7 @@ import {
   const SECOND_THEME_BASE_WIDTH = 300;
   const SECOND_THEME_SCALE = CANVAS_WIDTH / SECOND_THEME_BASE_WIDTH;
   const SECOND_THEME_PADDING_LEFT = scaleSecondThemeValue(22);
-  const SECOND_THEME_PADDING_RIGHT = scaleSecondThemeValue(26);
+  const SECOND_THEME_PADDING_RIGHT = scaleSecondThemeValue(60);
   const SECOND_THEME_SAFE_Y = scaleSecondThemeValue(38);
   const SECOND_THEME_BODY_FONT_SIZE = scaleCanvasValue(34);
   const SECOND_THEME_BODY_LINE_HEIGHT = CANVAS_LINE_HEIGHT;
