@@ -27,6 +27,7 @@ import {
   deleteMenuPlace,
   getMenuPlace,
   listMenuPlaces,
+  reorderMenuPlaces,
   replaceMenuPlaceImage,
   updateMenuPlace,
 } from "./lib/menu-places.mjs";
@@ -295,6 +296,15 @@ export function buildServer(options = {}) {
   app.get("/api/menu-places/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: { place: await getMenuPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id) },
+  }));
+
+  app.put("/api/menu-places/reorder", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await reorderMenuPlaces(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
   }));
 
   app.post("/api/menu-places", { preHandler: authenticated }, async (request, reply) => {

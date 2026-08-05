@@ -3,10 +3,17 @@ import {
   listCategories,
   listDishes,
   listMenuPlaces,
-  reorderDishSortOrders
+  reorderDishSortOrders,
+  reorderMenuPlaceSortOrders
 } from "../../services/menu"
 import { listDiningScenes } from "../../services/life-lists"
-import type { Category, Dish, MealPeriod, MenuPlace } from "../../types/api"
+import type {
+  Category,
+  Dish,
+  MealPeriod,
+  MenuPlace,
+  MenuPlaceDishPreview
+} from "../../types/api"
 import type { DiningScene } from "../../types/life-lists"
 import {
   activateAsyncPage,
@@ -30,6 +37,8 @@ let dragItemIds: string[] = []
 let suppressDishTapUntil = 0
 let dragInsertAfter = false
 let sortOriginalIds: string[] = []
+let outsideSortOriginalIds = new Map<string, string[]>()
+let outsidePlaceOriginalIds: string[] = []
 
 type MealPeriodTag = {
   key: MealPeriod
@@ -42,9 +51,23 @@ type RecordTypeFilter = "all" | "home" | "outside"
 type MenuDish = Dish & {
   mealPeriodTags: MealPeriodTag[]
   mealPeriodText: string
+  mainIngredientText: string
+  cookingMethodText: string
+  tasteText: string
   recordTypeLabel: string
   displayCategory: string
   tasteTags: string[]
+}
+
+type QuickOutsideDish = MenuPlaceDishPreview & {
+  mainIngredientText: string
+  cookingMethodText: string
+  tasteText: string
+}
+
+type QuickMenuPlace = Omit<MenuPlace, "dishes" | "preview_dishes"> & {
+  dishes: QuickOutsideDish[]
+  preview_dishes: QuickOutsideDish[]
 }
 
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
@@ -58,13 +81,15 @@ function toMenuDish(dish: Dish): MenuDish {
     Array.isArray(dish.meal_periods) && dish.meal_periods.length > 0
       ? dish.meal_periods
       : []
+  const cookingMethods = normalizeCookingTypes(dish.cooking_methods)
+  const tasteTags = normalizeTasteTags(dish.taste)
   const displayCategory = dish.record_type === "outside"
     ? dish.outside_category?.name || "未分类"
     : dish.category?.name || "未分类"
   return {
     ...dish,
-    cooking_methods: normalizeCookingTypes(dish.cooking_methods),
-    tasteTags: normalizeTasteTags(dish.taste),
+    cooking_methods: cookingMethods,
+    tasteTags,
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
     displayCategory,
     mealPeriodTags: mealPeriods
@@ -76,7 +101,28 @@ function toMenuDish(dish: Dish): MenuDish {
     mealPeriodText: mealPeriods
       .filter((key) => Boolean(MEAL_PERIOD_TEXT[key]))
       .map((key) => MEAL_PERIOD_TEXT[key])
-      .join("、")
+      .join("、"),
+    mainIngredientText: dish.main_ingredients.slice(0, 3).join("、"),
+    cookingMethodText: cookingMethods.join("、"),
+    tasteText: tasteTags.join("、")
+  }
+}
+
+function toQuickOutsideDish(dish: MenuPlaceDishPreview): QuickOutsideDish {
+  const cookingMethods = normalizeCookingTypes(dish.cooking_methods)
+  return {
+    ...dish,
+    mainIngredientText: dish.main_ingredients.slice(0, 3).join("、"),
+    cookingMethodText: cookingMethods.join("、"),
+    tasteText: normalizeTasteTags(dish.taste).join("、")
+  }
+}
+
+function toQuickMenuPlace(place: MenuPlace): QuickMenuPlace {
+  return {
+    ...place,
+    dishes: place.dishes.map(toQuickOutsideDish),
+    preview_dishes: place.preview_dishes.map(toQuickOutsideDish)
   }
 }
 
@@ -144,7 +190,7 @@ Page({
     categories: [] as Category[],
     outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
-    outsidePlaces: [] as MenuPlace[],
+    outsidePlaces: [] as QuickMenuPlace[],
     homePlaceId: "",
     displayMode: "quick" as DisplayMode,
     browseCurrentIndex: 0,
@@ -177,6 +223,8 @@ Page({
     deactivateAsyncPage(this)
     resetDragSession()
     sortOriginalIds = []
+    outsideSortOriginalIds.clear()
+    outsidePlaceOriginalIds = []
   },
 
   async refreshData() {
@@ -229,13 +277,13 @@ Page({
         categories,
         outsideCategories,
         dishes: dishes.map(toMenuDish),
-        outsidePlaces,
+        outsidePlaces: outsidePlaces.map(toQuickMenuPlace),
         homePlaceId,
         activeFilter,
         activeRecordType,
         ...browsePosition,
         canWrite: session.user.can_write,
-        canReorder: session.user.can_write && activeRecordType === "home",
+        canReorder: session.user.can_write,
         draggingIndex: -1,
         dragTargetIndex: -1
       })
@@ -263,7 +311,9 @@ Page({
       activeFilter: filter,
       activeRecordType: recordTypeFromFilter(filter),
       browseCurrentIndex: 0,
-      sortEditing: false
+      sortEditing: false,
+      contentLoading: true,
+      errorMessage: ""
     }, () => this.refreshData())
   },
 
@@ -286,7 +336,9 @@ Page({
       activeFilter: filter,
       activeRecordType: recordType,
       browseCurrentIndex: 0,
-      sortEditing: false
+      sortEditing: false,
+      contentLoading: true,
+      errorMessage: ""
     }, () => this.refreshData())
   },
 
@@ -309,8 +361,59 @@ Page({
   async handleSortEditingToggle() {
     if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
     if (!this.data.sortEditing) {
+      if (this.data.activeRecordType === "outside") {
+        outsidePlaceOriginalIds = this.data.outsidePlaces.map((place) => place.id)
+        outsideSortOriginalIds = new Map(
+          this.data.outsidePlaces.map((place) => [
+            place.id,
+            place.dishes.map((dish) => dish.id)
+          ])
+        )
+        this.setData({ sortEditing: true, displayMode: "quick" })
+        return
+      }
       sortOriginalIds = this.data.dishes.map((dish) => dish.id)
       this.setData({ sortEditing: true, displayMode: "quick" })
+      return
+    }
+
+    if (this.data.activeRecordType === "outside") {
+      const placeIds = this.data.outsidePlaces.map((place) => place.id)
+      const placeOrderChanged = !hasSameDishOrder(outsidePlaceOriginalIds, placeIds)
+      const changedPlaces = this.data.outsidePlaces.filter((place) => !hasSameDishOrder(
+        outsideSortOriginalIds.get(place.id) || [],
+        place.dishes.map((dish) => dish.id)
+      ))
+      if (!placeOrderChanged && changedPlaces.length === 0) {
+        outsideSortOriginalIds.clear()
+        outsidePlaceOriginalIds = []
+        this.setData({ sortEditing: false })
+        return
+      }
+
+      this.setData({ ordering: true })
+      try {
+        const saveTasks = changedPlaces.map((place) =>
+          reorderDishSortOrders(place.dishes.map((dish) => dish.id), place.id)
+        )
+        if (placeOrderChanged) saveTasks.push(reorderMenuPlaceSortOrders(placeIds))
+        await Promise.all(saveTasks)
+        if (!isAsyncPageActive(this)) return
+        outsideSortOriginalIds.clear()
+        outsidePlaceOriginalIds = []
+        this.setData({ sortEditing: false })
+        wx.showToast({ title: "排序已保存", icon: "success" })
+        await this.refreshData()
+      } catch (error) {
+        if (isAsyncPageActive(this)) {
+          wx.showToast({
+            title: error instanceof Error ? error.message : "排序保存失败",
+            icon: "none"
+          })
+        }
+      } finally {
+        if (isAsyncPageActive(this)) this.setData({ ordering: false })
+      }
       return
     }
 
@@ -410,7 +513,7 @@ Page({
   },
 
   handlePlaceTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.contentLoading) return
+    if (this.data.sortEditing || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/menu/place/index?id=${id}` })
   },
@@ -430,6 +533,47 @@ Page({
     const [dish] = dishes.splice(index, 1)
     dishes.splice(targetIndex, 0, dish)
     this.setData({ dishes })
+  },
+
+  handleOutsideMove(event: WechatMiniprogram.TouchEvent) {
+    const placeIndex = Number(event.currentTarget.dataset.placeIndex)
+    const dishIndex = Number(event.currentTarget.dataset.dishIndex)
+    const direction = Number(event.currentTarget.dataset.direction)
+    const targetIndex = dishIndex + direction
+    const place = this.data.outsidePlaces[placeIndex]
+    if (
+      !this.data.canReorder ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      !place ||
+      targetIndex < 0 ||
+      targetIndex >= place.dishes.length
+    ) return
+
+    const outsidePlaces = [...this.data.outsidePlaces]
+    const dishes = [...place.dishes]
+    const [dish] = dishes.splice(dishIndex, 1)
+    dishes.splice(targetIndex, 0, dish)
+    outsidePlaces[placeIndex] = { ...place, dishes }
+    this.setData({ outsidePlaces })
+  },
+
+  handleOutsidePlaceMove(event: WechatMiniprogram.TouchEvent) {
+    const placeIndex = Number(event.currentTarget.dataset.placeIndex)
+    const direction = Number(event.currentTarget.dataset.direction)
+    const targetIndex = placeIndex + direction
+    if (
+      !this.data.canReorder ||
+      !this.data.sortEditing ||
+      this.data.ordering ||
+      targetIndex < 0 ||
+      targetIndex >= this.data.outsidePlaces.length
+    ) return
+
+    const outsidePlaces = [...this.data.outsidePlaces]
+    const [place] = outsidePlaces.splice(placeIndex, 1)
+    outsidePlaces.splice(targetIndex, 0, place)
+    this.setData({ outsidePlaces })
   },
 
   handleDragStart(event: WechatMiniprogram.TouchEvent) {

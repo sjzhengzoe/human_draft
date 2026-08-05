@@ -375,7 +375,7 @@ Page({
       wx.showToast({ title: "最多添加 30 道衍生菜", icon: "none" })
       return
     }
-    if (!category) {
+    if (recordType === "home" && !category) {
       wx.showToast({ title: "请选择分类", icon: "none" })
       return
     }
@@ -395,7 +395,7 @@ Page({
         await updateDish(this.data.dishId, {
           name,
           place_id: this.data.placeId,
-          category_id: category?.id || null,
+          category_id: recordType === "home" ? category?.id || null : null,
           meal_periods: mealPeriods,
           main_ingredients: mainIngredients,
           introduction,
@@ -411,7 +411,7 @@ Page({
           name,
           recordType,
           placeId: this.data.placeId,
-          categoryId: category?.id,
+          categoryId: recordType === "home" ? category?.id : undefined,
           imagePath: this.data.selectedImagePath || undefined,
           mealPeriods,
           mainIngredients,

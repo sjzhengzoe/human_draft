@@ -7,6 +7,7 @@ import {
   replaceMenuPlaceImage,
   updateMenuPlace
 } from "../../../services/menu"
+import type { MenuPlace } from "../../../types/api"
 import type { DiningScene } from "../../../types/life-lists"
 import {
   activateAsyncPage,
@@ -31,6 +32,7 @@ Page({
     showDeleteDialog: false,
     loading: true,
     saving: false,
+    savingForDish: false,
     deleting: false
   },
 
@@ -119,48 +121,77 @@ Page({
     wx.showToast({ title: event.detail.message || "图片裁剪失败", icon: "none" })
   },
 
-  async handleSave() {
-    if (this.data.saving || this.data.deleting) return
+  validatePlaceInput(): { name: string; category: DiningScene } | null {
+    if (this.data.saving || this.data.deleting) return null
     const name = this.data.name.trim()
     const category = this.data.categories[this.data.categoryIndex]
     if (!name) {
       wx.showToast({ title: "请填写店铺名", icon: "none" })
-      return
+      return null
     }
     if (!category) {
       wx.showToast({ title: "请选择外食分类", icon: "none" })
-      return
+      return null
     }
     if (!this.data.placeId && !this.data.selectedImagePath) {
       wx.showToast({ title: "请选择店铺图片", icon: "none" })
-      return
+      return null
     }
+    return { name, category }
+  },
+
+  async persistPlace(): Promise<MenuPlace | null> {
+    const input = this.validatePlaceInput()
+    if (!input) return null
     this.setData({ saving: true })
     wx.showLoading({ title: "保存中", mask: true })
     try {
+      let place: MenuPlace
       if (this.data.placeId) {
-        await updateMenuPlace(this.data.placeId, {
-          name,
-          outside_category_id: category.id
+        place = await updateMenuPlace(this.data.placeId, {
+          name: input.name,
+          outside_category_id: input.category.id
         })
         if (this.data.selectedImagePath) {
-          await replaceMenuPlaceImage(this.data.placeId, this.data.selectedImagePath)
+          place = await replaceMenuPlaceImage(this.data.placeId, this.data.selectedImagePath)
         }
       } else {
-        await createMenuPlace({
-          name,
-          outsideCategoryId: category.id,
+        place = await createMenuPlace({
+          name: input.name,
+          outsideCategoryId: input.category.id,
           imagePath: this.data.selectedImagePath
         })
       }
-      if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: "已保存", icon: "success" })
-      wx.navigateBack()
+      return place
     } catch (error) {
       if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
+      return null
     } finally {
       wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ saving: false })
+    }
+  },
+
+  async handleSave() {
+    this.setData({ savingForDish: false })
+    const place = await this.persistPlace()
+    if (!place || !isAsyncPageActive(this)) return
+    wx.showToast({ title: "已保存", icon: "success" })
+    wx.navigateBack()
+  },
+
+  async handleAddDish() {
+    if (this.data.saving || this.data.deleting) return
+    const existingPlace = Boolean(this.data.placeId)
+    this.setData({ savingForDish: true })
+    try {
+      const place = await this.persistPlace()
+      if (!place || !isAsyncPageActive(this)) return
+      const url = `/pages/menu/edit/index?placeId=${place.id}`
+      if (existingPlace) wx.navigateTo({ url })
+      else wx.redirectTo({ url })
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ savingForDish: false })
     }
   },
 

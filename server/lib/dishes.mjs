@@ -518,7 +518,7 @@ export async function createDish(supabase, userId, fields, image) {
   const cookingMethods = place || recordType === "home"
     ? normalizeCookingMethods(fields.cooking_methods, true)
     : [];
-  const taste = place || recordType === "home" ? normalizeTaste(fields.taste, true) : "";
+  const taste = place || recordType === "home" ? normalizeTaste(fields.taste, true) : [];
   const flavorOptions = place || recordType === "home"
     ? normalizeFlavorOptions(fields.flavor_options, true)
     : [];

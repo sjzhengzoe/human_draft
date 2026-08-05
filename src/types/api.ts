@@ -39,6 +39,10 @@ export type MenuRecordType = "home" | "outside"
 export type MenuPlaceDishPreview = {
   id: string
   name: string
+  introduction: string
+  main_ingredients: string[]
+  cooking_methods: string[]
+  taste: string
   image_url: string
   thumbnail_url: string
 }

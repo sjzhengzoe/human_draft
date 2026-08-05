@@ -32,7 +32,8 @@
       </view>
     </view>
     <view class="footer-actions">
-      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存店铺</button>
+      <button class="save-button" loading="{{saving && !savingForDish}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存店铺</button>
+      <button class="add-dish-button" loading="{{savingForDish}}" disabled="{{saving || deleting}}" bindtap="handleAddDish">保存并新增菜品</button>
       <button wx:if="{{placeId}}" class="delete-button" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" />删除店铺</button>
     </view>
   </view>
@@ -40,4 +41,4 @@
 
 <app-dialog visible="{{showDeleteDialog}}" title="删除店铺" content="店铺和店内菜品都会删除，且无法恢复。" confirmText="删除" bind:cancel="handleDeleteCancel" bind:confirm="handleDeleteConfirm" />
 
-<image-cropper wx:if="{{showImageCropper}}" src="{{cropSourcePath}}" shape="rectangle" aspect-ratio="1.333333" output-size="1536" title="裁剪为 4:3 图片" bind:cancel="handleImageCropCancel" bind:confirm="handleImageCropConfirm" bind:error="handleImageCropError" />
+<image-cropper wx:if="{{showImageCropper}}" src="{{cropSourcePath}}" shape="square" aspect-ratio="1" output-size="1080" title="裁剪为 1:1 图片" bind:cancel="handleImageCropCancel" bind:confirm="handleImageCropConfirm" bind:error="handleImageCropError" />

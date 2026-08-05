@@ -4,6 +4,7 @@ import {
   createDish,
   deleteDish,
   replaceDishImage,
+  toDishResponse,
   updateDish,
 } from "./dishes.mjs";
 import { throwSupabaseError } from "./supabase.mjs";
@@ -16,11 +17,16 @@ function publicUrlFor(supabase, path) {
 }
 
 function toPreviewDish(supabase, dish) {
+  const normalizedDish = toDishResponse(supabase, dish);
   return {
-    id: dish.id,
-    name: dish.name,
-    image_url: publicUrlFor(supabase, dish.image_path),
-    thumbnail_url: publicUrlFor(supabase, dish.thumbnail_path || dish.image_path),
+    id: normalizedDish.id,
+    name: normalizedDish.name,
+    introduction: normalizedDish.introduction,
+    main_ingredients: normalizedDish.main_ingredients,
+    cooking_methods: normalizedDish.cooking_methods,
+    taste: normalizedDish.taste,
+    image_url: normalizedDish.image_url,
+    thumbnail_url: normalizedDish.thumbnail_url,
   };
 }
 
@@ -86,7 +92,7 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   const placeIds = places.map((place) => place.id);
   const { data: dishes, error: dishError } = await supabase
     .from("dishes")
-    .select("id, name, place_id, image_path, thumbnail_path, place_sort_order, created_at")
+    .select("id, name, introduction, main_ingredients, cooking_methods, taste, place_id, image_path, thumbnail_path, place_sort_order, created_at")
     .eq("user_id", userId)
     .in("place_id", placeIds)
     .order("place_sort_order", { ascending: true })
@@ -116,13 +122,44 @@ export async function getMenuPlace(supabase, userId, placeId) {
   assertCondition(data, 404, "PLACE_NOT_FOUND", "用餐地点不存在。" );
   const { data: dishes, error: dishError } = await supabase
     .from("dishes")
-    .select("id, name, place_id, image_path, thumbnail_path, place_sort_order, created_at")
+    .select("id, name, introduction, main_ingredients, cooking_methods, taste, place_id, image_path, thumbnail_path, place_sort_order, created_at")
     .eq("user_id", userId)
     .eq("place_id", placeId)
     .order("place_sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(dishError, "读取地点菜品失败。" );
   return toMenuPlaceResponse(supabase, data, dishes || []);
+}
+
+export async function reorderMenuPlaces(supabase, userId, body) {
+  const ids = Array.isArray(body.ids) ? body.ids : [];
+  assertCondition(
+    ids.length > 0
+      && ids.length <= 500
+      && ids.every((id) => typeof id === "string" && UUID_PATTERN.test(id)),
+    400,
+    "INVALID_PLACE_IDS",
+    "排序列表不能为空。",
+  );
+  assertCondition(
+    new Set(ids).size === ids.length,
+    400,
+    "DUPLICATE_PLACE_IDS",
+    "排序列表包含重复店铺。",
+  );
+
+  const { error } = await supabase.rpc("reorder_menu_places", {
+    p_user_id: userId,
+    p_place_ids: ids,
+  });
+  throwSupabaseError(error, "保存店铺排序失败。", {
+    "22023": {
+      statusCode: 400,
+      code: "INVALID_PLACE_ORDER",
+      message: "排序列表包含不存在或不同分类的店铺。",
+    },
+  });
+  return { updated: ids.length };
 }
 
 export async function createMenuPlace(supabase, userId, fields, image) {
@@ -140,7 +177,7 @@ export async function createMenuPlace(supabase, userId, fields, image) {
     main_ingredients: "[]",
     introduction: "",
     cooking_methods: "[]",
-    taste: "",
+    taste: "[]",
     flavor_options: "[]",
   }, image);
   return getMenuPlace(supabase, userId, proxy.id);

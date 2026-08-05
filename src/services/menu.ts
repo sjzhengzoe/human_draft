@@ -37,13 +37,26 @@ function normalizeDish(dish: Dish): Dish {
 }
 
 function normalizeMenuPlace(place: MenuPlace): MenuPlace {
-  const previewDishes = Array.isArray(place.preview_dishes) ? place.preview_dishes : []
+  const normalizePreviewDish = (dish: MenuPlace["dishes"][number]) => ({
+    ...dish,
+    introduction: typeof dish.introduction === "string" ? dish.introduction : "",
+    main_ingredients: normalizeStringArray(dish.main_ingredients),
+    cooking_methods: normalizeStringArray(dish.cooking_methods),
+    taste: typeof dish.taste === "string" ? dish.taste : "",
+    image_url: typeof dish.image_url === "string" ? dish.image_url : "",
+    thumbnail_url: typeof dish.thumbnail_url === "string" ? dish.thumbnail_url : ""
+  })
+  const previewDishes = Array.isArray(place.preview_dishes)
+    ? place.preview_dishes.map(normalizePreviewDish)
+    : []
   return {
     ...place,
     image_url: typeof place.image_url === "string" ? place.image_url : "",
     thumbnail_url: typeof place.thumbnail_url === "string" ? place.thumbnail_url : "",
     dish_count: Number(place.dish_count || 0),
-    dishes: Array.isArray(place.dishes) ? place.dishes : previewDishes,
+    dishes: Array.isArray(place.dishes)
+      ? place.dishes.map(normalizePreviewDish)
+      : previewDishes,
     preview_dishes: previewDishes
   }
 }
@@ -234,5 +247,13 @@ export function reorderDishSortOrders(ids: string[], placeId?: string): Promise<
     path: "/api/dishes/reorder",
     method: "PUT",
     data: { ids, place_id: placeId || "" }
+  })
+}
+
+export function reorderMenuPlaceSortOrders(ids: string[]): Promise<{ updated: number }> {
+  return request<{ updated: number }>({
+    path: "/api/menu-places/reorder",
+    method: "PUT",
+    data: { ids }
   })
 }

@@ -485,10 +485,10 @@ test("menu places expose stores first and their linked dishes separately", async
     category_id: null,
     outside_category_id: SOURCE_ID,
     recommended_items: [],
-    main_ingredients: [],
-    introduction: "",
-    cooking_methods: [],
-    taste: [],
+    main_ingredients: ["牛肉", "面条"],
+    introduction: "汤浓面香",
+    cooking_methods: ["cooking_02"],
+    taste: ["taste_03", "taste_04"],
     flavor_options: [],
     image_path: "",
     thumbnail_path: null,
@@ -516,6 +516,10 @@ test("menu places expose stores first and their linked dishes separately", async
   assert.equal(placeResponse.json().data.items[0].name, "街角面馆");
   assert.equal(placeResponse.json().data.items[0].dish_count, 1);
   assert.equal(placeResponse.json().data.items[0].dishes[0].name, "牛肉面");
+  assert.equal(placeResponse.json().data.items[0].dishes[0].introduction, "汤浓面香");
+  assert.deepEqual(placeResponse.json().data.items[0].dishes[0].main_ingredients, ["牛肉", "面条"]);
+  assert.deepEqual(placeResponse.json().data.items[0].dishes[0].cooking_methods, ["蒸煮"]);
+  assert.equal(placeResponse.json().data.items[0].dishes[0].taste, "鲜、香");
   assert.equal(placeResponse.json().data.items[0].preview_dishes[0].name, "牛肉面");
 
   const dishResponse = await app.inject({
@@ -526,6 +530,32 @@ test("menu places expose stores first and their linked dishes separately", async
   assert.equal(dishResponse.statusCode, 200);
   assert.equal(dishResponse.json().data.items.length, 1);
   assert.equal(dishResponse.json().data.items[0].place_id, DINING_ID);
+});
+
+test("outside menu places can be reordered within their category", async (t) => {
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables(),
+    rpc: { reorder_menu_places: { data: null, error: null } },
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: "/api/menu-places/reorder",
+    headers: authHeaders,
+    payload: { ids: [SOURCE_ID, TARGET_ID] },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.updated, 2);
+  assert.deepEqual(supabase.rpcCalls.at(-1), {
+    name: "reorder_menu_places",
+    params: {
+      p_user_id: USER_ID,
+      p_place_ids: [SOURCE_ID, TARGET_ID],
+    },
+  });
 });
 
 test("media list supports server-side pagination and fuzzy title search", async (t) => {
@@ -1524,6 +1554,40 @@ test("menu place migration preserves legacy stores and backfills real dishes", a
   assert.match(migration, /create or replace function public\.sync_menu_place_from_legacy_dish/i);
   assert.doesNotMatch(migration, /drop table public\.dishes/i);
   assert.doesNotMatch(migration, /delete from public\.dishes/i);
+});
+
+test("menu place creation trigger uses array defaults after taste code migration", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608050002_fix_menu_place_creation.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /create or replace function public\.sync_menu_place_from_legacy_dish/i);
+  assert.match(
+    migration,
+    /new\.outside_category_id,[\s\S]*?'\{\}',\s*'\{\}',\s*'',\s*'\{\}',\s*'\{\}',\s*'\{\}'/i,
+  );
+  assert.doesNotMatch(migration, /drop table|drop column|delete from public\.dishes/i);
+});
+
+test("legacy outside-store creation sends an empty taste array", async () => {
+  const dishLogic = await readFile(
+    new URL("./lib/dishes.mjs", import.meta.url),
+    "utf8",
+  );
+  const placeLogic = await readFile(
+    new URL("./lib/menu-places.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    dishLogic,
+    /const taste = place \|\| recordType === "home" \? normalizeTaste\(fields\.taste, true\) : \[\];/,
+  );
+  assert.match(placeLogic, /taste: "\[\]"/);
+  assert.doesNotMatch(placeLogic, /taste: "",/);
 });
 
 test("dish ordering migration backfills newest-first and inserts new dishes first", async () => {

@@ -1,19 +1,21 @@
 .store-scroll { width: 100%; box-sizing: border-box; background: var(--ui-page-background); }
 .store-page { min-height: 100%; box-sizing: border-box; padding: 26rpx var(--ui-page-gutter) calc(48rpx + env(safe-area-inset-bottom)); }
 .state-block { padding: 180rpx 30rpx; color: #888; font-size: var(--ui-font-size-base); text-align: center; }
-.retry-button { width: 180rpx; margin-top: 24rpx; border-radius: 40rpx; background: #111; color: #fff; font-size: 23rpx; }
+.retry-button { display: flex; width: auto !important; min-width: 0 !important; height: 58rpx; align-items: center; justify-content: center; margin: 24rpx auto 0; padding: 0 24rpx; border-radius: var(--ui-radius-pill); background: #111; color: #fff; font-size: 22rpx; line-height: normal; }
 .retry-button::after { border: 0; }
 .store-hero { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: 28rpx; background: var(--ui-surface); }
-.store-hero__image, .store-hero__empty { display: flex; width: 100%; aspect-ratio: 4 / 3; align-items: center; justify-content: center; background: var(--ui-subtle-background); color: #999; font-size: 22rpx; }
+.store-hero__image-frame { position: relative; width: 100%; height: 0; overflow: hidden; padding-top: 100%; background: var(--ui-subtle-background); }
+.store-hero__image, .store-hero__empty { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; background: var(--ui-subtle-background); color: #999; font-size: 22rpx; }
 .store-hero__body { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 24rpx 26rpx 26rpx; }
-.store-hero__copy { min-width: 0; }
+.store-hero__copy { min-width: 0; flex: 1; }
 .store-hero__name { overflow: hidden; color: #171717; font-size: 31rpx; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .store-hero__meta { display: flex; align-items: center; gap: 12rpx; margin-top: 13rpx; color: #888; font-size: 21rpx; }
-.store-tag { display: inline-flex; min-height: 40rpx; box-sizing: border-box; align-items: center; padding: 5rpx 13rpx; border: 2rpx solid #d4d4d4; border-radius: 999rpx; background: #fff; color: #222; font-size: 20rpx; line-height: normal; }
-.outline-action, .add-dish-button, .empty-dishes__button { margin: 0; border: 2rpx solid #111; border-radius: 999rpx; background: #fff; color: #111; font-size: 22rpx; line-height: normal; }
-.outline-action { flex: none; padding: 13rpx 20rpx; }
-.add-dish-button { flex: none; padding: 14rpx 20rpx; }
-.outline-action::after, .add-dish-button::after, .empty-dishes__button::after { border: 0; }
+.store-tag { display: inline-flex; min-height: 40rpx; box-sizing: border-box; align-items: center; padding: 5rpx 13rpx; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-pill); background: var(--ui-page-background); color: #555; font-size: 20rpx; font-weight: 500; line-height: normal; }
+.store-action { display: inline-flex; width: auto !important; min-width: 0 !important; height: 56rpx !important; box-sizing: border-box !important; flex: none; align-items: center; justify-content: center; gap: 7rpx; margin: 0 !important; padding: 0 20rpx !important; border-radius: var(--ui-radius-pill) !important; font-size: 22rpx; font-weight: 600; line-height: normal; transition: opacity .16s ease; }
+.store-action--secondary { border: 1rpx solid #d7d7d7; background: var(--ui-surface); color: #333; }
+.store-action--primary { border: 1rpx solid #111; background: #111; color: #fff; }
+.store-action:active { opacity: .58; }
+.store-action::after { border: 0; }
 .dish-section { margin-top: 30rpx; }
 .dish-section__header { display: flex; align-items: center; justify-content: space-between; gap: 22rpx; margin-bottom: 18rpx; }
 .dish-section__title { color: #171717; font-size: 31rpx; font-weight: 650; }
@@ -27,4 +29,4 @@
 .dish-row__name { overflow: hidden; color: #1b1b1b; font-size: 27rpx; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .dish-row__tags { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 12rpx; }
 .empty-dishes { padding: 90rpx 30rpx; border: 1rpx solid var(--ui-border); border-radius: 24rpx; background: #fff; color: #999; font-size: 24rpx; text-align: center; }
-.empty-dishes__button { display: inline-flex; margin-top: 22rpx; padding: 14rpx 24rpx; }
+.empty-dishes__button { margin: 22rpx auto 0 !important; padding: 0 24rpx !important; }

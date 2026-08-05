@@ -13,13 +13,15 @@
 
   <view wx:elif="{{place}}" class="store-page">
     <view class="store-hero">
-      <image
-        wx:if="{{place.thumbnail_url || place.image_url}}"
-        class="store-hero__image"
-        src="{{place.thumbnail_url || place.image_url}}"
-        mode="aspectFill"
-      />
-      <view wx:else class="store-hero__empty">暂无店铺图片</view>
+      <view class="store-hero__image-frame">
+        <image
+          wx:if="{{place.thumbnail_url || place.image_url}}"
+          class="store-hero__image"
+          src="{{place.thumbnail_url || place.image_url}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="store-hero__empty">暂无店铺图片</view>
+      </view>
       <view class="store-hero__body">
         <view class="store-hero__copy">
           <view class="store-hero__name">{{place.name}}</view>
@@ -28,7 +30,10 @@
             <text>{{dishes.length}} 道菜</text>
           </view>
         </view>
-        <button wx:if="{{canWrite}}" class="outline-action" bindtap="handleEditPlace">编辑店铺</button>
+        <button wx:if="{{canWrite}}" class="store-action store-action--secondary outline-action" bindtap="handleEditPlace">
+          <app-icon name="pencil" size="19" />
+          <text>编辑店铺</text>
+        </button>
       </view>
     </view>
 
@@ -38,7 +43,10 @@
           <view class="dish-section__title">店内菜品</view>
           <view class="dish-section__hint">这里的菜品和居家菜共用相同属性</view>
         </view>
-        <button wx:if="{{canWrite}}" class="add-dish-button" bindtap="handleAddDish">+ 新增菜品</button>
+        <button wx:if="{{canWrite}}" class="store-action store-action--primary add-dish-button" bindtap="handleAddDish">
+          <app-icon name="plus-white" size="19" />
+          <text>新增菜品</text>
+        </button>
       </view>
 
       <view wx:if="{{dishes.length}}" class="dish-list">
@@ -68,7 +76,10 @@
       </view>
       <view wx:else class="empty-dishes">
         <view>这家店还没有记录菜品</view>
-        <button wx:if="{{canWrite}}" class="empty-dishes__button" bindtap="handleAddDish">添加第一道菜</button>
+        <button wx:if="{{canWrite}}" class="store-action store-action--primary empty-dishes__button" bindtap="handleAddDish">
+          <app-icon name="plus-white" size="19" />
+          <text>添加第一道菜</text>
+        </button>
       </view>
     </view>
   </view>

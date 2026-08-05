@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("menu supports camera capture with one 4:3 crop and matching previews", async () => {
-  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes, placePage, placeEdit] = await Promise.all([
+test("menu supports 4:3 dish images, 1:1 store images, and matching previews", async () => {
+  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes, placePage, placeStyles, placeEdit, placeEditStyles] = await Promise.all([
     readFile(new URL("../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.less", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/edit/index.ts", import.meta.url), "utf8"),
@@ -13,7 +13,9 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
     readFile(new URL("../src/components/image-cropper/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/utils/menu-attributes.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/place/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/menu/place/index.less", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/menu/place-edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/menu/place-edit/index.less", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /class="image-field__preview"[\s\S]*?mode="aspectFill"/);
@@ -94,7 +96,7 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(editLogic, /handleCategoryTap\(event:/);
   assert.doesNotMatch(editLogic, /editingTextField|handleTextFieldEdit|handleTextFieldBlur/);
   assert.match(editLogic, /categoryIndex:\s*-1/);
-  assert.match(editLogic, /if \(!category\) \{/);
+  assert.match(editLogic, /if \(recordType === "home" && !category\) \{/);
   assert.doesNotMatch(editLogic, /categoryOffset/);
   assert.doesNotMatch(editLogic, /暂不分类/);
   assert.match(editLogic, /handleAddMainIngredient\(\)/);
@@ -137,12 +139,24 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuPage, /wx:for="\{\{outsidePlaces\}\}"/);
   assert.match(menuPage, /bindtap="handlePlaceTap"/);
   assert.match(menuPage, /wx:for="\{\{place\.dishes\}\}"/);
-  assert.match(menuPage, /class="quick-grid outside-store__dish-grid"/);
+  assert.match(menuPage, /class="outside-store__dish-scroll"[\s\S]*scroll-x/);
+  assert.match(menuPage, /class="outside-store__dish-grid"/);
   assert.match(menuPage, /data-id="\{\{dish\.id\}\}" bindtap="handleDishTap"/);
   assert.match(menuPage, /店内菜品/);
   assert.match(placePage, /class="store-hero"/);
   assert.match(placePage, /新增菜品/);
+  assert.match(placePage, /store-action store-action--secondary outline-action[\s\S]*app-icon name="pencil"/);
+  assert.match(placePage, /store-action store-action--primary add-dish-button[\s\S]*app-icon name="plus-white"/);
+  assert.match(placePage, /class="store-hero__image-frame"[\s\S]*class="store-hero__image"/);
+  assert.match(placeStyles, /\.store-hero__image-frame[^}]*height:\s*0[^}]*padding-top:\s*100%/);
+  assert.match(placeStyles, /\.store-hero__image,[\s\S]*?\.store-hero__empty[^}]*width:\s*100%[^}]*height:\s*100%/);
+  assert.match(placeStyles, /\.store-action[^}]*width:\s*auto !important[^}]*min-width:\s*0 !important[^}]*height:\s*56rpx/);
+  assert.match(placeStyles, /\.store-action--primary[^}]*background:\s*#111/);
+  assert.match(placeStyles, /\.store-action--secondary[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(placeEdit, /<app-dialog[\s\S]*title="删除店铺"/);
+  assert.match(placeEdit, /shape="square"[\s\S]*aspect-ratio="1"[\s\S]*output-size="1080"/);
+  assert.match(placeEdit, /bindtap="handleAddDish">保存并新增菜品/);
+  assert.match(placeEditStyles, /\.image-field[^}]*aspect-ratio:\s*1\s*\/\s*1/);
   assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid #e8e8e8/);
   assert.match(menuPage, /class="browse-slide-scroll"[\s\S]*scroll-y/);
   assert.doesNotMatch(menuPage, /handleBrowseScroll/);
@@ -155,6 +169,8 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuPage, /class="dish-image-frame browse-card__image-frame"[\s\S]*?mode="aspectFill"/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*width:\s*480rpx/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*height:\s*360rpx/);
+  assert.match(menuStyles, /\.store-browse-card \.browse-card__image-frame[^}]*height:\s*480rpx[^}]*aspect-ratio:\s*1\s*\/\s*1/);
+  assert.match(menuStyles, /\.store-browse-card__tag[^}]*background:\s*var\(--ui-page-background\)/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*margin:\s*0 auto/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*padding-top:\s*0/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*border-radius:\s*16rpx/);
@@ -168,16 +184,16 @@ test("menu supports camera capture with one 4:3 crop and matching previews", asy
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*color:\s*#111/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*border:\s*2rpx solid #d4d4d4/);
-  assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(3/);
+  assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(2/);
   assert.match(
     menuStyles,
     /\.content-scroll--quick[^}]*padding:\s*var\(--ui-page-gutter\) var\(--ui-page-gutter\)/,
   );
-  assert.match(menuStyles, /\.quick-card[^}]*border-radius:\s*34rpx/);
+  assert.match(menuStyles, /\.quick-card[^}]*border-radius:\s*24rpx/);
   assert.match(menuStyles, /\.quick-card[^}]*padding:\s*0/);
-  assert.match(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*border-radius:\s*33rpx 33rpx 0 0/);
+  assert.match(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*border-radius:\s*23rpx 23rpx 0 0/);
   assert.doesNotMatch(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*transform:\s*scale/);
-  assert.match(menuStyles, /\.quick-card__name[^}]*text-align:\s*center/);
+  assert.match(menuStyles, /\.quick-card__name[^}]*text-align:\s*left/);
   assert.match(menuStyles, /\.browse-swiper[^}]*background:\s*var\(--ui-page-background\)/);
   assert.match(menuStyles, /\.record-filter__item--active[^}]*border-color:\s*#111/);
   assert.match(menuStyles, /\.category-chip--active[^}]*border-color:\s*#111/);

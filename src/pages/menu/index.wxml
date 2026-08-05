@@ -36,15 +36,19 @@
       </scroll-view>
     </view>
 
-    <view wx:if="{{displayMode === 'quick' && activeRecordType === 'home'}}" class="menu-toolbar">
-      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="22" /><text>安排三餐</text></view>
-      <view class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="22" /><text>打印</text></view>
+    <view wx:if="{{displayMode === 'quick'}}" class="menu-toolbar">
+      <view wx:if="{{activeRecordType === 'home'}}" class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="22" /><text>安排三餐</text></view>
+      <view wx:if="{{activeRecordType === 'home'}}" class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="22" /><text>打印</text></view>
       <view wx:if="{{canReorder}}" class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle"><app-icon name="settings-2" size="22" /><text>{{sortEditing ? '完成排序' : '编辑排序'}}</text></view>
     </view>
   </view>
 
   <scroll-view wx:if="{{displayMode === 'quick'}}" class="content-scroll content-scroll--quick" scroll-y enhanced show-scrollbar="{{false}}">
-    <view wx:if="{{errorMessage}}" class="state-block"><view>{{errorMessage}}</view><button class="retry-button" bindtap="handleRetry">重试</button></view>
+    <view wx:if="{{contentLoading}}" class="content-loading">
+      <view class="content-loading__spinner" />
+      <view class="content-loading__text">正在加载菜单…</view>
+    </view>
+    <view wx:elif="{{errorMessage}}" class="state-block"><view>{{errorMessage}}</view><button class="retry-button" bindtap="handleRetry">重试</button></view>
     <view wx:elif="{{activeRecordType === 'home' && dishes.length === 0}}" class="state-block">当前分类还没有菜品</view>
     <view wx:elif="{{activeRecordType === 'outside' && outsidePlaces.length === 0}}" class="state-block">当前分类还没有店铺</view>
 
@@ -56,6 +60,21 @@
         </view>
         <view class="quick-card__body">
           <view class="quick-card__name">{{item.name}}</view>
+          <view class="quick-card__meta">{{item.introduction}}</view>
+          <view class="quick-card__details">
+            <view class="quick-card__detail-row">
+              <text class="quick-card__detail-label">食材</text>
+              <text class="quick-card__detail-value">{{item.mainIngredientText || '—'}}</text>
+            </view>
+            <view class="quick-card__detail-row">
+              <text class="quick-card__detail-label">烹饪类型</text>
+              <text class="quick-card__detail-value">{{item.cookingMethodText || '—'}}</text>
+            </view>
+            <view class="quick-card__detail-row">
+              <text class="quick-card__detail-label">口味</text>
+              <text class="quick-card__detail-value">{{item.tasteText || '—'}}</text>
+            </view>
+          </view>
           <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
             <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="23" /></view>
             <view class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="23" /></view>
@@ -65,7 +84,7 @@
     </view>
 
     <view wx:else class="outside-store-list">
-      <view wx:for="{{outsidePlaces}}" wx:key="id" wx:for-item="place" class="outside-store">
+      <view wx:for="{{outsidePlaces}}" wx:key="id" wx:for-item="place" wx:for-index="placeIndex" class="outside-store">
         <view class="outside-store__header" data-id="{{place.id}}" bindtap="handlePlaceTap" role="button" aria-label="查看{{place.name}}">
           <image wx:if="{{place.thumbnail_url || place.image_url}}" class="outside-store__image" src="{{place.thumbnail_url || place.image_url}}" mode="aspectFill" lazy-load />
           <view wx:else class="outside-store__image outside-store__image--empty">暂无图片</view>
@@ -73,25 +92,54 @@
             <view class="outside-store__name">{{place.name}}</view>
             <view class="outside-store__meta">{{place.dish_count}} 道菜</view>
           </view>
-          <app-icon name="chevron-right" size="30" />
+          <view wx:if="{{canReorder && sortEditing}}" class="outside-store__place-sort-actions">
+            <view class="sort-action {{placeIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="-1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-up" size="23" /></view>
+            <view class="sort-action {{placeIndex === outsidePlaces.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-down" size="23" /></view>
+          </view>
+          <app-icon wx:else name="chevron-right" size="30" />
         </view>
 
-        <view wx:if="{{place.dishes.length}}" class="quick-grid outside-store__dish-grid">
-          <view wx:for="{{place.dishes}}" wx:key="id" wx:for-item="dish" class="quick-card" data-id="{{dish.id}}" bindtap="handleDishTap">
-            <view class="dish-image-frame quick-card__image-frame">
-              <image wx:if="{{dish.thumbnail_url || dish.image_url}}" class="dish-image" src="{{dish.thumbnail_url || dish.image_url}}" mode="aspectFill" lazy-load />
-              <view wx:else class="dish-image-empty">暂无图片</view>
-            </view>
-            <view class="quick-card__body">
-              <view class="quick-card__name">{{dish.name}}</view>
+        <scroll-view wx:if="{{place.dishes.length}}" class="outside-store__dish-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+          <view class="outside-store__dish-grid">
+            <view wx:for="{{place.dishes}}" wx:key="id" wx:for-item="dish" wx:for-index="dishIndex" class="quick-card outside-store__dish-card" data-id="{{dish.id}}" bindtap="handleDishTap">
+              <view class="dish-image-frame quick-card__image-frame">
+                <image wx:if="{{dish.thumbnail_url || dish.image_url}}" class="dish-image" src="{{dish.thumbnail_url || dish.image_url}}" mode="aspectFill" lazy-load />
+                <view wx:else class="dish-image-empty">暂无图片</view>
+              </view>
+              <view class="quick-card__body">
+                <view class="quick-card__name">{{dish.name}}</view>
+                <view class="quick-card__meta">{{dish.introduction}}</view>
+                <view class="quick-card__details">
+                  <view class="quick-card__detail-row">
+                    <text class="quick-card__detail-label">食材</text>
+                    <text class="quick-card__detail-value">{{dish.mainIngredientText || '—'}}</text>
+                  </view>
+                  <view class="quick-card__detail-row">
+                    <text class="quick-card__detail-label">烹饪类型</text>
+                    <text class="quick-card__detail-value">{{dish.cookingMethodText || '—'}}</text>
+                  </view>
+                  <view class="quick-card__detail-row">
+                    <text class="quick-card__detail-label">口味</text>
+                    <text class="quick-card__detail-value">{{dish.tasteText || '—'}}</text>
+                  </view>
+                </view>
+                <view wx:if="{{canReorder && sortEditing}}" class="sort-actions outside-store__sort-actions">
+                  <view class="sort-action {{dishIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="-1" catchtap="handleOutsideMove"><app-icon name="arrow-left" size="23" /></view>
+                  <view class="sort-action {{dishIndex === place.dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="1" catchtap="handleOutsideMove"><app-icon name="arrow-right" size="23" /></view>
+                </view>
+              </view>
             </view>
           </view>
-        </view>
+        </scroll-view>
       </view>
     </view>
     <view wx:if="{{activeRecordType === 'home' ? dishes.length > 0 : outsidePlaces.length > 0}}" class="quick-footer">没有更多了</view>
   </scroll-view>
 
+  <view wx:elif="{{contentLoading}}" class="browse-state content-loading">
+    <view class="content-loading__spinner" />
+    <view class="content-loading__text">正在加载菜单…</view>
+  </view>
   <view wx:elif="{{errorMessage}}" class="browse-state state-block"><view>{{errorMessage}}</view><button class="retry-button" bindtap="handleRetry">重试</button></view>
   <view wx:elif="{{activeRecordType === 'home' && dishes.length === 0}}" class="browse-state state-block">当前分类还没有菜品</view>
   <view wx:elif="{{activeRecordType === 'outside' && outsidePlaces.length === 0}}" class="browse-state state-block">当前分类还没有店铺</view>
@@ -108,9 +156,9 @@
             <view class="browse-card__body">
               <view class="browse-card__name">{{item.name}}</view>
               <view class="store-browse-card__meta">
-                <view class="browse-card__black-tag">外食</view>
-                <view class="browse-card__black-tag">{{item.outside_category.name || '未分类'}}</view>
-                <view class="browse-card__black-tag">{{item.dish_count}} 道菜</view>
+                <view class="store-browse-card__tag">外食</view>
+                <view class="store-browse-card__tag">{{item.outside_category.name || '未分类'}}</view>
+                <view class="store-browse-card__tag">{{item.dish_count}} 道菜</view>
               </view>
               <view class="browse-card__home-section store-ticket">
                 <view class="browse-card__detail-label">店内菜品</view>

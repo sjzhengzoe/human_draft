@@ -68,7 +68,7 @@
         </view>
       </view>
 
-      <view class="field field--inline">
+      <view wx:if="{{recordType === 'home'}}" class="field field--inline">
         <view class="field__label">菜品分类<text class="field__required">*</text></view>
         <view class="meal-period-options" role="radiogroup" aria-label="菜品分类">
           <view
