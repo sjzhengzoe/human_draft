@@ -39,6 +39,7 @@ type ChoiceOption = {
 const DEFAULT_MEAL_OPTIONS: MealPeriodOption[] = [
   { key: "breakfast", label: "早餐", selected: false },
   { key: "lunch", label: "午餐", selected: true },
+  { key: "afternoon_tea", label: "下午茶", selected: false },
   { key: "dinner", label: "晚餐", selected: true }
 ]
 

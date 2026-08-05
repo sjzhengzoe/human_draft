@@ -10,10 +10,11 @@
 
 ## UI Typography Rules
 
-- New business and utility pages should use the global `--ui-font-size-base` (`25rpx`) for normal body text by default, and should compare typography with adjacent existing modules before introducing page-local sizes.
-- Keep compact page section titles around `30-32rpx`, primary card content around `25-27rpx`, tabs and buttons around `22-25rpx`, and secondary labels or hints around `19-22rpx`.
-- Do not use body or card text above `28rpx`, or ordinary section titles above `34rpx`, unless the page has an explicit display, hero, or data-emphasis requirement.
-- When reducing typography, also tighten the related card minimum height, padding, and vertical gaps so the visual density remains balanced.
+- Business UI text may use only `23rpx` and `25rpx`. Do not introduce `24rpx` or any other business-text size.
+- Use the global `--ui-font-size-base` (`23rpx`) for body text, attribute labels, input content, placeholders, buttons, tabs, tags, hints, empty states, dialog content, and other normal interface copy.
+- Use `25rpx` only for page titles, section titles, card titles, dialog titles, and genuinely emphasized values. `25rpx` is the maximum business-text size, including hero and display treatments.
+- Create hierarchy with font weight, color, spacing, and layout instead of additional font sizes. Icons, icon glyphs, and purely decorative symbols are exempt from the `23rpx` / `25rpx` restriction.
+- When changing typography, adjust related control height, card minimum height, padding, and vertical gaps so the visual density remains balanced.
 
 ## Database Migration and Compatibility Rules
 

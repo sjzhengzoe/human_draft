@@ -1387,12 +1387,13 @@ test("dish meal periods accept free combinations and reject invalid values", asy
     method: "PUT",
     url: `/api/dishes/${SOURCE_ID}`,
     headers: authHeaders,
-    payload: { meal_periods: ["breakfast", "lunch", "dinner"] },
+    payload: { meal_periods: ["breakfast", "lunch", "afternoon_tea", "dinner"] },
   });
   assert.equal(validResponse.statusCode, 200);
   assert.deepEqual(validResponse.json().data.dish.meal_periods, [
     "breakfast",
     "lunch",
+    "afternoon_tea",
     "dinner",
   ]);
 
@@ -1457,7 +1458,7 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
     payload: {
       main_ingredients: ["虾", "蒜"],
       introduction: "同一道炒虾可以更换香草风味。",
-      cooking_methods: ["煎炒"],
+      cooking_methods: ["煎炒", "即食"],
       taste: "香、鲜",
       flavor_options: ["紫苏", "九层塔", "紫苏"],
     },
@@ -1466,10 +1467,10 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json().data.dish.main_ingredients, ["虾", "蒜"]);
   assert.equal(response.json().data.dish.introduction, "同一道炒虾可以更换香草风味。");
-  assert.deepEqual(response.json().data.dish.cooking_methods, ["煎炒"]);
+  assert.deepEqual(response.json().data.dish.cooking_methods, ["煎炒", "即食"]);
   assert.equal(response.json().data.dish.taste, "鲜、香");
   assert.deepEqual(response.json().data.dish.flavor_options, ["紫苏", "九层塔"]);
-  assert.deepEqual(dish.cooking_methods, ["cooking_01"]);
+  assert.deepEqual(dish.cooking_methods, ["cooking_01", "cooking_05"]);
   assert.deepEqual(dish.taste, ["taste_03", "taste_04"]);
 
   const invalidTasteResponse = await app.inject({
@@ -1537,6 +1538,21 @@ test("menu attribute code migration decouples stored values from display labels"
   assert.match(migration, /is_standard_menu_codes/);
   assert.match(migration, /p_taste text\[\]/);
   assert.doesNotMatch(migration, /drop column|drop table|delete from public\.dishes/i);
+});
+
+test("afternoon tea and ready-to-eat migration widens enums without rewriting rows", async () => {
+  const migration = await readFile(
+    new URL(
+      "../supabase/migrations/202608050003_afternoon_tea_and_ready_to_eat.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /'breakfast', 'lunch', 'afternoon_tea', 'dinner'/);
+  assert.match(migration, /cardinality\(meal_periods\) between 1 and 4/i);
+  assert.match(migration, /'cooking_04', 'cooking_05'/);
+  assert.match(migration, /pg_get_functiondef/);
+  assert.doesNotMatch(migration, /update public\.dishes|delete from|drop table|drop column/i);
 });
 
 test("menu place migration preserves legacy stores and backfills real dishes", async () => {

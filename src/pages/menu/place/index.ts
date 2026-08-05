@@ -13,6 +13,7 @@ type StoreDish = Dish & { mealText: string; categoryText: string }
 const MEAL_TEXT: Record<MealPeriod, string> = {
   breakfast: "早餐",
   lunch: "午餐",
+  afternoon_tea: "下午茶",
   dinner: "晚餐"
 }
 

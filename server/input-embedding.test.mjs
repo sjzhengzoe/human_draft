@@ -47,7 +47,7 @@ test("shared app-input keeps the project font outside native editing", async () 
   assert.match(template, /placeholder-style="[^"]*font-size: \{\{fontSize\}\}/);
   assert.match(template, /wx:else[\s\S]*app-input__display/);
   assert.match(logic, /externalClasses:\s*\["custom-class"\]/);
-  assert.match(logic, /fontSize:[\s\S]*value:\s*"25rpx"/);
+  assert.match(logic, /fontSize:[\s\S]*value:\s*"23rpx"/);
   assert.match(logic, /handleActivate\(\)/);
   assert.match(logic, /this\.triggerEvent\("input", event\.detail\)/);
   assert.match(styles, /\.app-input__display[^}]*font-family:\s*var\(--ui-font-family\)/);

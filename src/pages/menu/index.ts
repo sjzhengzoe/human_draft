@@ -73,6 +73,7 @@ type QuickMenuPlace = Omit<MenuPlace, "dishes" | "preview_dishes"> & {
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
   breakfast: "早餐",
   lunch: "午餐",
+  afternoon_tea: "下午茶",
   dinner: "晚餐"
 }
 

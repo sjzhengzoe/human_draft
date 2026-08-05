@@ -10,13 +10,14 @@ import { throwSupabaseError } from "./supabase.mjs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "dinner"]);
+const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "afternoon_tea", "dinner"]);
 const ALLOWED_RECORD_TYPES = new Set(["home", "outside"]);
 const COOKING_METHOD_OPTIONS = [
   { code: "cooking_01", label: "煎炒" },
   { code: "cooking_02", label: "蒸煮" },
   { code: "cooking_03", label: "凉拌" },
   { code: "cooking_04", label: "烤炸" },
+  { code: "cooking_05", label: "即食" },
 ];
 const TASTE_OPTIONS = [
   { code: "taste_01", label: "清淡" },
@@ -52,7 +53,7 @@ function normalizeMealPeriods(value, useDefault = false) {
   assertCondition(
     Array.isArray(periods)
       && periods.length >= 1
-      && periods.length <= 3
+      && periods.length <= ALLOWED_MEAL_PERIODS.size
       && periods.every((period) => typeof period === "string" && ALLOWED_MEAL_PERIODS.has(period))
       && new Set(periods).size === periods.length,
     400,

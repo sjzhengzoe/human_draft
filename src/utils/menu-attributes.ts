@@ -1,4 +1,4 @@
-export const COOKING_TYPE_OPTIONS = ["煎炒", "蒸煮", "凉拌", "烤炸"]
+export const COOKING_TYPE_OPTIONS = ["煎炒", "蒸煮", "凉拌", "烤炸", "即食"]
 export const TASTE_OPTIONS = ["清淡", "咸", "鲜", "香", "酸", "甜", "辣"]
 
 function splitAttributeValues(values: string[]): string[] {

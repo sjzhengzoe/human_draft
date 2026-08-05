@@ -18,7 +18,8 @@ function normalizeStringArray(value: unknown): string[] {
 
 function normalizeDish(dish: Dish): Dish {
   const mealPeriods = normalizeStringArray(dish.meal_periods).filter(
-    (item): item is MealPeriod => ["breakfast", "lunch", "dinner"].includes(item)
+    (item): item is MealPeriod =>
+      ["breakfast", "lunch", "afternoon_tea", "dinner"].includes(item)
   )
   return {
     ...dish,

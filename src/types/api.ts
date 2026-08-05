@@ -33,7 +33,7 @@ export type Category = {
   created_at: string
 }
 
-export type MealPeriod = "breakfast" | "lunch" | "dinner"
+export type MealPeriod = "breakfast" | "lunch" | "afternoon_tea" | "dinner"
 export type MenuRecordType = "home" | "outside"
 
 export type MenuPlaceDishPreview = {

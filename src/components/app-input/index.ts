@@ -15,7 +15,7 @@ Component({
     },
     fontSize: {
       type: String,
-      value: "25rpx"
+      value: "23rpx"
     },
     maxlength: {
       type: Number,
