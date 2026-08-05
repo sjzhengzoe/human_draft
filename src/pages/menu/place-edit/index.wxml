@@ -14,7 +14,6 @@
           <app-icon name="image-plus" size="42" />
           <view>拍照或从相册选择店铺图片</view>
         </view>
-        <view class="image-field__hint">{{selectingImage ? '正在处理…' : '点击' + (currentImageUrl || selectedImagePath ? '更换图片' : '拍照或选择')}}</view>
       </view>
       <view class="field">
         <view class="field__label">店铺名</view>
@@ -33,7 +32,7 @@
     </view>
     <view class="footer-actions">
       <button class="save-button" loading="{{saving && !savingForDish}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存店铺</button>
-      <button class="add-dish-button" loading="{{savingForDish}}" disabled="{{saving || deleting}}" bindtap="handleAddDish">保存并新增菜品</button>
+      <button wx:if="{{!placeId}}" class="add-dish-button" loading="{{savingForDish}}" disabled="{{saving || deleting}}" bindtap="handleAddDish">保存并新增菜品</button>
       <button wx:if="{{placeId}}" class="delete-button" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" />删除店铺</button>
     </view>
   </view>
