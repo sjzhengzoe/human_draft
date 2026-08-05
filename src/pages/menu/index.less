@@ -300,11 +300,11 @@
 }
 
 .quick-card__meta {
-  min-height: 30rpx;
-  margin-top: 5rpx;
+  min-height: 28rpx;
+  margin-top: 4rpx;
   overflow: hidden;
   color: #777;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 1.4;
   text-align: left;
   text-overflow: ellipsis;
@@ -314,30 +314,31 @@
 .quick-card__details {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
-  margin-top: 14rpx;
-  padding-top: 12rpx;
+  gap: 6rpx;
+  margin-top: 12rpx;
+  padding-top: 10rpx;
   border-top: 1rpx solid #e8e8e8;
 }
 
 .quick-card__detail-row {
   display: grid;
   min-width: 0;
-  grid-template-columns: 78rpx minmax(0, 1fr);
+  grid-template-columns: 82rpx minmax(0, 1fr);
   align-items: baseline;
-  gap: 10rpx;
+  gap: 8rpx;
 }
 
 .quick-card__detail-label {
   color: #aaa;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 1.4;
+  white-space: nowrap;
 }
 
 .quick-card__detail-value {
   overflow: hidden;
   color: #666;
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;

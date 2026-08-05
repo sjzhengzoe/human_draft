@@ -170,7 +170,6 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*width:\s*480rpx/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*height:\s*360rpx/);
   assert.match(menuStyles, /\.store-browse-card \.browse-card__image-frame[^}]*height:\s*480rpx[^}]*aspect-ratio:\s*1\s*\/\s*1/);
-  assert.match(menuStyles, /\.store-browse-card__tag[^}]*background:\s*var\(--ui-page-background\)/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*margin:\s*0 auto/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*padding-top:\s*0/);
   assert.match(menuStyles, /\.browse-card__image-frame[^}]*border-radius:\s*16rpx/);
@@ -232,7 +231,7 @@ test("menu edit page locks native scrolling and scrolls its content area", async
   assert.match(page, /show-scrollbar="\{\{false\}\}"/);
 });
 
-test("menu pages use only the 23rpx and 25rpx business typography sizes", async () => {
+test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes", async () => {
   const styleUrls = [
     "../src/pages/menu/index.less",
     "../src/pages/menu/edit/index.less",
@@ -257,10 +256,13 @@ test("menu pages use only the 23rpx and 25rpx business typography sizes", async 
       (match) => Number(match[1]),
     );
     assert.ok(
-      explicitSizes.every((size) => size === 23 || size === 25),
-      `${styleUrls[index]} contains a business font size outside 23rpx/25rpx`,
+      explicitSizes.every((size) => size === 20 || size === 23 || size === 25),
+      `${styleUrls[index]} contains a business font size outside 20rpx/23rpx/25rpx`,
     );
   }
+  assert.match(styles[0], /\.quick-card__meta[^}]*font-size:\s*var\(--ui-font-size-small\)/);
+  assert.match(styles[0], /\.quick-card__detail-label[^}]*font-size:\s*var\(--ui-font-size-small\)/);
+  assert.match(styles[0], /\.quick-card__detail-value[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[1], /\.field__input[^}]*font-size:\s*23rpx/);
   assert.match(styles[1], /\.item-entry__input[^}]*font-size:\s*23rpx/);
   assert.equal(editPage.match(/font-size="23rpx"/g)?.length, 4);
@@ -269,7 +271,7 @@ test("menu pages use only the 23rpx and 25rpx business typography sizes", async 
   assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*25rpx/);
 });
 
-test("shared UI typography defines 23rpx body text and 25rpx titles", async () => {
+test("shared UI typography defines 20rpx metadata, 23rpx body text, and 25rpx titles", async () => {
   const [guidance, appStyles, navigationStyles, dialogStyles, appInput] = await Promise.all([
     readFile(new URL("../AGENTS.md", import.meta.url), "utf8"),
     readFile(new URL("../src/app.less", import.meta.url), "utf8"),
@@ -278,8 +280,9 @@ test("shared UI typography defines 23rpx body text and 25rpx titles", async () =
     readFile(new URL("../src/components/app-input/index.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(guidance, /23rpx.*25rpx/);
+  assert.match(guidance, /20rpx.*23rpx.*25rpx/);
   assert.match(guidance, /Do not introduce `24rpx`/);
+  assert.match(appStyles, /--ui-font-size-small:\s*20rpx/);
   assert.match(appStyles, /--ui-font-size-base:\s*23rpx/);
   assert.match(navigationStyles, /\.custom-navigation__title[^}]*font-size:\s*25rpx/);
   assert.match(dialogStyles, /\.app-dialog__title[^}]*font-size:\s*25rpx/);

@@ -10,10 +10,11 @@
 
 ## UI Typography Rules
 
-- Business UI text may use only `23rpx` and `25rpx`. Do not introduce `24rpx` or any other business-text size.
-- Use the global `--ui-font-size-base` (`23rpx`) for body text, attribute labels, input content, placeholders, buttons, tabs, tags, hints, empty states, dialog content, and other normal interface copy.
+- Business UI text may use only `20rpx`, `23rpx`, and `25rpx`. Do not introduce `24rpx` or any other business-text size.
+- Use the global `--ui-font-size-small` (`20rpx`) only for compact secondary metadata inside dense repeated cards, such as short attribute labels and values, timestamps, counts, badges, and brief supporting copy. Compact icon action bars that must keep several actions directly visible may also use it. Do not use it for ordinary buttons, tabs, inputs, placeholders, dialogs, or primary body text.
+- Use the global `--ui-font-size-base` (`23rpx`) for body text, regular attribute labels, input content, placeholders, buttons, tabs, tags, hints, empty states, dialog content, and other normal interface copy.
 - Use `25rpx` only for page titles, section titles, card titles, dialog titles, and genuinely emphasized values. `25rpx` is the maximum business-text size, including hero and display treatments.
-- Create hierarchy with font weight, color, spacing, and layout instead of additional font sizes. Icons, icon glyphs, and purely decorative symbols are exempt from the `23rpx` / `25rpx` restriction.
+- Create hierarchy with font weight, color, spacing, and layout instead of additional font sizes. Icons, icon glyphs, and purely decorative symbols are exempt from the `20rpx` / `23rpx` / `25rpx` restriction.
 - When changing typography, adjust related control height, card minimum height, padding, and vertical gaps so the visual density remains balanced.
 
 ## Database Migration and Compatibility Rules
