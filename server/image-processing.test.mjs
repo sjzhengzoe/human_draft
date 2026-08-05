@@ -6,6 +6,7 @@ import {
   IMAGE_PROFILES,
   isOptimizedImagePath,
   optimizeImage,
+  optimizeOriginalImage,
   optimizedImagePaths,
 } from "./lib/image-processing.mjs";
 
@@ -57,6 +58,19 @@ test("compression level zero preserves every decoded original pixel", async () =
     sharp(result.original).raw().toBuffer(),
   ]);
   assert.deepEqual(outputPixels, sourcePixels);
+});
+
+test("single-image optimization returns only the lossless original", async () => {
+  const input = await createTestImage(1_536, 1_152);
+  const result = await optimizeOriginalImage(input);
+  const metadata = await sharp(result.original).metadata();
+
+  assert.deepEqual(Object.keys(result).sort(), ["original", "originalContentType"]);
+  assert.equal(result.originalContentType, "image/webp");
+  assert.deepEqual(
+    { format: metadata.format, width: metadata.width, height: metadata.height },
+    { format: "webp", width: 1_536, height: 1_152 },
+  );
 });
 
 test("image optimization never enlarges small images", async () => {

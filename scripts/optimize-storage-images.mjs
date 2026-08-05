@@ -6,6 +6,7 @@ import {
   IMAGE_PROFILES,
   isOptimizedImagePath,
   optimizeImage,
+  optimizeOriginalImage,
   optimizedImagePaths,
 } from "../server/lib/image-processing.mjs";
 import { getSupabaseAdmin } from "../server/lib/supabase.mjs";
@@ -30,6 +31,7 @@ const targets = [
     table: "dishes",
     bucket: config.dishBucket,
     profile: IMAGE_PROFILES.dish,
+    createThumbnail: false,
   },
   {
     name: "衣橱",
@@ -91,6 +93,8 @@ async function uploadOptimizedPair(bucket, paths, optimized) {
   });
   if (imageError) throw imageError;
 
+  if (!optimized.thumbnail || !paths.thumbnailPath) return;
+
   const { error: thumbnailError } = await bucket.upload(
     paths.thumbnailPath,
     optimized.thumbnail,
@@ -131,9 +135,11 @@ async function optimizeTarget(supabase, target, manifest, totals) {
         downloadBuffer(bucket, row.image_path),
         downloadOptionalBuffer(bucket, row.thumbnail_path),
       ]);
-      const optimized = await optimizeImage(source, target.profile);
+      const optimized = target.createThumbnail === false
+        ? await optimizeOriginalImage(source)
+        : await optimizeImage(source, target.profile);
       const oldBytes = source.length + (oldThumbnail?.length || 0);
-      const newBytes = optimized.original.length + optimized.thumbnail.length;
+      const newBytes = optimized.original.length + (optimized.thumbnail?.length || 0);
       totals.oldBytes += oldBytes;
       totals.newBytes += newBytes;
       totals.processed += 1;
@@ -142,7 +148,11 @@ async function optimizeTarget(supabase, target, manifest, totals) {
         const directory = row.image_path.includes("/")
           ? row.image_path.slice(0, row.image_path.lastIndexOf("/"))
           : "migrated";
-        const paths = optimizedImagePaths(`${directory}/migration-${row.id}`);
+        const generatedPaths = optimizedImagePaths(`${directory}/migration-${row.id}`);
+        const paths = {
+          imagePath: generatedPaths.imagePath,
+          thumbnailPath: optimized.thumbnail ? generatedPaths.thumbnailPath : null,
+        };
         await uploadOptimizedPair(bucket, paths, optimized);
 
         const entry = {
@@ -168,7 +178,7 @@ async function optimizeTarget(supabase, target, manifest, totals) {
           .select("id, image_path, thumbnail_path")
           .maybeSingle();
         if (error || !data || data.image_path !== paths.imagePath) {
-          await bucket.remove([paths.imagePath, paths.thumbnailPath]);
+          await bucket.remove([paths.imagePath, paths.thumbnailPath].filter(Boolean));
           throw error || new Error("记录已被其他操作更新，未切换图片路径。");
         }
         entry.status = "switched";

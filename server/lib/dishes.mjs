@@ -2,8 +2,7 @@ import { randomUUID } from "node:crypto";
 import { config } from "../config.mjs";
 import { assertCondition, HttpError } from "./errors.mjs";
 import {
-  IMAGE_PROFILES,
-  optimizeImage,
+  optimizeOriginalImage,
   optimizedImagePaths,
 } from "./image-processing.mjs";
 import { throwSupabaseError } from "./supabase.mjs";
@@ -290,7 +289,7 @@ export async function readMultipartImage(request) {
 
 async function normalizeImage(buffer) {
   try {
-    return await optimizeImage(buffer, IMAGE_PROFILES.dish);
+    return await optimizeOriginalImage(buffer);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。" );
@@ -299,12 +298,11 @@ async function normalizeImage(buffer) {
   }
 }
 
-async function uploadImagePair(supabase, userId, dishId, buffer) {
+async function uploadImage(supabase, userId, dishId, buffer) {
   const revision = randomUUID();
   const basePath = `users/${userId}/dishes/${dishId}/${revision}`;
-  const { imagePath, thumbnailPath } = optimizedImagePaths(basePath);
-  const { original, thumbnail, originalContentType, thumbnailContentType } =
-    await normalizeImage(buffer);
+  const { imagePath } = optimizedImagePaths(basePath);
+  const { original, originalContentType } = await normalizeImage(buffer);
 
   const { error: originalError } = await supabase.storage
     .from(config.dishBucket)
@@ -319,21 +317,7 @@ async function uploadImagePair(supabase, userId, dishId, buffer) {
     throw wrapped;
   }
 
-  const { error: thumbnailError } = await supabase.storage
-    .from(config.dishBucket)
-    .upload(thumbnailPath, thumbnail, {
-      cacheControl: "31536000",
-      contentType: thumbnailContentType,
-      upsert: false,
-    });
-  if (thumbnailError) {
-    await supabase.storage.from(config.dishBucket).remove([imagePath]);
-    const wrapped = new HttpError(500, "THUMBNAIL_UPLOAD_FAILED", "上传菜品缩略图失败。" );
-    wrapped.cause = thumbnailError;
-    throw wrapped;
-  }
-
-  return { imagePath, thumbnailPath };
+  return { imagePath, thumbnailPath: null };
 }
 
 async function removeImages(supabase, paths) {
@@ -532,7 +516,7 @@ export async function createDish(supabase, userId, fields, image) {
 
   const dishId = randomUUID();
   const paths = image?.buffer?.length
-    ? await uploadImagePair(supabase, userId, dishId, image.buffer)
+    ? await uploadImage(supabase, userId, dishId, image.buffer)
     : { imagePath: "", thumbnailPath: null };
   const rpcName = place ? "create_menu_dish" : "create_dish_at_end";
   const rpcPayload = place
@@ -718,7 +702,7 @@ export async function updateDish(supabase, userId, dishId, body) {
 export async function replaceDishImage(supabase, userId, dishId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
   const dish = await getDish(supabase, userId, dishId);
-  const paths = await uploadImagePair(supabase, userId, dishId, image.buffer);
+  const paths = await uploadImage(supabase, userId, dishId, image.buffer);
   const { data, error } = await supabase
     .from("dishes")
     .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })

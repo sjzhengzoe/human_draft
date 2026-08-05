@@ -64,6 +64,19 @@ export async function optimizeImage(buffer, profile) {
   };
 }
 
+export async function optimizeOriginalImage(buffer) {
+  const source = sharp(buffer, { failOn: "error" }).rotate();
+  const metadata = await source.metadata();
+  if (!metadata.width || !metadata.height) {
+    throw new Error("IMAGE_DIMENSIONS_UNAVAILABLE");
+  }
+
+  return {
+    original: await toWebp(source, {}),
+    originalContentType: "image/webp",
+  };
+}
+
 export function optimizedImagePaths(basePath) {
   return {
     imagePath: `${basePath}-${IMAGE_STORAGE_VERSION}.webp`,

@@ -4,8 +4,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 import { config } from "../server/config.mjs";
 import {
-  IMAGE_PROFILES,
-  optimizeImage,
+  optimizeOriginalImage,
   optimizedImagePaths,
 } from "../server/lib/image-processing.mjs";
 import { getSupabaseAdmin } from "../server/lib/supabase.mjs";
@@ -102,10 +101,9 @@ async function main() {
     }
 
     const dishId = randomUUID();
-    const { imagePath, thumbnailPath } = optimizedImagePaths(`dishes/${dishId}/import`);
+    const { imagePath } = optimizedImagePaths(`dishes/${dishId}/import`);
     const input = await readFile(file.path);
-    const { original, thumbnail, originalContentType, thumbnailContentType } =
-      await optimizeImage(input, IMAGE_PROFILES.dish);
+    const { original, originalContentType } = await optimizeOriginalImage(input);
 
     const { error: imageError } = await supabase.storage
       .from(config.dishBucket)
@@ -116,32 +114,20 @@ async function main() {
       });
     if (imageError) throw imageError;
 
-    const { error: thumbnailError } = await supabase.storage
-      .from(config.dishBucket)
-      .upload(thumbnailPath, thumbnail, {
-        cacheControl: "31536000",
-        contentType: thumbnailContentType,
-        upsert: false,
-      });
-    if (thumbnailError) {
-      await supabase.storage.from(config.dishBucket).remove([imagePath]);
-      throw thumbnailError;
-    }
-
     const sourceTime = getFirstCommitAt(file.path);
     const { error: insertError } = await supabase.from("dishes").insert({
       id: dishId,
       name: parsed.name,
       category_id: categoryId,
       image_path: imagePath,
-      thumbnail_path: thumbnailPath,
+      thumbnail_path: null,
       printed_at: file.printed ? sourceTime : null,
       sort_order: nextSortOrder,
       created_at: sourceTime,
       updated_at: sourceTime,
     });
     if (insertError) {
-      await supabase.storage.from(config.dishBucket).remove([imagePath, thumbnailPath]);
+      await supabase.storage.from(config.dishBucket).remove([imagePath]);
       throw insertError;
     }
 
