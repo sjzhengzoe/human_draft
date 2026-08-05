@@ -1,8 +1,9 @@
-const QUICK_ACTIONS = [
+const BASE_ACTIONS = [
   { key: "paste", label: "粘贴", icon: "clipboard-paste" },
+  { key: "copy", label: "复制", icon: "copy" },
   { key: "edit", label: "编辑", icon: "pencil" },
-  { key: "export", label: "导出高清", icon: "download", primary: true },
-  { key: "more", label: "更多", icon: "settings-2" }
+  { key: "clear", label: "清空", icon: "eraser" },
+  { key: "export", label: "导出高清", icon: "download", primary: true }
 ]
 
 const APPEND_ACTION = {
@@ -13,11 +14,13 @@ const APPEND_ACTION = {
 
 Component({
   data: {
-    actions: QUICK_ACTIONS.map((action) => ({
+    actions: BASE_ACTIONS.map((action) => ({
       ...action,
-      disabled: action.key === "export" || action.key === "more"
-    })),
-    showMoreDialog: false
+      disabled:
+        action.key === "copy" ||
+        action.key === "clear" ||
+        action.key === "export"
+    }))
   },
 
   properties: {
@@ -53,18 +56,17 @@ Component({
       const hasContent = this.data.hasContent
       const exportReady = this.data.exportReady
       const actions = this.data.showAppend
-        ? [QUICK_ACTIONS[0], APPEND_ACTION, ...QUICK_ACTIONS.slice(1)]
-        : QUICK_ACTIONS
+        ? [BASE_ACTIONS[0], APPEND_ACTION, ...BASE_ACTIONS.slice(1)]
+        : BASE_ACTIONS
 
       this.setData({
         actions: actions.map((action) => ({
           ...action,
           disabled:
             globallyDisabled ||
-            (action.key === "more" && !hasContent) ||
+            ((action.key === "copy" || action.key === "clear") && !hasContent) ||
             (action.key === "export" && !exportReady)
-        })),
-        showMoreDialog: globallyDisabled ? false : this.data.showMoreDialog
+        }))
       })
     },
 
@@ -73,27 +75,9 @@ Component({
       const action = this.data.actions.find((item) => item.key === key)
       if (!action || action.disabled) return
 
-      if (key === "more") {
-        this.setData({ showMoreDialog: true })
-        return
-      }
-
       this.triggerEvent("action", {
         key
       })
-    },
-
-    closeMoreDialog() {
-      this.setData({ showMoreDialog: false })
-    },
-
-    handleMoreActionTap(event: WechatMiniprogram.TouchEvent) {
-      if (this.data.disabled || !this.data.hasContent) return
-      const key = event.currentTarget.dataset.key
-      if (key !== "copy" && key !== "clear") return
-
-      this.setData({ showMoreDialog: false })
-      this.triggerEvent("action", { key })
     }
   }
 })

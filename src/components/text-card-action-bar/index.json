@@ -1,7 +1,6 @@
 {
   "component": true,
   "usingComponents": {
-    "app-dialog": "/components/app-dialog/index",
     "app-icon": "/components/app-icon/index"
   }
 }

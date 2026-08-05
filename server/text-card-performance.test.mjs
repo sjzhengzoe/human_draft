@@ -76,7 +76,9 @@ test("text card UI exposes preview and high-resolution export states", async () 
     "src/components/text-card-action-bar/index.ts"
   )
   assert.match(actionBar, /label: "导出高清"/)
-  assert.match(actionBar, /showMoreDialog/)
+  assert.match(actionBar, /key: "copy"/)
+  assert.match(actionBar, /key: "clear"/)
+  assert.doesNotMatch(actionBar, /showMoreDialog|key: "more"/)
 
   for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
     const template = await readProjectFile(`src/pages/${page}/index.wxml`)
