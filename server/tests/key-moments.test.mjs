@@ -41,6 +41,20 @@ test("key moment creation uses the previewed date only for day view", async () =
   assert.match(page, /editorDate,[\s\S]*?editorTime: now\.time/);
 });
 
+test("key moment timeline items own the edit hit area without a corner control", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
+  ]);
+  assert.match(
+    page,
+    /class="timeline-entry[^\n]*"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?bindtap="handleEdit"/,
+  );
+  assert.match(page, /class="moment-image"[\s\S]*?catchtap="handlePreview"/);
+  assert.doesNotMatch(page, /edit-button|edit-button__dots|•••/);
+  assert.doesNotMatch(styles, /\.edit-button/);
+});
+
 test("key moments migration creates user-owned records and a private image bucket", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608020001_key_moments.sql", import.meta.url),
