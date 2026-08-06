@@ -9,6 +9,13 @@ import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
+import {
+  canvasToTempFilePath,
+  createPreviewSignature,
+  createRenderQueue,
+  loadCanvasImage,
+  saveImageToPhotosAlbum,
+} from "../../utils/text-card-render";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
   type RenderQuality = "preview" | "export";
@@ -141,7 +148,7 @@ import {
   ].join("\n");
 
   let renderRequestId = 0;
-  let renderChain = Promise.resolve();
+  const enqueueRender = createRenderQueue();
   let clearUndoSnapshot: ClearSnapshot | undefined;
   let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -435,7 +442,10 @@ import {
         if (!this.data.canvasReady || !this.data.pages.length) return;
 
         const requestId = ++renderRequestId;
-        const previewSignature = getPreviewSignature(this.data.content);
+        const previewSignature = createPreviewSignature(
+          PREVIEW_CACHE_VERSION,
+          this.data.content,
+        );
         this.setData({
           isRenderingCards: true,
           renderError: false,
@@ -568,7 +578,7 @@ import {
           y += item.afterGap;
         });
 
-        return canvasToTempFilePath(canvas, metrics);
+        return canvasToTempFilePath(canvas, metrics.width, metrics.height);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -600,7 +610,10 @@ import {
           Math.max(pages.length - 1, 0),
         );
         const cachedUrls = pages.length
-          ? getCachedTextCardPreview("douyin2", getPreviewSignature(content))
+          ? getCachedTextCardPreview(
+              "douyin2",
+              createPreviewSignature(PREVIEW_CACHE_VERSION, content),
+            )
           : undefined;
         const renderedImageUrls =
           cachedUrls ||
@@ -675,10 +688,6 @@ import {
     if (!bodyLines.length) return DOUYIN_TAGS;
 
     return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
-  }
-
-  function getPreviewSignature(content: string) {
-    return `${PREVIEW_CACHE_VERSION}\u0000${content}`;
   }
 
   function getPages(content: string) {
@@ -919,54 +928,6 @@ import {
     };
   }
 
-  function saveImageToPhotosAlbum(filePath: string) {
-    return new Promise<void>((resolve, reject) => {
-      wx.saveImageToPhotosAlbum({
-        filePath,
-        success: () => resolve(),
-        fail: reject,
-      });
-    });
-  }
-
-  function loadCanvasImage(canvas: Canvas2DNode, src: string) {
-    return new Promise<unknown>((resolve, reject) => {
-      const image = canvas.createImage();
-
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = src;
-    });
-  }
-
-  function canvasToTempFilePath(
-    canvas: Canvas2DNode,
-    metrics: CanvasMetrics,
-  ) {
-    return new Promise<string>((resolve, reject) => {
-      wx.canvasToTempFilePath({
-        canvas,
-        width: metrics.width,
-        height: metrics.height,
-        destWidth: metrics.width,
-        destHeight: metrics.height,
-        fileType: "png",
-        success: (result) => resolve(result.tempFilePath),
-        fail: reject,
-      });
-    });
-  }
-
   function ensureDouyin2FontLoaded() {
     return loadAppFont(APP_FONTS.ui);
-  }
-
-  function enqueueRender<T>(task: () => Promise<T>) {
-    const run = renderChain.then(task, task);
-    renderChain = run.then(
-      () => undefined,
-      () => undefined,
-    );
-
-    return run;
   }

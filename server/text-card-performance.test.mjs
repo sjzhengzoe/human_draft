@@ -48,6 +48,36 @@ test("text card previews stay lightweight, cached, and cancellable", async () =>
   )
 })
 
+test("text card pages share presentation and render infrastructure", async () => {
+  const pageNames = ["xiaohongshu", "douyin2", "douyin3"]
+  const [pageSources, pageStyles, sharedRender, sharedStyle] = await Promise.all([
+    Promise.all(
+      pageNames.map((page) => readProjectFile(`src/pages/${page}/index.ts`))
+    ),
+    Promise.all(
+      pageNames.map((page) => readProjectFile(`src/pages/${page}/index.less`))
+    ),
+    readProjectFile("src/utils/text-card-render.ts"),
+    readProjectFile("src/styles/text-card-page.less")
+  ])
+
+  for (const source of pageSources) {
+    assert.match(source, /from "\.\.\/\.\.\/utils\/text-card-render"/)
+    assert.doesNotMatch(source, /function saveImageToPhotosAlbum/)
+    assert.doesNotMatch(source, /let renderChain = Promise\.resolve\(\)/)
+  }
+
+  for (const style of pageStyles) {
+    assert.match(style, /@import "\.\.\/\.\.\/styles\/text-card-page\.less"/)
+  }
+
+  assert.match(sharedRender, /export function createRenderQueue/)
+  assert.match(sharedRender, /export function canvasToTempFilePath/)
+  assert.match(sharedStyle, /\.template-switch/)
+  assert.match(sharedStyle, /\.card-preview-overlay/)
+  assert.match(pageStyles[2], /\.circle-image-picker/)
+})
+
 test("content security checks new input but not copy or export output", async () => {
   for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
     const source = await readProjectFile(`src/pages/${page}/index.ts`)

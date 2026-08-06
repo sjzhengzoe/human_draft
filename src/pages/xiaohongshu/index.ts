@@ -9,6 +9,13 @@ import {
   getStoredTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
+import {
+  canvasToTempFilePath,
+  createPreviewSignature,
+  createRenderQueue,
+  loadCanvasImage,
+  saveImageToPhotosAlbum,
+} from "../../utils/text-card-render";
 
   type ActionKey =
     | "paste"
@@ -195,7 +202,7 @@ import {
   ].join("\n");
 
   let renderRequestId = 0;
-  let renderChain = Promise.resolve();
+  const enqueueRender = createRenderQueue();
   let clearUndoSnapshot: ClearSnapshot | undefined;
   let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -540,7 +547,10 @@ import {
         if (!this.data.canvasReady || !this.data.slides.length) return;
 
         const requestId = ++renderRequestId;
-        const previewSignature = getPreviewSignature(this.data.content);
+        const previewSignature = createPreviewSignature(
+          PREVIEW_CACHE_VERSION,
+          this.data.content,
+        );
         this.setData({
           isRenderingCards: true,
           renderError: false,
@@ -709,7 +719,7 @@ import {
           y += metrics.paragraphGap;
         });
 
-        return canvasToTempFilePath(canvas, metrics);
+        return canvasToTempFilePath(canvas, metrics.width, metrics.height);
       },
 
       async generateCombinedImage(
@@ -770,7 +780,7 @@ import {
           }
         });
 
-        return canvasToTempFilePath(canvas, metrics);
+        return canvasToTempFilePath(canvas, metrics.width, metrics.height);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -807,7 +817,7 @@ import {
         const cachedUrls = slides.length
           ? getCachedTextCardPreview(
               "xiaohongshu",
-              getPreviewSignature(content),
+              createPreviewSignature(PREVIEW_CACHE_VERSION, content),
             )
           : undefined;
         const renderedImageUrls =
@@ -869,10 +879,6 @@ import {
     const body = getXiaohongshuCopyableBody(content);
 
     return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
-  }
-
-  function getPreviewSignature(content: string) {
-    return `${PREVIEW_CACHE_VERSION}\u0000${content}`;
   }
 
   function getDouyinCopyableContent(content: string) {
@@ -1274,54 +1280,6 @@ import {
     };
   }
 
-  function saveImageToPhotosAlbum(filePath: string) {
-    return new Promise<void>((resolve, reject) => {
-      wx.saveImageToPhotosAlbum({
-        filePath,
-        success: () => resolve(),
-        fail: reject,
-      });
-    });
-  }
-
-  function loadCanvasImage(canvas: Canvas2DNode, src: string) {
-    return new Promise<unknown>((resolve, reject) => {
-      const image = canvas.createImage();
-
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = src;
-    });
-  }
-
-  function canvasToTempFilePath(
-    canvas: Canvas2DNode,
-    metrics: CanvasMetrics,
-  ) {
-    return new Promise<string>((resolve, reject) => {
-      wx.canvasToTempFilePath({
-        canvas,
-        width: metrics.width,
-        height: metrics.height,
-        destWidth: metrics.width,
-        destHeight: metrics.height,
-        fileType: "png",
-        success: (result) => resolve(result.tempFilePath),
-        fail: reject,
-      });
-    });
-  }
-
   function ensureRed3FontLoaded() {
     return loadAppFont(APP_FONTS.red3);
-  }
-
-  function enqueueRender<T>(task: () => Promise<T>) {
-    const run = renderChain.then(task, task);
-    renderChain = run.then(
-      () => undefined,
-      () => undefined,
-    );
-
-    return run;
   }
