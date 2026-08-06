@@ -21,9 +21,22 @@ import {
   replaceMenuPlaceImage,
   updateMenuPlace
 } from "../domains/menu/places.mjs"
+import { getMenuOverview } from "../domains/menu/overview.mjs"
 
 export function registerMenuRoutes(app, context) {
   const { authenticated, contentSecurity, getSupabaseAdmin } = context
+
+  app.get("/api/menu-overview", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      ...await getMenuOverview(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.query || {}
+      ),
+      can_write: request.auth.user.can_write
+    }
+  }))
 
   app.get("/api/categories", { preHandler: authenticated }, async (request) => ({
     ok: true,

@@ -1,12 +1,10 @@
-import { ensureLogin } from "../../services/auth"
 import {
-  listCategories,
+  getMenuOverview,
   listDishes,
   listMenuPlaces,
   reorderDishSortOrders,
   reorderMenuPlaceSortOrders
 } from "../../services/menu"
-import { listDiningScenes } from "../../services/dining"
 import type {
   Category,
   Dish,
@@ -29,6 +27,9 @@ import {
   normalizeCookingTypes,
   normalizeTasteTags
 } from "../../utils/menu-attributes"
+import {
+  getMenuDataRevision
+} from "../../utils/menu-data-revision"
 
 let dragSourceIndex = -1
 let dragTargetIndex = -1
@@ -49,6 +50,7 @@ type DisplayMode = "quick" | "browse"
 type RecordTypeFilter = "all" | "home" | "outside"
 
 type MenuDish = Dish & {
+  browseVisible: boolean
   mealPeriodTags: MealPeriodTag[]
   mealPeriodText: string
   mainIngredientText: string
@@ -66,8 +68,16 @@ type QuickOutsideDish = MenuPlaceDishPreview & {
 }
 
 type QuickMenuPlace = Omit<MenuPlace, "dishes" | "preview_dishes"> & {
+  browseVisible: boolean
   dishes: QuickOutsideDish[]
   preview_dishes: QuickOutsideDish[]
+}
+
+type CachedMenuContent = {
+  revision: number
+  cachedAt: number
+  dishes: MenuDish[]
+  outsidePlaces: QuickMenuPlace[]
 }
 
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
@@ -75,6 +85,24 @@ const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
   lunch: "午餐",
   afternoon_tea: "下午茶",
   dinner: "晚餐"
+}
+
+const BROWSE_WINDOW_RADIUS = 1
+const MENU_CACHE_MAX_AGE_MS = 5 * 60 * 1000
+const menuContentCache = new Map<string, CachedMenuContent>()
+
+function isBrowseItemVisible(index: number, currentIndex: number): boolean {
+  return Math.abs(index - currentIndex) <= BROWSE_WINDOW_RADIUS
+}
+
+function applyBrowseWindow<T extends { browseVisible: boolean }>(
+  items: T[],
+  currentIndex: number
+): T[] {
+  return items.map((item, index) => ({
+    ...item,
+    browseVisible: isBrowseItemVisible(index, currentIndex)
+  }))
 }
 
 function toMenuDish(dish: Dish): MenuDish {
@@ -89,6 +117,7 @@ function toMenuDish(dish: Dish): MenuDish {
     : dish.category?.name || "未分类"
   return {
     ...dish,
+    browseVisible: false,
     cooking_methods: cookingMethods,
     tasteTags,
     recordTypeLabel: dish.record_type === "outside" ? "外食" : "在家",
@@ -122,6 +151,7 @@ function toQuickOutsideDish(dish: MenuPlaceDishPreview): QuickOutsideDish {
 function toQuickMenuPlace(place: MenuPlace): QuickMenuPlace {
   return {
     ...place,
+    browseVisible: false,
     dishes: place.dishes.map(toQuickOutsideDish),
     preview_dishes: place.preview_dishes.map(toQuickOutsideDish)
   }
@@ -208,12 +238,20 @@ Page({
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    metadataLoaded: false,
+    loadedRevision: -1,
+    lastLoadedAt: 0,
     errorMessage: ""
   },
 
   onShow() {
     activateAsyncPage(this)
-    this.refreshData()
+    const revisionChanged = this.data.loadedRevision !== getMenuDataRevision()
+    const cacheExpired = Date.now() - this.data.lastLoadedAt > MENU_CACHE_MAX_AGE_MS
+    if (!this.data.metadataLoaded || revisionChanged || cacheExpired) {
+      menuContentCache.clear()
+      this.refreshData(true)
+    }
   },
 
   onUnload() {
@@ -222,10 +260,49 @@ Page({
     sortOriginalIds = []
     outsideSortOriginalIds.clear()
     outsidePlaceOriginalIds = []
+    menuContentCache.clear()
   },
 
-  async refreshData() {
+  async refreshData(reloadMetadata: boolean, allowCache = false) {
     const generation = beginAsyncPageRequest(this)
+    const currentRevision = getMenuDataRevision()
+    if (currentRevision !== this.data.loadedRevision) menuContentCache.clear()
+    if (!reloadMetadata && allowCache) {
+      const activeFilter = resolveCategoryFilter(
+        this.data.activeFilter,
+        this.data.categories,
+        this.data.outsideCategories
+      )
+      const cached = menuContentCache.get(activeFilter)
+      if (
+        cached
+        && cached.revision === currentRevision
+        && Date.now() - cached.cachedAt <= MENU_CACHE_MAX_AGE_MS
+      ) {
+        const activeRecordType = recordTypeFromFilter(activeFilter)
+        const itemCount = activeRecordType === "outside"
+          ? cached.outsidePlaces.length
+          : cached.dishes.length
+        const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
+        this.setData({
+          dishes: applyBrowseWindow(cached.dishes, browsePosition.browseCurrentIndex),
+          outsidePlaces: applyBrowseWindow(
+            cached.outsidePlaces,
+            browsePosition.browseCurrentIndex
+          ),
+          activeFilter,
+          activeRecordType,
+          ...browsePosition,
+          loading: false,
+          contentLoading: false,
+          hasLoaded: true,
+          loadedRevision: currentRevision,
+          lastLoadedAt: cached.cachedAt,
+          errorMessage: ""
+        })
+        return
+      }
+    }
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
       loading: showInitialLoading,
@@ -233,57 +310,101 @@ Page({
       errorMessage: ""
     })
     try {
-      const session = await ensureLogin()
-      const [categories, outsideCategories] = await Promise.all([
-        listCategories(),
-        listDiningScenes()
-      ])
-      if (!isAsyncPageRequestCurrent(this, generation)) return
-      const activeFilter = resolveCategoryFilter(
+      let categories = this.data.categories
+      let outsideCategories = this.data.outsideCategories
+      let homePlaceId = this.data.homePlaceId
+      let activeFilter = resolveCategoryFilter(
         this.data.activeFilter,
         categories,
         outsideCategories
       )
-      const homeCategoryId = activeFilter.startsWith("home:")
-        ? activeFilter.slice("home:".length)
-        : ""
-      const outsideCategoryId = activeFilter.startsWith("outside:")
-        ? activeFilter.slice("outside:".length)
-        : ""
-      const activeRecordType = recordTypeFromFilter(activeFilter)
-      const homePlaces = activeRecordType === "home"
-        ? await listMenuPlaces({ place_type: "home" })
-        : []
-      const homePlaceId = homePlaces[0]?.id || ""
-      const [dishes, outsidePlaces] = activeRecordType === "home"
-        ? [await listDishes({
-          place_id: homePlaceId || undefined,
-          category_id: homeCategoryId || undefined,
-          record_type: "home",
-          sort: "custom",
-          page_size: 100
-        }), [] as MenuPlace[]]
-        : [[], await listMenuPlaces({
-          place_type: "outside",
-          outside_category_id: outsideCategoryId || undefined
-        })]
+      let activeRecordType = recordTypeFromFilter(activeFilter)
+      let dishes: Dish[] = []
+      let outsidePlaces: MenuPlace[] = []
+      let canWrite = this.data.canWrite
+
+      if (reloadMetadata) {
+        const requestedCategoryId = this.data.activeFilter.includes(":")
+          ? this.data.activeFilter.slice(this.data.activeFilter.indexOf(":") + 1)
+          : undefined
+        const requestedRecordType = recordTypeFromFilter(this.data.activeFilter)
+        const overview = await getMenuOverview({
+          record_type: requestedRecordType === "outside" ? "outside" : "home",
+          category_id: requestedCategoryId
+        })
+        categories = overview.categories
+        outsideCategories = overview.outsideCategories
+        homePlaceId = overview.homePlaceId
+        activeFilter = overview.activeFilter
+        activeRecordType = overview.activeRecordType
+        dishes = overview.dishes
+        outsidePlaces = overview.outsidePlaces
+        canWrite = overview.canWrite
+      } else {
+        const homeCategoryId = activeFilter.startsWith("home:")
+          ? activeFilter.slice("home:".length)
+          : ""
+        const outsideCategoryId = activeFilter.startsWith("outside:")
+          ? activeFilter.slice("outside:".length)
+          : ""
+        if (activeRecordType === "home") {
+          dishes = await listDishes({
+            place_id: homePlaceId || undefined,
+            category_id: homeCategoryId || undefined,
+            record_type: "home",
+            sort: "custom",
+            page_size: 100
+          })
+        } else {
+          outsidePlaces = await listMenuPlaces({
+            place_type: "outside",
+            outside_category_id: outsideCategoryId || undefined
+          })
+        }
+      }
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const itemCount = activeRecordType === "outside" ? outsidePlaces.length : dishes.length
       const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
-      this.setData({
-        categories,
-        outsideCategories,
-        dishes: dishes.map(toMenuDish),
-        outsidePlaces: outsidePlaces.map(toQuickMenuPlace),
+      const loadedRevision = getMenuDataRevision()
+      const loadedAt = Date.now()
+      const menuDishes = dishes.map(toMenuDish)
+      const quickOutsidePlaces = outsidePlaces.map(toQuickMenuPlace)
+      menuContentCache.set(activeFilter, {
+        revision: loadedRevision,
+        cachedAt: loadedAt,
+        dishes: menuDishes,
+        outsidePlaces: quickOutsidePlaces
+      })
+      const nextDishes = applyBrowseWindow(
+        menuDishes,
+        browsePosition.browseCurrentIndex
+      )
+      const nextOutsidePlaces = applyBrowseWindow(
+        quickOutsidePlaces,
+        browsePosition.browseCurrentIndex
+      )
+      const dataPatch: WechatMiniprogram.IAnyObject = {
+        dishes: nextDishes,
+        outsidePlaces: nextOutsidePlaces,
         homePlaceId,
         activeFilter,
         activeRecordType,
         ...browsePosition,
-        canWrite: session.user.can_write,
-        canReorder: session.user.can_write,
+        canWrite,
+        canReorder: canWrite,
+        loadedRevision,
+        lastLoadedAt: loadedAt,
         draggingIndex: -1,
         dragTargetIndex: -1
-      })
+      }
+      if (reloadMetadata) {
+        Object.assign(dataPatch, {
+          categories,
+          outsideCategories,
+          metadataLoaded: true
+        })
+      }
+      this.setData(dataPatch)
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const message = error instanceof Error ? error.message : "菜单加载失败"
@@ -311,7 +432,7 @@ Page({
       sortEditing: false,
       contentLoading: true,
       errorMessage: ""
-    }, () => this.refreshData())
+    }, () => this.refreshData(false, true))
   },
 
   handleRecordTypeTap(event: WechatMiniprogram.TouchEvent) {
@@ -336,7 +457,7 @@ Page({
       sortEditing: false,
       contentLoading: true,
       errorMessage: ""
-    }, () => this.refreshData())
+    }, () => this.refreshData(false, true))
   },
 
   handleDisplayModeTap(event: WechatMiniprogram.TouchEvent) {
@@ -400,7 +521,7 @@ Page({
         outsidePlaceOriginalIds = []
         this.setData({ sortEditing: false })
         wx.showToast({ title: "排序已保存", icon: "success" })
-        await this.refreshData()
+        await this.refreshData(false)
       } catch (error) {
         if (isAsyncPageActive(this)) {
           wx.showToast({
@@ -428,7 +549,7 @@ Page({
       sortOriginalIds = []
       this.setData({ sortEditing: false })
       wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.refreshData()
+      await this.refreshData(false)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -499,7 +620,23 @@ Page({
       : this.data.dishes.length
     const browsePosition = getBrowsePosition(itemCount, index)
     if (browsePosition.browseCurrentIndex !== this.data.browseCurrentIndex) {
-      this.setData(browsePosition)
+      const previousIndex = this.data.browseCurrentIndex
+      const currentIndex = browsePosition.browseCurrentIndex
+      const collectionKey = this.data.activeRecordType === "outside"
+        ? "outsidePlaces"
+        : "dishes"
+      const items = this.data.activeRecordType === "outside"
+        ? this.data.outsidePlaces
+        : this.data.dishes
+      const dataPatch: WechatMiniprogram.IAnyObject = { browseCurrentIndex: currentIndex }
+      items.forEach((item, itemIndex) => {
+        const wasVisible = isBrowseItemVisible(itemIndex, previousIndex)
+        const shouldBeVisible = isBrowseItemVisible(itemIndex, currentIndex)
+        if (wasVisible !== shouldBeVisible || item.browseVisible !== shouldBeVisible) {
+          dataPatch[`${collectionKey}[${itemIndex}].browseVisible`] = shouldBeVisible
+        }
+      })
+      this.setData(dataPatch)
     }
   },
 
@@ -670,6 +807,6 @@ Page({
 
   handleRetry() {
     if (this.data.sorting) return
-    this.refreshData()
+    this.refreshData(!this.data.metadataLoaded)
   }
 })

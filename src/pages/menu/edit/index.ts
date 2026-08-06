@@ -153,7 +153,7 @@ Page({
       } else {
         const place = this.data.placeId
           ? await getMenuPlace(this.data.placeId)
-          : (await listMenuPlaces({ place_type: "home" }))[0]
+          : (await listMenuPlaces({ place_type: "home", include_dishes: false }))[0]
         if (!place) throw new Error("没有可用的用餐地点")
         this.setData({
           categories,

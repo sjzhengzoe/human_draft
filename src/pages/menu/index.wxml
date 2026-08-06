@@ -147,7 +147,7 @@
   <view wx:elif="{{activeRecordType === 'outside'}}" class="browse-carousel">
     <swiper class="browse-swiper" current="{{browseCurrentIndex}}" circular="{{false}}" display-multiple-items="1" acceleration="{{false}}" duration="160" bindchange="handleBrowseChange">
       <swiper-item wx:for="{{outsidePlaces}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
-        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
+        <scroll-view wx:if="{{item.browseVisible}}" class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
           <view class="browse-card store-browse-card" data-id="{{item.id}}" bindtap="handlePlaceTap" role="button" aria-label="查看{{item.name}}">
             <view class="dish-image-frame browse-card__image-frame">
               <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
@@ -174,7 +174,7 @@
   <view wx:else class="browse-carousel">
     <swiper class="browse-swiper" current="{{browseCurrentIndex}}" circular="{{false}}" display-multiple-items="1" acceleration="{{false}}" duration="160" bindchange="handleBrowseChange">
       <swiper-item wx:for="{{dishes}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
-        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
+        <scroll-view wx:if="{{item.browseVisible}}" class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
           <view class="browse-card" data-id="{{item.id}}" bindtap="handleEditDishTap" role="button" aria-label="编辑{{item.name}}">
             <view class="dish-image-frame browse-card__image-frame">
               <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />

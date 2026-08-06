@@ -3,13 +3,18 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("menu supports 4:3 dish images, 1:1 store images, and matching previews", async () => {
-  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, cropper, attributes, placePage, placeStyles, placeEdit, placeEditStyles] = await Promise.all([
+  const [page, styles, editLogic, menuPage, menuStyles, menuLogic, menuService, diningService, menuRevision, menuPlaces, menuOverview, cropper, attributes, placePage, placeStyles, placeEdit, placeEditStyles] = await Promise.all([
     readFile(new URL("../../src/pages/menu/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/edit/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/edit/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/menu.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/dining.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/utils/menu-data-revision.ts", import.meta.url), "utf8"),
+    readFile(new URL("../domains/menu/places.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../domains/menu/overview.mjs", import.meta.url), "utf8"),
     readFile(new URL("../../src/components/image-cropper/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/utils/menu-attributes.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/menu/place/index.wxml", import.meta.url), "utf8"),
@@ -198,6 +203,22 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuStyles, /\.category-chip--active[^}]*border-color:\s*#111/);
   assert.match(menuLogic, /resolveCategoryFilter/);
   assert.match(menuLogic, /activeFilter,\s*activeRecordType,/);
+  assert.match(menuLogic, /const overview = await getMenuOverview/);
+  assert.match(menuService, /\/api\/menu-overview/);
+  assert.match(menuOverview, /Promise\.all\(\[\s*listCategories/);
+  assert.match(menuOverview, /include_dishes: false/);
+  assert.match(menuService, /include_dishes\?: boolean/);
+  assert.match(menuPlaces, /if \(!includeDishes\) \{\s*return places\.map/);
+  assert.match(menuLogic, /metadataLoaded:\s*false/);
+  assert.match(menuLogic, /menuContentCache = new Map/);
+  assert.match(menuLogic, /revisionChanged[\s\S]*cacheExpired/);
+  assert.match(menuLogic, /this\.refreshData\(false, true\)/);
+  assert.match(menuService, /markMenuDataChanged\(\)/);
+  assert.match(diningService, /markMenuDataChanged\(\)/);
+  assert.match(menuRevision, /menuDataRevision \+= 1/);
+  assert.match(menuLogic, /applyBrowseWindow/);
+  assert.match(menuLogic, /BROWSE_WINDOW_RADIUS\s*=\s*1/);
+  assert.match(menuPage, /wx:if="\{\{item\.browseVisible\}\}" class="browse-slide-scroll"/);
   assert.match(menuLogic, /handleBrowseChange\(event:\s*WechatMiniprogram\.SwiperChange\)/);
   assert.doesNotMatch(menuLogic, /getBrowseMetrics|BROWSE_CARD_STRIDE_RPX|scrollLeft/);
   assert.match(cropper, /viewportWidth/);

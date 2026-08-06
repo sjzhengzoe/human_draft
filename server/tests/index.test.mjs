@@ -462,6 +462,85 @@ test("media and dining detail routes load records by id", async (t) => {
   assert.equal(unauthenticatedResponse.json().error.code, "UNAUTHORIZED");
 });
 
+test("menu overview combines metadata, permissions, and initial content", async (t) => {
+  const category = {
+    id: SOURCE_ID,
+    user_id: USER_ID,
+    name: "家常菜",
+    sort_order: 1000,
+    created_at: "2026-08-01T00:00:00.000Z",
+  };
+  const outsideCategory = {
+    id: TARGET_ID,
+    user_id: USER_ID,
+    name: "面馆",
+    sort_order: 1000,
+  };
+  const homePlace = {
+    id: DINING_ID,
+    user_id: USER_ID,
+    name: "家",
+    place_type: "home",
+    outside_category_id: null,
+    image_path: "",
+    thumbnail_path: null,
+    sort_order: 1000,
+    source_dish_id: null,
+    created_at: "2026-08-01T00:00:00.000Z",
+    updated_at: "2026-08-01T00:00:00.000Z",
+  };
+  const dish = {
+    id: MEDIA_ID,
+    user_id: USER_ID,
+    name: "番茄炒鸡蛋",
+    record_type: "home",
+    category_id: SOURCE_ID,
+    outside_category_id: null,
+    recommended_items: [],
+    main_ingredients: ["番茄", "鸡蛋"],
+    introduction: "",
+    cooking_methods: ["cooking_01"],
+    taste: ["taste_04"],
+    flavor_options: [],
+    image_path: "dishes/tomato.webp",
+    thumbnail_path: "dishes/tomato-thumb.webp",
+    meal_periods: ["lunch", "dinner"],
+    place_id: DINING_ID,
+    place_sort_order: 1000,
+    sort_order: 1000,
+    created_at: "2026-08-01T00:00:00.000Z",
+    updated_at: "2026-08-01T00:00:00.000Z",
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        categories: [category],
+        dining_scenes: [outsideCategory],
+        menu_places: [homePlace],
+        dishes: [dish],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/menu-overview?record_type=home",
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  const overview = response.json().data;
+  assert.equal(overview.can_write, true);
+  assert.equal(overview.home_place_id, DINING_ID);
+  assert.equal(overview.active_filter, `home:${SOURCE_ID}`);
+  assert.equal(overview.active_record_type, "home");
+  assert.equal(overview.categories[0].name, "家常菜");
+  assert.equal(overview.outside_categories[0].name, "面馆");
+  assert.equal(overview.dishes[0].name, "番茄炒鸡蛋");
+  assert.deepEqual(overview.outside_places, []);
+});
+
 test("menu places expose stores first and their linked dishes separately", async (t) => {
   const place = {
     id: DINING_ID,
@@ -521,6 +600,17 @@ test("menu places expose stores first and their linked dishes separately", async
   assert.deepEqual(placeResponse.json().data.items[0].dishes[0].cooking_methods, ["蒸煮"]);
   assert.equal(placeResponse.json().data.items[0].dishes[0].taste, "鲜、香");
   assert.equal(placeResponse.json().data.items[0].preview_dishes[0].name, "牛肉面");
+
+  const lightweightPlaceResponse = await app.inject({
+    method: "GET",
+    url: "/api/menu-places?place_type=outside&include_dishes=false",
+    headers: authHeaders,
+  });
+  assert.equal(lightweightPlaceResponse.statusCode, 200);
+  assert.equal(lightweightPlaceResponse.json().data.items[0].name, "街角面馆");
+  assert.equal(lightweightPlaceResponse.json().data.items[0].dish_count, 0);
+  assert.deepEqual(lightweightPlaceResponse.json().data.items[0].dishes, []);
+  assert.deepEqual(lightweightPlaceResponse.json().data.items[0].preview_dishes, []);
 
   const dishResponse = await app.inject({
     method: "GET",

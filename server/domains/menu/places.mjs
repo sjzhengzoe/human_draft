@@ -60,6 +60,7 @@ async function assertOutsideCategoryExists(supabase, userId, categoryId) {
 }
 
 export async function listMenuPlaces(supabase, userId, query = {}) {
+  const includeDishes = query.include_dishes !== "false" && query.include_dishes !== false;
   let request = supabase
     .from("menu_places")
     .select("*, outside_category:dining_scenes!menu_places_outside_category_user_fkey(id, name)")
@@ -82,6 +83,9 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
     .order("created_at", { ascending: false });
   throwSupabaseError(error, "读取用餐地点失败。" );
   if (!places?.length) return [];
+  if (!includeDishes) {
+    return places.map((place) => toMenuPlaceResponse(supabase, place));
+  }
 
   const placeIds = places.map((place) => place.id);
   const { data: dishes, error: dishError } = await supabase

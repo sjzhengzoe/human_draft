@@ -6,7 +6,9 @@ import type {
   MenuPlace,
   MenuRecordType
 } from "../types/api"
+import type { DiningScene } from "../types/dining"
 import { request, upload } from "./request"
+import { markMenuDataChanged } from "../utils/menu-data-revision"
 
 const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
 
@@ -77,6 +79,45 @@ export async function listCategories(): Promise<Category[]> {
   return data.items
 }
 
+export type MenuOverview = {
+  categories: Category[]
+  outsideCategories: DiningScene[]
+  homePlaceId: string
+  activeFilter: string
+  activeRecordType: MenuRecordType
+  dishes: Dish[]
+  outsidePlaces: MenuPlace[]
+  canWrite: boolean
+}
+
+export async function getMenuOverview(params: {
+  record_type: MenuRecordType
+  category_id?: string
+}): Promise<MenuOverview> {
+  const data = await request<{
+    categories: Category[]
+    outside_categories: DiningScene[]
+    home_place_id: string
+    active_filter: string
+    active_record_type: MenuRecordType
+    dishes: Dish[]
+    outside_places: MenuPlace[]
+    can_write: boolean
+  }>({ path: `/api/menu-overview${toQuery(params)}` })
+  return {
+    categories: Array.isArray(data.categories) ? data.categories : [],
+    outsideCategories: Array.isArray(data.outside_categories) ? data.outside_categories : [],
+    homePlaceId: typeof data.home_place_id === "string" ? data.home_place_id : "",
+    activeFilter: typeof data.active_filter === "string" ? data.active_filter : params.record_type,
+    activeRecordType: data.active_record_type === "outside" ? "outside" : "home",
+    dishes: Array.isArray(data.dishes) ? data.dishes.map(normalizeDish) : [],
+    outsidePlaces: Array.isArray(data.outside_places)
+      ? data.outside_places.map(normalizeMenuPlace)
+      : [],
+    canWrite: data.can_write === true
+  }
+}
+
 export async function listDishes(params: DishListParams): Promise<Dish[]> {
   const data = await request<{ items: Dish[] }>({
     path: `/api/dishes${toQuery(params)}`
@@ -92,6 +133,7 @@ export async function getDish(id: string): Promise<Dish> {
 export async function listMenuPlaces(params: {
   place_type?: MenuRecordType
   outside_category_id?: string
+  include_dishes?: boolean
 } = {}): Promise<MenuPlace[]> {
   const data = await request<{ items: MenuPlace[] }>({
     path: `/api/menu-places${toQuery(params)}`
@@ -117,6 +159,7 @@ export async function createMenuPlace(input: {
       outside_category_id: input.outsideCategoryId
     }
   })
+  markMenuDataChanged()
   return normalizeMenuPlace(data.place)
 }
 
@@ -129,6 +172,7 @@ export async function updateMenuPlace(
     method: "PUT",
     data: changes
   })
+  markMenuDataChanged()
   return normalizeMenuPlace(data.place)
 }
 
@@ -137,11 +181,13 @@ export async function replaceMenuPlaceImage(id: string, imagePath: string): Prom
     path: `/api/menu-places/${id}/image`,
     filePath: imagePath
   })
+  markMenuDataChanged()
   return normalizeMenuPlace(data.place)
 }
 
-export function deleteMenuPlace(id: string): Promise<void> {
-  return request<void>({ path: `/api/menu-places/${id}`, method: "DELETE" })
+export async function deleteMenuPlace(id: string): Promise<void> {
+  await request<void>({ path: `/api/menu-places/${id}`, method: "DELETE" })
+  markMenuDataChanged()
 }
 
 export async function createDish(input: {
@@ -184,6 +230,7 @@ export async function createDish(input: {
       method: "POST",
       data: payload
     })
+  markMenuDataChanged()
   return normalizeDish(data.dish)
 }
 
@@ -209,6 +256,7 @@ export async function updateDish(
     method: "PUT",
     data: changes
   })
+  markMenuDataChanged()
   return normalizeDish(data.dish)
 }
 
@@ -217,33 +265,41 @@ export async function replaceDishImage(id: string, imagePath: string): Promise<D
     path: `/api/dishes/${id}/image`,
     filePath: imagePath
   })
+  markMenuDataChanged()
   return normalizeDish(data.dish)
 }
 
-export function deleteDish(id: string): Promise<void> {
-  return request<void>({ path: `/api/dishes/${id}`, method: "DELETE" })
+export async function deleteDish(id: string): Promise<void> {
+  await request<void>({ path: `/api/dishes/${id}`, method: "DELETE" })
+  markMenuDataChanged()
 }
 
-export function updatePrintStatus(ids: string[], printed: boolean): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
+export async function updatePrintStatus(ids: string[], printed: boolean): Promise<{ updated: number }> {
+  const result = await request<{ updated: number }>({
     path: "/api/dishes/print-status",
     method: "PUT",
     data: { ids, printed }
   })
+  markMenuDataChanged()
+  return result
 }
 
-export function reorderDishSortOrders(ids: string[], placeId?: string): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
+export async function reorderDishSortOrders(ids: string[], placeId?: string): Promise<{ updated: number }> {
+  const result = await request<{ updated: number }>({
     path: "/api/dishes/reorder",
     method: "PUT",
     data: { ids, place_id: placeId || "" }
   })
+  markMenuDataChanged()
+  return result
 }
 
-export function reorderMenuPlaceSortOrders(ids: string[]): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
+export async function reorderMenuPlaceSortOrders(ids: string[]): Promise<{ updated: number }> {
+  const result = await request<{ updated: number }>({
     path: "/api/menu-places/reorder",
     method: "PUT",
     data: { ids }
   })
+  markMenuDataChanged()
+  return result
 }
