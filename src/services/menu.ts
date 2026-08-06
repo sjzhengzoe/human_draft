@@ -113,7 +113,9 @@ async function getLegacyMenuOverview(params: {
   const activeCategories = params.record_type === "outside"
     ? outsideCategories
     : categories
-  const categoryId = resolveOverviewCategoryId(params.category_id, activeCategories)
+  const categoryId = params.record_type === "outside" && params.category_id === undefined
+    ? ""
+    : resolveOverviewCategoryId(params.category_id, activeCategories)
   const homePlaceId = homePlaces[0]?.id || ""
   const [dishes, outsidePlaces] = params.record_type === "home"
     ? [await listDishes({

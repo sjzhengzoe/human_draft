@@ -31,6 +31,7 @@
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
           <view wx:if="{{activeRecordType === 'home'}}" wx:for="{{categories}}" wx:key="id" class="category-chip {{activeFilter === 'home:' + item.id ? 'category-chip--active' : ''}}" data-filter="home:{{item.id}}" bindtap="handleFilterTap">{{item.name}}</view>
+          <view wx:if="{{activeRecordType === 'outside'}}" class="category-chip {{activeFilter === 'outside' ? 'category-chip--active' : ''}}" data-filter="outside" bindtap="handleFilterTap">全部</view>
           <view wx:if="{{activeRecordType === 'outside'}}" wx:for="{{outsideCategories}}" wx:key="id" class="category-chip {{activeFilter === 'outside:' + item.id ? 'category-chip--active' : ''}}" data-filter="outside:{{item.id}}" bindtap="handleFilterTap">{{item.name}}</view>
         </view>
       </scroll-view>

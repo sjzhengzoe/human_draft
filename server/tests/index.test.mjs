@@ -476,6 +476,12 @@ test("menu overview combines metadata, permissions, and initial content", async 
     name: "面馆",
     sort_order: 1000,
   };
+  const secondOutsideCategory = {
+    id: SEASON_ID,
+    user_id: USER_ID,
+    name: "咖啡店",
+    sort_order: 2000,
+  };
   const homePlace = {
     id: DINING_ID,
     user_id: USER_ID,
@@ -511,13 +517,41 @@ test("menu overview combines metadata, permissions, and initial content", async 
     created_at: "2026-08-01T00:00:00.000Z",
     updated_at: "2026-08-01T00:00:00.000Z",
   };
+  const outsidePlaces = [
+    {
+      id: EPISODE_ID,
+      user_id: USER_ID,
+      name: "街角面馆",
+      place_type: "outside",
+      outside_category_id: TARGET_ID,
+      image_path: "",
+      thumbnail_path: null,
+      sort_order: 1000,
+      source_dish_id: null,
+      created_at: "2026-08-01T00:00:00.000Z",
+      updated_at: "2026-08-01T00:00:00.000Z",
+    },
+    {
+      id: "10000000-0000-4000-8000-000000000010",
+      user_id: USER_ID,
+      name: "巷口咖啡",
+      place_type: "outside",
+      outside_category_id: SEASON_ID,
+      image_path: "",
+      thumbnail_path: null,
+      sort_order: 2000,
+      source_dish_id: null,
+      created_at: "2026-08-01T00:00:00.000Z",
+      updated_at: "2026-08-01T00:00:00.000Z",
+    },
+  ];
   const app = buildServer({
     logger: false,
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         categories: [category],
-        dining_scenes: [outsideCategory],
-        menu_places: [homePlace],
+        dining_scenes: [outsideCategory, secondOutsideCategory],
+        menu_places: [homePlace, ...outsidePlaces],
         dishes: [dish],
       }),
     }),
@@ -539,6 +573,32 @@ test("menu overview combines metadata, permissions, and initial content", async 
   assert.equal(overview.outside_categories[0].name, "面馆");
   assert.equal(overview.dishes[0].name, "番茄炒鸡蛋");
   assert.deepEqual(overview.outside_places, []);
+
+  const outsideResponse = await app.inject({
+    method: "GET",
+    url: "/api/menu-overview?record_type=outside",
+    headers: authHeaders,
+  });
+  assert.equal(outsideResponse.statusCode, 200);
+  const outsideOverview = outsideResponse.json().data;
+  assert.equal(outsideOverview.active_filter, "outside");
+  assert.deepEqual(
+    outsideOverview.outside_places.map((place) => place.name),
+    ["街角面馆", "巷口咖啡"],
+  );
+
+  const filteredOutsideResponse = await app.inject({
+    method: "GET",
+    url: `/api/menu-overview?record_type=outside&category_id=${TARGET_ID}`,
+    headers: authHeaders,
+  });
+  assert.equal(filteredOutsideResponse.statusCode, 200);
+  const filteredOutsideOverview = filteredOutsideResponse.json().data;
+  assert.equal(filteredOutsideOverview.active_filter, `outside:${TARGET_ID}`);
+  assert.deepEqual(
+    filteredOutsideOverview.outside_places.map((place) => place.name),
+    ["街角面馆"],
+  );
 });
 
 test("menu places expose stores first and their linked dishes separately", async (t) => {

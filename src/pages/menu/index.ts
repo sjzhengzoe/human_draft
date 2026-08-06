@@ -165,11 +165,10 @@ function recordTypeFromFilter(filter: string): RecordTypeFilter {
 
 function defaultCategoryFilter(
   recordType: RecordTypeFilter,
-  categories: Category[],
-  outsideCategories: DiningScene[]
+  categories: Category[]
 ) {
   if (recordType === "home" && categories[0]) return `home:${categories[0].id}`
-  if (recordType === "outside" && outsideCategories[0]) return `outside:${outsideCategories[0].id}`
+  if (recordType === "outside") return "outside"
   return recordType
 }
 
@@ -179,6 +178,7 @@ function resolveCategoryFilter(
   outsideCategories: DiningScene[]
 ) {
   const recordType = recordTypeFromFilter(filter)
+  if (recordType === "outside" && filter === "outside") return filter
   if (
     recordType === "home"
     && filter.startsWith("home:")
@@ -189,7 +189,7 @@ function resolveCategoryFilter(
     && filter.startsWith("outside:")
     && outsideCategories.some((category) => filter === `outside:${category.id}`)
   ) return filter
-  return defaultCategoryFilter(recordType, categories, outsideCategories)
+  return defaultCategoryFilter(recordType, categories)
 }
 
 function getBrowsePosition(itemCount: number, requestedIndex: number) {
@@ -446,8 +446,7 @@ Page({
     if (recordType === this.data.activeRecordType) return
     const filter = defaultCategoryFilter(
       recordType,
-      this.data.categories,
-      this.data.outsideCategories
+      this.data.categories
     )
     if (filter === this.data.activeFilter) return
     this.setData({

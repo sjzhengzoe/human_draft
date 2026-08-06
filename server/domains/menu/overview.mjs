@@ -32,7 +32,9 @@ export async function getMenuOverview(supabase, userId, query = {}) {
   ]);
   const homePlaceId = homePlaces[0]?.id || "";
   const activeCategories = recordType === "outside" ? outsideCategories : categories;
-  const categoryId = resolveCategoryId(query.category_id, activeCategories);
+  const categoryId = recordType === "outside" && query.category_id === undefined
+    ? ""
+    : resolveCategoryId(query.category_id, activeCategories);
   const [dishes, outsidePlaces] = recordType === "home"
     ? [
       (await listDishes(supabase, userId, {

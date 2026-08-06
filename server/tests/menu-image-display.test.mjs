@@ -124,7 +124,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   );
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);
   assert.doesNotMatch(menuPage, /data-type="all"/);
-  assert.doesNotMatch(menuPage, />全部<\/view>/);
+  assert.equal(menuPage.match(/>全部<\/view>/g)?.length, 1);
+  assert.match(menuPage, /data-filter="outside"[^>]*bindtap="handleFilterTap">全部<\/view>/);
   assert.doesNotMatch(menuPage, /quick-card__type/);
   assert.doesNotMatch(menuPage, /quick-card__meals/);
   assert.doesNotMatch(menuPage, /quick-card__category/);
