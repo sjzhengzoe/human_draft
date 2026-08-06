@@ -133,7 +133,7 @@
         </scroll-view>
       </view>
     </view>
-    <view wx:if="{{activeRecordType === 'home' ? dishes.length > 0 : outsidePlaces.length > 0}}" class="quick-footer">没有更多了</view>
+    <view wx:if="{{!contentLoading && !errorMessage && (activeRecordType === 'home' ? dishes.length > 0 : outsidePlaces.length > 0)}}" class="quick-footer">没有更多了</view>
   </scroll-view>
 
   <view wx:elif="{{contentLoading}}" class="browse-state content-loading">

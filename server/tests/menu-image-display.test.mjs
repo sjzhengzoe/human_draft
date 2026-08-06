@@ -118,6 +118,10 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.doesNotMatch(attributes, /item\.includes\("香"\)/);
   assert.match(menuPage, /displayMode === 'quick'/);
   assert.match(menuPage, /displayMode === 'browse'/);
+  assert.match(
+    menuPage,
+    /wx:if="\{\{!contentLoading && !errorMessage && \(activeRecordType === 'home' \? dishes\.length > 0 : outsidePlaces\.length > 0\)\}\}" class="quick-footer">没有更多了/,
+  );
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);
   assert.doesNotMatch(menuPage, /data-type="all"/);
   assert.doesNotMatch(menuPage, />全部<\/view>/);
