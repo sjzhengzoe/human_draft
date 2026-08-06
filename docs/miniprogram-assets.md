@@ -52,7 +52,7 @@ https://gufeifei.cn/assets/brand/logo.png
 提交前运行：
 
 ```bash
-node --test server/miniprogram-package.test.mjs
+node --test server/tests/miniprogram-package.test.mjs
 pnpm run typecheck
 ```
 

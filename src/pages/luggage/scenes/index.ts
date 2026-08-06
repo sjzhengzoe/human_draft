@@ -1,4 +1,4 @@
-import { listLuggageScenes } from "../../../services/life-lists"
+import { listLuggageScenes } from "../../../services/luggage"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

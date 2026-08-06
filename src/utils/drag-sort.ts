@@ -5,6 +5,10 @@ export type SortableRect = {
   bottom: number
 }
 
+export function hasSameOrder(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
+
 export function findClosestSortTarget(
   rects: SortableRect[],
   clientX: number,

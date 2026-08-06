@@ -1,5 +1,5 @@
-import { listDiningScenes, swapDiningSceneSortOrders } from "../../../services/life-lists"
-import type { DiningScene } from "../../../types/life-lists"
+import { listDiningScenes, swapDiningSceneSortOrders } from "../../../services/dining"
+import type { DiningScene } from "../../../types/dining"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -7,12 +7,9 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { hasSameOrder } from "../../../utils/drag-sort"
 
 let diningSceneSortOriginalIds: string[] = []
-
-function hasSameSceneOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 Page({
   data: {
@@ -80,7 +77,7 @@ Page({
       return
     }
     const desiredIds = this.data.scenes.map((scene) => scene.id)
-    if (hasSameSceneOrder(diningSceneSortOriginalIds, desiredIds)) {
+    if (hasSameOrder(diningSceneSortOriginalIds, desiredIds)) {
       diningSceneSortOriginalIds = []
       this.setData({ sortEditing: false })
       return

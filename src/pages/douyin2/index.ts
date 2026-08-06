@@ -1,21 +1,38 @@
-import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
+import {
+  copyTextCardContent,
+  copyTextCardTemplate,
+  createTextCardPageData,
+  ensureTextCardContentSafe,
+  openTextCardEditor,
+  readTextCardClipboard,
+  redirectToTextCardTemplate,
+  saveTextCardImages,
+} from "../../features/text-card/page-actions";
 import {
   cacheTextCardPreview,
   getCachedTextCardPreview,
 } from "../../services/text-card-preview-cache";
 import {
-  getStoredTextCardContent,
+  initializeTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
 import {
   canvasToTempFilePath,
   createPreviewSignature,
   createRenderQueue,
+  getTextCardCanvas,
   loadCanvasImage,
-  saveImageToPhotosAlbum,
+  type TextCardCanvasContext as Canvas2DContext,
+  type TextCardCanvasNode as Canvas2DNode,
 } from "../../utils/text-card-render";
+import {
+  createTextCardContentParser,
+  type TextCardParagraph as Paragraph,
+  type TextCardTextPart as TextPart,
+} from "../../features/text-card/content";
+import { createTimedUndo } from "../../features/text-card/timed-undo";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
   type RenderQuality = "preview" | "export";
@@ -25,16 +42,6 @@ import {
     width: number;
     height: number;
     scale: number;
-  };
-
-  type TextPart = {
-    text: string;
-  };
-
-  type Paragraph = {
-    parts: TextPart[];
-    isTitle: boolean;
-    isSpacer: boolean;
   };
 
   type ClearSnapshot = {
@@ -47,45 +54,9 @@ import {
     persist?: boolean;
   };
 
-  type Canvas2DNode = {
-    width: number;
-    height: number;
-    getContext: (contextId: "2d") => Canvas2DContext;
-    createImage: () => {
-      src: string;
-      onload: (() => void) | null;
-      onerror: ((error: unknown) => void) | null;
-    };
-  };
-
-  type Canvas2DContext = {
-    fillStyle: string;
-    font: string;
-    textAlign: "left" | "right" | "center" | "start" | "end";
-    textBaseline:
-      | "top"
-      | "hanging"
-      | "middle"
-      | "alphabetic"
-      | "ideographic"
-      | "bottom";
-    clearRect: (x: number, y: number, width: number, height: number) => void;
-    drawImage: (
-      image: unknown,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ) => void;
-    fillRect: (x: number, y: number, width: number, height: number) => void;
-    fillText: (text: string, x: number, y: number) => void;
-    measureText: (text: string) => { width: number };
-    scale: (x: number, y: number) => void;
-  };
 
   const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.douyin2;
   const LEGACY_STORAGE_KEY = "DOUYIN2_FORM_DATA_CONTENT";
-  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin2ExportCanvas";
   const PREVIEW_CACHE_VERSION = "douyin2-v2";
@@ -111,7 +82,15 @@ import {
   const CANVAS_MAX_CHARS_PER_LINE = 21;
   const CANVAS_TITLE_MAX_CHARS_PER_LINE = 18;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
-  const CLEAR_UNDO_DURATION = 5000;
+  const {
+    appendPastedContent,
+    getContentSlides,
+    getCopyableContent,
+    getParagraphs,
+  } = createTextCardContentParser({
+    format: "bracketed",
+    tags: DOUYIN_TAGS,
+  });
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
 那些惴惴不安的未来
@@ -149,37 +128,19 @@ import {
 
   let renderRequestId = 0;
   const enqueueRender = createRenderQueue();
-  let clearUndoSnapshot: ClearSnapshot | undefined;
-  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearUndo = createTimedUndo<ClearSnapshot>();
 
   Component({
     data: {
-      content: "",
-      hasCustomContent: false,
-      isExampleContent: false,
+      ...createTextCardPageData(),
       pages: [] as Paragraph[][],
-      renderedImageUrls: [] as string[],
-      activeIndex: 0,
-      isGenerating: false,
-      isRenderingCards: false,
-      renderError: false,
-      renderErrorMessage: "生成失败，请重试",
-      renderProgressText: "",
-      showClearUndo: false,
-      canvasReady: false,
     },
     lifetimes: {
       attached() {
-        const storedContent = getStoredTextCardContent("douyin2");
-        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
-        const initialContent =
-          typeof storedContent === "string"
-            ? storedContent
-            : typeof legacyContent === "string"
-              ? legacyContent
-              : undefined;
-
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin2");
+        const initialContent = initializeTextCardContent(
+          "douyin2",
+          LEGACY_STORAGE_KEY,
+        );
 
         if (typeof initialContent === "string") {
           this.loadStoredContent(initialContent);
@@ -200,9 +161,7 @@ import {
       },
       detached() {
         renderRequestId += 1;
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoTimer = undefined;
-        clearUndoSnapshot = undefined;
+        clearUndo.clear();
       },
     },
     pageLifetimes: {
@@ -219,25 +178,17 @@ import {
       },
     },
     methods: {
-      handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+      handleTemplateChange(
+        event: WechatMiniprogram.CustomEvent<{ template?: string }>,
+      ) {
         if (this.data.isGenerating) return;
-        const template = event.currentTarget.dataset.template;
-        if (template !== "xiaohongshu" && template !== "douyin3") return;
-
-        this.finalizeClearUndo();
-        wx.redirectTo({ url: `/pages/${template}/index` });
+        redirectToTextCardTemplate(event.detail.template, "douyin2", () =>
+          this.finalizeClearUndo(),
+        );
       },
 
       handleCopyTemplate() {
-        wx.setClipboardData({
-          data: COPY_TEMPLATE_CONTENT,
-          success: () => {
-            wx.showToast({ title: "模板已复制", icon: "success" });
-          },
-          fail: () => {
-            wx.showToast({ title: "复制失败", icon: "none" });
-          },
-        });
+        copyTextCardTemplate(COPY_TEMPLATE_CONTENT);
       },
 
       loadDouyin2Font() {
@@ -299,74 +250,47 @@ import {
       },
 
       openEditModal() {
-        wx.navigateTo({
-          url: "/pages/editor/index?source=douyin2",
-        });
+        openTextCardEditor("douyin2");
       },
 
       clearContent() {
         if (!this.data.hasCustomContent) return;
 
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoSnapshot = {
+        clearUndo.start({
           content: this.data.content,
           activeIndex: this.data.activeIndex,
-        };
+        }, () => this.finalizeClearUndo());
         this.syncContent("");
         this.setData({ showClearUndo: true });
-        clearUndoTimer = setTimeout(() => {
-          this.finalizeClearUndo();
-        }, CLEAR_UNDO_DURATION);
       },
 
       handleUndoClear() {
-        if (!clearUndoSnapshot) return;
-
-        const snapshot = clearUndoSnapshot;
-        this.finalizeClearUndo();
+        const snapshot = clearUndo.clear();
+        if (!snapshot) return;
+        this.setData({ showClearUndo: false });
         this.syncContent(snapshot.content, snapshot.activeIndex);
       },
 
       finalizeClearUndo() {
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoTimer = undefined;
-        clearUndoSnapshot = undefined;
+        clearUndo.clear();
         if (this.data.showClearUndo) {
           this.setData({ showClearUndo: false });
         }
       },
 
-      handlePasteContent() {
-        wx.getClipboardData({
-          success: async (result) => {
-            const pastedContent = result.data.trim();
-            if (!pastedContent) {
-              wx.showToast({
-                title: "剪贴板为空",
-                icon: "none",
-              });
-              return;
-            }
+      async handlePasteContent() {
+        const pastedContent = await readTextCardClipboard();
+        if (!pastedContent) return;
 
-            const currentContent = this.data.hasCustomContent
-              ? this.data.content
-              : "";
-            const content = appendPastedContent(currentContent, pastedContent);
-            if (!(await this.ensureSafeContent(pastedContent))) return;
+        const currentContent = this.data.hasCustomContent ? this.data.content : "";
+        const content = appendPastedContent(currentContent, pastedContent);
+        if (!(await ensureTextCardContentSafe(pastedContent))) return;
 
-            this.finalizeClearUndo();
-            this.syncContent(content);
-            wx.showToast({
-              title: currentContent ? "已追加" : "已粘贴",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "读取剪贴板失败",
-              icon: "none",
-            });
-          },
+        this.finalizeClearUndo();
+        this.syncContent(content);
+        wx.showToast({
+          title: currentContent ? "已追加" : "已粘贴",
+          icon: "success",
         });
       },
 
@@ -376,21 +300,7 @@ import {
         const text = getCopyableContent(this.data.content);
         if (!text) return;
 
-        wx.setClipboardData({
-          data: text,
-          success: () => {
-            wx.showToast({
-              title: "复制成功",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "复制失败",
-              icon: "none",
-            });
-          },
-        });
+        copyTextCardContent(text);
       },
 
       async handleSaveImages() {
@@ -399,41 +309,11 @@ import {
 
         this.setData({ isGenerating: true });
         const total = this.data.pages.length;
-        wx.showLoading({ title: `生成 0/${total}`, mask: true });
-
         try {
-          const urls = await this.renderPagesToImages(
-            "export",
-            undefined,
-            (completed, count) => {
-              wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
-            },
+          await saveTextCardImages(total, (onProgress) =>
+            this.renderPagesToImages("export", undefined, onProgress),
           );
-          if (!urls.length) {
-            wx.showToast({
-              title: "暂无内容",
-              icon: "none",
-            });
-            return;
-          }
-
-          for (const [index, url] of urls.entries()) {
-            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
-            await saveImageToPhotosAlbum(url);
-          }
-
-          wx.showToast({
-            title: "已保存",
-            icon: "success",
-          });
-        } catch (error) {
-          console.error("保存图片失败", error);
-          wx.showToast({
-            title: "保存失败",
-            icon: "none",
-          });
         } finally {
-          wx.hideLoading();
           this.setData({ isGenerating: false });
         }
       },
@@ -582,20 +462,9 @@ import {
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
-        return new Promise((resolve, reject) => {
-          this.createSelectorQuery()
-            .select(`#${CANVAS_ID}`)
-            .node((result) => {
-              if (result && result.node) {
-                resolve(result.node as Canvas2DNode);
-                return;
-              }
-
-              reject(new Error("未找到导出 canvas"));
-            })
-            .exec();
-        });
+        return getTextCardCanvas(this, CANVAS_ID);
       },
+
 
       syncContent(
         content: string,
@@ -646,148 +515,13 @@ import {
         }
       },
 
-      async ensureSafeContent(content: string) {
-        if (!content.trim()) return true;
-
-        wx.showLoading({ title: "安全检测中", mask: true });
-        try {
-          await checkTextContent(content);
-          return true;
-        } catch (error) {
-          wx.showToast({
-            title:
-              error instanceof Error
-                ? error.message
-                : "内容安全检测失败",
-            icon: "none",
-          });
-          return false;
-        } finally {
-          wx.hideLoading();
-        }
-      },
     },
   });
-
-  function getCopyableContent(content: string) {
-    const rawLines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => !line.startsWith("#") && line !== "/");
-    const hasPageTitles = rawLines.some(isPageBreakLine);
-    const lines = rawLines.filter((line) => !isPageBreakLine(line));
-
-    if (!lines.length) return "";
-
-    const titleIndex = lines.findIndex(Boolean);
-    if (titleIndex < 0) return "";
-
-    const bodyLines = hasPageTitles
-      ? trimEmptyLines(lines)
-      : trimEmptyLines(lines.slice(titleIndex + 1));
-    if (!bodyLines.length) return DOUYIN_TAGS;
-
-    return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
-  }
 
   function getPages(content: string) {
     return getContentSlides(content)
       .map((slide) => getParagraphs(slide))
       .filter((page) => page.some((paragraph) => !paragraph.isSpacer));
-  }
-
-  function getParagraphs(text: string) {
-    let hasTitle = false;
-
-    return getParagraphLines(text).map((line) => {
-      const isSpacer = line === "";
-      const isTitle = !isSpacer && !hasTitle;
-
-      if (isTitle) {
-        hasTitle = true;
-      }
-
-      return {
-        parts: isSpacer ? [] : [{ text: line }],
-        isTitle,
-        isSpacer,
-      };
-    });
-  }
-
-  function getParagraphLines(text: string) {
-    const lines = normalizeText(text)
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => !line.startsWith("#") && line !== "/");
-
-    return trimEmptyLines(lines);
-  }
-
-  function getContentSlides(content: string) {
-    const lines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trimEnd())
-      .filter((line) => !line.trim().startsWith("#") && line.trim() !== "/");
-    const slides = lines.reduce<string[][]>(
-      (result, line) => {
-        const currentSlide = result[result.length - 1];
-
-        if (isPageBreakLine(line) && currentSlide.some(Boolean)) {
-          result.push([]);
-        }
-
-        result[result.length - 1].push(line);
-        return result;
-      },
-      [[]],
-    );
-
-    return slides.map((item) => item.join("\n").trim()).filter(Boolean);
-  }
-
-  function isPageBreakLine(line: string) {
-    const text = line.trim();
-    return (
-      (text.startsWith("［") && text.endsWith("］")) ||
-      (text.startsWith("[") && text.endsWith("]"))
-    );
-  }
-
-  function appendPastedContent(currentContent: string, pastedContent: string) {
-    const current = currentContent.trim();
-    const pasted = pastedContent.trim();
-    if (!current) return pasted;
-
-    const firstPastedLine = normalizeText(pasted)
-      .split("\n")
-      .map((line) => line.trim())
-      .find(Boolean);
-    if (firstPastedLine && isPageBreakLine(firstPastedLine)) {
-      return `${current}\n\n${pasted}`;
-    }
-
-    const nextPage = getContentSlides(current).length + 1;
-    const pageTitle = `［第 ${nextPage} 张］`;
-    return `${current}\n\n${pageTitle}\n${pasted}`;
-  }
-
-  function trimEmptyLines(lines: string[]) {
-    const result = [...lines];
-
-    while (result[0] === "") {
-      result.shift();
-    }
-
-    while (result[result.length - 1] === "") {
-      result.pop();
-    }
-
-    return result;
-  }
-
-  function normalizeText(text: string) {
-    return text.replace(/\r\n/g, "\n").replace(/`/g, "");
   }
 
   function getRenderErrorMessage(error: unknown) {

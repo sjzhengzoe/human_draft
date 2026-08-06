@@ -1,0 +1,127 @@
+<view class="creation-screen">
+  <view class="creation-navigation">
+    <custom-navigation title="图文创作" />
+  </view>
+
+  <view class="page page--{{variant}}">
+    <view
+      class="template-switch {{disabled ? 'template-switch--disabled' : ''}}"
+      role="tablist"
+      aria-label="选择图文模板"
+      aria-disabled="{{disabled}}"
+    >
+      <view
+        wx:for="{{templates}}"
+        wx:key="key"
+        class="template-switch__item {{activeTemplate === item.key ? 'template-switch__item--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeTemplate === item.key}}"
+        data-template="{{item.key}}"
+        bindtap="handleTemplateTap"
+      >{{item.label}}</view>
+    </view>
+
+    <view wx:if="{{isExampleContent}}" class="example-notice">
+      <text class="example-notice__title">当前是默认文案</text>
+      <text class="example-notice__desc">请编辑文案后再导出</text>
+    </view>
+
+    <view wx:if="{{!hasCustomContent && !isExampleContent}}" class="card-swiper card-slide">
+      <view class="card-item card-item--empty">
+        <view class="card-loading card-empty-state">
+          <view class="card-empty-state__content">
+            <view class="card-loading__title">开始创作</view>
+            <view class="card-loading__desc">复制模板，按示例填写内容</view>
+            <button class="card-empty-state__copy" bindtap="handleCopyTemplate">
+              <text>复制模板</text>
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <swiper
+      wx:else
+      class="card-swiper"
+      current="{{activeIndex}}"
+      indicator-dots="{{renderedImageUrls.length > 1}}"
+      indicator-color="rgba(0, 0, 0, 0.18)"
+      indicator-active-color="#111111"
+      bindchange="handleSwiperChange"
+    >
+      <swiper-item wx:for="{{renderedImageUrls}}" wx:key="*this" class="card-slide">
+        <view class="card-item">
+          <image class="card-image" src="{{item}}" mode="widthFix" />
+          <view wx:if="{{renderError}}" class="card-preview-overlay">
+            <view class="card-preview-overlay__title">{{renderErrorMessage}}</view>
+            <button class="card-preview-overlay__retry" bindtap="handleRetryPreview">重新生成</button>
+          </view>
+          <view wx:elif="{{isRenderingCards}}" class="card-preview-overlay">
+            <view class="card-preview-overlay__spinner" />
+            <view class="card-preview-overlay__title">正在更新预览 {{renderProgressText}}</view>
+          </view>
+          <view
+            wx:if="{{showCircleImagePicker && !isExampleContent}}"
+            class="circle-image-picker {{selectedImagePaths[index] ? 'circle-image-picker--selected' : ''}} {{selectingImage && selectingImageIndex === index ? 'circle-image-picker--loading' : ''}}"
+            data-index="{{index}}"
+            role="button"
+            aria-label="{{selectedImagePaths[index] ? '更换圆形图片' : '添加圆形图片'}}"
+            catchtap="handleChooseCircleImage"
+          >
+            <image
+              wx:if="{{selectedImagePaths[index]}}"
+              class="circle-image-picker__image"
+              src="{{selectedImagePaths[index]}}"
+              mode="aspectFill"
+            />
+            <view wx:else class="circle-image-picker__placeholder">
+              <app-icon name="image-plus" size="32" />
+            </view>
+            <view wx:if="{{selectingImage && selectingImageIndex === index}}" class="circle-image-picker__mask">处理中</view>
+          </view>
+        </view>
+      </swiper-item>
+
+      <swiper-item wx:if="{{!renderedImageUrls.length && renderError}}" class="card-slide">
+        <view class="card-item card-item--preview-loading">
+          <view class="card-loading">
+            <view class="card-loading__title">{{renderErrorMessage}}</view>
+            <view class="card-loading__desc">
+              {{showCircleImagePicker ? '文案和图片不会丢失，可以重新生成预览' : '文案不会丢失，可以重新生成预览'}}
+            </view>
+            <button class="card-loading__retry" bindtap="handleRetryPreview">重新生成</button>
+          </view>
+        </view>
+      </swiper-item>
+
+      <swiper-item wx:elif="{{!renderedImageUrls.length}}" class="card-slide">
+        <view class="card-item card-item--preview-loading">
+          <view class="card-loading">
+            <view class="card-loading__title">正在生成预览 {{renderProgressText}}</view>
+            <view class="card-loading__desc">完成后可导出高清图片</view>
+          </view>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <view class="page-count" wx:if="{{contentCount}}">
+      <text>预览 · </text>
+      <text wx:if="{{mergeStartIndex >= 0 && activeIndex >= mergeStartIndex}}">合并版 · </text>
+      {{activeIndex + 1}} / {{previewCount}}
+    </view>
+
+    <text-card-action-bar
+      disabled="{{disabled}}"
+      has-content="{{hasCustomContent}}"
+      export-ready="{{exportReady}}"
+      show-append="{{showAppend}}"
+      label="{{actionLabel}}"
+      bind:action="handleAction"
+    />
+
+    <text-card-undo-bar
+      visible="{{showClearUndo}}"
+      bind:undo="handleUndoClear"
+    />
+  </view>
+</view>

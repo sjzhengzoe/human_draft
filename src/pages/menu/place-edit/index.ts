@@ -1,5 +1,5 @@
 import { ensureLogin } from "../../../services/auth"
-import { listDiningScenes } from "../../../services/life-lists"
+import { listDiningScenes } from "../../../services/dining"
 import {
   createMenuPlace,
   deleteMenuPlace,
@@ -8,7 +8,7 @@ import {
   updateMenuPlace
 } from "../../../services/menu"
 import type { MenuPlace } from "../../../types/api"
-import type { DiningScene } from "../../../types/life-lists"
+import type { DiningScene } from "../../../types/dining"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

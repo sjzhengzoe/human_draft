@@ -10,8 +10,8 @@ import {
   moveLuggageGroup,
   updateLuggageGroup,
   updateLuggageItem
-} from "../../services/life-lists"
-import type { LuggageItem, LuggageScene } from "../../types/life-lists"
+} from "../../services/luggage"
+import type { LuggageItem, LuggageScene } from "../../types/luggage"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

@@ -4,8 +4,8 @@ import {
   getDiningPlace,
   listDiningScenes,
   updateDiningPlace
-} from "../../../services/life-lists"
-import type { DiningMode, DiningPlace, DiningScene } from "../../../types/life-lists"
+} from "../../../services/dining"
+import type { DiningMode, DiningPlace, DiningScene } from "../../../types/dining"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

@@ -10,7 +10,7 @@ const SHARED_STORAGE_KEY = "TEXT_CARD_CONTENT";
 const LAST_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
 const SPLIT_MIGRATION_STORAGE_KEY = "TEXT_CARD_CONTENT_SPLIT_MIGRATED";
 
-export function getStoredTextCardContent(template: TextCardTemplate) {
+function getStoredTextCardContent(template: TextCardTemplate) {
   const storageKey = TEXT_CARD_STORAGE_KEYS[template];
   const storedContent = wx.getStorageSync(storageKey);
 
@@ -25,4 +25,21 @@ export function getStoredTextCardContent(template: TextCardTemplate) {
 
   wx.setStorageSync(storageKey, sharedContent);
   return sharedContent;
+}
+
+export function initializeTextCardContent(
+  template: TextCardTemplate,
+  legacyStorageKey: string,
+) {
+  const storedContent = getStoredTextCardContent(template);
+  const legacyContent = wx.getStorageSync(legacyStorageKey);
+  const initialContent =
+    typeof storedContent === "string"
+      ? storedContent
+      : typeof legacyContent === "string"
+        ? legacyContent
+        : undefined;
+
+  wx.setStorageSync(LAST_TEMPLATE_STORAGE_KEY, template);
+  return initialContent;
 }

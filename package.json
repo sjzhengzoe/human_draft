@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch server/index.mjs",
     "server:start": "node --env-file-if-exists=.env server/index.mjs",
-    "server:test": "NODE_ENV=test node --test server/**/*.test.mjs",
+    "server:test": "NODE_ENV=test node --test server/tests/*.test.mjs",
     "import:dishes": "node --env-file-if-exists=.env scripts/import-dishes.mjs",
     "images:audit": "node --env-file-if-exists=.env scripts/optimize-storage-images.mjs",
     "images:migrate": "node --env-file-if-exists=.env scripts/optimize-storage-images.mjs --apply",

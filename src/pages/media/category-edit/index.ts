@@ -3,7 +3,7 @@ import {
   deleteMediaCategory,
   getMediaCategory,
   updateMediaCategory
-} from "../../../services/life-lists"
+} from "../../../services/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

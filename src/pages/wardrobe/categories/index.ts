@@ -10,13 +10,10 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { hasSameOrder } from "../../../utils/drag-sort"
 
 type DisplayCategory = WardrobeCategory & { fieldSummary: string }
 let wardrobeCategorySortOriginalIds: string[] = []
-
-function hasSameCategoryOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 Page({
   data: {
@@ -100,7 +97,7 @@ Page({
       return
     }
     const desiredIds = this.data.categories.map((category) => category.id)
-    if (hasSameCategoryOrder(wardrobeCategorySortOriginalIds, desiredIds)) {
+    if (hasSameOrder(wardrobeCategorySortOriginalIds, desiredIds)) {
       wardrobeCategorySortOriginalIds = []
       this.setData({ sortEditing: false })
       return

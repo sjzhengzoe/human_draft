@@ -1,21 +1,40 @@
-import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
+import {
+  copyTextCardContent,
+  copyTextCardTemplate,
+  createTextCardPageData,
+  ensureTextCardContentSafe,
+  openTextCardEditor,
+  readTextCardClipboard,
+  redirectToTextCardTemplate,
+  saveTextCardImages,
+} from "../../features/text-card/page-actions";
+import { createLocalImageBindingsStore } from "../../features/text-card/local-image-bindings";
 import {
   cacheTextCardPreview,
   getCachedTextCardPreview,
 } from "../../services/text-card-preview-cache";
 import {
-  getStoredTextCardContent,
+  initializeTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
 import {
   canvasToTempFilePath,
   createPreviewSignature,
   createRenderQueue,
+  getTextCardCanvas,
   loadCanvasImage,
-  saveImageToPhotosAlbum,
+  type TextCardCanvasContext as Canvas2DContext,
+  type TextCardCanvasImage as CanvasImage,
+  type TextCardCanvasNode as Canvas2DNode,
 } from "../../utils/text-card-render";
+import {
+  createTextCardContentParser,
+  type TextCardParagraph as Paragraph,
+  type TextCardTextPart as TextPart,
+} from "../../features/text-card/content";
+import { createTimedUndo } from "../../features/text-card/timed-undo";
 
   type ActionKey = "paste" | "copy" | "edit" | "clear" | "export";
   type RenderQuality = "preview" | "export";
@@ -24,16 +43,6 @@ import {
   type CanvasMetrics = {
     width: number;
     scale: number;
-  };
-
-  type TextPart = {
-    text: string;
-  };
-
-  type Paragraph = {
-    parts: TextPart[];
-    isTitle: boolean;
-    isSpacer: boolean;
   };
 
   type ClearSnapshot = {
@@ -48,82 +57,8 @@ import {
     preferredImagePaths?: string[];
   };
 
-  type StoredImageBindings = {
-    version: 2;
-    bindings: Array<{
-      pageKey: string;
-      path: string;
-    }>;
-  };
-
-  type CanvasImage = {
-    width: number;
-    height: number;
-    src: string;
-    onload: (() => void) | null;
-    onerror: ((error: unknown) => void) | null;
-  };
-
-  type Canvas2DNode = {
-    width: number;
-    height: number;
-    getContext: (contextId: "2d") => Canvas2DContext;
-    createImage: () => CanvasImage;
-  };
-
-  type Canvas2DContext = {
-    fillStyle: string;
-    font: string;
-    textAlign: "left" | "right" | "center" | "start" | "end";
-    textBaseline:
-      | "top"
-      | "hanging"
-      | "middle"
-      | "alphabetic"
-      | "ideographic"
-      | "bottom";
-    clearRect: (x: number, y: number, width: number, height: number) => void;
-    drawImage: {
-      (
-        image: unknown,
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-      ): void;
-      (
-        image: unknown,
-        sourceX: number,
-        sourceY: number,
-        sourceWidth: number,
-        sourceHeight: number,
-        destinationX: number,
-        destinationY: number,
-        destinationWidth: number,
-        destinationHeight: number,
-      ): void;
-    };
-    fillRect: (x: number, y: number, width: number, height: number) => void;
-    fillText: (text: string, x: number, y: number) => void;
-    measureText: (text: string) => { width: number };
-    scale: (x: number, y: number) => void;
-    save: () => void;
-    restore: () => void;
-    beginPath: () => void;
-    arc: (
-      x: number,
-      y: number,
-      radius: number,
-      startAngle: number,
-      endAngle: number,
-    ) => void;
-    clip: () => void;
-  };
-
   const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.douyin3;
-  const LOCAL_IMAGES_STORAGE_KEY = "DOUYIN3_LOCAL_IMAGE_PATHS";
   const LEGACY_STORAGE_KEY = "DOUYIN3_FORM_DATA_CONTENT";
-  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "douyin3ExportCanvas";
   const PREVIEW_CACHE_VERSION = "douyin3-v2";
@@ -154,7 +89,22 @@ import {
   const CANVAS_BODY_FONT = `normal ${CANVAS_BODY_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const CANVAS_TITLE_FONT = `bold ${CANVAS_TITLE_FONT_SIZE}px ${CANVAS_TEXT_FONT_FAMILY}`;
   const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
-  const CLEAR_UNDO_DURATION = 5000;
+  const {
+    appendPastedContent,
+    getContentSlides,
+    getCopyableContent,
+    getParagraphs,
+    normalizeText,
+  } = createTextCardContentParser({
+    format: "numbered",
+    tags: DOUYIN_TAGS,
+  });
+  const {
+    getStoredImagePaths,
+    persistLocalImagePaths,
+    removeLocalImageFile,
+    saveLocalImageFile,
+  } = createLocalImageBindingsStore("DOUYIN3_LOCAL_IMAGE_PATHS");
   const DEFAULT_CONTENT = `［2026.06.21 xxx］
 
 那些惴惴不安的未来
@@ -193,24 +143,12 @@ import {
 
   let renderRequestId = 0;
   const enqueueRender = createRenderQueue();
-  let clearUndoSnapshot: ClearSnapshot | undefined;
-  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearUndo = createTimedUndo<ClearSnapshot>();
 
   Component({
     data: {
-      content: "",
-      hasCustomContent: false,
-      isExampleContent: false,
+      ...createTextCardPageData(),
       pages: [] as Paragraph[][],
-      renderedImageUrls: [] as string[],
-      activeIndex: 0,
-      isGenerating: false,
-      isRenderingCards: false,
-      renderError: false,
-      renderErrorMessage: "生成失败，请重试",
-      renderProgressText: "",
-      showClearUndo: false,
-      canvasReady: false,
       selectedImagePaths: [] as string[],
       pageKeys: [] as string[],
       selectingImage: false,
@@ -221,17 +159,10 @@ import {
     },
     lifetimes: {
       attached() {
-        const storedContent = getStoredTextCardContent("douyin3");
-        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
-        const storedImageValue = wx.getStorageSync(LOCAL_IMAGES_STORAGE_KEY);
-        const initialContent =
-          typeof storedContent === "string"
-            ? storedContent
-            : typeof legacyContent === "string"
-              ? legacyContent
-              : undefined;
-
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "douyin3");
+        const initialContent = initializeTextCardContent(
+          "douyin3",
+          LEGACY_STORAGE_KEY,
+        );
 
         if (typeof initialContent === "string") {
           const pageKeys = createPageKeys(
@@ -240,10 +171,7 @@ import {
             ),
           );
           this.syncContent(initialContent, 0, {
-            preferredImagePaths: getStoredImagePaths(
-              storedImageValue,
-              pageKeys,
-            ),
+            preferredImagePaths: getStoredImagePaths(pageKeys),
           });
         } else {
           this.syncContent(DEFAULT_CONTENT, 0, {
@@ -262,12 +190,10 @@ import {
       },
       detached() {
         renderRequestId += 1;
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        if (clearUndoSnapshot) {
-          clearUndoSnapshot.imagePaths.filter(Boolean).forEach(removeLocalImageFile);
+        const snapshot = clearUndo.clear();
+        if (snapshot) {
+          snapshot.imagePaths.filter(Boolean).forEach(removeLocalImageFile);
         }
-        clearUndoTimer = undefined;
-        clearUndoSnapshot = undefined;
       },
     },
     pageLifetimes: {
@@ -284,25 +210,17 @@ import {
       },
     },
     methods: {
-      handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+      handleTemplateChange(
+        event: WechatMiniprogram.CustomEvent<{ template?: string }>,
+      ) {
         if (this.data.isGenerating || this.data.selectingImage) return;
-        const template = event.currentTarget.dataset.template;
-        if (template !== "xiaohongshu" && template !== "douyin2") return;
-
-        this.finalizeClearUndo();
-        wx.redirectTo({ url: `/pages/${template}/index` });
+        redirectToTextCardTemplate(event.detail.template, "douyin3", () =>
+          this.finalizeClearUndo(),
+        );
       },
 
       handleCopyTemplate() {
-        wx.setClipboardData({
-          data: COPY_TEMPLATE_CONTENT,
-          success: () => {
-            wx.showToast({ title: "模板已复制", icon: "success" });
-          },
-          fail: () => {
-            wx.showToast({ title: "复制失败", icon: "none" });
-          },
-        });
+        copyTextCardTemplate(COPY_TEMPLATE_CONTENT);
       },
 
       loadDouyin3Font() {
@@ -363,10 +281,12 @@ import {
         });
       },
 
-      handleChooseCircleImage(event: WechatMiniprogram.TouchEvent) {
+      handleChooseCircleImage(
+        event: WechatMiniprogram.CustomEvent<{ index?: number }>,
+      ) {
         if (this.data.selectingImage || this.data.isGenerating) return;
 
-        const targetIndex = Number(event.currentTarget.dataset.index);
+        const targetIndex = Number(event.detail.index);
         if (!Number.isInteger(targetIndex) || targetIndex < 0) return;
 
         this.setData({
@@ -454,85 +374,58 @@ import {
       },
 
       openEditModal() {
-        wx.navigateTo({
-          url: "/pages/editor/index?source=douyin3",
-        });
+        openTextCardEditor("douyin3");
       },
 
       clearContent() {
         if (!this.data.hasCustomContent) return;
 
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoSnapshot = {
+        clearUndo.start({
           content: this.data.content,
           activeIndex: this.data.activeIndex,
           imagePaths: [...this.data.selectedImagePaths],
-        };
+        }, () => this.finalizeClearUndo());
         this.syncContent("");
         this.setData({ showClearUndo: true });
-        clearUndoTimer = setTimeout(() => {
-          this.finalizeClearUndo();
-        }, CLEAR_UNDO_DURATION);
       },
 
       handleUndoClear() {
-        if (!clearUndoSnapshot) return;
-
-        const snapshot = clearUndoSnapshot;
-        this.finalizeClearUndo(false);
+        const snapshot = clearUndo.clear();
+        if (!snapshot) return;
+        this.setData({ showClearUndo: false });
         this.syncContent(snapshot.content, snapshot.activeIndex, {
           preferredImagePaths: snapshot.imagePaths,
         });
       },
 
       finalizeClearUndo(removeImages = true) {
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoTimer = undefined;
+        const snapshot = clearUndo.clear();
 
-        if (removeImages && clearUndoSnapshot) {
+        if (removeImages && snapshot) {
           const activePaths = new Set(this.data.selectedImagePaths.filter(Boolean));
-          clearUndoSnapshot.imagePaths
+          snapshot.imagePaths
             .filter((path) => path && !activePaths.has(path))
             .forEach(removeLocalImageFile);
         }
 
-        clearUndoSnapshot = undefined;
         if (this.data.showClearUndo) {
           this.setData({ showClearUndo: false });
         }
       },
 
-      handlePasteContent() {
-        wx.getClipboardData({
-          success: async (result) => {
-            const pastedContent = result.data.trim();
-            if (!pastedContent) {
-              wx.showToast({
-                title: "剪贴板为空",
-                icon: "none",
-              });
-              return;
-            }
+      async handlePasteContent() {
+        const pastedContent = await readTextCardClipboard();
+        if (!pastedContent) return;
 
-            const currentContent = this.data.hasCustomContent
-              ? this.data.content
-              : "";
-            const content = appendPastedContent(currentContent, pastedContent);
-            if (!(await this.ensureSafeContent(pastedContent))) return;
+        const currentContent = this.data.hasCustomContent ? this.data.content : "";
+        const content = appendPastedContent(currentContent, pastedContent);
+        if (!(await ensureTextCardContentSafe(pastedContent))) return;
 
-            this.finalizeClearUndo();
-            this.syncContent(content);
-            wx.showToast({
-              title: currentContent ? "已追加" : "已粘贴",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "读取剪贴板失败",
-              icon: "none",
-            });
-          },
+        this.finalizeClearUndo();
+        this.syncContent(content);
+        wx.showToast({
+          title: currentContent ? "已追加" : "已粘贴",
+          icon: "success",
         });
       },
 
@@ -542,21 +435,7 @@ import {
         const text = getCopyableContent(this.data.content);
         if (!text) return;
 
-        wx.setClipboardData({
-          data: text,
-          success: () => {
-            wx.showToast({
-              title: "复制成功",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "复制失败",
-              icon: "none",
-            });
-          },
-        });
+        copyTextCardContent(text);
       },
 
       async handleSaveImages() {
@@ -565,42 +444,16 @@ import {
 
         this.setData({ isGenerating: true });
         const total = this.data.pages.length;
-        wx.showLoading({ title: `生成 0/${total}`, mask: true });
-
         try {
-          const urls = await this.renderPagesToImages(
-            "export",
-            this.data.selectedImagePaths,
-            undefined,
-            (completed, count) => {
-              wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
-            },
+          await saveTextCardImages(total, (onProgress) =>
+            this.renderPagesToImages(
+              "export",
+              this.data.selectedImagePaths,
+              undefined,
+              onProgress,
+            ),
           );
-          if (!urls.length) {
-            wx.showToast({
-              title: "暂无内容",
-              icon: "none",
-            });
-            return;
-          }
-
-          for (const [index, url] of urls.entries()) {
-            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
-            await saveImageToPhotosAlbum(url);
-          }
-
-          wx.showToast({
-            title: "已保存",
-            icon: "success",
-          });
-        } catch (error) {
-          console.error("保存图片失败", error);
-          wx.showToast({
-            title: "保存失败",
-            icon: "none",
-          });
         } finally {
-          wx.hideLoading();
           this.setData({ isGenerating: false });
         }
       },
@@ -760,24 +613,9 @@ import {
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
-        return this.getCanvasNode(CANVAS_ID);
+        return getTextCardCanvas(this, CANVAS_ID);
       },
 
-      getCanvasNode(canvasId: string): Promise<Canvas2DNode> {
-        return new Promise((resolve, reject) => {
-          this.createSelectorQuery()
-            .select(`#${canvasId}`)
-            .node((result) => {
-              if (result && result.node) {
-                resolve(result.node as Canvas2DNode);
-                return;
-              }
-
-              reject(new Error(`未找到 canvas：${canvasId}`));
-            })
-            .exec();
-        });
-      },
 
       syncContent(
         content: string,
@@ -863,123 +701,8 @@ import {
         }
       },
 
-      async ensureSafeContent(content: string) {
-        if (!content.trim()) return true;
-
-        wx.showLoading({ title: "安全检测中", mask: true });
-        try {
-          await checkTextContent(content);
-          return true;
-        } catch (error) {
-          wx.showToast({
-            title:
-              error instanceof Error
-                ? error.message
-                : "内容安全检测失败",
-            icon: "none",
-          });
-          return false;
-        } finally {
-          wx.hideLoading();
-        }
-      },
     },
   });
-
-  function getCopyableContent(content: string) {
-    const rawLines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => !line.startsWith("#") && line !== "/");
-    const hasPageTitles = rawLines.some(isPageBreakLine);
-    const lines = rawLines.filter((line) => !isPageBreakLine(line));
-
-    if (!lines.length) return "";
-
-    const titleIndex = lines.findIndex(Boolean);
-    if (titleIndex < 0) return "";
-
-    const bodyLines = hasPageTitles
-      ? trimEmptyLines(lines)
-      : trimEmptyLines(lines.slice(titleIndex + 1));
-    if (!bodyLines.length) return DOUYIN_TAGS;
-
-    return [bodyLines.join("\n"), DOUYIN_TAGS].join("\n\n");
-  }
-
-  function getParagraphs(text: string) {
-    let hasTitle = false;
-
-    return getParagraphLines(text).map((line) => {
-      const isSpacer = line === "";
-      const isTitle = !isSpacer && !hasTitle;
-
-      if (isTitle) {
-        hasTitle = true;
-      }
-
-      return {
-        parts: isSpacer ? [] : [{ text: line }],
-        isTitle,
-        isSpacer,
-      };
-    });
-  }
-
-  function getParagraphLines(text: string) {
-    const lines = normalizeText(text)
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => !line.startsWith("#") && line !== "/");
-
-    return trimEmptyLines(lines);
-  }
-
-  function getContentSlides(content: string) {
-    const lines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trimEnd())
-      .filter((line) => !line.trim().startsWith("#") && line.trim() !== "/");
-    const slides = lines.reduce<string[][]>(
-      (result, line) => {
-        const currentSlide = result[result.length - 1];
-
-        if (isPageBreakLine(line) && currentSlide.some(Boolean)) {
-          result.push([]);
-        }
-
-        result[result.length - 1].push(line);
-        return result;
-      },
-      [[]],
-    );
-
-    return slides.map((item) => item.join("\n").trim()).filter(Boolean);
-  }
-
-  function isPageBreakLine(line: string) {
-    const text = line.trim();
-    return text.startsWith("［") || /^\d{2}$/.test(text);
-  }
-
-  function appendPastedContent(currentContent: string, pastedContent: string) {
-    const current = currentContent.trim();
-    const pasted = pastedContent.trim();
-    if (!current) return pasted;
-
-    const firstPastedLine = normalizeText(pasted)
-      .split("\n")
-      .map((line) => line.trim())
-      .find(Boolean);
-    if (firstPastedLine && isPageBreakLine(firstPastedLine)) {
-      return `${current}\n\n${pasted}`;
-    }
-
-    const nextPage = getContentSlides(current).length + 1;
-    const pageTitle =
-      nextPage <= 99 ? String(nextPage).padStart(2, "0") : `［第 ${nextPage} 页］`;
-    return `${current}\n\n${pageTitle}\n${pasted}`;
-  }
 
   function createPageKeys(slides: string[]) {
     const occurrences = new Map<string, number>();
@@ -1000,27 +723,6 @@ import {
       occurrences.set(normalizedIdentity, occurrence);
       return `${normalizedIdentity}::${occurrence}`;
     });
-  }
-
-  function trimEmptyLines(lines: string[]) {
-    const result = [...lines];
-
-    while (result[0] === "") {
-      result.shift();
-    }
-
-    while (result[result.length - 1] === "") {
-      result.pop();
-    }
-
-    return result;
-  }
-
-  function normalizeText(text: string) {
-    return text
-      .replace(/\r\n/g, "\n")
-      .replace(/\u2800/g, " ")
-      .replace(/`/g, "");
   }
 
   function getRenderErrorMessage(_error: unknown) {
@@ -1247,67 +949,6 @@ import {
     };
   }
 
-  function getStoredImagePaths(value: unknown, pageKeys: string[]) {
-    if (Array.isArray(value)) {
-      return pageKeys.map((_, index) =>
-        typeof value[index] === "string" ? value[index] : "",
-      );
-    }
-
-    if (!isStoredImageBindings(value)) return pageKeys.map(() => "");
-    const pathByPageKey = new Map(
-      value.bindings.map((binding) => [binding.pageKey, binding.path]),
-    );
-    return pageKeys.map((pageKey) => pathByPageKey.get(pageKey) || "");
-  }
-
-  function persistLocalImagePaths(paths: string[], pageKeys: string[]) {
-    const bindings = paths.flatMap((path, index) => {
-      const pageKey = pageKeys[index];
-      return path && pageKey ? [{ pageKey, path }] : [];
-    });
-
-    if (bindings.length) {
-      const value: StoredImageBindings = { version: 2, bindings };
-      wx.setStorageSync(LOCAL_IMAGES_STORAGE_KEY, value);
-      return;
-    }
-    wx.removeStorageSync(LOCAL_IMAGES_STORAGE_KEY);
-  }
-
-  function isStoredImageBindings(value: unknown): value is StoredImageBindings {
-    if (!value || typeof value !== "object") return false;
-    const candidate = value as Partial<StoredImageBindings>;
-    return (
-      candidate.version === 2 &&
-      Array.isArray(candidate.bindings) &&
-      candidate.bindings.every(
-        (binding) =>
-          Boolean(binding) &&
-          typeof binding.pageKey === "string" &&
-          typeof binding.path === "string",
-      )
-    );
-  }
-
-  function saveLocalImageFile(tempFilePath: string) {
-    return new Promise<string>((resolve, reject) => {
-      wx.saveFile({
-        tempFilePath,
-        success: (result) => resolve(result.savedFilePath),
-        fail: reject,
-      });
-    });
-  }
-
-  function removeLocalImageFile(filePath: string) {
-    wx.removeSavedFile({
-      filePath,
-      fail: (error) => {
-        console.warn("删除模板三本地图片失败", error);
-      },
-    });
-  }
 
   function ensureDouyin3FontLoaded() {
     return loadAppFont(APP_FONTS.lantingExtraLight);

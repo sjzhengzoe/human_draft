@@ -3,7 +3,7 @@ import {
   deleteLuggageScene,
   listLuggageScenes,
   updateLuggageScene
-} from "../../../services/life-lists"
+} from "../../../services/luggage"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

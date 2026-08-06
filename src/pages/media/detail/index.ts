@@ -10,14 +10,14 @@ import {
   updateMediaEntry,
   updateMediaEpisode,
   updateMediaSeason
-} from "../../../services/life-lists"
+} from "../../../services/media"
 import type {
   MediaEntry,
   MediaEpisode,
   MediaSeason,
   MediaTimelineNote,
   MediaTimelineNoteType
-} from "../../../types/life-lists"
+} from "../../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

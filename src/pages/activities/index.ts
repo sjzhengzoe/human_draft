@@ -5,8 +5,8 @@ import {
   listActivityItems,
   swapActivityItemSortOrders,
   updateActivityItem
-} from "../../services/life-lists"
-import type { ActivityItem, ActivityType } from "../../types/life-lists"
+} from "../../services/activities"
+import type { ActivityItem, ActivityType } from "../../types/activities"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -14,13 +14,10 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { hasSameOrder } from "../../utils/drag-sort"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
 let activitySortOriginalIds: string[] = []
-
-function hasSameActivityOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 Page({
   data: {
@@ -96,7 +93,7 @@ Page({
     }
 
     const desiredIds = this.data.items.map((item) => item.id)
-    if (hasSameActivityOrder(activitySortOriginalIds, desiredIds)) {
+    if (hasSameOrder(activitySortOriginalIds, desiredIds)) {
       activitySortOriginalIds = []
       this.setData({ sortEditing: false })
       return

@@ -1,21 +1,43 @@
-import { checkTextContent } from "../../services/content-security";
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
+import {
+  copyTextCardContent,
+  copyTextCardTemplate,
+  createTextCardPageData,
+  ensureTextCardContentSafe,
+  openTextCardEditor,
+  readTextCardClipboard,
+  redirectToTextCardTemplate,
+  saveTextCardImages,
+} from "../../features/text-card/page-actions";
 import {
   cacheTextCardPreview,
   getCachedTextCardPreview,
 } from "../../services/text-card-preview-cache";
 import {
-  getStoredTextCardContent,
+  initializeTextCardContent,
   TEXT_CARD_STORAGE_KEYS,
 } from "../../utils/text-card-storage";
 import {
   canvasToTempFilePath,
   createPreviewSignature,
   createRenderQueue,
+  getTextCardCanvas,
   loadCanvasImage,
-  saveImageToPhotosAlbum,
+  type TextCardCanvasContext as Canvas2DContext,
+  type TextCardCanvasNode as Canvas2DNode,
 } from "../../utils/text-card-render";
+import {
+  appendPastedEntry,
+  createPastedEntry,
+  getContentSlides,
+  getDouyinCopyableContent,
+  getNextSlideOrder,
+  getXiaohongshuCopyableContent,
+  type XiaohongshuSlide as Slide,
+  XIAOHONGSHU_BLANK_LINE,
+} from "../../features/text-card/xiaohongshu-content";
+import { createTimedUndo } from "../../features/text-card/timed-undo";
 
   type ActionKey =
     | "paste"
@@ -28,10 +50,6 @@ import {
   type RenderQuality = "preview" | "export";
   type RenderProgress = (completed: number, total: number) => void;
 
-  type Slide = {
-    order: string;
-    paragraphs: string[];
-  };
 
   type CombinedFontOption = {
     family: string;
@@ -82,44 +100,9 @@ import {
     persist?: boolean;
   };
 
-  type Canvas2DNode = {
-    width: number;
-    height: number;
-    getContext: (contextId: "2d") => Canvas2DContext;
-    createImage: () => {
-      src: string;
-      onload: (() => void) | null;
-      onerror: ((error: unknown) => void) | null;
-    };
-  };
-
-  type Canvas2DContext = {
-    fillStyle: string;
-    font: string;
-    textAlign: "left" | "right" | "center" | "start" | "end";
-    textBaseline:
-      | "top"
-      | "hanging"
-      | "middle"
-      | "alphabetic"
-      | "ideographic"
-      | "bottom";
-    clearRect: (x: number, y: number, width: number, height: number) => void;
-    drawImage: (
-      image: unknown,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ) => void;
-    fillRect: (x: number, y: number, width: number, height: number) => void;
-    fillText: (text: string, x: number, y: number) => void;
-    measureText: (text: string) => { width: number };
-  };
 
   const STORAGE_KEY = TEXT_CARD_STORAGE_KEYS.xiaohongshu;
   const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
-  const TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
   const PREVIEW_CACHE_VERSION = "xiaohongshu-v2";
@@ -134,11 +117,6 @@ import {
       family: RED3_FONT_FAMILY,
     },
   ];
-  const XIAOHONGSHU_BLANK_LINE = "\u2800";
-  const XIAOHONGSHU_TAGS =
-    "#日记复兴计划[话题]# #一些有感而发[话题]# #文字复兴单元[话题]# #文字[话题]# #随便记录点什么[话题]# #日常记录[话题]# #记录真实生活[话题]#";
-  const DOUYIN_TAGS = "#文字的力量 #记录真实生活 #思考 #讨论";
-  const CLEAR_UNDO_DURATION = 5000;
   const DEFAULT_CONTENT = `#感性的人类/WAIT 
 01
 即使是不同的 AI
@@ -203,38 +181,20 @@ import {
 
   let renderRequestId = 0;
   const enqueueRender = createRenderQueue();
-  let clearUndoSnapshot: ClearSnapshot | undefined;
-  let clearUndoTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearUndo = createTimedUndo<ClearSnapshot>();
 
   Component({
     data: {
-      content: "",
-      hasCustomContent: false,
-      isExampleContent: false,
+      ...createTextCardPageData(),
       slides: [] as Slide[],
-      renderedImageUrls: [] as string[],
       previewCount: 0,
-      activeIndex: 0,
-      isGenerating: false,
-      isRenderingCards: false,
-      renderError: false,
-      renderErrorMessage: "生成失败，请重试",
-      renderProgressText: "",
-      showClearUndo: false,
-      canvasReady: false,
     },
     lifetimes: {
       attached() {
-        const storedContent = getStoredTextCardContent("xiaohongshu");
-        const legacyContent = wx.getStorageSync(LEGACY_STORAGE_KEY);
-        const initialContent =
-          typeof storedContent === "string"
-            ? storedContent
-            : typeof legacyContent === "string"
-              ? legacyContent
-              : undefined;
-
-        wx.setStorageSync(TEMPLATE_STORAGE_KEY, "xiaohongshu");
+        const initialContent = initializeTextCardContent(
+          "xiaohongshu",
+          LEGACY_STORAGE_KEY,
+        );
 
         if (typeof initialContent === "string") {
           this.loadStoredContent(initialContent);
@@ -255,9 +215,7 @@ import {
       },
       detached() {
         renderRequestId += 1;
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoTimer = undefined;
-        clearUndoSnapshot = undefined;
+        clearUndo.clear();
       },
     },
     pageLifetimes: {
@@ -274,25 +232,17 @@ import {
       },
     },
     methods: {
-      handleTemplateChange(event: WechatMiniprogram.TouchEvent) {
+      handleTemplateChange(
+        event: WechatMiniprogram.CustomEvent<{ template?: string }>,
+      ) {
         if (this.data.isGenerating) return;
-        const template = event.currentTarget.dataset.template;
-        if (template !== "douyin2" && template !== "douyin3") return;
-
-        this.finalizeClearUndo();
-        wx.redirectTo({ url: `/pages/${template}/index` });
+        redirectToTextCardTemplate(event.detail.template, "xiaohongshu", () =>
+          this.finalizeClearUndo(),
+        );
       },
 
       handleCopyTemplate() {
-        wx.setClipboardData({
-          data: COPY_TEMPLATE_CONTENT,
-          success: () => {
-            wx.showToast({ title: "模板已复制", icon: "success" });
-          },
-          fail: () => {
-            wx.showToast({ title: "复制失败", icon: "none" });
-          },
-        });
+        copyTextCardTemplate(COPY_TEMPLATE_CONTENT);
       },
 
       loadRed3Font() {
@@ -359,107 +309,54 @@ import {
       },
 
       openEditModal() {
-        wx.navigateTo({
-          url: "/pages/editor/index?source=xiaohongshu",
-        });
+        openTextCardEditor("xiaohongshu");
       },
 
-      handlePasteContent() {
-        wx.getClipboardData({
-          success: async (result) => {
-            const content = result.data.trim();
-            if (!content) {
-              wx.showToast({
-                title: "剪贴板为空",
-                icon: "none",
-              });
-              return;
-            }
+      async handlePasteContent() {
+        const content = await readTextCardClipboard();
+        if (!content || !(await ensureTextCardContentSafe(content))) return;
 
-            if (!(await this.ensureSafeContent(content))) return;
-
-            this.finalizeClearUndo();
-            this.syncContent(content);
-            wx.showToast({
-              title: "已粘贴",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "读取剪贴板失败",
-              icon: "none",
-            });
-          },
-        });
+        this.finalizeClearUndo();
+        this.syncContent(content);
+        wx.showToast({ title: "已粘贴", icon: "success" });
       },
 
-      handleAppendContent() {
-        wx.getClipboardData({
-          success: async (result) => {
-            const currentContent = this.data.hasCustomContent
-              ? this.data.content
-              : "";
-            const nextOrder = getNextSlideOrder(currentContent);
-            const pastedEntry = createPastedEntry(result.data, nextOrder);
-            if (!pastedEntry) {
-              wx.showToast({
-                title: "剪贴板为空",
-                icon: "none",
-              });
-              return;
-            }
+      async handleAppendContent() {
+        const pastedContent = await readTextCardClipboard();
+        if (!pastedContent) return;
 
-            const nextContent = appendPastedEntry(currentContent, pastedEntry);
-            const nextActiveIndex = Math.max(
-              getContentSlides(nextContent).length - 1,
-              0,
-            );
-            if (!(await this.ensureSafeContent(result.data))) return;
+        const currentContent = this.data.hasCustomContent ? this.data.content : "";
+        const nextOrder = getNextSlideOrder(currentContent);
+        const pastedEntry = createPastedEntry(pastedContent, nextOrder);
+        if (!pastedEntry || !(await ensureTextCardContentSafe(pastedContent))) return;
 
-            this.finalizeClearUndo();
-            this.syncContent(nextContent, nextActiveIndex);
-            wx.showToast({
-              title: `已追加 ${nextOrder}`,
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "读取剪贴板失败",
-              icon: "none",
-            });
-          },
-        });
+        const nextContent = appendPastedEntry(currentContent, pastedEntry);
+        const nextActiveIndex = Math.max(getContentSlides(nextContent).length - 1, 0);
+        this.finalizeClearUndo();
+        this.syncContent(nextContent, nextActiveIndex);
+        wx.showToast({ title: `已追加 ${nextOrder}`, icon: "success" });
       },
 
       clearContent() {
         if (!this.data.hasCustomContent) return;
 
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoSnapshot = {
+        clearUndo.start({
           content: this.data.content,
           activeIndex: this.data.activeIndex,
-        };
+        }, () => this.finalizeClearUndo());
         this.syncContent("");
         this.setData({ showClearUndo: true });
-        clearUndoTimer = setTimeout(() => {
-          this.finalizeClearUndo();
-        }, CLEAR_UNDO_DURATION);
       },
 
       handleUndoClear() {
-        if (!clearUndoSnapshot) return;
-
-        const snapshot = clearUndoSnapshot;
-        this.finalizeClearUndo();
+        const snapshot = clearUndo.clear();
+        if (!snapshot) return;
+        this.setData({ showClearUndo: false });
         this.syncContent(snapshot.content, snapshot.activeIndex);
       },
 
       finalizeClearUndo() {
-        if (clearUndoTimer) clearTimeout(clearUndoTimer);
-        clearUndoTimer = undefined;
-        clearUndoSnapshot = undefined;
+        clearUndo.clear();
         if (this.data.showClearUndo) {
           this.setData({ showClearUndo: false });
         }
@@ -485,21 +382,7 @@ import {
 
         if (!text) return;
 
-        wx.setClipboardData({
-          data: text,
-          success: () => {
-            wx.showToast({
-              title: "复制成功",
-              icon: "success",
-            });
-          },
-          fail: () => {
-            wx.showToast({
-              title: "复制失败",
-              icon: "none",
-            });
-          },
-        });
+        copyTextCardContent(text);
       },
 
       async handleSaveImages() {
@@ -508,37 +391,11 @@ import {
 
         this.setData({ isGenerating: true });
         const total = this.data.slides.length + COMBINED_FONT_OPTIONS.length;
-        wx.showLoading({ title: `生成 0/${total}`, mask: true });
-
         try {
-          const urls = await this.generateExportImages((completed, count) => {
-            wx.showLoading({ title: `生成 ${completed}/${count}`, mask: true });
-          });
-          if (!urls.length) {
-            wx.showToast({
-              title: "暂无内容",
-              icon: "none",
-            });
-            return;
-          }
-
-          for (const [index, url] of urls.entries()) {
-            wx.showLoading({ title: `保存 ${index + 1}/${urls.length}`, mask: true });
-            await saveImageToPhotosAlbum(url);
-          }
-
-          wx.showToast({
-            title: "已保存",
-            icon: "success",
-          });
-        } catch (error) {
-          console.error("保存图片失败", error);
-          wx.showToast({
-            title: "保存失败",
-            icon: "none",
-          });
+          await saveTextCardImages(total, (onProgress) =>
+            this.generateExportImages(onProgress),
+          );
         } finally {
-          wx.hideLoading();
           this.setData({ isGenerating: false });
         }
       },
@@ -784,20 +641,9 @@ import {
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
-        return new Promise((resolve, reject) => {
-          this.createSelectorQuery()
-            .select(`#${CANVAS_ID}`)
-            .node((result) => {
-              if (result && result.node) {
-                resolve(result.node as Canvas2DNode);
-                return;
-              }
-
-              reject(new Error("未找到导出 canvas"));
-            })
-            .exec();
-        });
+        return getTextCardCanvas(this, CANVAS_ID);
       },
+
 
       syncContent(
         content: string,
@@ -852,164 +698,9 @@ import {
         }
       },
 
-      async ensureSafeContent(content: string) {
-        if (!content.trim()) return true;
-
-        wx.showLoading({ title: "安全检测中", mask: true });
-        try {
-          await checkTextContent(content);
-          return true;
-        } catch (error) {
-          wx.showToast({
-            title:
-              error instanceof Error
-                ? error.message
-                : "内容安全检测失败",
-            icon: "none",
-          });
-          return false;
-        } finally {
-          wx.hideLoading();
-        }
-      },
     },
   });
 
-  function getXiaohongshuCopyableContent(content: string) {
-    const body = getXiaohongshuCopyableBody(content);
-
-    return [body, XIAOHONGSHU_BLANK_LINE, XIAOHONGSHU_TAGS].join("\n");
-  }
-
-  function getDouyinCopyableContent(content: string) {
-    const body = getXiaohongshuCopyableBody(content);
-
-    return [body, XIAOHONGSHU_BLANK_LINE, DOUYIN_TAGS].join("\n");
-  }
-
-  function appendPastedEntry(currentContent: string, pastedEntry: string) {
-    const current = currentContent.trim();
-
-    if (!current) return pastedEntry;
-
-    return [current, pastedEntry].join("\n\n");
-  }
-
-  function createPastedEntry(content: string, order: string) {
-    const lines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trimEnd());
-
-    while (lines.length && !lines[0].trim()) {
-      lines.shift();
-    }
-
-    while (lines.length && !lines[lines.length - 1].trim()) {
-      lines.pop();
-    }
-
-    if (!lines.length) return "";
-
-    const firstContentLineIndex = lines.findIndex((line) => line.trim());
-
-    if (
-      firstContentLineIndex >= 0 &&
-      lines[firstContentLineIndex].trim().startsWith("#")
-    ) {
-      lines.splice(firstContentLineIndex, 1);
-    }
-
-    const body = lines.join("\n").trim();
-
-    return body ? `${order}\n${body}` : order;
-  }
-
-  function getNextSlideOrder(content: string) {
-    const nextIndex = getContentSlides(content).length + 1;
-
-    return String(nextIndex).padStart(2, "0");
-  }
-
-  function getXiaohongshuCopyableBody(content: string) {
-    const lines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trimEnd())
-      .filter((line) => !line.trim().startsWith("#"));
-
-    while (lines.length && !lines[0].trim()) {
-      lines.shift();
-    }
-
-    while (lines.length && !lines[lines.length - 1].trim()) {
-      lines.pop();
-    }
-
-    return lines
-      .map((line) => (line.trim() ? line : XIAOHONGSHU_BLANK_LINE))
-      .join("\n");
-  }
-
-  function getContentSlides(content: string): Slide[] {
-    const lines = normalizeText(content)
-      .split("\n")
-      .map((line) => line.trimEnd())
-      .filter((line) => !line.trim().startsWith("#"));
-
-    const slideLines = lines.reduce<string[][]>(
-      (result, line) => {
-        const currentSlide = result[result.length - 1];
-
-        if (
-          (/^\d{2}$/.test(line.trim()) ||
-            line.trim().startsWith("［")) &&
-          currentSlide.some(Boolean)
-        ) {
-          result.push([]);
-        }
-
-        result[result.length - 1].push(line);
-        return result;
-      },
-      [[]],
-    );
-
-    return slideLines
-      .map((item, index) => createSlide(item.join("\n"), index))
-      .filter((slide) => slide.paragraphs.length);
-  }
-
-  function createSlide(text: string, index: number): Slide {
-    const firstLine = getFirstLine(text) || "";
-    const hasOrderLine = /^\d{2}$/.test(firstLine);
-    const order = hasOrderLine
-      ? firstLine
-      : String(index + 1).padStart(2, "0");
-    const paragraphs = getParagraphLines(
-      hasOrderLine ? removeFirstLine(text) : text,
-    );
-
-    return {
-      order,
-      paragraphs,
-    };
-  }
-
-  function getParagraphLines(text: string) {
-    return normalizeText(text)
-      .split(/\n\s*\n/)
-      .map((paragraph) =>
-        paragraph
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .join("\n"),
-      )
-      .filter(Boolean);
-  }
-
-  function normalizeText(text: string) {
-    return text.replace(/\r\n/g, "\n");
-  }
 
   function getRenderErrorMessage(error: unknown) {
     if (
@@ -1021,26 +712,6 @@ import {
     return "生成失败，请重试";
   }
 
-  function getFirstLine(text: string) {
-    return normalizeText(text)
-      .split("\n")
-      .map((line) => line.trim())
-      .find(Boolean);
-  }
-
-  function removeFirstLine(text: string) {
-    const lines = normalizeText(text).split("\n");
-    const firstContentLineIndex = lines.findIndex((line) => line.trim());
-
-    if (firstContentLineIndex === -1) {
-      return "";
-    }
-
-    return lines
-      .filter((_, index) => index !== firstContentLineIndex)
-      .join("\n")
-      .trim();
-  }
 
   function wrapLine(
     line: string,

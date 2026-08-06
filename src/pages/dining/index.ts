@@ -1,6 +1,6 @@
 import { ensureLogin } from "../../services/auth"
-import { deleteDiningPlace, listDiningPlaces, listDiningScenes } from "../../services/life-lists"
-import type { DiningPlace, DiningScene } from "../../types/life-lists"
+import { deleteDiningPlace, listDiningPlaces, listDiningScenes } from "../../services/dining"
+import type { DiningPlace, DiningScene } from "../../types/dining"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

@@ -4,12 +4,12 @@ import {
   listMediaEntries,
   updateMediaEntry,
   reorderMediaEntrySortOrders
-} from "../../services/life-lists"
+} from "../../services/media"
 import type {
   MediaEntry,
   MediaStatus,
   MediaType
-} from "../../types/life-lists"
+} from "../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -18,7 +18,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget } from "../../utils/drag-sort"
+import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
 import type { SortableRect } from "../../utils/drag-sort"
 
 type StatusFilter = "all" | "revisitable" | MediaStatus
@@ -52,10 +52,6 @@ let dragInsertAfter = false
 let savedPageScrollTop = 0
 let mediaListSnapshot: MediaListSnapshot | null = null
 let mediaSortOriginalIds: string[] = []
-
-function hasSameMediaOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 function snapshotMediaList(data: MediaListSnapshot): void {
   mediaListSnapshot = {
@@ -358,7 +354,7 @@ Page({
       return
     }
     const itemIds = this.data.items.map((item) => item.id)
-    if (hasSameMediaOrder(mediaSortOriginalIds, itemIds)) {
+    if (hasSameOrder(mediaSortOriginalIds, itemIds)) {
       mediaSortOriginalIds = []
       this.setData({ sortEditing: false })
       return

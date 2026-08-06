@@ -1,5 +1,5 @@
-import { listMediaCategories, swapMediaCategorySortOrders } from "../../../services/life-lists"
-import type { MediaCategory } from "../../../types/life-lists"
+import { listMediaCategories, swapMediaCategorySortOrders } from "../../../services/media"
+import type { MediaCategory } from "../../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -7,12 +7,9 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { hasSameOrder } from "../../../utils/drag-sort"
 
 let mediaCategorySortOriginalIds: string[] = []
-
-function hasSameCategoryOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 Page({
   data: {
@@ -86,7 +83,7 @@ Page({
       return
     }
     const desiredIds = this.data.categories.map((category) => category.id)
-    if (hasSameCategoryOrder(mediaCategorySortOriginalIds, desiredIds)) {
+    if (hasSameOrder(mediaCategorySortOriginalIds, desiredIds)) {
       mediaCategorySortOriginalIds = []
       this.setData({ sortEditing: false })
       return

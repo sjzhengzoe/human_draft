@@ -22,7 +22,7 @@
 - Follow `docs/miniprogram-assets.md` when adding images or audio to the mini program.
 - Keep only small, runtime-required package assets under `src/`. Treat 200 KB as the combined image-and-audio budget reported by WeChat Developer Tools, not as a per-file allowance.
 - Put large, optional, archival, design-source, and print assets under `public/` so Nginx can serve them from `https://gufeifei.cn/`. Do not duplicate the same asset in both `src/` and `public/`.
-- Before completing an asset change, run `node --test server/miniprogram-package.test.mjs` and rescan code quality in WeChat Developer Tools.
+- Before completing an asset change, run `node --test server/tests/miniprogram-package.test.mjs` and rescan code quality in WeChat Developer Tools.
 
 ## Database Migration and Compatibility Rules
 

@@ -218,32 +218,6 @@
   line-height: 1.3;
 }
 
-.task-list {
-  margin-top: 14rpx;
-  border-top: 1rpx solid var(--ui-border);
-}
-
-.task-row {
-  display: flex;
-  min-height: 78rpx;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24rpx;
-  padding: 0 4rpx;
-}
-
-.task-row + .task-row {
-  border-top: 1rpx solid var(--ui-border);
-}
-
-.task-row__label {
-  flex: none;
-  color: #666660;
-  font-size: var(--ui-font-size-base);
-  line-height: 1.4;
-}
-
 .task-row__remaining {
   display: flex;
   align-items: center;
@@ -263,14 +237,6 @@
   font-size: 21rpx;
 }
 
-.task-row__end {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12rpx;
-}
-
 .task-row__hint {
   margin-right: 8rpx;
   color: #a2a29c;
@@ -282,11 +248,6 @@
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.4;
-}
-
-.task-row__status--muted {
-  color: #aaa9a4;
-  font-weight: 550;
 }
 
 .task-completion-summary {
@@ -407,12 +368,6 @@
   border-color: #171717;
   background: #171717;
   color: #fff;
-}
-
-.task-button--disabled {
-  border-color: var(--ui-border);
-  background: #eeeeeb;
-  color: #aaa9a4;
 }
 
 .task-button__title {

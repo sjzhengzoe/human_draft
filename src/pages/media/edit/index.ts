@@ -5,8 +5,8 @@ import {
   getMediaEntry,
   listMediaCategories,
   updateMediaEntry
-} from "../../../services/life-lists"
-import type { MediaEntry, MediaStatus, MediaType } from "../../../types/life-lists"
+} from "../../../services/media"
+import type { MediaEntry, MediaStatus, MediaType } from "../../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

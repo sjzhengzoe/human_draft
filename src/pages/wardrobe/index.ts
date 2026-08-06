@@ -16,7 +16,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget } from "../../utils/drag-sort"
+import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
 import type { SortableRect } from "../../utils/drag-sort"
 
 type DisplayValue = { id: string; name: string; value: string }
@@ -29,10 +29,6 @@ let dragItemIds: string[] = []
 let suppressItemTapUntil = 0
 let dragInsertAfter = false
 let wardrobeSortOriginalIds: string[] = []
-
-function hasSameWardrobeOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
-}
 
 function resetDragSession(): void {
   dragSourceIndex = -1
@@ -214,7 +210,7 @@ Page({
       return
     }
     const itemIds = this.data.items.map((item) => item.id)
-    if (hasSameWardrobeOrder(wardrobeSortOriginalIds, itemIds)) {
+    if (hasSameOrder(wardrobeSortOriginalIds, itemIds)) {
       wardrobeSortOriginalIds = []
       this.setData({ sortEditing: false })
       return

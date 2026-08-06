@@ -6,7 +6,7 @@ import {
   reorderDishSortOrders,
   reorderMenuPlaceSortOrders
 } from "../../services/menu"
-import { listDiningScenes } from "../../services/life-lists"
+import { listDiningScenes } from "../../services/dining"
 import type {
   Category,
   Dish,
@@ -14,7 +14,7 @@ import type {
   MenuPlace,
   MenuPlaceDishPreview
 } from "../../types/api"
-import type { DiningScene } from "../../types/life-lists"
+import type { DiningScene } from "../../types/dining"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -23,7 +23,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget } from "../../utils/drag-sort"
+import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
 import type { SortableRect } from "../../utils/drag-sort"
 import {
   normalizeCookingTypes,
@@ -180,10 +180,6 @@ function resetDragSession(): void {
   dragRects = []
   dragItemIds = []
   dragInsertAfter = false
-}
-
-function hasSameDishOrder(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index])
 }
 
 Page({
@@ -380,8 +376,8 @@ Page({
 
     if (this.data.activeRecordType === "outside") {
       const placeIds = this.data.outsidePlaces.map((place) => place.id)
-      const placeOrderChanged = !hasSameDishOrder(outsidePlaceOriginalIds, placeIds)
-      const changedPlaces = this.data.outsidePlaces.filter((place) => !hasSameDishOrder(
+      const placeOrderChanged = !hasSameOrder(outsidePlaceOriginalIds, placeIds)
+      const changedPlaces = this.data.outsidePlaces.filter((place) => !hasSameOrder(
         outsideSortOriginalIds.get(place.id) || [],
         place.dishes.map((dish) => dish.id)
       ))
@@ -419,7 +415,7 @@ Page({
     }
 
     const dishIds = this.data.dishes.map((dish) => dish.id)
-    if (hasSameDishOrder(sortOriginalIds, dishIds)) {
+    if (hasSameOrder(sortOriginalIds, dishIds)) {
       sortOriginalIds = []
       this.setData({ sortEditing: false })
       return

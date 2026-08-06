@@ -1,11 +1,11 @@
 import { ensureLogin } from "../../../services/auth"
-import { getMediaEpisode, updateMediaEpisode } from "../../../services/life-lists"
+import { getMediaEpisode, updateMediaEpisode } from "../../../services/media"
 import type {
   MediaEpisode,
   MediaTimelineDialogue,
   MediaTimelineNote,
   MediaTimelineNoteType
-} from "../../../types/life-lists"
+} from "../../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,

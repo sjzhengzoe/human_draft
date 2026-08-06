@@ -1,4 +1,4 @@
-import { createDiningScene, deleteDiningScene, getDiningScene, updateDiningScene } from "../../../services/life-lists"
+import { createDiningScene, deleteDiningScene, getDiningScene, updateDiningScene } from "../../../services/dining"
 import { activateAsyncPage, beginAsyncPageRequest, deactivateAsyncPage, isAsyncPageActive, isAsyncPageRequestCurrent } from "../../../utils/async-page"
 
 Page({
