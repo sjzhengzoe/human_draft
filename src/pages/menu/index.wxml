@@ -155,15 +155,14 @@
             </view>
             <view class="browse-card__body">
               <view class="browse-card__name">{{item.name}}</view>
-              <view class="browse-card__home-section store-ticket">
+              <view wx:if="{{item.preview_dishes.length}}" class="browse-card__home-section store-ticket">
                 <view class="browse-card__detail-label">店内菜品</view>
-                <view wx:if="{{item.preview_dishes.length}}" class="browse-card__recommendation-list">
+                <view class="browse-card__recommendation-list">
                   <view wx:for="{{item.preview_dishes}}" wx:key="id" wx:for-item="preview" wx:for-index="previewIndex" class="browse-card__recommendation-item">
                     <text class="browse-card__recommendation-number">{{previewIndex + 1}}</text><text>{{preview.name}}</text>
                   </view>
                   <view wx:if="{{item.dish_count > item.preview_dishes.length}}" class="store-ticket__more">另有 {{item.dish_count - item.preview_dishes.length}} 道菜</view>
                 </view>
-                <view wx:else class="browse-card__empty-value browse-card__empty-value--ticket">-</view>
               </view>
             </view>
           </view>
