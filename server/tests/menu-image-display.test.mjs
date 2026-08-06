@@ -309,6 +309,9 @@ test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes"
   assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles[4], /\.meal-section__english[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*25rpx/);
+  assert.match(styles[5], /\.dish-card__category[^}]*font-size:\s*var\(--ui-font-size-small\)/);
+  assert.match(styles[5], /\.print-status-filter__item[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.match(styles[5], /\.generate-button[^}]*font-size:\s*var\(--ui-font-size-base\)/);
 });
 
 test("shared UI typography defines 20rpx metadata, 23rpx body text, and 25rpx titles", async () => {

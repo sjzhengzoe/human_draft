@@ -9,7 +9,7 @@ async function readProjectFile(path) {
 }
 
 test("fonts use one shared lazy loader and one canonical definition each", async () => {
-  const [config, loader, uiFont, templateOne, templateTwo, templateThree, menuPrint, nginx] =
+  const [config, loader, uiFont, templateOne, templateTwo, templateThree, menuPrint, dayPlan, nginx] =
     await Promise.all([
       readProjectFile("src/config/fonts.ts"),
       readProjectFile("src/services/font-loader.ts"),
@@ -18,6 +18,7 @@ test("fonts use one shared lazy loader and one canonical definition each", async
       readProjectFile("src/pages/douyin2/index.ts"),
       readProjectFile("src/pages/douyin3/index.ts"),
       readProjectFile("src/pages/menu/print/index.ts"),
+      readProjectFile("src/pages/menu/day-plan/index.ts"),
       readProjectFile("nginx.conf")
     ])
 
@@ -29,6 +30,9 @@ test("fonts use one shared lazy loader and one canonical definition each", async
     assert.doesNotMatch(consumer, /wx\.loadFontFace/)
     assert.match(consumer, /loadAppFont/)
   }
+
+  assert.doesNotMatch(dayPlan, /wx\.loadFontFace/)
+  assert.match(dayPlan, /initializeUIFont/)
 
   assert.match(uiFont, /APP_FONTS\.ui|UI_FONT/)
   assert.match(templateOne, /APP_FONTS\.red3/)

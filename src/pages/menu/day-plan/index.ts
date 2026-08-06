@@ -1,5 +1,6 @@
 import { ensureLogin } from "../../../services/auth"
 import { listDishes } from "../../../services/menu"
+import { initializeUIFont } from "../../../services/ui-font"
 import type { Dish, MealPeriod } from "../../../types/api"
 import {
   activateAsyncPage,
@@ -159,7 +160,10 @@ Page({
     this.setData({ loading: true, errorMessage: "" })
 
     try {
-      await ensureLogin()
+      await Promise.all([
+        initializeUIFont().catch(() => undefined),
+        ensureLogin()
+      ])
       const dishes = await listAllDishes()
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
