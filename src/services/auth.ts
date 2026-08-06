@@ -2,22 +2,6 @@ import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope, AppUser, AuthSession } from "../types/api"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
 
-export type LoginProfile = {
-  displayName: string
-  avatarUrl: string
-  avatarIsLocal: boolean
-}
-
-class LoginApiError extends Error {
-  readonly code: string
-
-  constructor(message: string, code = "LOGIN_FAILED") {
-    super(message)
-    this.name = "LoginApiError"
-    this.code = code
-  }
-}
-
 let pendingLogin: Promise<AuthSession> | null = null
 let redirectingToLogin = false
 
@@ -39,28 +23,18 @@ function wxLogin(): Promise<string> {
   })
 }
 
-function requestWechatSession(code: string, profile?: LoginProfile): Promise<AuthSession> {
+function requestWechatSession(code: string): Promise<AuthSession> {
   return new Promise((resolve, reject) => {
-    const data: Record<string, string> = { code }
-    if (profile) {
-      data.display_name = profile.displayName
-      data.avatar_url = profile.avatarIsLocal ? "" : profile.avatarUrl
-    }
     wx.request<ApiEnvelope<AuthSession>>({
       url: `${API_BASE_URL}/api/auth/wechat`,
       method: "POST",
-      data,
+      data: { code },
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300 && response.data.data) {
           resolve(response.data.data)
           return
         }
-        reject(
-          new LoginApiError(
-            response.data.error?.message || `登录失败（${response.statusCode}）`,
-            response.data.error?.code
-          )
-        )
+        reject(new Error(response.data.error?.message || `登录失败（${response.statusCode}）`))
       },
       fail(result) {
         reject(callbackError(result, "无法连接登录服务。"))
@@ -69,42 +43,12 @@ function requestWechatSession(code: string, profile?: LoginProfile): Promise<Aut
   })
 }
 
-function uploadAvatar(filePath: string, token: string): Promise<AppUser> {
-  return new Promise((resolve, reject) => {
-    wx.uploadFile({
-      url: `${API_BASE_URL}/api/auth/avatar`,
-      filePath,
-      name: "avatar",
-      header: { Authorization: `Bearer ${token}` },
-      success(response) {
-        let body: ApiEnvelope<{ user: AppUser }> = { ok: false }
-        try {
-          body = JSON.parse(response.data) as ApiEnvelope<{ user: AppUser }>
-        } catch (_error) {
-          // 统一走下面的错误信息。
-        }
-        if (response.statusCode >= 200 && response.statusCode < 300 && body.data?.user) {
-          resolve(body.data.user)
-          return
-        }
-        reject(new Error(body.error?.message || `头像保存失败（${response.statusCode}）`))
-      },
-      fail(result) {
-        reject(callbackError(result, "无法上传头像。"))
-      }
-    })
-  })
-}
-
-async function runLogin(profile?: LoginProfile): Promise<AuthSession> {
+async function runLogin(): Promise<AuthSession> {
   if (pendingLogin) return pendingLogin
 
   pendingLogin = (async () => {
     const code = await wxLogin()
-    const session = await requestWechatSession(code, profile)
-    if (profile?.avatarIsLocal) {
-      session.user = await uploadAvatar(profile.avatarUrl, session.token)
-    }
+    const session = await requestWechatSession(code)
     setStoredSession(session)
     redirectingToLogin = false
     return session
@@ -119,14 +63,6 @@ async function runLogin(profile?: LoginProfile): Promise<AuthSession> {
 
 export function loginExistingUser(): Promise<AuthSession> {
   return runLogin()
-}
-
-export function login(profile: LoginProfile): Promise<AuthSession> {
-  return runLogin(profile)
-}
-
-export function isProfileRequiredError(error: unknown): boolean {
-  return error instanceof LoginApiError && error.code === "PROFILE_REQUIRED"
 }
 
 export function redirectToLogin(expectedToken?: string): void {

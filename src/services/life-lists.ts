@@ -11,7 +11,6 @@ import type {
   MediaEntryPage,
   MediaEpisode,
   MediaSeason,
-  FavoriteMediaEpisode,
   MediaCategory,
   MediaStatus,
   MediaTimelineNote,
@@ -140,17 +139,6 @@ export async function setMediaEntryCoverFromSeason(
   return data.item
 }
 
-export function swapMediaEntrySortOrders(
-  sourceId: string,
-  targetId: string
-): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
-    path: "/api/media/order/swap",
-    method: "PUT",
-    data: { source_id: sourceId, target_id: targetId }
-  })
-}
-
 export function reorderMediaEntrySortOrders(mediaType: MediaType, ids: string[]): Promise<{ updated: number }> {
   return request<{ updated: number }>({
     path: "/api/media/reorder",
@@ -220,19 +208,6 @@ export async function updateMediaEpisode(
     data: input
   })
   return data.item
-}
-
-export async function listFavoriteMediaEpisodes(input: {
-  mediaType: MediaType
-  keyword?: string
-}): Promise<FavoriteMediaEpisode[]> {
-  const data = await request<{ items: FavoriteMediaEpisode[] }>({
-    path: `/api/media-episodes/favorites${queryString({
-      media_type: input.mediaType,
-      keyword: input.keyword
-    })}`
-  })
-  return data.items
 }
 
 export async function listActivityItems(activityType: ActivityType): Promise<ActivityItem[]> {
@@ -316,14 +291,6 @@ export function updateLuggageGroup(id: string, name: string): Promise<void> {
 
 export function deleteLuggageGroup(id: string): Promise<void> {
   return request<void>({ path: `/api/luggage/groups/${id}`, method: "DELETE" })
-}
-
-export function swapLuggageGroupSortOrders(sourceId: string, targetId: string): Promise<void> {
-  return request<void>({
-    path: "/api/luggage/groups/order/swap",
-    method: "PUT",
-    data: { source_id: sourceId, target_id: targetId }
-  })
 }
 
 export function moveLuggageGroup(

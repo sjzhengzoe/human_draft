@@ -232,17 +232,6 @@ export function updatePrintStatus(ids: string[], printed: boolean): Promise<{ up
   })
 }
 
-export function swapDishSortOrders(
-  sourceId: string,
-  targetId: string
-): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
-    path: "/api/dishes/order/swap",
-    method: "PUT",
-    data: { source_id: sourceId, target_id: targetId }
-  })
-}
-
 export function reorderDishSortOrders(ids: string[], placeId?: string): Promise<{ updated: number }> {
   return request<{ updated: number }>({
     path: "/api/dishes/reorder",

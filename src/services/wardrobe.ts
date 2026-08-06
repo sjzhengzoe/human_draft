@@ -150,17 +150,6 @@ export function deleteWardrobeItem(id: string): Promise<void> {
   return request<void>({ path: `/api/wardrobe/items/${id}`, method: "DELETE" })
 }
 
-export function swapWardrobeItemSortOrders(
-  sourceId: string,
-  targetId: string
-): Promise<{ updated: number }> {
-  return request<{ updated: number }>({
-    path: "/api/wardrobe/items/order/swap",
-    method: "PUT",
-    data: { source_id: sourceId, target_id: targetId }
-  })
-}
-
 export function reorderWardrobeItemSortOrders(ids: string[]): Promise<{ updated: number }> {
   return request<{ updated: number }>({
     path: "/api/wardrobe/items/reorder",
