@@ -17,6 +17,13 @@
 - Create hierarchy with font weight, color, spacing, and layout instead of additional font sizes. Icons, icon glyphs, and purely decorative symbols are exempt from the `20rpx` / `23rpx` / `25rpx` restriction.
 - When changing typography, adjust related control height, card minimum height, padding, and vertical gaps so the visual density remains balanced.
 
+## Mini Program Asset Packaging Rules
+
+- Follow `docs/miniprogram-assets.md` when adding images or audio to the mini program.
+- Keep only small, runtime-required package assets under `src/`. Treat 200 KB as the combined image-and-audio budget reported by WeChat Developer Tools, not as a per-file allowance.
+- Put large, optional, archival, design-source, and print assets under `public/` so Nginx can serve them from `https://gufeifei.cn/`. Do not duplicate the same asset in both `src/` and `public/`.
+- Before completing an asset change, run `node --test server/miniprogram-package.test.mjs` and rescan code quality in WeChat Developer Tools.
+
 ## Database Migration and Compatibility Rules
 
 - Treat every schema change, table replacement, field semantic change, or change to how historical records are read as a compatibility task. Never assume the database is empty or that only new users matter.
