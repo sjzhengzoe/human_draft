@@ -7,7 +7,9 @@ import type {
   MenuRecordType
 } from "../types/api"
 import type { DiningScene } from "../types/dining"
-import { request, upload } from "./request"
+import { getCurrentUser } from "./auth"
+import { listDiningScenes } from "./dining"
+import { ApiRequestError, request, upload } from "./request"
 import { markMenuDataChanged } from "../utils/menu-data-revision"
 
 const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
@@ -90,20 +92,75 @@ export type MenuOverview = {
   canWrite: boolean
 }
 
+function resolveOverviewCategoryId<T extends { id: string }>(
+  requestedId: string | undefined,
+  categories: T[]
+): string {
+  return categories.some((category) => category.id === requestedId)
+    ? requestedId || ""
+    : categories[0]?.id || ""
+}
+
+async function getLegacyMenuOverview(params: {
+  record_type: MenuRecordType
+  category_id?: string
+}): Promise<MenuOverview> {
+  const [categories, outsideCategories, homePlaces] = await Promise.all([
+    listCategories(),
+    listDiningScenes(),
+    listMenuPlaces({ place_type: "home", include_dishes: false })
+  ])
+  const activeCategories = params.record_type === "outside"
+    ? outsideCategories
+    : categories
+  const categoryId = resolveOverviewCategoryId(params.category_id, activeCategories)
+  const homePlaceId = homePlaces[0]?.id || ""
+  const [dishes, outsidePlaces] = params.record_type === "home"
+    ? [await listDishes({
+      place_id: homePlaceId || undefined,
+      category_id: categoryId || undefined,
+      record_type: "home",
+      sort: "custom",
+      page_size: 100
+    }), [] as MenuPlace[]]
+    : [[], await listMenuPlaces({
+      place_type: "outside",
+      outside_category_id: categoryId || undefined
+    })]
+  return {
+    categories,
+    outsideCategories,
+    homePlaceId,
+    activeFilter: categoryId ? `${params.record_type}:${categoryId}` : params.record_type,
+    activeRecordType: params.record_type,
+    dishes,
+    outsidePlaces,
+    canWrite: getCurrentUser()?.can_write === true
+  }
+}
+
 export async function getMenuOverview(params: {
   record_type: MenuRecordType
   category_id?: string
 }): Promise<MenuOverview> {
-  const data = await request<{
-    categories: Category[]
-    outside_categories: DiningScene[]
-    home_place_id: string
-    active_filter: string
-    active_record_type: MenuRecordType
-    dishes: Dish[]
-    outside_places: MenuPlace[]
-    can_write: boolean
-  }>({ path: `/api/menu-overview${toQuery(params)}` })
+  let data: {
+      categories: Category[]
+      outside_categories: DiningScene[]
+      home_place_id: string
+      active_filter: string
+      active_record_type: MenuRecordType
+      dishes: Dish[]
+      outside_places: MenuPlace[]
+      can_write: boolean
+    }
+  try {
+    data = await request({ path: `/api/menu-overview${toQuery(params)}` })
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.statusCode === 404) {
+      return getLegacyMenuOverview(params)
+    }
+    throw error
+  }
   return {
     categories: Array.isArray(data.categories) ? data.categories : [],
     outsideCategories: Array.isArray(data.outside_categories) ? data.outside_categories : [],

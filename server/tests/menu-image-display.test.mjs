@@ -205,6 +205,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuLogic, /activeFilter,\s*activeRecordType,/);
   assert.match(menuLogic, /const overview = await getMenuOverview/);
   assert.match(menuService, /\/api\/menu-overview/);
+  assert.match(menuService, /error instanceof ApiRequestError && error\.statusCode === 404/);
+  assert.match(menuService, /return getLegacyMenuOverview\(params\)/);
   assert.match(menuOverview, /Promise\.all\(\[\s*listCategories/);
   assert.match(menuOverview, /include_dishes: false/);
   assert.match(menuService, /include_dishes\?: boolean/);
