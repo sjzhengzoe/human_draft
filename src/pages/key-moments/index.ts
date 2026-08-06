@@ -197,11 +197,14 @@ Page({
   handleAdd() {
     if (!this.data.canWrite || this.data.loading || this.data.contentLoading) return
     const now = currentShanghaiDateTime()
+    const editorDate = this.data.activeGranularity === "day"
+      ? this.data.anchorDate
+      : now.date
     this.setData({
       showEditor: true,
       editingId: "",
       editorContent: "",
-      editorDate: now.date,
+      editorDate,
       editorTime: now.time,
       currentImageUrl: "",
       originalImageUrl: "",

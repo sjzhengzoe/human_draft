@@ -29,6 +29,18 @@ test("key moment period bounds reject invalid dates", () => {
   );
 });
 
+test("key moment creation uses the previewed date only for day view", async () => {
+  const page = await readFile(
+    new URL("../../src/pages/key-moments/index.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    page,
+    /const editorDate = this\.data\.activeGranularity === "day"[\s\S]*?\? this\.data\.anchorDate[\s\S]*?: now\.date/,
+  );
+  assert.match(page, /editorDate,[\s\S]*?editorTime: now\.time/);
+});
+
 test("key moments migration creates user-owned records and a private image bucket", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608020001_key_moments.sql", import.meta.url),
