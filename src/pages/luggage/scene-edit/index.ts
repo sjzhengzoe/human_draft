@@ -20,7 +20,10 @@ Page({
     itemCount: 0,
     loading: true,
     saving: false,
-    deleting: false
+    deleting: false,
+    deleteConfirmVisible: false,
+    loadErrorVisible: false,
+    loadErrorMessage: ""
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -49,7 +52,10 @@ Page({
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      wx.showModal({ title: "加载失败", content: error instanceof Error ? error.message : "无法读取场景", showCancel: false, success: () => isAsyncPageActive(this) && wx.navigateBack() })
+      this.setData({
+        loadErrorVisible: true,
+        loadErrorMessage: error instanceof Error ? error.message : "无法读取场景"
+      })
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) this.setData({ loading: false })
     }
@@ -76,23 +82,30 @@ Page({
 
   handleDelete() {
     if (!this.data.id || this.data.saving || this.data.deleting) return
-    wx.showModal({
-      title: "删除场景",
-      content: "场景内的全部分组和物品也会删除。",
-      confirmText: "删除",
-      confirmColor: "#c9342f",
-      success: async (result) => {
-        if (!result.confirm || !isAsyncPageActive(this)) return
-        this.setData({ deleting: true })
-        try {
-          await deleteLuggageScene(this.data.id)
-          if (isAsyncPageActive(this)) wx.navigateBack()
-        } catch (error) {
-          if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })
-        } finally {
-          if (isAsyncPageActive(this)) this.setData({ deleting: false })
-        }
+    this.setData({ deleteConfirmVisible: true })
+  },
+
+  closeDeleteConfirm() {
+    if (!this.data.deleting) this.setData({ deleteConfirmVisible: false })
+  },
+
+  async confirmDelete() {
+    if (!this.data.id || this.data.saving || this.data.deleting) return
+    this.setData({ deleting: true })
+    try {
+      await deleteLuggageScene(this.data.id)
+      if (isAsyncPageActive(this)) wx.navigateBack()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })
       }
-    })
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
+  },
+
+  closeLoadError() {
+    this.setData({ loadErrorVisible: false })
+    if (isAsyncPageActive(this)) wx.navigateBack()
   }
 })

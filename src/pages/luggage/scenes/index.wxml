@@ -1,36 +1,36 @@
-<custom-navigation title="行李场景" />
+<custom-navigation title="管理行李场景" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载场景…</view>
 </view>
 
-<view wx:else class="page page--with-navigation">
-  <view class="overview">
-    <view class="overview__topline">
-      <view class="overview__title">管理行李场景</view>
-      <button class="overview__add" bindtap="handleAdd"><app-icon name="plus-white" size="22" /><text>新增</text></button>
+<view wx:else class="page page--fixed">
+  <view class="manager-header">
+    <view>
+      <view class="manager-header__title">场景列表</view>
+      <view class="manager-header__count">{{scenes.length}} 个场景</view>
     </view>
-    <view class="overview__stats">
-      <view class="overview-stat">
-        <view class="overview-stat__value">{{scenes.length}}</view>
-        <view class="overview-stat__label">场景</view>
-      </view>
+    <view class="manager-header__add" bindtap="handleAdd">
+      <app-icon name="plus-white" size="21" />
+      <text>新增场景</text>
     </view>
   </view>
 
-  <view wx:if="{{errorMessage}}" class="state">
-    <view>{{errorMessage}}</view>
-    <button class="retry-button" bindtap="handleRetry">重试</button>
-  </view>
-  <view wx:elif="{{scenes.length === 0}}" class="state">还没有场景，点击右上角新增</view>
-  <view wx:else class="category-list">
-    <view wx:for="{{scenes}}" wx:key="id" class="category-card" data-id="{{item.id}}" bindtap="handleEdit">
-      <view class="category-card__main">
-        <view class="category-card__name">{{item.name}}</view>
-        <view class="category-card__fields">{{item.group_count}} 个分组 · {{item.item_count}} 件物品</view>
-      </view>
-      <view class="category-card__arrow"><app-icon name="chevron-right" size="28" /></view>
+  <scroll-view class="manager-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:if="{{errorMessage}}" class="state">
+      <view>{{errorMessage}}</view>
+      <view class="retry-button" bindtap="handleRetry">重试</view>
     </view>
-  </view>
+    <view wx:elif="{{scenes.length === 0}}" class="state">还没有场景，点击上方新增</view>
+    <view wx:else class="scene-list">
+      <view wx:for="{{scenes}}" wx:key="id" class="scene-card" data-id="{{item.id}}" bindtap="handleEdit">
+        <view class="scene-card__main">
+          <view class="scene-card__name">{{item.name}}</view>
+          <view class="scene-card__fields">{{item.group_count}} 个层级 · {{item.item_count}} 件物品</view>
+        </view>
+        <view class="scene-card__arrow"><app-icon name="chevron-right" size="26" /></view>
+      </view>
+    </view>
+  </scroll-view>
 </view>

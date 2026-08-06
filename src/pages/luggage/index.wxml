@@ -1,4 +1,8 @@
-<custom-navigation title="行李清单" />
+<custom-navigation
+  title="{{viewMode === 'overview' ? '行李场景' : activeScene.name}}"
+  custom-back="{{viewMode === 'detail'}}"
+  bindback="handleDetailBack"
+/>
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -6,46 +10,72 @@
 </view>
 
 <view wx:else class="page page--fixed">
-  <view class="scene-tabs">
-    <scroll-view class="scene-tabs__list" scroll-y enhanced show-scrollbar="{{false}}">
-      <view wx:for="{{scenes}}" wx:key="id" class="scene-tab {{activeSceneId === item.id ? 'scene-tab--active' : ''}}" data-id="{{item.id}}" bindtap="handleSceneTap">{{item.name}}</view>
-    </scroll-view>
-    <view wx:if="{{canWrite}}" class="scene-add-fixed" role="button" aria-label="新增场景" bindtap="handleAddScene">
-      <view class="scene-add-fixed__button"><app-icon name="plus" size="27" /></view>
+  <block wx:if="{{viewMode === 'overview'}}">
+    <view class="scene-directory__header">
+      <view>
+        <view class="scene-directory__title">选择一个场景</view>
+        <view class="scene-directory__count">{{scenes.length}} 个场景</view>
+      </view>
+      <view wx:if="{{canWrite}}" class="scene-directory__actions">
+        <view class="scene-directory__manage" bindtap="handleManageScenes">
+          <app-icon name="pencil" size="22" />
+          <text>管理</text>
+        </view>
+        <view class="scene-directory__add" bindtap="handleAddScene">
+          <app-icon name="plus-white" size="21" />
+          <text>新增场景</text>
+        </view>
+      </view>
     </view>
-  </view>
 
-  <view class="content">
-    <view wx:if="{{!activeScene}}" class="empty-state">
-      <view>还没有行李场景</view>
-      <button wx:if="{{canWrite}}" class="primary-button" bindtap="handleAddScene">新增第一个场景</button>
-    </view>
-    <block wx:else>
+    <scroll-view class="scene-directory__scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{contentLoading}}" class="content-loading">
+        <view class="content-loading__spinner" />
+        <view class="content-loading__text">正在加载场景…</view>
+      </view>
+      <view wx:elif="{{errorMessage}}" class="state">
+        <view>{{errorMessage}}</view>
+      </view>
+      <view wx:elif="{{scenes.length === 0}}" class="state">
+        <view>还没有行李场景</view>
+        <view wx:if="{{canWrite}}" class="state__action" bindtap="handleAddScene">新增第一个场景</view>
+      </view>
+      <view wx:else class="scene-directory__list">
+        <view
+          wx:for="{{scenes}}"
+          wx:key="id"
+          class="scene-card"
+          data-id="{{item.id}}"
+          bindtap="handleSceneTap"
+        >
+          <view class="scene-card__topline">
+            <view class="scene-card__name">{{item.name}}</view>
+            <view class="scene-card__meta">{{item.groups.length}} 层 · {{item.item_count}} 件</view>
+            <view class="scene-card__arrow"><app-icon name="chevron-right" size="25" /></view>
+          </view>
+          <view wx:if="{{item.groups.length}}" class="scene-card__layers">
+            <view wx:for="{{item.groups}}" wx:for-item="group" wx:key="id" class="scene-layer-chip">
+              <text>{{group.name}}</text>
+              <text class="scene-layer-chip__count">{{group.items.length}}</text>
+            </view>
+          </view>
+          <view wx:else class="scene-card__empty">暂无携带层级</view>
+        </view>
+      </view>
+    </scroll-view>
+  </block>
+
+  <block wx:elif="{{activeScene}}">
+    <view class="detail-content">
       <view class="app-overview luggage-overview">
         <view class="app-overview__topline">
           <view class="app-overview__title-group">
-            <view class="luggage-title-row">
-              <view class="app-overview__title">{{activeScene.name}}</view>
-            </view>
+            <view class="app-overview__title">{{activeScene.name}}</view>
           </view>
-          <view wx:if="{{canWrite}}" class="scene-overview-actions">
-            <view
-              class="scene-icon-button scene-icon-button--rename"
-              role="button"
-              aria-label="修改场景名称"
-              bindtap="handleRenameScene"
-            >
-              <app-icon name="pencil" size="25" />
-            </view>
-            <view
-              class="scene-icon-button scene-icon-button--delete"
-              role="button"
-              aria-label="删除场景"
-              bindtap="handleDeleteScene"
-            >
-              <app-icon name="trash-2-danger" size="27" />
-            </view>
-          </view>
+          <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAddGroup">
+            <app-icon name="plus-white" size="21" />
+            <text>新增层级</text>
+          </button>
         </view>
         <view class="app-overview__stats">
           <view class="app-overview__stat">
@@ -59,101 +89,125 @@
         </view>
       </view>
 
-      <view wx:if="{{canWrite}}" class="scene-toolbar">
-        <view class="scene-toolbar__action {{sortEditing ? 'scene-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
+      <view wx:if="{{canWrite && activeScene.groups.length}}" class="sort-toolbar">
+        <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
           <app-icon name="settings-2" size="22" />
-          <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
-        </view>
-        <view class="scene-toolbar__action" bindtap="handleAddGroup">
-          <app-icon name="plus" size="23" />
-          <text>新增分组</text>
+          <text>{{sortEditing ? '完成排序' : '调整顺序'}}</text>
         </view>
       </view>
 
-      <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-      <view class="group-list">
-        <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="id" class="group-card">
-          <view class="group-header">
-            <view class="group-header__main">
-              <view class="group-title">{{group.name}}</view>
-              <view class="group-count">{{group.items.length}} 件物品</view>
-            </view>
-            <view wx:if="{{canWrite}}" class="inline-icon-actions">
-              <block wx:if="{{sortEditing}}">
-                <view class="inline-icon-button {{groupIndex === 0 ? 'inline-icon-button--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="-1" catchtap="handleGroupMove"><app-icon name="arrow-up" size="24" /></view>
-                <view class="inline-icon-button {{groupIndex === activeScene.groups.length - 1 ? 'inline-icon-button--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="1" catchtap="handleGroupMove"><app-icon name="arrow-down" size="24" /></view>
-              </block>
-              <view
-                class="inline-icon-button"
-                role="button"
-                aria-label="修改层级名称"
-                data-id="{{group.id}}"
-                data-name="{{group.name}}"
-                bindtap="handleRenameGroup"
-              >
-                <app-icon name="pencil" size="24" />
-              </view>
-              <view
-                class="inline-icon-button"
-                role="button"
-                aria-label="添加物品"
-                data-group-id="{{group.id}}"
-                catchtap="handleAddItem"
-              >
-                <app-icon name="plus" size="24" />
-              </view>
-              <view
-                class="inline-icon-button inline-icon-button--delete"
-                role="button"
-                aria-label="删除层级"
-                data-id="{{group.id}}"
-                bindtap="handleDeleteGroup"
-              >
-                <app-icon name="trash-2-danger" size="24" />
-              </view>
-            </view>
-          </view>
-          <view class="luggage-items">
+      <scroll-view class="group-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <view wx:if="{{contentLoading}}" class="content-loading">
+          <view class="content-loading__spinner" />
+          <view class="content-loading__text">正在加载清单…</view>
+        </view>
+        <view wx:elif="{{activeScene.groups.length === 0}}" class="state">还没有携带层级</view>
+        <view wx:else class="group-list">
+          <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="id" class="group-card">
             <view
-              wx:for="{{group.items}}"
-              wx:for-item="luggageItem"
-              wx:for-index="itemIndex"
-              wx:key="id"
-              class="luggage-item"
-              data-id="{{luggageItem.id}}"
-              data-group-id="{{group.id}}"
-              data-name="{{luggageItem.name}}"
-              bindtap="handleItemTap"
+              class="group-header"
+              data-id="{{group.id}}"
+              data-name="{{group.name}}"
+              data-required="{{group.is_required}}"
+              bindtap="openGroupEditor"
             >
-              <view class="luggage-item__marker">{{itemIndex + 1}}</view>
-              <view class="luggage-item__name">{{luggageItem.name}}</view>
-              <view wx:if="{{canWrite}}" class="inline-icon-actions">
-                <block wx:if="{{sortEditing}}">
-                  <view class="inline-icon-button {{itemIndex === 0 ? 'inline-icon-button--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="-1" catchtap="handleItemMove"><app-icon name="arrow-up" size="23" /></view>
-                  <view class="inline-icon-button {{itemIndex === group.items.length - 1 ? 'inline-icon-button--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="1" catchtap="handleItemMove"><app-icon name="arrow-down" size="23" /></view>
-                </block>
-                <view
-                  class="item-delete-button"
-                  role="button"
-                  aria-label="删除物品"
-                  data-id="{{luggageItem.id}}"
-                  catchtap="handleDeleteItem"
-                >
-                  <app-icon name="trash-2-danger" size="24" />
+              <view class="group-header__main">
+                <view class="group-header__title-row">
+                  <view class="group-index">{{groupIndex < 9 ? '0' : ''}}{{groupIndex + 1}}</view>
+                  <view class="group-title">{{group.name}}</view>
+                  <view wx:if="{{group.is_required}}" class="required-badge">固定</view>
                 </view>
+                <view class="group-count">{{group.items.length}} 件物品</view>
               </view>
+              <view wx:if="{{sortEditing}}" class="sort-actions">
+                <view class="sort-icon {{groupIndex === 0 ? 'sort-icon--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="-1" catchtap="handleGroupMove"><app-icon name="arrow-up" size="23" /></view>
+                <view class="sort-icon {{groupIndex === activeScene.groups.length - 1 ? 'sort-icon--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="1" catchtap="handleGroupMove"><app-icon name="arrow-down" size="23" /></view>
+              </view>
+              <view wx:else class="group-header__arrow"><app-icon name="chevron-right" size="25" /></view>
             </view>
-            <view wx:if="{{group.items.length === 0}}" class="items-empty">这个分组还没有物品</view>
+
+            <view class="luggage-items">
+              <view
+                wx:for="{{group.items}}"
+                wx:for-item="luggageItem"
+                wx:for-index="itemIndex"
+                wx:key="id"
+                class="luggage-item"
+                data-id="{{luggageItem.id}}"
+                data-group-id="{{group.id}}"
+                data-name="{{luggageItem.name}}"
+                bindtap="openItemEditor"
+              >
+                <view class="luggage-item__name">{{luggageItem.name}}</view>
+                <view wx:if="{{sortEditing}}" class="sort-actions">
+                  <view class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="-1" catchtap="handleItemMove"><app-icon name="arrow-up" size="22" /></view>
+                  <view class="sort-icon {{itemIndex === group.items.length - 1 ? 'sort-icon--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="1" catchtap="handleItemMove"><app-icon name="arrow-down" size="22" /></view>
+                </view>
+                <view wx:else class="luggage-item__arrow"><app-icon name="chevron-right" size="23" /></view>
+              </view>
+              <view
+                wx:if="{{canWrite && !sortEditing}}"
+                class="item-add-row"
+                data-group-id="{{group.id}}"
+                data-group-name="{{group.name}}"
+                bindtap="handleAddItem"
+              >
+                <app-icon name="plus" size="21" />
+                <text>{{group.items.length ? '添加物品' : '这个层级还没有物品，点击添加'}}</text>
+              </view>
+              <view wx:elif="{{group.items.length === 0}}" class="items-empty">这个层级还没有物品</view>
+            </view>
           </view>
         </view>
-      </view>
       </scroll-view>
-    </block>
-  </view>
+    </view>
+  </block>
 
-  <operation-loading
-    visible="{{ordering || savingItem || savingGroup || savingScene || editing || deleting}}"
-    text="{{deleting ? deletingLabel : editing ? editingLabel : savingItem ? '正在添加物品…' : savingGroup ? '正在添加分组…' : savingScene ? '正在添加场景…' : '正在保存排序…'}}"
+  <app-dialog
+    wx:if="{{editorVisible}}"
+    visible="{{true}}"
+    title="{{editorTitle}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="editor-body">
+      <app-input
+        custom-class="editor-input"
+        value="{{editorName}}"
+        maxlength="{{editorMaxlength}}"
+        placeholder="{{editorPlaceholder}}"
+        focus
+        adjust-position="{{false}}"
+        bindinput="handleEditorNameInput"
+        bindconfirm="saveEditor"
+      />
+      <view wx:if="{{editorRequired}}" class="editor-hint">必备层级会固定保留，不能删除。</view>
+    </view>
+    <view slot="actions" class="editor-actions">
+      <view wx:if="{{editorId && !editorRequired}}" class="editor-delete" bindtap="handleEditorDelete">
+        <app-icon name="trash-2-danger" size="22" />
+        <text>{{editorKind === 'group' ? '删除层级' : '删除物品'}}</text>
+      </view>
+      <view class="editor-main-actions">
+        <button class="dialog-button" disabled="{{saving}}" bindtap="closeEditor">取消</button>
+        <button class="dialog-button dialog-button--primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+      </view>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{confirmVisible}}"
+    visible="{{true}}"
+    title="{{confirmTitle}}"
+    content="{{confirmContent}}"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="closeDeleteConfirm"
+    bindconfirm="confirmDelete"
   />
 
+  <operation-loading
+    visible="{{ordering || deleting}}"
+    text="{{deleting ? '正在删除…' : '正在保存排序…'}}"
+  />
 </view>

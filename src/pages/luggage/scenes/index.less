@@ -1,1 +1,117 @@
-@import "../../wardrobe/categories/index.less";
+page,
+.page {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.page {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+
+.manager-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 28rpx var(--ui-page-gutter) 20rpx;
+}
+
+.manager-header__title {
+  color: #171717;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.manager-header__count {
+  margin-top: 7rpx;
+  color: #999994;
+  font-size: var(--ui-font-size-small);
+}
+
+.manager-header__add,
+.retry-button {
+  display: inline-flex;
+  min-height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 7rpx;
+  padding: 0 20rpx;
+  border-radius: var(--ui-radius-pill);
+  background: #111111;
+  color: #ffffff;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+}
+
+.manager-scroll {
+  min-height: 0;
+  flex: 1;
+  box-sizing: border-box;
+  padding: 0 var(--ui-page-gutter) calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.scene-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.scene-card {
+  display: flex;
+  min-height: 112rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 20rpx 22rpx 24rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-surface);
+}
+
+.scene-card:active {
+  opacity: .6;
+}
+
+.scene-card__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.scene-card__name {
+  overflow: hidden;
+  color: #171717;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-card__fields {
+  margin-top: 8rpx;
+  color: #999994;
+  font-size: var(--ui-font-size-small);
+  line-height: 1.4;
+}
+
+.scene-card__arrow {
+  display: flex;
+  color: #b3b3ae;
+}
+
+.state {
+  padding: 130rpx 20rpx;
+  color: #888883;
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.retry-button {
+  margin-top: 22rpx;
+}

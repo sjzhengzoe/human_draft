@@ -1,4 +1,4 @@
-<custom-navigation title="编辑行李场景" />
+<custom-navigation title="{{id ? '编辑行李场景' : '新增行李场景'}}" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -15,19 +15,45 @@
       </view>
       <view wx:if="{{id}}" class="record-overview__stat">
         <view class="record-overview__value">{{groupCount}}</view>
-        <view class="record-overview__label">分组</view>
+        <view class="record-overview__label">层级</view>
       </view>
     </view>
   </view>
+
   <view class="form-card">
     <view class="field">
       <view class="field__label">场景名称</view>
       <app-input custom-class="field__input" value="{{name}}" maxlength="80" placeholder="例如：成都三日游" bindinput="handleNameInput" />
     </view>
   </view>
+
   <view class="footer-actions">
     <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">{{id ? '保存场景' : '创建场景'}}</button>
-    <button wx:if="{{id}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除场景</text></button>
+    <button wx:if="{{id}}" class="delete-button" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="22" /><text>删除场景</text></button>
   </view>
+
+  <app-dialog
+    wx:if="{{deleteConfirmVisible}}"
+    visible="{{true}}"
+    title="删除场景"
+    content="场景内的全部层级和物品也会删除。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="closeDeleteConfirm"
+    bindconfirm="confirmDelete"
+  />
+
+  <app-dialog
+    wx:if="{{loadErrorVisible}}"
+    visible="{{true}}"
+    title="加载失败"
+    content="{{loadErrorMessage}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="actions" class="load-error-actions">
+      <button class="load-error-button" bindtap="closeLoadError">返回</button>
+    </view>
+  </app-dialog>
+
   <operation-loading visible="{{saving || deleting}}" text="{{deleting ? '正在删除场景…' : id ? '正在保存场景…' : '正在创建场景…'}}" />
 </view>

@@ -127,7 +127,13 @@ export async function updateLuggageGroup(supabase, userId, id, body) {
 }
 
 export async function deleteLuggageGroup(supabase, userId, id) {
-  await requireRecord(supabase, userId, "luggage_groups", id, "id");
+  const group = await requireRecord(supabase, userId, "luggage_groups", id, "id,is_required");
+  assertCondition(
+    !group.is_required,
+    400,
+    "REQUIRED_LUGGAGE_GROUP",
+    "必备物品层级不能删除。",
+  );
   const { error } = await supabase
     .from("luggage_groups")
     .delete()
