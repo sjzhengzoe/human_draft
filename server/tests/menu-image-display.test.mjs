@@ -258,6 +258,19 @@ test("menu edit page locks native scrolling and scrolls its content area", async
   assert.match(page, /show-scrollbar="\{\{false\}\}"/);
 });
 
+test("menu print page locks native scrolling and scrolls only the dish list", async () => {
+  const [pageConfig, page, styles] = await Promise.all([
+    readFile(new URL("../../src/pages/menu/print/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/menu/print/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/menu/print/index.less", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(pageConfig).disableScroll, true);
+  assert.match(page, /class="page page--fixed"/);
+  assert.match(page, /<scroll-view class="dish-scroll" scroll-y enhanced show-scrollbar="\{\{false\}\}">/);
+  assert.match(styles, /\.dish-scroll\s*\{[^}]*min-height:\s*0;[^}]*height:\s*0;[^}]*flex:\s*1;/);
+});
+
 test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes", async () => {
   const styleUrls = [
     "../../src/pages/menu/index.less",
@@ -293,8 +306,8 @@ test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes"
   assert.match(styles[1], /\.field__input[^}]*font-size:\s*23rpx/);
   assert.match(styles[1], /\.item-entry__input[^}]*font-size:\s*23rpx/);
   assert.equal(editPage.match(/font-size="23rpx"/g)?.length, 4);
-  assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*25rpx/);
-  assert.match(styles[4], /\.meal-section__english[^}]*font-size:\s*23rpx/);
+  assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.match(styles[4], /\.meal-section__english[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*25rpx/);
 });
 

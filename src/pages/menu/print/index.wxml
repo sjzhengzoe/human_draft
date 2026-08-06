@@ -5,7 +5,7 @@
   <view class="fullscreen-loading__text">正在加载菜单…</view>
 </view>
 
-<view wx:else class="page page--with-navigation">
+<view wx:else class="page page--fixed">
   <view class="app-overview print-intro">
     <view class="app-overview__title">四张打印</view>
     <view class="app-overview__stats">
@@ -51,30 +51,34 @@
     </view>
   </scroll-view>
 
-  <view wx:if="{{errorMessage}}" class="state-block">
-    <view>{{errorMessage}}</view>
-    <button class="retry-button" bindtap="handleRetry">重试</button>
-  </view>
-  <view wx:elif="{{dishes.length === 0}}" class="state-block">当前筛选没有菜品</view>
-
-  <view wx:else class="dish-grid">
-    <view
-      wx:for="{{dishes}}"
-      wx:key="id"
-      class="dish-card {{item.selectionOrder > 0 ? 'dish-card--selected' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="handleDishTap"
-    >
-      <image class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
-      <view wx:if="{{item.selectionOrder > 0}}" class="dish-card__order">
-        {{item.selectionOrder}}
+  <scroll-view class="dish-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="dish-scroll__content">
+      <view wx:if="{{errorMessage}}" class="state-block">
+        <view>{{errorMessage}}</view>
+        <button class="retry-button" bindtap="handleRetry">重试</button>
       </view>
-      <view class="dish-card__body">
-        <view class="dish-card__category">{{item.category && item.category.name ? item.category.name : '未分类'}}</view>
-        <view class="dish-card__name">{{item.name}}</view>
+      <view wx:elif="{{dishes.length === 0}}" class="state-block">当前筛选没有菜品</view>
+
+      <view wx:else class="dish-grid">
+        <view
+          wx:for="{{dishes}}"
+          wx:key="id"
+          class="dish-card {{item.selectionOrder > 0 ? 'dish-card--selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="handleDishTap"
+        >
+          <image class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
+          <view wx:if="{{item.selectionOrder > 0}}" class="dish-card__order">
+            {{item.selectionOrder}}
+          </view>
+          <view class="dish-card__body">
+            <view class="dish-card__category">{{item.category && item.category.name ? item.category.name : '未分类'}}</view>
+            <view class="dish-card__name">{{item.name}}</view>
+          </view>
+        </view>
       </view>
     </view>
-  </view>
+  </scroll-view>
 
   <view class="print-footer">
     <view class="selection-count">已选 <text>{{selectedIds.length}}</text>/4</view>

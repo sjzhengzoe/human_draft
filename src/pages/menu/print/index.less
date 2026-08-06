@@ -1,4 +1,4 @@
-.page { min-height: 100vh; box-sizing: border-box; padding: 32rpx var(--ui-page-gutter) calc(170rpx + env(safe-area-inset-bottom)); background: var(--ui-page-background); }
+.page { display: flex; min-height: 0; box-sizing: border-box; flex-direction: column; overflow: hidden; padding: 32rpx var(--ui-page-gutter) 0; background: var(--ui-page-background); }
 .print-intro { min-height: 184rpx; }
 .print-status-filter { display: flex; margin-top: 22rpx; padding: 6rpx; border-radius: 34rpx; background: #eaeaea; }
 .print-status-filter__item { display: flex; height: 56rpx; flex: 1; align-items: center; justify-content: center; border-radius: 28rpx; color: #777; font-size: 23rpx; line-height: normal; text-align: center; }
@@ -7,6 +7,8 @@
 .category-list { display: inline-flex; gap: 12rpx; padding: 2rpx 2rpx 22rpx; }
 .category-chip { padding: 14rpx 24rpx; border: 1rpx solid #dedede; border-radius: 30rpx; background: var(--ui-surface); color: #666; font-size: 23rpx; }
 .category-chip--active { border-color: #111; background: #111; color: #fff; }
+.dish-scroll { min-height: 0; height: 0; flex: 1; box-sizing: border-box; }
+.dish-scroll__content { box-sizing: border-box; padding-bottom: calc(170rpx + env(safe-area-inset-bottom)); }
 .dish-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18rpx; }
 .dish-card { position: relative; overflow: hidden; border: 3rpx solid transparent; border-radius: var(--ui-radius-card); background: var(--ui-surface); box-shadow: 0 0 0 1rpx #e4e4e4; }
 .dish-card--selected { border-color: #111; box-shadow: none; }
