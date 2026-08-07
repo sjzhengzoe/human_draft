@@ -53,9 +53,9 @@ const BORDER_COLOR = "#ffffff"
 const MUTED_TEXT = "#747474"
 const VISITED_TEXT = "#ffffff"
 const LABEL_HALO = "#ffffff"
-const SELECTED_FILL = "#26c866"
-const SELECTED_CITY_OVERLAY = "rgba(38, 200, 102, 0.24)"
-const SELECTED_GLOW = "rgba(38, 200, 102, 0.72)"
+const SELECTED_FILL = "#111111"
+const SELECTED_CITY_OVERLAY = "rgba(17, 17, 17, 0.28)"
+const SELECTED_GLOW = "rgba(17, 17, 17, 0.32)"
 
 const LABEL_OFFSETS: Record<string, [number, number]> = {
   北京: [-3, -7],
@@ -307,11 +307,12 @@ export function drawFootprintMap(
     const x = baseX + offsetX
     const y = baseY + offsetY
     const isVisited = visitedProvinces.has(province.name)
-    if (!isVisited) {
+    const isSelected = province.name === selectedProvince
+    if (!isVisited && !isSelected) {
       context.strokeStyle = LABEL_HALO
       context.strokeText(province.name, x, y)
     }
-    context.fillStyle = isVisited ? VISITED_TEXT : MUTED_TEXT
+    context.fillStyle = isVisited || isSelected ? VISITED_TEXT : MUTED_TEXT
     context.fillText(province.name, x, y)
   })
 }
