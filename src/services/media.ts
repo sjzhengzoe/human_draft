@@ -12,7 +12,7 @@ import { queryString } from "./query-string"
 import { request } from "./request"
 
 export async function listMediaEntries(input: {
-  mediaType: MediaType
+  mediaType?: MediaType
   status?: MediaStatus
   revisitable?: boolean
   keyword?: string

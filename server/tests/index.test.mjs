@@ -754,6 +754,49 @@ test("media list supports server-side pagination and fuzzy title search", async 
   });
 });
 
+test("media list can include every category when media type is omitted", async (t) => {
+  const entries = [
+    {
+      id: MEDIA_ID,
+      user_id: USER_ID,
+      title: "我的电影",
+      media_type: "电影",
+      watch_status: "completed",
+      platforms: [],
+      sort_order: 1000,
+    },
+    {
+      id: TARGET_ID,
+      user_id: USER_ID,
+      title: "我的电视剧",
+      media_type: "电视剧",
+      watch_status: "in_progress",
+      platforms: [],
+      sort_order: 1000,
+    },
+  ];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: entries }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/media?page_size=100",
+    headers: authHeaders,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.pagination.total, 2);
+  assert.deepEqual(
+    new Set(response.json().data.items.map((item) => item.media_type)),
+    new Set(["电影", "电视剧"]),
+  );
+});
+
 test("personal modules never return another user's records", async (t) => {
   const ownMedia = {
     id: MEDIA_ID,

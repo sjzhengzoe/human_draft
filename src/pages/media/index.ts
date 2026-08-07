@@ -1,100 +1,95 @@
 import { ensureLogin } from "../../services/auth"
-import {
-  listMediaCategories,
-  listMediaEntries,
-  updateMediaEntry,
-  reorderMediaEntrySortOrders
-} from "../../services/media"
-import type {
-  MediaEntry,
-  MediaStatus,
-  MediaType
-} from "../../types/media"
+import { listMediaCategories, listMediaEntries } from "../../services/media"
+import type { MediaEntry, MediaStatus, MediaType } from "../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
   deactivateAsyncPage,
-  invalidateAsyncPageRequests,
-  isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
-import type { SortableRect } from "../../utils/drag-sort"
 
-type StatusFilter = "all" | "revisitable" | MediaStatus
-type LoadItemsOptions = { append?: boolean; reset?: boolean }
-type MediaListSnapshot = {
-  mediaTypes: MediaType[]
-  activeType: MediaType
-  statusFilter: StatusFilter
-  isEpisodic: boolean
-  isAudio: boolean
-  keyword: string
-  appliedKeyword: string
-  items: MediaEntry[]
-  page: number
-  totalItems: number
-  hasMore: boolean
-  canWrite: boolean
-  canReorder: boolean
-  sortEditing: boolean
+type DisplayMode = "overview" | "record"
+
+type DisplayMediaEntry = MediaEntry & {
+  metaText: string
+  statsText: string
+  favoriteText: string
+  recordDateText: string
 }
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
-const PAGE_SIZE = 20
+const PAGE_SIZE = 100
 
-let dragSourceIndex = -1
-let dragTargetIndex = -1
-let dragRects: SortableRect[] = []
-let dragItemIds: string[] = []
-let suppressEditTapUntil = 0
-let dragInsertAfter = false
-let savedPageScrollTop = 0
-let mediaListSnapshot: MediaListSnapshot | null = null
-let mediaSortOriginalIds: string[] = []
+function timestamp(value: string): number {
+  const result = Date.parse(value)
+  return Number.isNaN(result) ? 0 : result
+}
 
-function snapshotMediaList(data: MediaListSnapshot): void {
-  mediaListSnapshot = {
-    ...data,
-    mediaTypes: [...data.mediaTypes],
-    items: [...data.items]
+function formatRecordDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return `最近记录 ${date.getMonth() + 1}月${date.getDate()}日`
+}
+
+function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
+  const isEpisodic = EPISODIC_MEDIA_TYPES.includes(entry.media_type)
+  const platformText = entry.platforms.length ? entry.platforms.join(" / ") : "未记录平台"
+  return {
+    ...entry,
+    metaText: `${entry.media_type} · ${platformText}`,
+    statsText: isEpisodic
+      ? `${entry.season_count || 0} 季 · ${entry.episode_count || 0} 集`
+      : "",
+    favoriteText: entry.favorite_episode_count
+      ? `喜欢 ${entry.favorite_episode_count} 集`
+      : "",
+    recordDateText: formatRecordDate(entry.updated_at || entry.created_at)
   }
 }
 
-function resetDragSession(): void {
-  dragSourceIndex = -1
-  dragTargetIndex = -1
-  dragRects = []
-  dragItemIds = []
-  dragInsertAfter = false
+function sortByRecent(entries: MediaEntry[]): DisplayMediaEntry[] {
+  return [...entries]
+    .sort((left, right) =>
+      timestamp(right.updated_at || right.created_at) -
+      timestamp(left.updated_at || left.created_at)
+    )
+    .map(toDisplayEntry)
+}
+
+async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
+  const items: MediaEntry[] = []
+  let page = 1
+  let hasMore = true
+  while (hasMore) {
+    const result = await listMediaEntries({
+      status,
+      page,
+      pageSize: PAGE_SIZE
+    })
+    items.push(...result.items)
+    hasMore = result.pagination.has_more
+    page += 1
+  }
+  return items
 }
 
 Page({
   data: {
+    displayMode: "overview" as DisplayMode,
     mediaTypes: [] as MediaType[],
-    activeType: "电影" as MediaType,
-    statusFilter: "all" as StatusFilter,
-    isEpisodic: false,
-    isAudio: false,
+    overviewCategoryOptions: ["全部分类"],
+    overviewCategoryIndex: 0,
+    overviewCategory: "" as MediaType,
+    overviewInProgressSource: [] as DisplayMediaEntry[],
+    overviewPlannedSource: [] as DisplayMediaEntry[],
+    inProgressItems: [] as DisplayMediaEntry[],
+    plannedItems: [] as DisplayMediaEntry[],
+    activeRecordType: "" as MediaType,
+    recordSourceItems: [] as DisplayMediaEntry[],
+    recordItems: [] as DisplayMediaEntry[],
     keyword: "",
     appliedKeyword: "",
-    items: [] as MediaEntry[],
-    page: 0,
-    totalItems: 0,
-    hasMore: false,
-    loadingMore: false,
     canWrite: false,
-    canReorder: false,
-    sortEditing: false,
-    draggingIndex: -1,
-    dragTargetIndex: -1,
-    dragInsertAfter: false,
-    sorting: false,
-    ordering: false,
-    dragGhostVisible: false,
-    dragGhostLabel: "",
-    dragGhostX: 0,
-    dragGhostY: 0,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -102,170 +97,127 @@ Page({
   },
 
   onLoad() {
-    savedPageScrollTop = 0
-    if (mediaListSnapshot) {
-      this.setData({
-        ...mediaListSnapshot,
-        loading: false,
-        contentLoading: false,
-        hasLoaded: true,
-        errorMessage: ""
-      })
-    }
+    activateAsyncPage(this)
   },
 
   onShow() {
-    activateAsyncPage(this)
-    mediaSortOriginalIds = []
-    if (this.data.sortEditing) this.setData({ sortEditing: false })
-    this.loadItems()
+    void this.loadCurrentView()
   },
 
   onUnload() {
-    if (this.data.hasLoaded) snapshotMediaList(this.data)
     deactivateAsyncPage(this)
-    resetDragSession()
-    mediaSortOriginalIds = []
-    savedPageScrollTop = 0
   },
 
-  onPageScroll(event: { scrollTop: number }) {
-    savedPageScrollTop = event.scrollTop
-  },
-
-  onReachBottom() {
-    if (
-      this.data.hasMore &&
-      !this.data.contentLoading &&
-      !this.data.loadingMore &&
-      !this.data.sortEditing &&
-      !this.data.sorting
-    ) {
-      this.loadItems({ append: true })
-    }
-  },
-
-  async loadItems(options: LoadItemsOptions = {}) {
-    const append = Boolean(options.append)
-    if (
-      append &&
-      (!this.data.hasMore || this.data.contentLoading || this.data.loadingMore)
-    ) return
+  async loadCurrentView() {
     const generation = beginAsyncPageRequest(this)
-    const statusFilter = this.data.statusFilter
     const showInitialLoading = !this.data.hasLoaded
-    const scrollTopBeforeRefresh = savedPageScrollTop
-    resetDragSession()
-    if (append) {
-      this.setData({ loadingMore: true })
-    } else {
-      this.setData({
-        loading: showInitialLoading,
-        contentLoading: !showInitialLoading && Boolean(options.reset),
-        errorMessage: "",
-        draggingIndex: -1,
-        dragTargetIndex: -1
-      })
-    }
+    const displayMode = this.data.displayMode
+    this.setData({
+      loading: showInitialLoading,
+      contentLoading: !showInitialLoading,
+      errorMessage: ""
+    })
+
     try {
-      const session = await ensureLogin()
+      const [session, categories] = await Promise.all([
+        ensureLogin(),
+        listMediaCategories()
+      ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const categories = await listMediaCategories()
-      if (!isAsyncPageRequestCurrent(this, generation)) return
+
       const mediaTypes = categories.map((category) => category.name)
-      const activeType = mediaTypes.includes(this.data.activeType)
-        ? this.data.activeType
-        : mediaTypes[0] || ""
-      const isEpisodic = EPISODIC_MEDIA_TYPES.includes(activeType)
-      const isAudio = activeType === "广播剧"
-      const refreshPageSize = !append && !options.reset && this.data.items.length
-        ? Math.min(100, Math.max(PAGE_SIZE, this.data.items.length))
-        : PAGE_SIZE
-      const mediaPage = activeType
-        ? await listMediaEntries({
-            mediaType: activeType,
-            status:
-              statusFilter === "all" || statusFilter === "revisitable"
-                ? undefined
-                : statusFilter,
-            revisitable: statusFilter === "revisitable",
-            keyword: this.data.appliedKeyword || undefined,
-            page: append ? this.data.page + 1 : 1,
-            pageSize: append ? PAGE_SIZE : refreshPageSize
-          })
-        : null
-      if (!isAsyncPageRequestCurrent(this, generation)) return
-      const items = mediaPage
-        ? append
-          ? [...this.data.items, ...mediaPage.items.filter((item) =>
-              !this.data.items.some((current) => current.id === item.id)
-            )]
-          : mediaPage.items
-        : []
-      const totalItems = mediaPage?.pagination.total || 0
-      const nextData = {
+      const overviewCategory = mediaTypes.includes(this.data.overviewCategory)
+        ? this.data.overviewCategory
+        : ""
+      const activeRecordType = mediaTypes.includes(this.data.activeRecordType)
+        ? this.data.activeRecordType
+        : ""
+      const sharedData = {
         mediaTypes,
-        activeType,
-        items,
-        isEpisodic,
-        isAudio,
-        page: mediaPage ? Math.ceil(items.length / PAGE_SIZE) : 0,
-        totalItems,
-        hasMore: Boolean(mediaPage && items.length < totalItems),
-        canWrite: session.user.can_write,
-        canReorder:
-          session.user.can_write &&
-          statusFilter === "all" &&
-          !this.data.appliedKeyword
+        overviewCategoryOptions: ["全部分类", ...mediaTypes],
+        overviewCategoryIndex: overviewCategory ? mediaTypes.indexOf(overviewCategory) + 1 : 0,
+        overviewCategory,
+        activeRecordType,
+        canWrite: session.user.can_write
       }
-      this.setData(nextData)
-      snapshotMediaList({ ...this.data, ...nextData })
+
+      if (displayMode === "overview") {
+        const [inProgressEntries, plannedEntries] = await Promise.all([
+          listAllEntries("in_progress"),
+          listAllEntries("planned")
+        ])
+        if (!isAsyncPageRequestCurrent(this, generation)) return
+        const overviewInProgressSource = sortByRecent(inProgressEntries)
+        const overviewPlannedSource = sortByRecent(plannedEntries)
+        this.setData({
+          ...sharedData,
+          overviewInProgressSource,
+          overviewPlannedSource,
+          inProgressItems: overviewCategory
+            ? overviewInProgressSource.filter((item) => item.media_type === overviewCategory)
+            : overviewInProgressSource,
+          plannedItems: overviewCategory
+            ? overviewPlannedSource.filter((item) => item.media_type === overviewCategory)
+            : overviewPlannedSource
+        })
+      } else {
+        const recordSourceItems = sortByRecent(await listAllEntries())
+        if (!isAsyncPageRequestCurrent(this, generation)) return
+        const appliedKeyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+        this.setData({
+          ...sharedData,
+          recordSourceItems,
+          recordItems: recordSourceItems.filter((item) =>
+            (!activeRecordType || item.media_type === activeRecordType) &&
+            (!appliedKeyword || item.title.toLocaleLowerCase().includes(appliedKeyword))
+          )
+        })
+      }
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const message = error instanceof Error ? error.message : "加载失败"
-      if (showInitialLoading) this.setData({ errorMessage: message })
-      else wx.showToast({ title: message, icon: "none" })
+      this.setData({
+        errorMessage: error instanceof Error ? error.message : "影视记录加载失败"
+      })
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
         this.setData({
           loading: false,
           contentLoading: false,
-          loadingMore: false,
           hasLoaded: true
-        }, () => {
-          if (!append && !showInitialLoading && scrollTopBeforeRefresh > 0) {
-            wx.pageScrollTo({ scrollTop: scrollTopBeforeRefresh, duration: 0 })
-          }
         })
       }
     }
   },
 
-  handleTypeTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.sorting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    const type = event.currentTarget.dataset.type as MediaType
-    if (!type || type === this.data.activeType) return
-    this.setData({
-      activeType: type,
-      statusFilter: "all",
-      keyword: "",
-      appliedKeyword: ""
-    }, () => this.loadItems({ reset: true }))
+  handleDisplayModeTap(event: WechatMiniprogram.TouchEvent) {
+    const displayMode = event.currentTarget.dataset.mode as DisplayMode
+    if (!displayMode || displayMode === this.data.displayMode) return
+    this.setData({ displayMode, errorMessage: "" }, () => {
+      void this.loadCurrentView()
+    })
   },
 
-  handleStatusTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.sorting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    const status = event.currentTarget.dataset.status as StatusFilter
-    if (!status || status === this.data.statusFilter) return
-    this.setData({ statusFilter: status }, () => this.loadItems({ reset: true }))
+  handleOverviewCategoryChange(event: WechatMiniprogram.PickerChange) {
+    const overviewCategoryIndex = Number(event.detail.value)
+    const overviewCategory = overviewCategoryIndex
+      ? this.data.mediaTypes[overviewCategoryIndex - 1] || ""
+      : ""
+    this.setData({
+      overviewCategoryIndex,
+      overviewCategory,
+      inProgressItems: overviewCategory
+        ? this.data.overviewInProgressSource.filter((item) => item.media_type === overviewCategory)
+        : this.data.overviewInProgressSource,
+      plannedItems: overviewCategory
+        ? this.data.overviewPlannedSource.filter((item) => item.media_type === overviewCategory)
+        : this.data.overviewPlannedSource
+    })
+  },
+
+  handleRecordTypeTap(event: WechatMiniprogram.TouchEvent) {
+    const activeRecordType = String(event.currentTarget.dataset.type || "")
+    if (activeRecordType === this.data.activeRecordType) return
+    this.setData({ activeRecordType }, () => this.applyRecordFilters())
   },
 
   handleKeywordInput(event: WechatMiniprogram.Input) {
@@ -273,220 +225,68 @@ Page({
   },
 
   handleSearch() {
-    if (this.data.sorting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    savedPageScrollTop = 0
     this.setData({ appliedKeyword: this.data.keyword.trim() }, () => {
-      wx.pageScrollTo({ scrollTop: 0, duration: 0 })
-      this.loadItems({ reset: true })
+      this.applyRecordFilters()
+    })
+  },
+
+  handleClearSearch() {
+    this.setData({ keyword: "", appliedKeyword: "" }, () => {
+      this.applyRecordFilters()
+    })
+  },
+
+  applyRecordFilters() {
+    const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+    const activeRecordType = this.data.activeRecordType
+    this.setData({
+      recordItems: this.data.recordSourceItems.filter((item) =>
+        (!activeRecordType || item.media_type === activeRecordType) &&
+        (!keyword || item.title.toLocaleLowerCase().includes(keyword))
+      )
     })
   },
 
   handleAdd() {
-    if (!this.data.canWrite || this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
+    if (!this.data.canWrite || this.data.contentLoading) return
+    if (!this.data.mediaTypes.length) {
+      wx.showToast({ title: "请先创建影视分类", icon: "none" })
+      wx.navigateTo({ url: "/pages/media/categories/index" })
       return
     }
+    const mediaType = this.data.displayMode === "overview"
+      ? this.data.overviewCategory || this.data.mediaTypes[0]
+      : this.data.activeRecordType || this.data.mediaTypes[0]
     wx.removeStorageSync("MEDIA_EDIT_ITEM")
     wx.navigateTo({
-      url: `/pages/media/edit/index?mediaType=${encodeURIComponent(this.data.activeType)}`
+      url: `/pages/media/edit/index?mediaType=${encodeURIComponent(mediaType)}`
     })
   },
 
   handleManageCategories() {
-    if (!this.data.canWrite || this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
+    if (!this.data.canWrite || this.data.contentLoading) return
     wx.navigateTo({ url: "/pages/media/categories/index" })
   },
 
-  handleEdit(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.sorting || Date.now() < suppressEditTapUntil) return
-    if (this.data.sortEditing) return
+  handleItemTap(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || "")
-    const item = this.data.items.find((entry) => entry.id === id)
+    const entries = [
+      ...this.data.overviewInProgressSource,
+      ...this.data.overviewPlannedSource,
+      ...this.data.recordSourceItems
+    ]
+    const item = entries.find((entry) => entry.id === id)
     if (!item) return
     if (EPISODIC_MEDIA_TYPES.includes(item.media_type)) {
-      wx.navigateTo({ url: "/pages/media/detail/index?id=" + id })
+      wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
       return
     }
     if (!this.data.canWrite) return
     wx.setStorageSync("MEDIA_EDIT_ITEM", item)
-    wx.navigateTo({ url: "/pages/media/edit/index?id=" + id })
+    wx.navigateTo({ url: `/pages/media/edit/index?id=${id}` })
   },
 
-  async handleToggleRevisitable(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.sortEditing || this.data.sorting) return
-    const id = String(event.currentTarget.dataset.id || "")
-    const item = this.data.items.find((entry) => entry.id === id)
-    if (!item) return
-    const nextValue = !item.is_revisitable
-    this.setData({
-      items: this.data.items.map((entry) =>
-        entry.id === id ? { ...entry, is_revisitable: nextValue } : entry
-      )
-    })
-    try {
-      await updateMediaEntry(id, { is_revisitable: nextValue })
-      if (this.data.statusFilter === "revisitable" && !nextValue) await this.loadItems()
-    } catch (error) {
-      if (!isAsyncPageActive(this)) return
-      this.setData({
-        items: this.data.items.map((entry) =>
-          entry.id === id ? { ...entry, is_revisitable: !nextValue } : entry
-        )
-      })
-      wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })
-    }
-  },
-
-  async handleSortEditingToggle() {
-    if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
-    if (!this.data.sortEditing) {
-      mediaSortOriginalIds = this.data.items.map((item) => item.id)
-      this.setData({ sortEditing: true })
-      return
-    }
-    const itemIds = this.data.items.map((item) => item.id)
-    if (hasSameOrder(mediaSortOriginalIds, itemIds)) {
-      mediaSortOriginalIds = []
-      this.setData({ sortEditing: false })
-      return
-    }
-    this.setData({ ordering: true })
-    try {
-      await reorderMediaEntrySortOrders(this.data.activeType, itemIds)
-      if (!isAsyncPageActive(this)) return
-      mediaSortOriginalIds = []
-      this.setData({ sortEditing: false })
-      wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.loadItems()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "排序保存失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ ordering: false })
-    }
-  },
-
-  handleMove(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      targetIndex < 0 ||
-      targetIndex >= this.data.items.length
-    ) return
-    const items = [...this.data.items]
-    const [item] = items.splice(index, 1)
-    items.splice(targetIndex, 0, item)
-    this.setData({ items })
-  },
-
-  handleDragStart(event: WechatMiniprogram.TouchEvent) {
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.sorting ||
-      this.data.loading ||
-      this.data.contentLoading
-    ) return
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || index < 0 || index >= this.data.items.length) return
-
-    dragSourceIndex = index
-    dragTargetIndex = index
-    dragItemIds = this.data.items.map((item) => item.id)
-    suppressEditTapUntil = Date.now() + 1000
-    const touch = event.touches[0] || event.changedTouches[0]
-    invalidateAsyncPageRequests(this)
-    this.setData({
-      draggingIndex: index,
-      dragTargetIndex: index,
-      sorting: true,
-      dragGhostVisible: true,
-      dragGhostLabel: this.data.items[index].title,
-      dragGhostX: touch?.clientX || 0,
-      dragGhostY: touch?.clientY || 0
-    })
-
-    wx.createSelectorQuery()
-      .selectAll(".js-sortable-media")
-      .boundingClientRect((result) => {
-        if (!isAsyncPageActive(this)) return
-        const rects = result as unknown as SortableRect[]
-        if (rects.length !== dragItemIds.length) {
-          resetDragSession()
-          this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false })
-          return
-        }
-        dragRects = rects
-      })
-      .exec()
-  },
-
-  handleDragMove(event: WechatMiniprogram.TouchEvent) {
-    if (dragSourceIndex < 0 || dragRects.length === 0) return
-    const touch = event.touches[0] || event.changedTouches[0]
-    if (!touch) return
-    this.setData({ dragGhostX: touch.clientX, dragGhostY: touch.clientY })
-    const target = findClosestSortTarget(dragRects, touch.clientX, touch.clientY)
-    if (target < 0) return
-    const insertAfter = touch.clientY > (dragRects[target].top + dragRects[target].bottom) / 2
-    if (target === dragTargetIndex && insertAfter === dragInsertAfter) return
-    dragTargetIndex = target
-    dragInsertAfter = insertAfter
-    this.setData({ dragTargetIndex: target, dragInsertAfter: insertAfter })
-  },
-
-  handleDragCancel() {
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
-  },
-
-  handleDragEnd() {
-    const source = dragSourceIndex
-    const target = dragTargetIndex
-    const sourceId = dragItemIds[source] || ""
-    const targetId = dragItemIds[target] || ""
-    const insertAfter = dragInsertAfter
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, dragGhostVisible: false })
-    if (
-      source < 0 ||
-      target < 0 ||
-      source === target ||
-      !sourceId ||
-      !targetId
-    ) {
-      this.setData({ sorting: false })
-      return
-    }
-
-    suppressEditTapUntil = Date.now() + 500
-    const items = [...this.data.items]
-    const currentSourceIndex = items.findIndex((item) => item.id === sourceId)
-    const currentTargetIndex = items.findIndex((item) => item.id === targetId)
-    if (currentSourceIndex < 0 || currentTargetIndex < 0) {
-      this.setData({ sorting: false })
-      return
-    }
-    const [sourceItem] = items.splice(currentSourceIndex, 1)
-    const nextTargetIndex = items.findIndex((item) => item.id === targetId)
-    items.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceItem)
-    this.setData({ items, sorting: false })
+  handleRetry() {
+    void this.loadCurrentView()
   }
 })

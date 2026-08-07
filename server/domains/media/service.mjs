@@ -151,7 +151,9 @@ const MEDIA_TITLE_UNIQUE_ERROR = {
 };
 
 export async function listMediaEntries(supabase, userId, query) {
-  const mediaType = requiredText(query.media_type, "影视分类", 40);
+  const mediaType = typeof query.media_type === "string" && query.media_type.trim()
+    ? requiredText(query.media_type, "影视分类", 40)
+    : "";
   const page = Math.max(1, Math.trunc(Number(query.page) || 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(Number(query.page_size) || 20)));
   const from = (page - 1) * pageSize;
@@ -159,8 +161,9 @@ export async function listMediaEntries(supabase, userId, query) {
   let request = supabase
     .from("media_entries")
     .select("*", { count: "exact" })
-    .eq("user_id", userId)
-    .eq("media_type", mediaType);
+    .eq("user_id", userId);
+
+  if (mediaType) request = request.eq("media_type", mediaType);
 
   if (query.watch_status) {
     request = request.eq(
