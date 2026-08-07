@@ -184,8 +184,25 @@
   box-shadow: 0 9rpx 24rpx rgba(69, 133, 91, 0.09);
 }
 
+.province-card--complete {
+  border-color: #83b293;
+  box-shadow: 0 9rpx 24rpx rgba(61, 126, 83, 0.12);
+}
+
+.province-card--complete .province-card__name {
+  color: #245436;
+  font-weight: 600;
+}
+
+.province-card--complete .province-card__count,
+.province-card--complete .province-card__aside {
+  color: #52775e;
+}
+
 .province-card__header {
+  position: relative;
   display: flex;
+  overflow: hidden;
   min-height: 88rpx;
   box-sizing: border-box;
   align-items: center;
@@ -194,7 +211,21 @@
   padding: 14rpx 18rpx;
 }
 
+.province-card__progress {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #e2f0e6;
+  box-shadow: inset -2rpx 0 rgba(75, 143, 98, 0.28);
+  pointer-events: none;
+  transition: width 180ms ease;
+}
+
 .province-card__identity {
+  position: relative;
+  z-index: 1;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -254,6 +285,8 @@
 }
 
 .province-card__aside {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: none;
   align-items: center;

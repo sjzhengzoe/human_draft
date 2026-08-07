@@ -1,7 +1,7 @@
 <custom-navigation title="全国足迹" />
 
 <template name="province-card">
-  <view class="province-card {{province.expanded ? 'province-card--expanded' : ''}}">
+  <view class="province-card {{province.expanded ? 'province-card--expanded' : ''}} {{province.fullyVisited ? 'province-card--complete' : ''}}">
     <view
       class="province-card__header"
       role="button"
@@ -10,6 +10,11 @@
       data-name="{{province.name}}"
       bindtap="handleProvinceTap"
     >
+      <view
+        class="province-card__progress"
+        style="width: {{province.progressPercent}}%;"
+        aria-hidden="true"
+      />
       <view class="province-card__identity">
         <view class="province-card__status {{province.visitedCount > 0 ? 'province-card__status--visited' : ''}}">
           <view class="province-card__status-core" />
@@ -20,8 +25,8 @@
         </view>
       </view>
       <view class="province-card__aside">
-        <text wx:if="{{province.visitedCount > 0}}">还差 {{province.totalCount - province.visitedCount}}</text>
-        <text wx:else>选择城市</text>
+        <text wx:if="{{province.visitedCount > 0 && !province.fullyVisited}}">还差 {{province.totalCount - province.visitedCount}}</text>
+        <text wx:elif="{{province.visitedCount === 0}}">选择城市</text>
         <view class="province-card__chevron {{province.expanded ? 'province-card__chevron--expanded' : ''}}">
           <app-icon name="chevron-down" size="24" />
         </view>

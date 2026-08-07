@@ -29,6 +29,8 @@ type FootprintProvinceView = Omit<FootprintProvinceDefinition, "cities"> & {
   cities: FootprintCityView[]
   visitedCount: number
   totalCount: number
+  progressPercent: number
+  fullyVisited: boolean
   expanded: boolean
 }
 
@@ -64,6 +66,11 @@ function createProvinceView(
     cities,
     visitedCount,
     totalCount: cities.length,
+    progressPercent:
+      cities.length > 0
+        ? Math.round((visitedCount / cities.length) * 1000) / 10
+        : 0,
+    fullyVisited: cities.length > 0 && visitedCount === cities.length,
     expanded: province.code === expandedProvinceCode
   }
 }
