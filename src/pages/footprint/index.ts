@@ -247,13 +247,6 @@ Page({
     saveVisitedFootprintCityCodes(visitedCityCodes)
     expandedProvinceCode = provinceCode
     selectedProvinceName = provinceName
-    const province = FOOTPRINT_PROVINCES.find((item) => item.code === provinceCode)
-    const provinceStillVisited = Boolean(
-      province?.cities.some((city) => visitedCityCodes.has(city.code))
-    )
-    const activeTab = provinceStillVisited ? "visited" : "unvisited"
-    this.setData({ activeTab }, () => {
-      this.rebuildLists(() => this.drawMap())
-    })
+    this.rebuildLists(() => this.drawMap())
   }
 })

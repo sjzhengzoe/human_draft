@@ -82,6 +82,8 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(page, /city-chip__marker/)
   assert.match(logic, /visitedCityCodes\.delete\(cityCode\)/)
   assert.match(logic, /visitedCityCodes\.add\(cityCode\)/)
+  assert.doesNotMatch(logic, /const provinceStillVisited/)
+  assert.doesNotMatch(logic, /const activeTab = provinceStillVisited/)
   assert.doesNotMatch(page, /省名直接标在区域内|绿色\s*=|app-dialog|picker/)
   assert.doesNotMatch(logic, /日期|date|showModal/)
   assert.match(styles, /grid-template-columns: repeat\(4/)
