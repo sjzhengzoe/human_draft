@@ -15,7 +15,8 @@
 .image-field {
   position: relative;
   width: 420rpx;
-  height: 560rpx;
+  height: auto;
+  aspect-ratio: 3 / 4;
   max-width: 100%;
   margin: 0 auto;
   overflow: hidden;
@@ -54,7 +55,7 @@
   border-radius: 999rpx;
   background: rgba(0, 0, 0, 0.62);
   color: #ffffff;
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .field {
@@ -64,7 +65,7 @@
 .field__label,
 .size-field__label {
   color: #555550;
-  font-size: 24rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 600;
 }
 
@@ -99,14 +100,14 @@
 
 .size-card__title {
   color: #111111;
-  font-size: 28rpx;
+  font-size: 25rpx;
   font-weight: 650;
 }
 
 .size-card__desc {
   margin-top: 8rpx;
   color: #999994;
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.45;
 }
 

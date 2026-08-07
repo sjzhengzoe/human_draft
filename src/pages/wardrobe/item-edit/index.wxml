@@ -32,7 +32,7 @@
           <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
           <view>选择衣物图片</view>
         </view>
-        <view class="image-field__hint">点击{{currentImageUrl ? '更换' : '选择'}}图片</view>
+        <view class="image-field__hint">点击{{selectedImagePath || currentImageUrl ? '更换' : '选择'}}图片</view>
       </view>
 
       <view class="field">
@@ -77,7 +77,19 @@
     </view>
 
     <view class="footer-actions">
-      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存衣物</button>
-      <button wx:if="{{itemId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除衣物</text></button>
+      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleSave">保存衣物</button>
+      <button wx:if="{{itemId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除衣物</text></button>
     </view>
 </view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="rectangle"
+  aspect-ratio="0.75"
+  output-size="1080"
+  title="裁剪为 3:4 衣物图片"
+  bind:cancel="handleImageCropCancel"
+  bind:confirm="handleImageCropConfirm"
+  bind:error="handleImageCropError"
+/>

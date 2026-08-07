@@ -38,6 +38,9 @@ Page({
     name: "",
     currentImageUrl: "",
     selectedImagePath: "",
+    selectingImage: false,
+    showImageCropper: false,
+    cropSourcePath: "",
     allValues: {} as Record<string, string>,
     formFields: [] as FormField[],
     loading: true,
@@ -148,21 +151,69 @@ Page({
   },
 
   handleChooseImage() {
-    if (this.data.loading || this.data.saving || this.data.deleting) return
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage
+    ) return
+    this.setData({ selectingImage: true })
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
-        const file = result.tempFiles[0]
-        if (file?.tempFilePath) this.setData({ selectedImagePath: file.tempFilePath })
+        const path = result.tempFiles[0]?.tempFilePath
+        if (!path) {
+          this.setData({ selectingImage: false })
+          return
+        }
+        this.setData({
+          selectingImage: false,
+          showImageCropper: true,
+          cropSourcePath: path
+        })
+      },
+      fail: () => {
+        if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
       }
     })
   },
 
+  handleImageCropCancel() {
+    this.setData({ showImageCropper: false, cropSourcePath: "" })
+  },
+
+  handleImageCropConfirm(
+    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+  ) {
+    const path = event.detail.tempFilePath
+    if (!path) return
+    this.setData({
+      selectedImagePath: path,
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
+  },
+
+  handleImageCropError(
+    event: WechatMiniprogram.CustomEvent<{ message?: string }>
+  ) {
+    wx.showToast({
+      title: event.detail.message || "图片裁剪失败",
+      icon: "none"
+    })
+  },
+
   async handleSave() {
-    if (this.data.loading || this.data.saving || this.data.deleting) return
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage ||
+      this.data.showImageCropper
+    ) return
     const name = this.data.name.trim()
     const category = this.data.categories[this.data.categoryIndex]
     if (!name) {

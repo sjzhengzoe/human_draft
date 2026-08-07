@@ -26,10 +26,10 @@ type DisplayItem = WardrobeItem & {
   cardHeightRpx: number
 }
 
-const CARD_BASE_HEIGHT_RPX = 540
-const EMPTY_MEASUREMENT_HEIGHT_RPX = 96
-const MEASUREMENT_ROW_HEIGHT_RPX = 76
-const MEASUREMENT_EXTRA_LINE_HEIGHT_RPX = 30
+const CARD_BASE_HEIGHT_RPX = 1052
+const EMPTY_MEASUREMENT_HEIGHT_RPX = 88
+const MEASUREMENT_ROW_HEIGHT_RPX = 68
+const MEASUREMENT_EXTRA_LINE_HEIGHT_RPX = 28
 
 function textLineCount(text: string, charactersPerLine: number): number {
   return Math.max(1, Math.ceil(Array.from(text).length / charactersPerLine))
