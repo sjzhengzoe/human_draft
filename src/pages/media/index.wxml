@@ -66,20 +66,20 @@
           <view class="section-heading__title">正在看</view>
           <view class="section-heading__count">{{inProgressItems.length}} 部</view>
         </view>
-        <view wx:if="{{inProgressItems.length}}" class="overview-list">
-          <view wx:for="{{inProgressItems}}" wx:key="id" class="overview-row" data-id="{{item.id}}" bindtap="handleItemTap">
-            <image wx:if="{{item.cover_url}}" class="overview-row__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
-            <view wx:else class="overview-row__cover overview-row__cover--empty"><app-icon name="clapperboard" size="30" /></view>
-            <view class="overview-row__main">
-              <view class="overview-row__title">{{item.title}}</view>
-              <view class="overview-row__meta">{{item.metaText}}</view>
-              <view wx:if="{{item.statsText || item.favoriteText || item.is_revisitable}}" class="overview-row__attributes">
-                <text wx:if="{{item.statsText}}">{{item.statsText}}</text>
-                <text wx:if="{{item.favoriteText}}">{{item.favoriteText}}</text>
-                <text wx:if="{{item.is_revisitable}}">值得重温</text>
+        <view wx:if="{{inProgressItems.length}}" class="record-grid overview-grid">
+          <view wx:for="{{inProgressItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
+            <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+            <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="clapperboard" size="38" /></view>
+            <view class="record-card__body">
+              <view class="record-card__title">{{item.title}}</view>
+              <view class="record-card__meta">{{item.metaText}}</view>
+              <view class="record-card__details">
+                <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
+                <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
+                <view wx:if="{{item.is_revisitable}}">值得重温</view>
+                <view wx:if="{{item.recordDateText}}">{{item.recordDateText}}</view>
               </view>
             </view>
-            <view class="overview-row__arrow"><app-icon name="chevron-right" size="25" /></view>
           </view>
         </view>
         <view wx:else class="section-empty">没有正在看的作品</view>
@@ -90,20 +90,20 @@
           <view class="section-heading__title">想看</view>
           <view class="section-heading__count">{{plannedItems.length}} 部</view>
         </view>
-        <view wx:if="{{plannedItems.length}}" class="overview-list">
-          <view wx:for="{{plannedItems}}" wx:key="id" class="overview-row" data-id="{{item.id}}" bindtap="handleItemTap">
-            <image wx:if="{{item.cover_url}}" class="overview-row__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
-            <view wx:else class="overview-row__cover overview-row__cover--empty"><app-icon name="clapperboard" size="30" /></view>
-            <view class="overview-row__main">
-              <view class="overview-row__title">{{item.title}}</view>
-              <view class="overview-row__meta">{{item.metaText}}</view>
-              <view wx:if="{{item.statsText || item.favoriteText || item.is_revisitable}}" class="overview-row__attributes">
-                <text wx:if="{{item.statsText}}">{{item.statsText}}</text>
-                <text wx:if="{{item.favoriteText}}">{{item.favoriteText}}</text>
-                <text wx:if="{{item.is_revisitable}}">值得重温</text>
+        <view wx:if="{{plannedItems.length}}" class="record-grid overview-grid">
+          <view wx:for="{{plannedItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
+            <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+            <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="clapperboard" size="38" /></view>
+            <view class="record-card__body">
+              <view class="record-card__title">{{item.title}}</view>
+              <view class="record-card__meta">{{item.metaText}}</view>
+              <view class="record-card__details">
+                <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
+                <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
+                <view wx:if="{{item.is_revisitable}}">值得重温</view>
+                <view wx:if="{{item.recordDateText}}">{{item.recordDateText}}</view>
               </view>
             </view>
-            <view class="overview-row__arrow"><app-icon name="chevron-right" size="25" /></view>
           </view>
         </view>
         <view wx:else class="section-empty">还没有想看的作品</view>

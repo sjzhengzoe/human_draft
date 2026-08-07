@@ -5,7 +5,7 @@ import test from "node:test";
 const pageUrl = new URL("../../src/pages/media/index.wxml", import.meta.url);
 const stylesUrl = new URL("../../src/pages/media/index.less", import.meta.url);
 
-test("media overview uses vertical sections and records use a status-free three-column grid", async () => {
+test("media overview and records share the same status-free three-column cards", async () => {
   const [page, styles] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(stylesUrl, "utf8"),
@@ -13,8 +13,9 @@ test("media overview uses vertical sections and records use a status-free three-
 
   assert.match(page, />速览<\/view>/);
   assert.match(page, />记录<\/view>/);
-  assert.match(page, /class="overview-list"/);
-  assert.match(page, /class="record-grid"/);
+  assert.equal(page.match(/class="record-grid/g)?.length, 3);
+  assert.equal(page.match(/class="record-card"/g)?.length, 3);
+  assert.doesNotMatch(page, /overview-list|overview-row/);
   assert.doesNotMatch(page, /swiper|status-badge|watch_status/);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
 });
