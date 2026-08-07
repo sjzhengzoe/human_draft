@@ -81,6 +81,14 @@ const HOME_FEATURE_GROUPS = [
     title: "记录",
     items: [
       {
+        key: "footprint",
+        icon: "map-pinned",
+        title: "走 / 全国足迹",
+        path: "/pages/footprint/index",
+        available: true,
+        requiresLogin: false
+      },
+      {
         key: "luggage",
         icon: "luggage",
         title: "行李清单",

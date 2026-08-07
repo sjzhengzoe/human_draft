@@ -1,0 +1,136 @@
+<custom-navigation title="全国足迹" />
+
+<template name="province-card">
+  <view class="province-card {{province.expanded ? 'province-card--expanded' : ''}}">
+    <view
+      class="province-card__header"
+      role="button"
+      aria-label="{{province.expanded ? '收起' : '展开'}}{{province.name}}城市"
+      data-code="{{province.code}}"
+      data-name="{{province.name}}"
+      bindtap="handleProvinceTap"
+    >
+      <view class="province-card__identity">
+        <view class="province-card__status {{province.visitedCount > 0 ? 'province-card__status--visited' : ''}}">
+          <view class="province-card__status-core" />
+        </view>
+        <view class="province-card__copy">
+          <view class="province-card__name">{{province.name}}</view>
+          <view class="province-card__count">{{province.visitedCount}} / {{province.totalCount}} 个城市</view>
+        </view>
+      </view>
+      <view class="province-card__aside">
+        <text wx:if="{{province.visitedCount > 0}}">还差 {{province.totalCount - province.visitedCount}}</text>
+        <text wx:else>选择城市</text>
+        <view class="province-card__chevron {{province.expanded ? 'province-card__chevron--expanded' : ''}}">
+          <app-icon name="chevron-down" size="24" />
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{province.expanded}}" class="city-grid">
+      <button
+        wx:for="{{province.cities}}"
+        wx:key="code"
+        wx:for-item="city"
+        class="city-chip {{city.visited ? 'city-chip--visited' : ''}}"
+        aria-label="{{city.visited ? '取消点亮' : '点亮'}}{{city.fullName}}"
+        aria-pressed="{{city.visited}}"
+        data-code="{{city.code}}"
+        data-province-code="{{province.code}}"
+        data-province-name="{{province.name}}"
+        catchtap="handleCityTap"
+      >
+        <view class="city-chip__marker">
+          <view class="city-chip__marker-core" />
+        </view>
+        <text class="city-chip__name">{{city.name}}</text>
+      </button>
+    </view>
+  </view>
+</template>
+
+<view class="page page--with-navigation footprint-page">
+  <view class="footprint-stats">
+    <view class="footprint-stat">
+      <view class="footprint-stat__value">
+        <text>{{visitedProvinceCount}}</text>
+        <text class="footprint-stat__total">/ {{totalProvinceCount}}</text>
+      </view>
+      <view class="footprint-stat__label">去过的省份</view>
+    </view>
+    <view class="footprint-stat">
+      <view class="footprint-stat__value">
+        <text>{{visitedCityCount}}</text>
+        <text class="footprint-stat__total">/ {{totalCityCount}}</text>
+      </view>
+      <view class="footprint-stat__label">去过的城市</view>
+    </view>
+  </view>
+
+  <view class="footprint-map-card">
+    <view class="map-level-switch" role="group" aria-label="地图点亮方式">
+      <button
+        class="map-level-switch__button {{mapLevel === 'province' ? 'map-level-switch__button--active' : ''}}"
+        aria-pressed="{{mapLevel === 'province'}}"
+        data-level="province"
+        bindtap="handleMapLevelTap"
+      >按省点亮</button>
+      <button
+        class="map-level-switch__button {{mapLevel === 'city' ? 'map-level-switch__button--active' : ''}}"
+        aria-pressed="{{mapLevel === 'city'}}"
+        data-level="city"
+        bindtap="handleMapLevelTap"
+      >按城市点亮</button>
+    </view>
+    <view class="footprint-map-stage">
+      <canvas
+        id="footprintMapCanvas"
+        class="footprint-map-canvas"
+        type="2d"
+        aria-label="全国省市足迹地图"
+      />
+      <view wx:if="{{mapLevel === 'city' && mapCityLoading}}" class="footprint-map-loading">
+        <view class="footprint-map-loading__spinner" />
+      </view>
+    </view>
+  </view>
+
+  <view class="province-section">
+    <view class="province-tabs" role="tablist" aria-label="省份点亮状态">
+      <button
+        class="province-tabs__button {{activeTab === 'visited' ? 'province-tabs__button--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeTab === 'visited'}}"
+        data-tab="visited"
+        bindtap="handleStatusTabTap"
+      >去过 {{visitedProvinceCount}}</button>
+      <button
+        class="province-tabs__button {{activeTab === 'unvisited' ? 'province-tabs__button--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeTab === 'unvisited'}}"
+        data-tab="unvisited"
+        bindtap="handleStatusTabTap"
+      >未去 {{totalProvinceCount - visitedProvinceCount}}</button>
+    </view>
+
+    <view wx:if="{{activeTab === 'visited'}}" class="province-list">
+      <view wx:if="{{visitedProvinces.length === 0}}" class="province-empty">还没有点亮的城市</view>
+      <template
+        wx:for="{{visitedProvinces}}"
+        wx:key="code"
+        is="province-card"
+        data="{{province: item}}"
+      />
+    </view>
+
+    <view wx:else class="province-list">
+      <template
+        wx:for="{{unvisitedProvinces}}"
+        wx:key="code"
+        is="province-card"
+        data="{{province: item}}"
+      />
+    </view>
+  </view>
+</view>
