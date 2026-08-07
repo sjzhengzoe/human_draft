@@ -89,7 +89,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(page, /province\.visitedCount > 0 && !province\.fullyVisited/)
   assert.match(page, /province\.identityOnProgress \? 'province-card__copy--on-progress'/)
   assert.match(page, /province\.asideOnProgress \? 'province-card__aside--on-progress'/)
-  assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: #111111;/)
+  assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: #189d4c;/)
   assert.match(styles, /\.province-card__name\s*\{[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.match(styles, /\.city-grid\s*\{[\s\S]*?padding: 14rpx 16rpx 16rpx;[\s\S]*?border-top:/)
   assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 50rpx;[\s\S]*?font-size: var\(--ui-font-size-small\);/)
