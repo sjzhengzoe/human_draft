@@ -14,6 +14,10 @@ export type FootprintCanvasContext = {
   strokeStyle: string
   lineWidth: number
   lineJoin: "round" | "bevel" | "miter"
+  shadowBlur: number
+  shadowColor: string
+  shadowOffsetX: number
+  shadowOffsetY: number
   font: string
   textAlign: "center"
   textBaseline: "middle"
@@ -43,13 +47,16 @@ const MAP_PADDING_X = 8
 const MAP_PADDING_Y = 8
 const MAP_FILL = "#e5e6df"
 const CITY_FILL = "#d7d8d4"
-const VISITED_FILL = "#424242"
+const VISITED_FILL = "#189d4c"
+const VISITED_GLOW = "rgba(31, 216, 101, 0.58)"
 const BORDER_COLOR = "#ffffff"
 const MUTED_TEXT = "#747474"
 const VISITED_TEXT = "#ffffff"
 const LABEL_HALO = "#ffffff"
-const SELECTED_COLOR = "#111111"
-const SELECTED_HALO = "#ffffff"
+const VISITED_LABEL_HALO = "#0b5b2d"
+const SELECTED_FILL = "#26c866"
+const SELECTED_CITY_OVERLAY = "rgba(38, 200, 102, 0.24)"
+const SELECTED_GLOW = "rgba(38, 200, 102, 0.72)"
 
 const LABEL_OFFSETS: Record<string, [number, number]> = {
   北京: [-3, -7],
@@ -127,8 +134,15 @@ function drawPolygons(
   project: Projection,
   fill: string,
   stroke = BORDER_COLOR,
-  lineWidth = 0.55
+  lineWidth = 0.55,
+  glowColor = "transparent",
+  glowBlur = 0
 ): void {
+  context.save()
+  context.shadowColor = glowColor
+  context.shadowBlur = glowBlur
+  context.shadowOffsetX = 0
+  context.shadowOffsetY = 0
   context.fillStyle = fill
   context.strokeStyle = stroke
   context.lineWidth = lineWidth
@@ -138,6 +152,7 @@ function drawPolygons(
     context.fill("evenodd")
     context.stroke()
   })
+  context.restore()
 }
 
 function ringArea(ring: FootprintMapPoint[], project: Projection): number {
@@ -215,19 +230,31 @@ export function drawFootprintMap(
   FOOTPRINT_PROVINCE_GEOMETRY.forEach((province) => {
     const isVisited = visitedProvinces.has(province.name)
     const fill = level === "province" && isVisited ? VISITED_FILL : MAP_FILL
-    drawPolygons(context, province.polygons, project, fill)
+    drawPolygons(
+      context,
+      province.polygons,
+      project,
+      fill,
+      BORDER_COLOR,
+      0.55,
+      level === "province" && isVisited ? VISITED_GLOW : "transparent",
+      level === "province" && isVisited ? 7 : 0
+    )
   })
 
   if (level === "city" && cityGeometry) {
     Object.values(cityGeometry.provinces).forEach((cities) => {
       cities.forEach((city) => {
+        const isVisited = visitedCityCodes.has(city.code)
         drawPolygons(
           context,
           city.polygons,
           project,
-          visitedCityCodes.has(city.code) ? VISITED_FILL : CITY_FILL,
+          isVisited ? VISITED_FILL : CITY_FILL,
           BORDER_COLOR,
-          0.42
+          0.42,
+          isVisited ? VISITED_GLOW : "transparent",
+          isVisited ? 5 : 0
         )
       })
     })
@@ -238,11 +265,16 @@ export function drawFootprintMap(
           (item) => item.name === province.name
         )
         if (!geometry) return
+        const isVisited = visitedCityCodes.has(province.cities[0].code)
         drawPolygons(
           context,
           geometry.polygons,
           project,
-          visitedCityCodes.has(province.cities[0].code) ? VISITED_FILL : CITY_FILL
+          isVisited ? VISITED_FILL : CITY_FILL,
+          BORDER_COLOR,
+          0.55,
+          isVisited ? VISITED_GLOW : "transparent",
+          isVisited ? 5 : 0
         )
       }
     )
@@ -253,16 +285,16 @@ export function drawFootprintMap(
       (province) => province.name === selectedProvince
     )
     if (selectedGeometry) {
-      selectedGeometry.polygons.forEach((polygon) => {
-        context.beginPath()
-        tracePolygon(context, polygon, project)
-        context.strokeStyle = SELECTED_HALO
-        context.lineWidth = 3.4
-        context.stroke()
-        context.strokeStyle = SELECTED_COLOR
-        context.lineWidth = 1.4
-        context.stroke()
-      })
+      drawPolygons(
+        context,
+        selectedGeometry.polygons,
+        project,
+        level === "province" ? SELECTED_FILL : SELECTED_CITY_OVERLAY,
+        BORDER_COLOR,
+        level === "province" ? 0.8 : 1.05,
+        SELECTED_GLOW,
+        level === "province" ? 11 : 8
+      )
     }
   }
 
@@ -275,14 +307,10 @@ export function drawFootprintMap(
     const [offsetX, offsetY] = LABEL_OFFSETS[province.name] || [0, 0]
     const x = baseX + offsetX
     const y = baseY + offsetY
-    context.strokeStyle = LABEL_HALO
+    const isVisited = visitedProvinces.has(province.name)
+    context.strokeStyle = isVisited ? VISITED_LABEL_HALO : LABEL_HALO
     context.strokeText(province.name, x, y)
-    context.fillStyle =
-      province.name === selectedProvince
-        ? SELECTED_COLOR
-        : visitedProvinces.has(province.name)
-          ? VISITED_TEXT
-          : MUTED_TEXT
+    context.fillStyle = isVisited ? VISITED_TEXT : MUTED_TEXT
     context.fillText(province.name, x, y)
   })
 }

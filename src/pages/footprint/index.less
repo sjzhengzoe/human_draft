@@ -217,8 +217,8 @@
   top: 0;
   bottom: 0;
   left: 0;
-  background: #e1e2de;
-  box-shadow: inset -2rpx 0 rgba(153, 157, 151, 0.55);
+  background: #111111;
+  box-shadow: inset -2rpx 0 rgba(17, 17, 17, 0.35);
   pointer-events: none;
   transition: width 180ms ease;
 }
@@ -254,9 +254,9 @@
 }
 
 .province-card__status--visited {
-  border-color: #343734;
-  background: #424242;
-  box-shadow: 0 0 0 7rpx rgba(17, 17, 17, 0.1);
+  border-color: #087136;
+  background: #189d4c;
+  box-shadow: 0 0 0 7rpx rgba(24, 157, 76, 0.12), 0 0 12rpx rgba(31, 216, 101, 0.28);
 }
 
 .province-card__status--visited .province-card__status-core {
@@ -293,6 +293,12 @@
   gap: 8rpx;
   color: #888e87;
   font-size: var(--ui-font-size-small);
+}
+
+.province-card__copy--on-progress .province-card__name,
+.province-card__copy--on-progress .province-card__count,
+.province-card__aside--on-progress {
+  color: #ffffff;
 }
 
 .province-card__chevron {

@@ -31,6 +31,8 @@ type FootprintProvinceView = Omit<FootprintProvinceDefinition, "cities"> & {
   totalCount: number
   progressPercent: number
   fullyVisited: boolean
+  identityOnProgress: boolean
+  asideOnProgress: boolean
   expanded: boolean
 }
 
@@ -61,16 +63,19 @@ function createProvinceView(
     visited: visitedCityCodes.has(city.code)
   }))
   const visitedCount = cities.filter((city) => city.visited).length
+  const progressPercent =
+    cities.length > 0
+      ? Math.round((visitedCount / cities.length) * 1000) / 10
+      : 0
   return {
     ...province,
     cities,
     visitedCount,
     totalCount: cities.length,
-    progressPercent:
-      cities.length > 0
-        ? Math.round((visitedCount / cities.length) * 1000) / 10
-        : 0,
+    progressPercent,
     fullyVisited: cities.length > 0 && visitedCount === cities.length,
+    identityOnProgress: progressPercent >= 18,
+    asideOnProgress: progressPercent >= 86,
     expanded: province.code === expandedProvinceCode
   }
 }
@@ -229,16 +234,20 @@ Page({
   handleStatusTabTap(event: WechatMiniprogram.TouchEvent) {
     const tab = event.currentTarget.dataset.tab
     if (tab !== "visited" && tab !== "unvisited") return
-    this.setData({ activeTab: tab })
+    expandedProvinceCode = ""
+    selectedProvinceName = ""
+    this.setData({ activeTab: tab }, () => {
+      this.rebuildLists(() => this.drawMap())
+    })
   },
 
   handleProvinceTap(event: WechatMiniprogram.TouchEvent) {
     const provinceCode = String(event.currentTarget.dataset.code || "")
     const provinceName = String(event.currentTarget.dataset.name || "")
     if (!provinceCode || !provinceName) return
-    expandedProvinceCode =
-      expandedProvinceCode === provinceCode ? "" : provinceCode
-    selectedProvinceName = provinceName
+    const shouldExpand = expandedProvinceCode !== provinceCode
+    expandedProvinceCode = shouldExpand ? provinceCode : ""
+    selectedProvinceName = shouldExpand ? provinceName : ""
     this.rebuildLists(() => this.drawMap())
   },
 
@@ -252,8 +261,14 @@ Page({
     else visitedCityCodes.add(cityCode)
 
     saveVisitedFootprintCityCodes(visitedCityCodes)
-    expandedProvinceCode = provinceCode
-    selectedProvinceName = provinceName
+    const province = FOOTPRINT_PROVINCES.find((item) => item.code === provinceCode)
+    const provinceHasVisited = Boolean(
+      province?.cities.some((city) => visitedCityCodes.has(city.code))
+    )
+    const remainsInCurrentTab =
+      this.data.activeTab === "visited" ? provinceHasVisited : !provinceHasVisited
+    expandedProvinceCode = remainsInCurrentTab ? provinceCode : ""
+    selectedProvinceName = remainsInCurrentTab ? provinceName : ""
     this.rebuildLists(() => this.drawMap())
   }
 })
