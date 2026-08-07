@@ -26,7 +26,7 @@ type DisplayItem = WardrobeItem & {
   cardHeightRpx: number
 }
 
-const CARD_BASE_HEIGHT_RPX = 596
+const CARD_BASE_HEIGHT_RPX = 620
 const EMPTY_MEASUREMENT_HEIGHT_RPX = 88
 const MEASUREMENT_ROW_HEIGHT_RPX = 68
 const MEASUREMENT_EXTRA_LINE_HEIGHT_RPX = 28
