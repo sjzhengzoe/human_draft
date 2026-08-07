@@ -114,7 +114,7 @@
     <block wx:else>
       <view class="record-heading">
         <view class="record-heading__title">{{activeRecordType || '全部记录'}}</view>
-        <view class="record-heading__hint">两列卡片</view>
+        <view class="record-heading__hint">三列卡片</view>
       </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">

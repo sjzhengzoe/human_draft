@@ -5,7 +5,7 @@ import test from "node:test";
 const pageUrl = new URL("../../src/pages/media/index.wxml", import.meta.url);
 const stylesUrl = new URL("../../src/pages/media/index.less", import.meta.url);
 
-test("media overview uses vertical sections and records use a status-free two-column grid", async () => {
+test("media overview uses vertical sections and records use a status-free three-column grid", async () => {
   const [page, styles] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(stylesUrl, "utf8"),
@@ -16,7 +16,7 @@ test("media overview uses vertical sections and records use a status-free two-co
   assert.match(page, /class="overview-list"/);
   assert.match(page, /class="record-grid"/);
   assert.doesNotMatch(page, /swiper|status-badge|watch_status/);
-  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
 });
 
 test("media controls are vertically centered and use shared typography sizes", async () => {
