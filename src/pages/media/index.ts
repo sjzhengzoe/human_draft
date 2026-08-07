@@ -16,7 +16,7 @@ type DisplayMediaEntry = MediaEntry & {
   metaText: string
   statsText: string
   favoriteText: string
-  recordDateText: string
+  placeholderIcon: string
 }
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
@@ -27,25 +27,30 @@ function timestamp(value: string): number {
   return Number.isNaN(result) ? 0 : result
 }
 
-function formatRecordDate(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ""
-  return `最近记录 ${date.getMonth() + 1}月${date.getDate()}日`
+function mediaPlaceholderIcon(mediaType: MediaType): string {
+  const normalizedType = mediaType.trim().toLocaleLowerCase()
+  if (/小说|书|读物|文学|books?/.test(normalizedType)) return "book-open"
+  if (/动漫|动画|卡通|漫画/.test(normalizedType)) return "sparkles"
+  if (/广播|有声|播客|音频|电台/.test(normalizedType)) return "headphones"
+  if (/电视剧|剧集|综艺|电视/.test(normalizedType)) return "tv"
+  return "clapperboard"
 }
 
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
   const isEpisodic = EPISODIC_MEDIA_TYPES.includes(entry.media_type)
   const platformText = entry.platforms.length ? entry.platforms.join(" / ") : "未记录平台"
+  const seasonCount = entry.season_count || 0
+  const episodeCount = entry.episode_count || 0
   return {
     ...entry,
     metaText: `${entry.media_type} · ${platformText}`,
-    statsText: isEpisodic
-      ? `${entry.season_count || 0} 季 · ${entry.episode_count || 0} 集`
+    statsText: isEpisodic && (seasonCount > 0 || episodeCount > 0)
+      ? `${seasonCount} 季 · ${episodeCount} 集`
       : "",
     favoriteText: entry.favorite_episode_count
       ? `喜欢 ${entry.favorite_episode_count} 集`
       : "",
-    recordDateText: formatRecordDate(entry.updated_at || entry.created_at)
+    placeholderIcon: mediaPlaceholderIcon(entry.media_type)
   }
 }
 
