@@ -375,14 +375,21 @@ Page({
     }
   },
 
-  handleDelete() {
-    if (!this.data.editingId || this.data.saving || this.data.deleting) return
-    this.setData({ showEditor: false, showDeleteConfirm: true })
+  handleDelete(event: WechatMiniprogram.TouchEvent) {
+    if (
+      !this.data.canWrite
+      || this.data.loading
+      || this.data.contentLoading
+      || this.data.deleting
+    ) return
+    const id = String(event.currentTarget.dataset.id || "")
+    if (!id) return
+    this.setData({ editingId: id, showEditor: false, showDeleteConfirm: true })
   },
 
   handleDeleteConfirmCancel() {
     if (this.data.deleting) return
-    this.setData({ showDeleteConfirm: false, showEditor: true })
+    this.setData({ showDeleteConfirm: false, editingId: "" })
   },
 
   async handleDeleteConfirm() {
@@ -392,12 +399,12 @@ Page({
     try {
       await deleteKeyMoment(this.data.editingId)
       if (!isAsyncPageActive(this)) return
-      this.setData({ showDeleteConfirm: false, showEditor: false })
+      this.setData({ showDeleteConfirm: false, showEditor: false, editingId: "" })
       wx.showToast({ title: "已删除", icon: "success" })
       await this.loadItems()
     } catch (error) {
       if (isAsyncPageActive(this)) {
-        this.setData({ showDeleteConfirm: false, showEditor: true })
+        this.setData({ showDeleteConfirm: false, editingId: "" })
         wx.showToast({
           title: error instanceof Error ? error.message : "删除失败",
           icon: "none"

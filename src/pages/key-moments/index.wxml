@@ -55,6 +55,16 @@
           <view class="timeline-main">
             <view class="timeline-heading">
               <text class="timeline-time">{{item.time_label}}</text>
+              <view
+                wx:if="{{canWrite}}"
+                class="timeline-delete-button"
+                data-id="{{item.id}}"
+                role="button"
+                aria-label="删除关键节点"
+                catchtap="handleDelete"
+              >
+                <app-icon name="trash-2-danger" size="24" />
+              </view>
             </view>
             <view class="moment-card">
               <image
@@ -131,7 +141,6 @@
       </view>
     </view>
     <view slot="actions" class="modal-actions">
-      <button wx:if="{{editingId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">删除</button>
       <button class="cancel-button" disabled="{{saving || deleting || selectingImage}}" bindtap="closeEditor">取消</button>
       <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="saveEditor">确定</button>
     </view>

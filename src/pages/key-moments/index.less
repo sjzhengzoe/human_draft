@@ -73,7 +73,6 @@
 }
 
 .add-button::after,
-.delete-button::after,
 .cancel-button::after,
 .save-button::after {
   border: 0;
@@ -169,13 +168,26 @@
 }
 
 .timeline-heading {
+  display: flex;
   min-height: 42rpx;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
 }
 
 .timeline-time {
   color: #888;
   font-size: 22rpx;
   font-variant-numeric: tabular-nums;
+}
+
+.timeline-delete-button {
+  display: flex;
+  width: 46rpx;
+  height: 42rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
 }
 
 .moment-card {
@@ -392,7 +404,6 @@
   margin: 0;
 }
 
-.delete-button,
 .cancel-button,
 .save-button {
   display: flex;
@@ -406,12 +417,6 @@
   border-radius: 999rpx;
   font-size: 23rpx;
   line-height: normal;
-}
-
-.delete-button {
-  flex: .8;
-  background: #f7e8e6;
-  color: #b13e37;
 }
 
 .cancel-button {

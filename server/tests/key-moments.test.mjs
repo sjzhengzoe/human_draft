@@ -41,18 +41,32 @@ test("key moment creation uses the previewed date only for day view", async () =
   assert.match(page, /editorDate,[\s\S]*?editorTime: now\.time/);
 });
 
-test("key moment timeline items own the edit hit area without a corner control", async () => {
-  const [page, styles] = await Promise.all([
+test("key moment items own the edit hit area and isolate the corner delete control", async () => {
+  const [page, styles, logic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
   ]);
   assert.match(
     page,
     /class="timeline-entry[^\n]*"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?bindtap="handleEdit"/,
   );
   assert.match(page, /class="moment-image"[\s\S]*?catchtap="handlePreview"/);
-  assert.doesNotMatch(page, /edit-button|edit-button__dots|•••/);
-  assert.doesNotMatch(styles, /\.edit-button/);
+  assert.match(
+    page,
+    /class="timeline-delete-button"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?catchtap="handleDelete"/,
+  );
+  assert.doesNotMatch(page, /class="delete-button"|edit-button|edit-button__dots|•••/);
+  assert.match(styles, /\.timeline-delete-button/);
+  assert.doesNotMatch(styles, /\.delete-button|\.edit-button/);
+  assert.match(
+    logic,
+    /handleDelete\(event:[\s\S]*?editingId: id,[\s\S]*?showDeleteConfirm: true/,
+  );
+  assert.match(
+    logic,
+    /handleDeleteConfirmCancel\(\)[\s\S]*?showDeleteConfirm: false, editingId: ""/,
+  );
 });
 
 test("key moments migration creates user-owned records and a private image bucket", async () => {
