@@ -203,12 +203,12 @@
   position: relative;
   display: flex;
   overflow: hidden;
-  min-height: 88rpx;
+  min-height: 82rpx;
   box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: 18rpx;
-  padding: 14rpx 18rpx;
+  padding: 12rpx 18rpx;
 }
 
 .province-card__progress {
@@ -234,8 +234,8 @@
 
 .province-card__status {
   display: flex;
-  width: 28rpx;
-  height: 28rpx;
+  width: 26rpx;
+  height: 26rpx;
   box-sizing: border-box;
   flex: none;
   align-items: center;
@@ -270,7 +270,7 @@
 .province-card__name {
   overflow: hidden;
   color: #29332c;
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -278,7 +278,7 @@
 }
 
 .province-card__count {
-  margin-top: 4rpx;
+  margin-top: 2rpx;
   color: #8a9088;
   font-size: var(--ui-font-size-small);
   line-height: 1.25;
@@ -309,25 +309,26 @@
 .city-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8rpx;
-  padding: 0 16rpx 18rpx;
+  gap: 7rpx;
+  padding: 14rpx 16rpx 16rpx;
+  border-top: 1rpx solid rgba(82, 119, 94, 0.12);
 }
 
 .city-chip {
   display: flex;
   width: 100% !important;
   min-width: 0 !important;
-  height: 58rpx;
+  height: 50rpx;
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
-  padding: 0 8rpx !important;
+  gap: 6rpx;
+  padding: 0 6rpx !important;
   border: 1rpx solid #d9dad4;
-  border-radius: 16rpx;
+  border-radius: 14rpx;
   background: #ffffff;
   color: #252925;
-  font-size: var(--ui-font-size-base);
+  font-size: var(--ui-font-size-small);
   box-shadow: 0 3rpx 9rpx rgba(32, 36, 31, 0.045);
   transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
@@ -338,8 +339,8 @@
 
 .city-chip__marker {
   display: flex;
-  width: 17rpx;
-  height: 17rpx;
+  width: 15rpx;
+  height: 15rpx;
   box-sizing: border-box;
   flex: none;
   align-items: center;
@@ -351,8 +352,8 @@
 }
 
 .city-chip__marker-core {
-  width: 5rpx;
-  height: 5rpx;
+  width: 4rpx;
+  height: 4rpx;
   border-radius: 50%;
   background: #696e68;
 }
