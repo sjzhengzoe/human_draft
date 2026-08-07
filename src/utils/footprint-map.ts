@@ -53,7 +53,6 @@ const BORDER_COLOR = "#ffffff"
 const MUTED_TEXT = "#747474"
 const VISITED_TEXT = "#ffffff"
 const LABEL_HALO = "#ffffff"
-const VISITED_LABEL_HALO = "#0b5b2d"
 const SELECTED_FILL = "#26c866"
 const SELECTED_CITY_OVERLAY = "rgba(38, 200, 102, 0.24)"
 const SELECTED_GLOW = "rgba(38, 200, 102, 0.72)"
@@ -308,8 +307,10 @@ export function drawFootprintMap(
     const x = baseX + offsetX
     const y = baseY + offsetY
     const isVisited = visitedProvinces.has(province.name)
-    context.strokeStyle = isVisited ? VISITED_LABEL_HALO : LABEL_HALO
-    context.strokeText(province.name, x, y)
+    if (!isVisited) {
+      context.strokeStyle = LABEL_HALO
+      context.strokeText(province.name, x, y)
+    }
     context.fillStyle = isVisited ? VISITED_TEXT : MUTED_TEXT
     context.fillText(province.name, x, y)
   })

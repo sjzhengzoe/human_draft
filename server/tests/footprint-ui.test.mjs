@@ -106,7 +106,8 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(renderer, /const VISITED_FILL = "#189d4c"/)
   assert.match(renderer, /const VISITED_GLOW = "rgba\(31, 216, 101, 0\.58\)"/)
   assert.match(renderer, /const VISITED_TEXT = "#ffffff"/)
-  assert.match(renderer, /const VISITED_LABEL_HALO = "#0b5b2d"/)
+  assert.match(renderer, /if \(!isVisited\) \{[\s\S]*?context\.strokeText\(province\.name, x, y\)/)
+  assert.doesNotMatch(renderer, /VISITED_LABEL_HALO/)
   assert.match(renderer, /const SELECTED_FILL = "#26c866"/)
   assert.match(renderer, /const BORDER_COLOR = "#ffffff"/)
   assert.match(renderer, /context\.shadowBlur = glowBlur/)
@@ -114,6 +115,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.doesNotMatch(renderer, /province\.name === selectedProvince[\s\S]*?SELECTED_COLOR/)
   assert.match(logic, /selectedProvinceName = shouldExpand \? provinceName : ""/)
   assert.match(logic, /const remainsInCurrentTab =/)
+  assert.match(styles, /\.province-tabs__button--active\s*\{[\s\S]*?background: #189d4c;[\s\S]*?color: #ffffff;/)
   assert.doesNotMatch(styles, /#8fbea0|#83b293|#e2f0e6|#62aa79|#3e8a5d/)
   assert.match(logic, /initializeUIFont\(\)[\s\S]*?\.then\(\(\) => \{[\s\S]*?this\.drawMap\(\)/)
 
