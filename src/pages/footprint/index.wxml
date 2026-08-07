@@ -27,8 +27,8 @@
       <view class="province-card__aside {{province.asideOnProgress ? 'province-card__aside--on-progress' : ''}}">
         <text wx:if="{{province.visitedCount > 0 && !province.fullyVisited}}">还差 {{province.totalCount - province.visitedCount}}</text>
         <text wx:elif="{{province.visitedCount === 0}}">选择城市</text>
-        <view class="province-card__chevron {{province.expanded ? 'province-card__chevron--expanded' : ''}}">
-          <app-icon name="chevron-down" size="24" inverse="{{province.asideOnProgress}}" />
+        <view class="province-card__chevron {{province.expanded ? 'province-card__chevron--expanded' : ''}} {{province.fullyVisited ? 'province-card__chevron--complete' : ''}}">
+          <app-icon name="chevron-down" size="24" />
         </view>
       </view>
     </view>
