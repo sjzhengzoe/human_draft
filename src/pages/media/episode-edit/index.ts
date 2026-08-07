@@ -13,6 +13,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { markMediaDataChanged } from "../../../utils/media-data-revision"
 
 type StoredEpisodeEdit = {
   episode: MediaEpisode
@@ -394,6 +395,7 @@ Page({
             : []
         }))
       })
+      markMediaDataChanged()
       wx.removeStorageSync("MEDIA_EPISODE_EDIT")
       wx.hideLoading()
       if (!isAsyncPageActive(this)) return

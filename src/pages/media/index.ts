@@ -7,8 +7,10 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { getMediaDataRevision } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
+type LoadCurrentViewOptions = { refreshShared?: boolean }
 
 type DisplayMediaEntry = MediaEntry & {
   metaText: string
@@ -93,6 +95,10 @@ Page({
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    sharedLoaded: false,
+    overviewLoaded: false,
+    recordLoaded: false,
+    mediaRevision: -1,
     errorMessage: ""
   },
 
@@ -101,14 +107,27 @@ Page({
   },
 
   onShow() {
-    void this.loadCurrentView()
+    const mediaRevision = getMediaDataRevision()
+    if (!this.data.hasLoaded) {
+      void this.loadCurrentView({ refreshShared: true })
+      return
+    }
+    if (this.data.mediaRevision !== mediaRevision) {
+      this.setData({
+        sharedLoaded: false,
+        overviewLoaded: false,
+        recordLoaded: false
+      }, () => {
+        void this.loadCurrentView({ refreshShared: true })
+      })
+    }
   },
 
   onUnload() {
     deactivateAsyncPage(this)
   },
 
-  async loadCurrentView() {
+  async loadCurrentView(options: LoadCurrentViewOptions = {}) {
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
     const displayMode = this.data.displayMode
@@ -119,27 +138,40 @@ Page({
     })
 
     try {
-      const [session, categories] = await Promise.all([
-        ensureLogin(),
-        listMediaCategories()
-      ])
-      if (!isAsyncPageRequestCurrent(this, generation)) return
-
-      const mediaTypes = categories.map((category) => category.name)
-      const overviewCategory = mediaTypes.includes(this.data.overviewCategory)
-        ? this.data.overviewCategory
-        : ""
-      const activeRecordType = mediaTypes.includes(this.data.activeRecordType)
-        ? this.data.activeRecordType
-        : ""
-      const sharedData = {
-        mediaTypes,
-        overviewCategoryOptions: ["全部分类", ...mediaTypes],
-        overviewCategoryIndex: overviewCategory ? mediaTypes.indexOf(overviewCategory) + 1 : 0,
-        overviewCategory,
-        activeRecordType,
-        canWrite: session.user.can_write
+      let sharedData = {
+        mediaTypes: this.data.mediaTypes,
+        overviewCategoryOptions: this.data.overviewCategoryOptions,
+        overviewCategoryIndex: this.data.overviewCategoryIndex,
+        overviewCategory: this.data.overviewCategory,
+        activeRecordType: this.data.activeRecordType,
+        canWrite: this.data.canWrite,
+        sharedLoaded: this.data.sharedLoaded
       }
+      if (options.refreshShared || !this.data.sharedLoaded) {
+        const [session, categories] = await Promise.all([
+          ensureLogin(),
+          listMediaCategories()
+        ])
+        if (!isAsyncPageRequestCurrent(this, generation)) return
+        const mediaTypes = categories.map((category) => category.name)
+        const overviewCategory = mediaTypes.includes(this.data.overviewCategory)
+          ? this.data.overviewCategory
+          : ""
+        const activeRecordType = mediaTypes.includes(this.data.activeRecordType)
+          ? this.data.activeRecordType
+          : ""
+        sharedData = {
+          mediaTypes,
+          overviewCategoryOptions: ["全部分类", ...mediaTypes],
+          overviewCategoryIndex: overviewCategory ? mediaTypes.indexOf(overviewCategory) + 1 : 0,
+          overviewCategory,
+          activeRecordType,
+          canWrite: session.user.can_write,
+          sharedLoaded: true
+        }
+      }
+
+      const { overviewCategory, activeRecordType } = sharedData
 
       if (displayMode === "overview") {
         const [inProgressEntries, plannedEntries] = await Promise.all([
@@ -158,7 +190,9 @@ Page({
             : overviewInProgressSource,
           plannedItems: overviewCategory
             ? overviewPlannedSource.filter((item) => item.media_type === overviewCategory)
-            : overviewPlannedSource
+            : overviewPlannedSource,
+          overviewLoaded: true,
+          mediaRevision: getMediaDataRevision()
         })
       } else {
         const recordSourceItems = sortByRecent(await listAllEntries())
@@ -170,7 +204,9 @@ Page({
           recordItems: recordSourceItems.filter((item) =>
             (!activeRecordType || item.media_type === activeRecordType) &&
             (!appliedKeyword || item.title.toLocaleLowerCase().includes(appliedKeyword))
-          )
+          ),
+          recordLoaded: true,
+          mediaRevision: getMediaDataRevision()
         })
       }
     } catch (error) {
@@ -192,8 +228,11 @@ Page({
   handleDisplayModeTap(event: WechatMiniprogram.TouchEvent) {
     const displayMode = event.currentTarget.dataset.mode as DisplayMode
     if (!displayMode || displayMode === this.data.displayMode) return
+    const viewLoaded = displayMode === "overview"
+      ? this.data.overviewLoaded
+      : this.data.recordLoaded
     this.setData({ displayMode, errorMessage: "" }, () => {
-      void this.loadCurrentView()
+      if (!viewLoaded) void this.loadCurrentView()
     })
   },
 
@@ -287,6 +326,6 @@ Page({
   },
 
   handleRetry() {
-    void this.loadCurrentView()
+    void this.loadCurrentView({ refreshShared: !this.data.sharedLoaded })
   }
 })

@@ -8,6 +8,10 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { hasSameOrder } from "../../../utils/drag-sort"
+import {
+  getMediaDataRevision,
+  markMediaDataChanged
+} from "../../../utils/media-data-revision"
 
 let mediaCategorySortOriginalIds: string[] = []
 
@@ -19,6 +23,7 @@ Page({
     hasLoaded: false,
     moving: false,
     sortEditing: false,
+    mediaRevision: -1,
     errorMessage: ""
   },
 
@@ -26,7 +31,9 @@ Page({
     activateAsyncPage(this)
     mediaCategorySortOriginalIds = []
     if (this.data.sortEditing) this.setData({ sortEditing: false })
-    this.loadCategories()
+    if (!this.data.hasLoaded || this.data.mediaRevision !== getMediaDataRevision()) {
+      void this.loadCategories()
+    }
   },
 
   onUnload() {
@@ -44,7 +51,9 @@ Page({
     })
     try {
       const categories = await listMediaCategories()
-      if (isAsyncPageRequestCurrent(this, generation)) this.setData({ categories })
+      if (isAsyncPageRequestCurrent(this, generation)) {
+        this.setData({ categories, mediaRevision: getMediaDataRevision() })
+      }
     } catch (error) {
       if (isAsyncPageRequestCurrent(this, generation)) {
         const message = error instanceof Error ? error.message : "分类加载失败"
@@ -101,11 +110,14 @@ Page({
         workingIds[targetIndex] = currentId
         mediaCategorySortOriginalIds = [...workingIds]
       }
+      const mediaRevision = markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
       mediaCategorySortOriginalIds = []
-      this.setData({ sortEditing: false })
+      this.setData({
+        sortEditing: false,
+        mediaRevision
+      })
       wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.loadCategories()
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

@@ -11,6 +11,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { markMediaDataChanged } from "../../../utils/media-data-revision"
 
 Page({
   data: {
@@ -63,6 +64,7 @@ Page({
     try {
       if (this.data.categoryId) await updateMediaCategory(this.data.categoryId, name)
       else await createMediaCategory(name)
+      markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
       wx.showToast({ title: "已保存", icon: "success" })
       wx.navigateBack()
@@ -90,6 +92,7 @@ Page({
         }
         try {
           await deleteMediaCategory(this.data.categoryId)
+          markMediaDataChanged()
           if (isAsyncPageActive(this)) wx.navigateBack({ delta: 2 })
         } catch (error) {
           if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })

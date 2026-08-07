@@ -25,6 +25,10 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import {
+  getMediaDataRevision,
+  markMediaDataChanged
+} from "../../../utils/media-data-revision"
 
 let savedPageScrollTop = 0
 
@@ -116,6 +120,7 @@ Page({
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    mediaRevision: -1,
     operating: false,
     errorMessage: ""
   },
@@ -132,7 +137,9 @@ Page({
   onShow() {
     if (!this.data.id) return
     activateAsyncPage(this)
-    this.loadPage()
+    if (!this.data.hasLoaded || this.data.mediaRevision !== getMediaDataRevision()) {
+      void this.loadPage()
+    }
   },
 
   onUnload() {
@@ -176,7 +183,8 @@ Page({
         coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
         canWrite: session.user.can_write,
         isAudio: entry.media_type === "广播剧",
-        requestedSeasonId: ""
+        requestedSeasonId: "",
+        mediaRevision: getMediaDataRevision()
       })
       wx.setNavigationBarTitle({ title: entry.title })
     } catch (error) {
@@ -273,8 +281,13 @@ Page({
     wx.showLoading({ title: "设置中", mask: true })
     try {
       const updatedEntry = await setMediaEntryCoverFromSeason(entry.id, season.id)
+      const mediaRevision = markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
-      this.setData({ entry: updatedEntry, coverUrl: updatedEntry.cover_url })
+      this.setData({
+        entry: updatedEntry,
+        coverUrl: updatedEntry.cover_url,
+        mediaRevision
+      })
       wx.showToast({ title: "已设为封面", icon: "success" })
     } catch (error) {
       if (isAsyncPageActive(this)) {
@@ -306,6 +319,7 @@ Page({
         wx.showLoading({ title: "删除中", mask: true })
         try {
           await deleteMediaEntry(entry.id)
+          markMediaDataChanged()
           wx.removeStorageSync("MEDIA_EDIT_ITEM")
           wx.removeStorageSync("MEDIA_EPISODE_EDIT")
           if (!isAsyncPageActive(this)) return
@@ -337,7 +351,13 @@ Page({
       }
       return
     }
-    if (isAsyncPageActive(this)) this.setData({ operating: false })
+    const mediaRevision = markMediaDataChanged()
+    if (isAsyncPageActive(this)) {
+      this.setData({
+        operating: false,
+        mediaRevision
+      })
+    }
   },
 
   async handleAddSeason() {
@@ -355,6 +375,7 @@ Page({
     wx.showLoading({ title: "创建中", mask: true })
     try {
       const season = await createMediaSeason(this.data.id, name, episodeCount)
+      markMediaDataChanged()
       this.setData({ requestedSeasonId: season.id })
       await this.loadPage()
     } catch (error) {
@@ -385,6 +406,7 @@ Page({
     if (!name || !isAsyncPageActive(this)) return
     try {
       await updateMediaSeason(season.id, name)
+      markMediaDataChanged()
       this.setData({ requestedSeasonId: season.id })
       await this.loadPage()
     } catch (error) {
@@ -398,6 +420,7 @@ Page({
     this.setData({ operating: true })
     try {
       await addNextMediaEpisode(season.id)
+      markMediaDataChanged()
       this.setData({ requestedSeasonId: season.id })
       await this.loadPage()
     } catch (error) {
@@ -420,6 +443,7 @@ Page({
         this.setData({ operating: true })
         try {
           await deleteMediaSeason(season.id)
+          markMediaDataChanged()
           this.setData({ activeSeasonIndex: 0 })
           await this.loadPage()
         } catch (error) {
@@ -480,6 +504,10 @@ Page({
     })
     try {
       await updateMediaEpisode(id, { is_favorite: isFavorite })
+      const mediaRevision = markMediaDataChanged()
+      if (isAsyncPageActive(this)) {
+        this.setData({ mediaRevision })
+      }
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })

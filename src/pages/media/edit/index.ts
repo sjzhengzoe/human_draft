@@ -14,6 +14,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { markMediaDataChanged } from "../../../utils/media-data-revision"
 
 const BUILTIN_PLATFORMS = [
   "待定",
@@ -203,6 +204,7 @@ Page({
     try {
       if (this.data.id) await updateMediaEntry(this.data.id, input)
       else await createMediaEntry(input)
+      markMediaDataChanged()
       wx.removeStorageSync("MEDIA_EDIT_ITEM")
       if (!isAsyncPageActive(this)) return
       wx.showToast({ title: "已保存", icon: "success" })
@@ -237,6 +239,7 @@ Page({
         let failureMessage = ""
         try {
           await deleteMediaEntry(id)
+          markMediaDataChanged()
           wx.removeStorageSync("MEDIA_EDIT_ITEM")
           deleted = true
         } catch (error) {
