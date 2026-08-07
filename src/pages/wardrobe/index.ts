@@ -1,8 +1,6 @@
 import {
-  getWardrobeStats,
   listWardrobeCategories,
-  listWardrobeItems,
-  reorderWardrobeItemSortOrders
+  listWardrobeItems
 } from "../../services/wardrobe"
 import type {
   WardrobeCategory,
@@ -12,42 +10,58 @@ import {
   activateAsyncPage,
   beginAsyncPageRequest,
   deactivateAsyncPage,
-  invalidateAsyncPageRequests,
-  isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
-import type { SortableRect } from "../../utils/drag-sort"
 
-type DisplayValue = { id: string; name: string; value: string }
-type DisplayItem = WardrobeItem & { displayValues: DisplayValue[] }
+type DisplayValue = {
+  id: string
+  name: string
+  value: string
+  rowHeightRpx: number
+}
 
-let dragSourceIndex = -1
-let dragTargetIndex = -1
-let dragRects: SortableRect[] = []
-let dragItemIds: string[] = []
-let suppressItemTapUntil = 0
-let dragInsertAfter = false
-let wardrobeSortOriginalIds: string[] = []
+type DisplayItem = WardrobeItem & {
+  categoryName: string
+  displayValues: DisplayValue[]
+  cardHeightRpx: number
+}
 
-function resetDragSession(): void {
-  dragSourceIndex = -1
-  dragTargetIndex = -1
-  dragRects = []
-  dragItemIds = []
-  dragInsertAfter = false
+const CARD_BASE_HEIGHT_RPX = 540
+const EMPTY_MEASUREMENT_HEIGHT_RPX = 96
+const MEASUREMENT_ROW_HEIGHT_RPX = 76
+const MEASUREMENT_EXTRA_LINE_HEIGHT_RPX = 30
+
+function textLineCount(text: string, charactersPerLine: number): number {
+  return Math.max(1, Math.ceil(Array.from(text).length / charactersPerLine))
+}
+
+function measurementRowHeight(name: string, value: string): number {
+  const lines = Math.max(
+    textLineCount(name, 12),
+    textLineCount(value, 18)
+  )
+  return MEASUREMENT_ROW_HEIGHT_RPX + (lines - 1) * MEASUREMENT_EXTRA_LINE_HEIGHT_RPX
 }
 
 function toDisplayItem(item: WardrobeItem): DisplayItem {
+  const displayValues = (item.category?.fields || []).map((field) => {
+    const value = String(item.values[field.id] || "").trim() || "—"
+    return {
+      id: field.id,
+      name: field.name,
+      value,
+      rowHeightRpx: measurementRowHeight(field.name, value)
+    }
+  })
+  const measurementHeight = displayValues.length
+    ? displayValues.reduce((total, field) => total + field.rowHeightRpx, 0)
+    : EMPTY_MEASUREMENT_HEIGHT_RPX
+
   return {
     ...item,
-    displayValues: (item.category?.fields || [])
-      .map((field) => ({
-        id: field.id,
-        name: field.name,
-        value: item.values[field.id] || ""
-      }))
-      .filter((field) => field.value)
+    categoryName: item.category?.name || "未分类",
+    displayValues,
+    cardHeightRpx: CARD_BASE_HEIGHT_RPX + measurementHeight
   }
 }
 
@@ -56,41 +70,29 @@ Page({
     categories: [] as WardrobeCategory[],
     items: [] as DisplayItem[],
     activeCategoryId: "",
-    totalItemCount: 0,
-    totalCategoryCount: 0,
-    monthlyItemCount: 0,
-    canReorder: false,
-    sortEditing: false,
-    draggingIndex: -1,
-    dragTargetIndex: -1,
-    dragInsertAfter: false,
-    sorting: false,
-    ordering: false,
-    dragGhostVisible: false,
-    dragGhostLabel: "",
-    dragGhostX: 0,
-    dragGhostY: 0,
+    activeItemIndex: 0,
+    swiperHeightRpx: CARD_BASE_HEIGHT_RPX + EMPTY_MEASUREMENT_HEIGHT_RPX,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
-    errorMessage: ""
+    errorMessage: "",
+    showCreateCategoryDialog: false
   },
 
   onShow() {
     activateAsyncPage(this)
-    wardrobeSortOriginalIds = []
-    if (this.data.sortEditing) this.setData({ sortEditing: false })
-    this.refreshData()
+    this.refreshData(true)
   },
 
   onUnload() {
     deactivateAsyncPage(this)
-    resetDragSession()
-    wardrobeSortOriginalIds = []
   },
 
-  async refreshData() {
+  async refreshData(preserveActiveItem = true) {
     const generation = beginAsyncPageRequest(this)
+    const activeItemId = preserveActiveItem
+      ? this.data.items[this.data.activeItemIndex]?.id || ""
+      : ""
     const activeCategoryId = this.data.activeCategoryId
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
@@ -98,32 +100,33 @@ Page({
       contentLoading: !showInitialLoading,
       errorMessage: ""
     })
+
     try {
-      const [categories, stats] = await Promise.all([
-        listWardrobeCategories(),
-        getWardrobeStats()
-      ])
+      const categories = await listWardrobeCategories()
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const nextActiveCategoryId = categories.some(
         (category) => category.id === activeCategoryId
       )
         ? activeCategoryId
         : ""
-      const items = await listWardrobeItems({
+      const items = (await listWardrobeItems({
         categoryId: nextActiveCategoryId || undefined,
         sort: "custom"
-      })
+      })).map(toDisplayItem)
       if (!isAsyncPageRequestCurrent(this, generation)) return
+
+      const preservedIndex = activeItemId
+        ? items.findIndex((item) => item.id === activeItemId)
+        : -1
+      const activeItemIndex = preservedIndex >= 0 ? preservedIndex : 0
       this.setData({
         categories,
-        items: items.map(toDisplayItem),
+        items,
         activeCategoryId: nextActiveCategoryId,
-        totalItemCount: stats.total_items,
-        totalCategoryCount: stats.total_categories,
-        monthlyItemCount: stats.monthly_items,
-        canReorder: items.length > 1,
-        draggingIndex: -1,
-        dragTargetIndex: -1
+        activeItemIndex,
+        swiperHeightRpx: items[activeItemIndex]?.cardHeightRpx || (
+          CARD_BASE_HEIGHT_RPX + EMPTY_MEASUREMENT_HEIGHT_RPX
+        )
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -138,49 +141,34 @@ Page({
   },
 
   handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.sorting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
+    if (this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id === this.data.activeCategoryId) return
-    this.setData({ activeCategoryId: id }, () => this.refreshData())
+    this.setData({ activeCategoryId: id, activeItemIndex: 0 }, () => {
+      this.refreshData(false)
+    })
+  },
+
+  handleSwiperChange(event: WechatMiniprogram.SwiperChange) {
+    const activeItemIndex = Number(event.detail.current)
+    const activeItem = this.data.items[activeItemIndex]
+    if (!activeItem) return
+    this.setData({
+      activeItemIndex,
+      swiperHeightRpx: activeItem.cardHeightRpx
+    })
   },
 
   handleManageCategories() {
-    if (this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
+    if (!this.data.contentLoading) {
+      wx.navigateTo({ url: "/pages/wardrobe/categories/index" })
     }
-    wx.navigateTo({ url: "/pages/wardrobe/categories/index" })
-  },
-
-  handleAddCategory() {
-    if (this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    wx.navigateTo({ url: "/pages/wardrobe/category-edit/index" })
   },
 
   handleAddItem() {
-    if (this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
+    if (this.data.contentLoading) return
     if (!this.data.categories.length) {
-      wx.showModal({
-        title: "先创建分类",
-        content: "新增衣物前，需要先创建一个分类和对应的尺寸属性。",
-        confirmText: "创建分类",
-        success: (result) => {
-          if (result.confirm && isAsyncPageActive(this)) this.handleAddCategory()
-        }
-      })
+      this.setData({ showCreateCategoryDialog: true })
       return
     }
     const categoryId = this.data.activeCategoryId
@@ -191,156 +179,22 @@ Page({
     })
   },
 
-  handleItemTap(event: WechatMiniprogram.TouchEvent) {
-    if (
-      this.data.sorting ||
-      this.data.sortEditing ||
-      this.data.contentLoading ||
-      Date.now() < suppressItemTapUntil
-    ) return
+  handleEditItem(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/wardrobe/item-edit/index?id=${id}` })
   },
 
-  async handleSortEditingToggle() {
-    if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
-    if (!this.data.sortEditing) {
-      wardrobeSortOriginalIds = this.data.items.map((item) => item.id)
-      this.setData({ sortEditing: true })
-      return
-    }
-    const itemIds = this.data.items.map((item) => item.id)
-    if (hasSameOrder(wardrobeSortOriginalIds, itemIds)) {
-      wardrobeSortOriginalIds = []
-      this.setData({ sortEditing: false })
-      return
-    }
-    this.setData({ ordering: true })
-    try {
-      await reorderWardrobeItemSortOrders(itemIds)
-      if (!isAsyncPageActive(this)) return
-      wardrobeSortOriginalIds = []
-      this.setData({ sortEditing: false })
-      wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.refreshData()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "排序保存失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ ordering: false })
-    }
+  handleCreateCategoryDialogCancel() {
+    this.setData({ showCreateCategoryDialog: false })
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      targetIndex < 0 ||
-      targetIndex >= this.data.items.length
-    ) return
-    const items = [...this.data.items]
-    const [item] = items.splice(index, 1)
-    items.splice(targetIndex, 0, item)
-    this.setData({ items })
-  },
-
-  handleDragStart(event: WechatMiniprogram.TouchEvent) {
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.sorting ||
-      this.data.loading ||
-      this.data.contentLoading
-    ) return
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || index < 0 || index >= this.data.items.length) return
-
-    dragSourceIndex = index
-    dragTargetIndex = index
-    dragItemIds = this.data.items.map((item) => item.id)
-    suppressItemTapUntil = Date.now() + 1000
-    const touch = event.touches[0] || event.changedTouches[0]
-    invalidateAsyncPageRequests(this)
-    this.setData({
-      draggingIndex: index,
-      dragTargetIndex: index,
-      sorting: true,
-      dragGhostVisible: true,
-      dragGhostLabel: this.data.items[index].name,
-      dragGhostX: touch?.clientX || 0,
-      dragGhostY: touch?.clientY || 0
-    })
-
-    wx.createSelectorQuery()
-      .selectAll(".js-sortable-wardrobe")
-      .boundingClientRect((result) => {
-        if (!isAsyncPageActive(this)) return
-        const rects = result as unknown as SortableRect[]
-        if (rects.length !== dragItemIds.length) {
-          resetDragSession()
-          this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false })
-          return
-        }
-        dragRects = rects
-      })
-      .exec()
-  },
-
-  handleDragMove(event: WechatMiniprogram.TouchEvent) {
-    if (dragSourceIndex < 0 || !dragRects.length) return
-    const touch = event.touches[0] || event.changedTouches[0]
-    if (!touch) return
-    this.setData({ dragGhostX: touch.clientX, dragGhostY: touch.clientY })
-    const target = findClosestSortTarget(dragRects, touch.clientX, touch.clientY)
-    if (target < 0) return
-    const insertAfter = touch.clientY > (dragRects[target].top + dragRects[target].bottom) / 2
-    if (target === dragTargetIndex && insertAfter === dragInsertAfter) return
-    dragTargetIndex = target
-    dragInsertAfter = insertAfter
-    this.setData({ dragTargetIndex: target, dragInsertAfter: insertAfter })
-  },
-
-  handleDragCancel() {
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
-  },
-
-  handleDragEnd() {
-    const source = dragSourceIndex
-    const target = dragTargetIndex
-    const sourceId = dragItemIds[source] || ""
-    const targetId = dragItemIds[target] || ""
-    const insertAfter = dragInsertAfter
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, dragGhostVisible: false })
-    if (source < 0 || target < 0 || source === target || !sourceId || !targetId) {
-      this.setData({ sorting: false })
-      return
-    }
-
-    suppressItemTapUntil = Date.now() + 500
-    const items = [...this.data.items]
-    const sourceIndex = items.findIndex((item) => item.id === sourceId)
-    const targetIndex = items.findIndex((item) => item.id === targetId)
-    if (sourceIndex < 0 || targetIndex < 0) {
-      this.setData({ sorting: false })
-      return
-    }
-    const [sourceItem] = items.splice(sourceIndex, 1)
-    const nextTargetIndex = items.findIndex((item) => item.id === targetId)
-    items.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceItem)
-    this.setData({ items, sorting: false })
+  handleCreateCategoryDialogConfirm() {
+    this.setData({ showCreateCategoryDialog: false })
+    wx.navigateTo({ url: "/pages/wardrobe/category-edit/index" })
   },
 
   handleRetry() {
-    if (!this.data.sorting) this.refreshData()
+    this.refreshData(true)
   }
 })

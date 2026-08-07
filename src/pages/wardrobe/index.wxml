@@ -1,4 +1,4 @@
-<custom-navigation title="衣橱记录" />
+<custom-navigation title="衣橱尺寸" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -6,98 +6,113 @@
 </view>
 
 <view wx:else class="page page--fixed">
-  <view class="sidebar">
-    <scroll-view class="side-tabs" scroll-y enhanced show-scrollbar="{{false}}">
-      <view
-        class="side-tab {{activeCategoryId === '' ? 'side-tab--active' : ''}}"
-        data-id=""
-        bindtap="handleCategoryTap"
-      >全部</view>
-      <view
-        wx:for="{{categories}}"
-        wx:key="id"
-        class="side-tab {{activeCategoryId === item.id ? 'side-tab--active' : ''}}"
-        data-id="{{item.id}}"
-        data-index="{{index}}"
-        bindtap="handleCategoryTap"
-      >{{item.name}}</view>
+  <view class="category-toolbar">
+    <scroll-view class="category-tabs" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="category-tabs__inner">
+        <view
+          class="category-tab {{activeCategoryId === '' ? 'category-tab--active' : ''}}"
+          data-id=""
+          bindtap="handleCategoryTap"
+        >全部</view>
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="category-tab {{activeCategoryId === item.id ? 'category-tab--active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="handleCategoryTap"
+        >{{item.name}}</view>
+      </view>
     </scroll-view>
-    <view class="sidebar__edit" role="button" aria-label="编辑分类" bindtap="handleManageCategories">
-      <view class="sidebar__edit-button"><app-icon name="pencil" size="26" /></view>
+    <view class="category-toolbar__actions">
+      <view
+        class="category-toolbar__action"
+        role="button"
+        aria-label="管理分类"
+        bindtap="handleManageCategories"
+      ><app-icon name="settings-2" size="24" /></view>
+      <view
+        class="category-toolbar__action category-toolbar__action--primary"
+        role="button"
+        aria-label="新增衣物"
+        bindtap="handleAddItem"
+      ><app-icon name="plus-white" size="22" /></view>
     </view>
   </view>
 
-  <view class="content">
-    <view class="header">
-      <view class="header__topline">
-        <view class="header__title-group">
-          <view class="header__title">衣橱记录</view>
-        </view>
-        <button class="header__add" bindtap="handleAddItem"><app-icon name="plus-white" size="22" /><text>新增</text></button>
-      </view>
-      <view class="header__stats">
-        <view class="header-stat">
-          <view class="header-stat__value">{{totalItemCount}}</view>
-          <view class="header-stat__label">衣物</view>
-        </view>
-        <view class="header-stat">
-          <view class="header-stat__value">{{totalCategoryCount}}</view>
-          <view class="header-stat__label">分类</view>
-        </view>
-        <view class="header-stat">
-          <view class="header-stat__value">{{monthlyItemCount}}</view>
-          <view class="header-stat__label">本月新增</view>
-        </view>
-      </view>
-    </view>
+  <view wx:if="{{errorMessage}}" class="state-block">
+    <view>{{errorMessage}}</view>
+    <button class="state-block__button" bindtap="handleRetry">重试</button>
+  </view>
 
-    <view wx:if="{{canReorder}}" class="sort-toolbar">
-      <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
-        <app-icon name="settings-2" size="22" />
-        <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
-      </view>
-    </view>
+  <view wx:elif="{{items.length === 0}}" class="empty-state">
+    <view class="empty-state__title">暂无衣物</view>
+    <view class="empty-state__desc">点击右上方的“＋”开始记录</view>
+  </view>
 
-    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view wx:if="{{errorMessage}}" class="state-block">
-      <view>{{errorMessage}}</view>
-      <button class="retry-button" bindtap="handleRetry">重试</button>
-    </view>
-    <view wx:elif="{{items.length === 0}}" class="empty-state">
-      <view class="empty-state__title">暂无衣物</view>
-      <view class="empty-state__desc">点击右上角“新增”开始记录</view>
-    </view>
+  <scroll-view wx:else class="wardrobe-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <swiper
+      class="garment-swiper"
+      current="{{activeItemIndex}}"
+      circular="{{items.length > 1}}"
+      duration="220"
+      style="height: {{swiperHeightRpx}}rpx;"
+      bindchange="handleSwiperChange"
+    >
+      <swiper-item wx:for="{{items}}" wx:key="id">
+        <view class="garment-card" style="height: {{item.cardHeightRpx}}rpx;">
+          <image
+            class="garment-card__image"
+            src="{{item.thumbnail_url || item.image_url}}"
+            mode="aspectFill"
+            lazy-load
+          />
 
-    <view wx:else class="item-list">
-      <view
-        wx:for="{{items}}"
-        wx:key="id"
-        class="item-card"
-        data-id="{{item.id}}"
-        bindtap="handleItemTap"
-      >
-        <image class="item-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
-        <view class="item-card__body">
-          <view class="item-card__topline">
-            <view class="item-card__name">{{item.name}}</view>
-            <view class="item-card__category">{{item.category.name}}</view>
+          <view class="garment-card__heading">
+            <view class="garment-card__identity">
+              <view class="garment-card__name">{{item.name}}</view>
+              <view class="garment-card__category">{{item.categoryName}}</view>
+            </view>
+            <view
+              class="garment-card__edit"
+              role="button"
+              aria-label="编辑{{item.name}}"
+              data-id="{{item.id}}"
+              catchtap="handleEditItem"
+            ><app-icon name="pencil" size="24" /></view>
           </view>
-          <view wx:if="{{item.displayValues.length}}" class="attribute-grid">
-            <view wx:for="{{item.displayValues}}" wx:for-item="attribute" wx:key="id" class="attribute">
-              <text class="attribute__name">{{attribute.name}}</text>
-              <text class="attribute__value">{{attribute.value}}</text>
+
+          <view wx:if="{{item.displayValues.length}}" class="measurement-list">
+            <view
+              wx:for="{{item.displayValues}}"
+              wx:for-item="measurement"
+              wx:key="id"
+              class="measurement-row"
+              style="min-height: {{measurement.rowHeightRpx}}rpx;"
+            >
+              <text class="measurement-row__name">{{measurement.name}}</text>
+              <text class="measurement-row__value">{{measurement.value}}</text>
             </view>
           </view>
-          <view wx:else class="attribute-empty">暂未填写尺寸</view>
-          <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
-            <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
-            <view class="sort-action {{index === items.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
-          </view>
+          <view wx:else class="measurement-empty">这个分类还没有配置尺寸</view>
         </view>
-      </view>
-    </view>
+      </swiper-item>
+    </swiper>
+
+    <view class="garment-counter">{{activeItemIndex + 1}} / {{items.length}}</view>
     <view class="bottom-space" />
-    </scroll-view>
+  </scroll-view>
+
+  <view wx:if="{{contentLoading}}" class="content-loading-mask">
+    <view class="content-loading__spinner" />
   </view>
-  <operation-loading visible="{{ordering}}" text="正在保存排序…" />
+
+  <app-dialog
+    visible="{{showCreateCategoryDialog}}"
+    title="先创建分类"
+    content="新增衣物前，需要先创建一个分类和对应的尺寸属性。"
+    cancel-text="暂不创建"
+    confirm-text="创建分类"
+    bindcancel="handleCreateCategoryDialogCancel"
+    bindconfirm="handleCreateCategoryDialogConfirm"
+  />
 </view>

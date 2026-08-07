@@ -99,7 +99,7 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "wardrobe",
         icon: "shirt",
-        title: "衣橱记录",
+        title: "衣橱尺寸",
         path: "/pages/wardrobe/index",
         available: true,
         requiresLogin: true
