@@ -87,7 +87,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(page, /province\.fullyVisited \? 'province-card--complete'/)
   assert.match(page, /style="width: \{\{province\.progressPercent\}\}%;"/)
   assert.match(page, /province\.visitedCount > 0 && !province\.fullyVisited/)
-  assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: #e2f0e6;/)
+  assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: #e1e2de;/)
   assert.match(styles, /\.province-card__name\s*\{[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.match(styles, /\.city-grid\s*\{[\s\S]*?padding: 14rpx 16rpx 16rpx;[\s\S]*?border-top:/)
   assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 50rpx;[\s\S]*?font-size: var\(--ui-font-size-small\);/)
@@ -101,6 +101,12 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(styles, /\.map-level-switch__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
   assert.match(styles, /\.province-tabs__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
   assert.match(renderer, /UI_FONT\.family/)
+  assert.match(renderer, /const VISITED_FILL = "#424242"/)
+  assert.match(renderer, /const VISITED_TEXT = "#ffffff"/)
+  assert.match(renderer, /const SELECTED_COLOR = "#111111"/)
+  assert.match(renderer, /const SELECTED_HALO = "#ffffff"/)
+  assert.doesNotMatch(renderer, /#79b98b|#df6d4e/)
+  assert.doesNotMatch(styles, /#8fbea0|#83b293|#e2f0e6|#62aa79|#3e8a5d/)
   assert.match(logic, /initializeUIFont\(\)[\s\S]*?\.then\(\(\) => \{[\s\S]*?this\.drawMap\(\)/)
 
   const fontSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)].map(

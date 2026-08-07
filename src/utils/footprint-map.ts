@@ -42,13 +42,14 @@ type Projection = (point: FootprintMapPoint) => [number, number]
 const MAP_PADDING_X = 8
 const MAP_PADDING_Y = 8
 const MAP_FILL = "#e5e6df"
-const CITY_FILL = "#d8e0da"
-const VISITED_FILL = "#79b98b"
+const CITY_FILL = "#d7d8d4"
+const VISITED_FILL = "#424242"
 const BORDER_COLOR = "#ffffff"
-const MUTED_TEXT = "#6f776f"
-const VISITED_TEXT = "#2b352e"
+const MUTED_TEXT = "#747474"
+const VISITED_TEXT = "#ffffff"
 const LABEL_HALO = "#ffffff"
-const SELECTED_COLOR = "#df6d4e"
+const SELECTED_COLOR = "#111111"
+const SELECTED_HALO = "#ffffff"
 
 const LABEL_OFFSETS: Record<string, [number, number]> = {
   北京: [-3, -7],
@@ -255,8 +256,11 @@ export function drawFootprintMap(
       selectedGeometry.polygons.forEach((polygon) => {
         context.beginPath()
         tracePolygon(context, polygon, project)
+        context.strokeStyle = SELECTED_HALO
+        context.lineWidth = 3.4
+        context.stroke()
         context.strokeStyle = SELECTED_COLOR
-        context.lineWidth = 1.7
+        context.lineWidth = 1.4
         context.stroke()
       })
     }
