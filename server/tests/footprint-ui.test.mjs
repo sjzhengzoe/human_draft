@@ -70,10 +70,11 @@ test("city geometry covers all 333 prefecture-level divisions", async () => {
 })
 
 test("footprint interaction is direct, compact, and contains no map hints", async () => {
-  const [page, logic, styles] = await Promise.all([
+  const [page, logic, styles, renderer] = await Promise.all([
     readProjectFile("src/pages/footprint/index.wxml"),
     readProjectFile("src/pages/footprint/index.ts"),
-    readProjectFile("src/pages/footprint/index.less")
+    readProjectFile("src/pages/footprint/index.less"),
+    readProjectFile("src/utils/footprint-map.ts")
   ])
 
   assert.match(page, /catchtap="handleCityTap"/)
@@ -84,7 +85,12 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.doesNotMatch(page, /省名直接标在区域内|绿色\s*=|app-dialog|picker/)
   assert.doesNotMatch(logic, /日期|date|showModal/)
   assert.match(styles, /grid-template-columns: repeat\(4/)
-  assert.match(styles, /linear-gradient/)
+  assert.match(styles, /\.city-chip--visited\s*\{[\s\S]*?background: #111111;[\s\S]*?color: #ffffff;/)
+  assert.match(styles, /\.city-chip\s*\{[\s\S]*?background: #ffffff;[\s\S]*?color: #252925;/)
+  assert.match(styles, /\.map-level-switch__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
+  assert.match(styles, /\.province-tabs__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
+  assert.match(renderer, /UI_FONT\.family/)
+  assert.match(logic, /initializeUIFont\(\)[\s\S]*?\.then\(\(\) => \{[\s\S]*?this\.drawMap\(\)/)
 
   const fontSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)].map(
     (match) => Number(match[1])

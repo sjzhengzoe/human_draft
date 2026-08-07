@@ -100,9 +100,13 @@ Page({
     const activeTab = lists.visited.length > 0 ? "visited" : "unvisited"
     this.setData({ activeTab })
     this.rebuildLists()
-    void initializeUIFont().catch((error) => {
-      console.warn("足迹页通用字体加载失败，使用系统字体回退", error)
-    })
+    void initializeUIFont()
+      .then(() => {
+        if (pageActive) this.drawMap()
+      })
+      .catch((error) => {
+        console.warn("足迹页通用字体加载失败，使用系统字体回退", error)
+      })
   },
 
   onReady() {

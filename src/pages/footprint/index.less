@@ -61,11 +61,16 @@
 .province-tabs__button,
 .city-chip {
   margin: 0 !important;
-  line-height: normal;
+  line-height: 1;
 }
 
 .map-level-switch__button {
+  display: flex;
+  height: 58rpx !important;
   min-height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
   padding: 0 18rpx;
   border-radius: var(--ui-radius-pill);
   background: transparent;
@@ -139,7 +144,12 @@
 }
 
 .province-tabs__button {
+  display: flex;
+  height: 58rpx !important;
   min-height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
   padding: 0 18rpx;
   border-radius: 16rpx;
   background: transparent;
@@ -280,12 +290,13 @@
   justify-content: center;
   gap: 8rpx;
   padding: 0 8rpx !important;
-  border: 1rpx solid #e0e1da;
+  border: 1rpx solid #d9dad4;
   border-radius: 16rpx;
-  background: #f2f2ed;
-  color: #7b817a;
+  background: #ffffff;
+  color: #252925;
   font-size: var(--ui-font-size-base);
-  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 3rpx 9rpx rgba(32, 36, 31, 0.045);
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .city-chip:active {
@@ -300,7 +311,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #b8bcb5;
+  border: 2rpx solid #696e68;
   border-radius: 50% 50% 50% 0;
   background: #ffffff;
   transform: rotate(-45deg);
@@ -310,7 +321,7 @@
   width: 5rpx;
   height: 5rpx;
   border-radius: 50%;
-  background: #bec1bb;
+  background: #696e68;
 }
 
 .city-chip__name {
@@ -321,17 +332,17 @@
 }
 
 .city-chip--visited {
-  border-color: #70ad85;
-  background: linear-gradient(135deg, #eff8f1, #d9eedf);
-  color: #29543a;
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
   font-weight: 500;
-  box-shadow: 0 6rpx 14rpx rgba(61, 137, 87, 0.13), inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6rpx 14rpx rgba(17, 17, 17, 0.16);
 }
 
 .city-chip--visited .city-chip__marker {
-  border-color: #377f54;
-  background: #55a16f;
-  box-shadow: 0 0 0 5rpx rgba(72, 148, 98, 0.12);
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
 }
 
 .city-chip--visited .city-chip__marker-core {
