@@ -29,6 +29,12 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.deepEqual([...new Set(explicitSizes)], [25]);
   assert.match(styles, /var\(--ui-font-size-small\)/);
   assert.match(styles, /var\(--ui-font-size-base\)/);
+  assert.match(
+    styles,
+    /\.record-card__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s,
+  );
+  assert.match(styles, /\.record-grid\s*\{[^}]*align-items:\s*start;/s);
+  assert.doesNotMatch(styles, /\.record-card__body\s*\{[^}]*min-height:/s);
   assert.match(styles, /\.view-switch__item\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.icon-button\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.search-row__button,[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/);
