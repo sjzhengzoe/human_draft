@@ -91,3 +91,11 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   )
   assert.ok(fontSizes.every((size) => [20, 23, 25].includes(size)))
 })
+
+test("footprint map projects longitude and latitude with matching units", async () => {
+  const renderer = await readProjectFile("src/utils/footprint-map.ts")
+
+  assert.match(renderer, /const longitude = point\[0\] \* Math\.PI \/ 180/)
+  assert.match(renderer, /return \[longitude, -Math\.log/)
+  assert.doesNotMatch(renderer, /return \[point\[0\], -Math\.log/)
+})

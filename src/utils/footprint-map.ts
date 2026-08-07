@@ -64,8 +64,9 @@ const LABEL_OFFSETS: Record<string, [number, number]> = {
 }
 
 function mercator(point: FootprintMapPoint): [number, number] {
+  const longitude = point[0] * Math.PI / 180
   const latitude = Math.max(-85, Math.min(85, point[1])) * Math.PI / 180
-  return [point[0], -Math.log(Math.tan(Math.PI / 4 + latitude / 2))]
+  return [longitude, -Math.log(Math.tan(Math.PI / 4 + latitude / 2))]
 }
 
 function createProjection(width: number, height: number): Projection {
