@@ -74,20 +74,12 @@
   line-height: normal;
 }
 
-.record-total {
-  min-width: 0;
-  flex: 1;
-  color: #333;
-  font-size: var(--ui-font-size-base);
-  font-weight: 600;
-  line-height: normal;
-}
-
 .media-toolbar__actions {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 10rpx;
+  margin-left: auto;
 }
 
 .icon-button {
@@ -276,9 +268,24 @@
   padding: 28rpx var(--ui-page-gutter) 16rpx;
 }
 
+.record-heading__main {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.record-heading__count {
+  flex: 0 0 auto;
+  color: #999;
+  font-size: var(--ui-font-size-small);
+  font-weight: 400;
+  line-height: normal;
+}
+
 .record-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: start;
   gap: 12rpx;
   padding: 0 var(--ui-page-gutter-compact);

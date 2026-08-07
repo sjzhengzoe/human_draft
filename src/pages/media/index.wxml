@@ -19,7 +19,6 @@
           <app-icon name="chevron-down" size="22" />
         </view>
       </picker>
-      <view wx:else class="record-total">{{recordItems.length}} 条记录</view>
 
       <view class="media-toolbar__actions">
         <view wx:if="{{canWrite}}" class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
@@ -111,8 +110,11 @@
 
     <block wx:else>
       <view class="record-heading">
-        <view class="record-heading__title">{{activeRecordType || '全部记录'}}</view>
-        <view class="record-heading__hint">三列卡片</view>
+        <view class="record-heading__main">
+          <view class="record-heading__title">{{activeRecordType || '全部记录'}}</view>
+          <view class="record-heading__count">{{recordItems.length}} 条记录</view>
+        </view>
+        <view class="record-heading__hint">四列卡片</view>
       </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
