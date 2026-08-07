@@ -95,6 +95,7 @@ type ExerciseCalendarCell = {
   day: number | string
   state: string
   isToday: boolean
+  restUsed: boolean
 }
 
 function pickRandomImage(images: readonly string[]) {
@@ -201,13 +202,15 @@ Page({
         key: `blank-${index}`,
         day: "",
         state: "blank",
-        isToday: false
+        isToday: false,
+        restUsed: false
       })),
       ...dashboard.month.days.map((item) => ({
         key: item.date,
         day: item.day,
         state: item.state,
-        isToday: item.date === dashboard.today.date
+        isToday: item.date === dashboard.today.date,
+        restUsed: item.rest_used
       }))
     ]
     this.setData({

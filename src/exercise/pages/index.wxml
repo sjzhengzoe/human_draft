@@ -60,7 +60,7 @@
         <view
           wx:for="{{calendarCells}}"
           wx:key="key"
-          class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}}"
+          class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}} {{item.restUsed ? 'calendar-day--rest' : ''}}"
         >
           <view wx:if="{{item.state === 'completed'}}" class="calendar-day__pet-frame">
             <image
@@ -80,6 +80,7 @@
             wx:if="{{item.state === 'future' || item.state === 'untracked'}}"
             class="calendar-day__number"
           >{{item.day}}</text>
+          <text wx:if="{{item.restUsed}}" class="calendar-day__rest-mark">休</text>
         </view>
       </view>
     </view>
