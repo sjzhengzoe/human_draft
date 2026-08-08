@@ -33,7 +33,7 @@ test("media overview and records share the same status-free four-column cards", 
   assert.match(logic, /setRevisitableValue\(id, entry\.is_revisitable\)/);
   assert.match(styles, /\.record-card__revisit--active\s*\{[^}]*color:\s*#e04444;/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
-  assert.doesNotMatch(page, /包含全部分类|包含全部记录/);
+  assert.doesNotMatch(page, /包含全部分类|包含全部记录|只展示所选状态/);
   assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
   assert.ok(page.indexOf('class="category-list status-list"') < page.indexOf('class="media-toolbar"'));
 });

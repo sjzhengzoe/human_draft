@@ -24,7 +24,6 @@
       </scroll-view>
       <view class="filter-heading filter-heading--status">
         <text>选择状态</text>
-        <text class="filter-heading__hint">只展示所选状态</text>
       </view>
       <view class="category-list status-list">
         <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">正在看</view>
