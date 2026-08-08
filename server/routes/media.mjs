@@ -14,6 +14,7 @@ import {
   listMediaEntries,
   listMediaSeasons,
   reorderMediaEntries,
+  replaceMediaEntryCover,
   setMediaEntryCoverFromSeason,
   swapMediaCategorySortOrders,
   swapMediaEntrySortOrders,
@@ -22,9 +23,10 @@ import {
   updateMediaEpisode,
   updateMediaSeason,
 } from "../domains/media/service.mjs";
+import { readMultipartImage } from "../http/multipart-image.mjs";
 
 export function registerMediaRoutes(app, context) {
-  const { authenticated, getSupabaseAdmin } = context;
+  const { authenticated, contentSecurity, getSupabaseAdmin } = context;
 
   app.get("/api/media", { preHandler: authenticated }, async (request) => ({
     ok: true,
@@ -147,6 +149,22 @@ export function registerMediaRoutes(app, context) {
       ),
     },
   }));
+
+  app.post("/api/media/:id/image", { preHandler: authenticated }, async (request) => {
+    const { image } = await readMultipartImage(request);
+    await contentSecurity.checkImage(image);
+    return {
+      ok: true,
+      data: {
+        item: await replaceMediaEntryCover(
+          getSupabaseAdmin(),
+          request.auth.user.id,
+          request.params.id,
+          image,
+        ),
+      },
+    };
+  });
 
   app.put("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,

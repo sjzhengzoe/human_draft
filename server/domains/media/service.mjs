@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { assertCondition } from "../../lib/errors.mjs";
+import { config } from "../../config.mjs";
+import { HttpError, assertCondition } from "../../lib/errors.mjs";
+import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
+import { optimizeOriginalImage } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   booleanValue,
@@ -26,6 +29,27 @@ export const MEDIA_PLATFORMS = [
 ];
 export const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"];
 export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
+
+function managedMediaCoverPath(url, userId, mediaEntryId) {
+  if (typeof url !== "string" || !url.trim()) return "";
+  try {
+    const pathname = decodeURIComponent(new URL(url).pathname);
+    const marker = `/${config.mediaCoverBucket}/`;
+    const markerIndex = pathname.lastIndexOf(marker);
+    if (markerIndex < 0) return "";
+    const path = pathname.slice(markerIndex + marker.length);
+    const expectedPrefix = `users/${userId}/entries/${mediaEntryId}/`;
+    return path.startsWith(expectedPrefix) ? path : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+async function removeManagedMediaCover(supabase, path) {
+  if (!path) return;
+  const { error } = await supabase.storage.from(config.mediaCoverBucket).remove([path]);
+  if (error) console.error("删除旧影视封面失败:", error);
+}
 
 function mediaPlatforms(value) {
   const platforms = textArray(value, "平台", MEDIA_PLATFORMS.length);
@@ -318,7 +342,7 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
   const seasonId = typeof body.season_id === "string" ? body.season_id.trim() : "";
   assertCondition(UUID_PATTERN.test(seasonId), 400, "INVALID_ID", "季编号无效。");
-  await requireRecord(supabase, userId, "media_entries", id, "id");
+  const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
   const season = await requireRecord(
     supabase,
     userId,
@@ -346,6 +370,63 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "设置作品封面失败。");
+  await removeManagedMediaCover(
+    supabase,
+    managedMediaCoverPath(current.cover_url, userId, id),
+  );
+  return data;
+}
+
+export async function replaceMediaEntryCover(supabase, userId, id, image) {
+  assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
+  assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择影视封面。");
+  assertCondition(
+    STANDARD_IMAGE_TYPES.has(image.mimetype),
+    415,
+    "UNSUPPORTED_IMAGE_TYPE",
+    "仅支持 PNG、JPEG 或 WebP 图片。",
+  );
+  const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
+  let optimized;
+  try {
+    optimized = await optimizeOriginalImage(image.buffer);
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。");
+    wrapped.cause = error;
+    throw wrapped;
+  }
+
+  const path = `users/${userId}/entries/${id}/${randomUUID()}.webp`;
+  const bucket = supabase.storage.from(config.mediaCoverBucket);
+  const { error: uploadError } = await bucket.upload(path, optimized.original, {
+    cacheControl: "31536000",
+    contentType: optimized.originalContentType,
+    upsert: false,
+  });
+  if (uploadError) {
+    const wrapped = new HttpError(500, "MEDIA_COVER_UPLOAD_FAILED", "上传影视封面失败。");
+    wrapped.cause = uploadError;
+    throw wrapped;
+  }
+
+  const coverUrl = bucket.getPublicUrl(path).data.publicUrl;
+  const { data, error } = await supabase
+    .from("media_entries")
+    .update({ cover_url: coverUrl })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+  if (error) {
+    await removeManagedMediaCover(supabase, path);
+    throwSupabaseError(error, "更新影视封面失败。");
+  }
+
+  await removeManagedMediaCover(
+    supabase,
+    managedMediaCoverPath(current.cover_url, userId, id),
+  );
   return data;
 }
 

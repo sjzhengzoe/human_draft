@@ -5,6 +5,9 @@ import test from "node:test";
 const pageUrl = new URL("../../src/pages/media/index.wxml", import.meta.url);
 const stylesUrl = new URL("../../src/pages/media/index.less", import.meta.url);
 const logicUrl = new URL("../../src/pages/media/index.ts", import.meta.url);
+const editPageUrl = new URL("../../src/pages/media/edit/index.wxml", import.meta.url);
+const editLogicUrl = new URL("../../src/pages/media/edit/index.ts", import.meta.url);
+const editConfigUrl = new URL("../../src/pages/media/edit/index.json", import.meta.url);
 
 test("media overview and records share the same status-free four-column cards", async () => {
   const [page, styles, logic] = await Promise.all([
@@ -57,4 +60,19 @@ test("media cards hide empty episode counts and use category-specific placeholde
   for (const icon of ["book-open", "sparkles", "headphones", "tv", "clapperboard"]) {
     assert.match(logic, new RegExp(`"${icon}"`));
   }
+});
+
+test("media editing supports a shared 3:4 cover crop and upload", async () => {
+  const [page, logic, config] = await Promise.all([
+    readFile(editPageUrl, "utf8"),
+    readFile(editLogicUrl, "utf8"),
+    readFile(editConfigUrl, "utf8"),
+  ]);
+
+  assert.match(config, /"image-cropper":\s*"\/components\/image-cropper\/index"/);
+  assert.match(page, /aspect-ratio="0\.75"/);
+  assert.match(page, /output-size="1080"/);
+  assert.match(page, /src="\{\{selectedImagePath \|\| coverUrl\}\}"/);
+  assert.match(logic, /wx\.chooseMedia\(/);
+  assert.match(logic, /replaceMediaEntryCover\(id, this\.data\.selectedImagePath\)/);
 });

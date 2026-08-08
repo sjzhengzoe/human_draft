@@ -21,6 +21,23 @@
   </view>
   <view class="form-card">
     <view class="field">
+      <view class="field-label">封面</view>
+      <view class="cover-editor" bindtap="handleChooseImage">
+        <image
+          wx:if="{{selectedImagePath || coverUrl}}"
+          class="cover-editor__preview"
+          src="{{selectedImagePath || coverUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="cover-editor__empty">
+          <app-icon name="image-plus" size="42" />
+          <view>选择封面</view>
+        </view>
+        <view class="cover-editor__action">{{selectedImagePath || coverUrl ? '更换封面' : '选择封面'}}</view>
+      </view>
+      <view class="field-help cover-editor__help">建议使用 3:4 竖图，保存后统一输出为 1080 × 1440</view>
+    </view>
+    <view class="field">
       <view class="field-label">名称</view>
       <app-input custom-class="field-input" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
     </view>
@@ -56,6 +73,18 @@
       </checkbox-group>
     </view>
   </view>
-  <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存</button>
-  <button wx:if="{{id}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除</text></button>
+  <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage || showImageCropper}}" bindtap="handleSave">保存</button>
+  <button wx:if="{{id}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage || showImageCropper}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除</text></button>
 </view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="rectangle"
+  aspect-ratio="0.75"
+  output-size="1080"
+  title="裁剪为 3:4 影视封面"
+  bind:cancel="handleImageCropCancel"
+  bind:confirm="handleImageCropConfirm"
+  bind:error="handleImageCropError"
+/>

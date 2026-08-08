@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import sharp from "sharp";
 
 process.env.NODE_ENV = "test";
 process.env.WECHAT_ALLOWED_OPENIDS = "test-openid";
@@ -20,6 +21,8 @@ const OTHER_USER_ID = "10000000-0000-4000-8000-000000000009";
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const rpcCalls = [];
+  const storageUploads = [];
+  const storageRemovals = [];
 
   class Query {
     constructor(table) {
@@ -129,9 +132,19 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
   const supabase = {
     rpcCalls,
+    storageUploads,
+    storageRemovals,
     storage: {
       from(bucket) {
         return {
+          async upload(path, buffer, options) {
+            storageUploads.push({ bucket, path, buffer, options });
+            return { data: { path }, error: null };
+          },
+          async remove(paths) {
+            storageRemovals.push({ bucket, paths });
+            return { data: paths, error: null };
+          },
           getPublicUrl(path) {
             return { data: { publicUrl: `https://example.test/${bucket}/${path || ""}` } };
           },
@@ -1160,6 +1173,75 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
   });
   assert.equal(invalidQuoteResponse.statusCode, 400);
   assert.equal(invalidQuoteResponse.json().error.code, "TEXT_REQUIRED");
+});
+
+test("media cover upload stores a WebP image and updates the existing entry", async (t) => {
+  const media = {
+    id: MEDIA_ID,
+    title: "测试电影",
+    media_type: "电影",
+    watch_status: "completed",
+    platforms: ["腾讯视频"],
+    cover_url: "https://example.com/legacy-cover.webp",
+  };
+  const checkedImages = [];
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({ media_entries: [media] }),
+  });
+  const app = buildServer({
+    logger: false,
+    supabase,
+    contentSecurity: {
+      async checkText() {},
+      async checkImage(image) {
+        checkedImages.push(image);
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const sourceImage = await sharp({
+    create: {
+      width: 30,
+      height: 40,
+      channels: 3,
+      background: { r: 120, g: 80, b: 40 },
+    },
+  }).png().toBuffer();
+  const boundary = "media-cover-test-boundary";
+  const payload = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="cover.png"\r\nContent-Type: image/png\r\n\r\n`,
+    ),
+    sourceImage,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  const response = await app.inject({
+    method: "POST",
+    url: `/api/media/${MEDIA_ID}/image`,
+    headers: {
+      ...authHeaders,
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+    },
+    payload,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(checkedImages.length, 1);
+  assert.equal(supabase.storageUploads.length, 1);
+  const upload = supabase.storageUploads[0];
+  assert.equal(upload.bucket, "media-covers");
+  assert.match(upload.path, new RegExp(`^users/${USER_ID}/entries/${MEDIA_ID}/.+\\.webp$`));
+  assert.equal(upload.options.contentType, "image/webp");
+  assert.deepEqual(
+    await sharp(upload.buffer).metadata().then(({ format, width, height }) => ({
+      format,
+      width,
+      height,
+    })),
+    { format: "webp", width: 30, height: 40 },
+  );
+  assert.equal(response.json().data.item.cover_url.includes(upload.path), true);
 });
 
 test("delete routes return a JSON success envelope", async (t) => {

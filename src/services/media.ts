@@ -9,7 +9,7 @@ import type {
   MediaType
 } from "../types/media"
 import { queryString } from "./query-string"
-import { request } from "./request"
+import { request, upload } from "./request"
 
 export async function listMediaEntries(input: {
   mediaType?: MediaType
@@ -105,6 +105,17 @@ export async function updateMediaEntry(
     path: `/api/media/${id}`,
     method: "PUT",
     data: input
+  })
+  return data.item
+}
+
+export async function replaceMediaEntryCover(
+  id: string,
+  imagePath: string
+): Promise<MediaEntry> {
+  const data = await upload<{ item: MediaEntry }>({
+    path: `/api/media/${id}/image`,
+    filePath: imagePath
   })
   return data.item
 }

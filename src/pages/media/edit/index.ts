@@ -4,6 +4,7 @@ import {
   deleteMediaEntry,
   getMediaEntry,
   listMediaCategories,
+  replaceMediaEntryCover,
   updateMediaEntry
 } from "../../../services/media"
 import type { MediaEntry, MediaStatus, MediaType } from "../../../types/media"
@@ -39,6 +40,11 @@ Page({
   data: {
     id: "",
     title: "",
+    coverUrl: "",
+    selectedImagePath: "",
+    selectingImage: false,
+    showImageCropper: false,
+    cropSourcePath: "",
     mediaTypes: [] as MediaType[],
     mediaTypeIndex: 0,
     watchStatus: "completed" as MediaStatus,
@@ -126,6 +132,7 @@ Page({
     this.setData({
       id: entry.id,
       title: entry.title,
+      coverUrl: entry.cover_url || "",
       mediaTypeIndex: Math.max(0, this.data.mediaTypes.indexOf(entry.media_type)),
       watchStatus: entry.watch_status,
       isEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
@@ -141,6 +148,60 @@ Page({
 
   handleTitleInput(event: WechatMiniprogram.Input) {
     this.setData({ title: event.detail.value })
+  },
+
+  handleChooseImage() {
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage ||
+      this.data.showImageCropper
+    ) return
+    this.setData({ selectingImage: true })
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ["image"],
+      sourceType: ["album", "camera"],
+      success: (result) => {
+        if (!isAsyncPageActive(this)) return
+        const path = result.tempFiles[0]?.tempFilePath
+        if (!path) {
+          this.setData({ selectingImage: false })
+          return
+        }
+        this.setData({
+          selectingImage: false,
+          showImageCropper: true,
+          cropSourcePath: path
+        })
+      },
+      fail: () => {
+        if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
+      }
+    })
+  },
+
+  handleImageCropCancel() {
+    this.setData({ showImageCropper: false, cropSourcePath: "" })
+  },
+
+  handleImageCropConfirm(
+    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+  ) {
+    const path = event.detail.tempFilePath
+    if (!path) return
+    this.setData({
+      selectedImagePath: path,
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
+  },
+
+  handleImageCropError(
+    event: WechatMiniprogram.CustomEvent<{ message?: string }>
+  ) {
+    showErrorToast(event.detail.message || "图片裁剪失败，请重试")
   },
 
   handleTypeChange(event: WechatMiniprogram.PickerChange) {
@@ -178,7 +239,13 @@ Page({
   },
 
   async handleSave() {
-    if (this.data.loading || this.data.saving || this.data.deleting) return
+    if (
+      this.data.loading ||
+      this.data.saving ||
+      this.data.deleting ||
+      this.data.selectingImage ||
+      this.data.showImageCropper
+    ) return
     const title = this.data.title.trim()
     const mediaType = this.data.mediaTypes[this.data.mediaTypeIndex]
     if (!title || !mediaType) {
@@ -201,17 +268,38 @@ Page({
       platforms: selectedPlatforms,
       is_revisitable: this.data.isRevisitable
     }
+    let entryPersisted = false
     try {
-      if (this.data.id) await updateMediaEntry(this.data.id, input)
-      else await createMediaEntry(input)
+      const savedEntry = this.data.id
+        ? await updateMediaEntry(this.data.id, input)
+        : await createMediaEntry(input)
+      const id = savedEntry.id
+      entryPersisted = true
+      if (!this.data.id) {
+        this.setData({ id, coverUrl: savedEntry.cover_url || "" })
+        wx.setNavigationBarTitle({ title: "编辑影视" })
+      }
+      if (this.data.selectedImagePath) {
+        const updatedEntry = await replaceMediaEntryCover(id, this.data.selectedImagePath)
+        this.setData({
+          coverUrl: updatedEntry.cover_url || "",
+          selectedImagePath: ""
+        })
+      }
       markMediaDataChanged()
       wx.removeStorageSync("MEDIA_EDIT_ITEM")
       if (!isAsyncPageActive(this)) return
       wx.showToast({ title: "已保存", icon: "success" })
       wx.navigateBack()
     } catch (error) {
+      if (entryPersisted) markMediaDataChanged()
       if (isAsyncPageActive(this)) {
-        showErrorToast(error instanceof Error ? error.message : "保存失败")
+        const message = error instanceof Error ? error.message : "保存失败"
+        showErrorToast(
+          entryPersisted && this.data.selectedImagePath
+            ? `资料已保存，封面上传失败：${message}`
+            : message
+        )
       }
     } finally {
       wx.hideLoading()

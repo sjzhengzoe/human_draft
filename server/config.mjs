@@ -29,6 +29,7 @@ export const config = {
   supabaseUrl: normalizeSupabaseUrl(process.env.SUPABASE_URL),
   supabaseSecretKey,
   dishBucket: process.env.SUPABASE_DISH_BUCKET || "dish-images",
+  mediaCoverBucket: process.env.SUPABASE_MEDIA_COVER_BUCKET || "media-covers",
   wardrobeBucket: process.env.SUPABASE_WARDROBE_BUCKET || "wardrobe-images",
   keyMomentBucket: process.env.SUPABASE_KEY_MOMENT_BUCKET || "key-moment-images",
   avatarBucket: process.env.SUPABASE_AVATAR_BUCKET || "user-avatars",

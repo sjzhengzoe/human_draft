@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "影视条目",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index"
+  }
 }
