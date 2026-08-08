@@ -133,4 +133,7 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.doesNotMatch(page, /handleDeleteEntry|trash-2-danger/);
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
   assert.match(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+  assert.match(styles, /\.active-season-bar__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
+  assert.match(styles, /\.episode-row__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
+  assert.match(styles, /\.episode-row__meta\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
 });
