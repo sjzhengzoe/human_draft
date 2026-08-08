@@ -124,6 +124,11 @@ test("media detail defaults to the detail tab and keeps plot records in a compac
   assert.match(page, /catchtap="handleEpisodeEdit"/);
   assert.match(page, /aria-label="筛选剧情记录"/);
   assert.match(page, /aria-label="新增季"/);
+  assert.match(page, /data-status="planned"[\s\S]*?bindtap="handleWatchStatusTap"/);
+  assert.match(page, /data-status="in_progress"[\s\S]*?bindtap="handleWatchStatusTap"/);
+  assert.match(page, /data-status="completed"[\s\S]*?bindtap="handleWatchStatusTap"/);
+  assert.match(logic, /updateMediaEntry\(entry\.id, \{ watch_status: watchStatus \}\)/);
+  assert.doesNotMatch(page, /detail-attribute__label">状态/);
   assert.doesNotMatch(page, /handleDeleteEntry|trash-2-danger/);
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
   assert.match(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);

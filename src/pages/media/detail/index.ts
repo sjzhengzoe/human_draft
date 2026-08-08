@@ -14,6 +14,7 @@ import type {
   MediaEntry,
   MediaEpisode,
   MediaSeason,
+  MediaStatus,
   MediaTimelineNote,
   MediaTimelineNoteType
 } from "../../../types/media"
@@ -365,6 +366,30 @@ Page({
         operating: false,
         mediaRevision
       })
+    }
+  },
+
+  async handleWatchStatusTap(event: WechatMiniprogram.TouchEvent) {
+    const entry = this.data.entry
+    const watchStatus = String(event.currentTarget.dataset.status || "") as MediaStatus
+    if (!this.data.canWrite || !entry || this.data.operating) return
+    if (!(["planned", "in_progress", "completed"] as string[]).includes(watchStatus)) return
+    if (entry.watch_status === watchStatus) return
+    this.setData({
+      entry: { ...entry, watch_status: watchStatus },
+      operating: true
+    })
+    try {
+      await updateMediaEntry(entry.id, { watch_status: watchStatus })
+      const mediaRevision = markMediaDataChanged()
+      if (isAsyncPageActive(this)) this.setData({ mediaRevision })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ entry })
+        wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ operating: false })
     }
   },
 

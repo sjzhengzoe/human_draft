@@ -53,16 +53,36 @@
         </view>
       </view>
 
+      <view class="detail-status-options {{operating ? 'detail-status-options--disabled' : ''}}" role="group" aria-label="切换观看状态">
+        <view
+          class="detail-status-option {{entry.watch_status === 'planned' ? 'detail-status-option--active' : ''}}"
+          role="button"
+          aria-pressed="{{entry.watch_status === 'planned'}}"
+          data-status="planned"
+          bindtap="handleWatchStatusTap"
+        >{{isAudio ? '想听' : '想看'}}</view>
+        <view
+          class="detail-status-option {{entry.watch_status === 'in_progress' ? 'detail-status-option--active' : ''}}"
+          role="button"
+          aria-pressed="{{entry.watch_status === 'in_progress'}}"
+          data-status="in_progress"
+          bindtap="handleWatchStatusTap"
+        >{{isAudio ? '在听' : '在看'}}</view>
+        <view
+          class="detail-status-option {{entry.watch_status === 'completed' ? 'detail-status-option--active' : ''}}"
+          role="button"
+          aria-pressed="{{entry.watch_status === 'completed'}}"
+          data-status="completed"
+          bindtap="handleWatchStatusTap"
+        >{{isAudio ? '听过' : '看过'}}</view>
+      </view>
+
       <view class="detail-attributes">
         <view class="detail-attribute">
           <view class="detail-attribute__label">分类</view>
           <view class="detail-attribute__value">{{entry.media_type}}</view>
         </view>
         <view class="detail-attribute">
-          <view class="detail-attribute__label">状态</view>
-          <view class="detail-attribute__value">{{isAudio ? (entry.watch_status === 'planned' ? '想听' : entry.watch_status === 'in_progress' ? '在听' : '听过') : (entry.watch_status === 'planned' ? '想看' : entry.watch_status === 'in_progress' ? '在看' : '看过')}}</view>
-        </view>
-        <view class="detail-attribute detail-attribute--wide">
           <view class="detail-attribute__label">平台/来源</view>
           <view class="detail-attribute__value">{{platformText}}</view>
         </view>
