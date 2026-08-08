@@ -42,7 +42,7 @@
         </view>
       </scroll-view>
       <view class="search-row">
-        <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <app-input custom-class="search-row__input" font-size="20rpx" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
         <view class="search-row__button" bindtap="handleSearch">搜索</view>
       </view>

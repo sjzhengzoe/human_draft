@@ -227,6 +227,7 @@
                 <app-input
                   class="episode-editor__control"
                   custom-class="episode-editor__input"
+                  font-size="20rpx"
                   name="title"
                   value="{{episodeDraftTitle}}"
                   maxlength="120"
@@ -242,6 +243,7 @@
                     name="plot_summary"
                     value="{{episodeDraftPlotSummary}}"
                     maxlength="2000"
+                    placeholder-style="font-size: 20rpx;"
                     auto-height
                     cursor-spacing="32"
                     adjust-position="{{true}}"
@@ -322,6 +324,7 @@
                         <app-input
                           class="episode-editor__control"
                           custom-class="episode-editor__input"
+                          font-size="20rpx"
                           name="dialogue_speaker_{{noteIndex}}_{{dialogueIndex}}"
                           value="{{dialogue.speaker}}"
                           maxlength="40"
@@ -341,6 +344,7 @@
                             name="dialogue_content_{{noteIndex}}_{{dialogueIndex}}"
                             value="{{dialogue.content}}"
                             maxlength="500"
+                            placeholder-style="font-size: 20rpx;"
                             auto-height
                             cursor-spacing="32"
                             adjust-position="{{true}}"
@@ -370,6 +374,7 @@
                       name="timeline_content_{{noteIndex}}"
                       value="{{draftNote.content}}"
                       maxlength="500"
+                      placeholder-style="font-size: 20rpx;"
                       auto-height
                       cursor-spacing="32"
                       adjust-position="{{true}}"

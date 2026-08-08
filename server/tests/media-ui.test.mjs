@@ -99,6 +99,14 @@ test("the whole media module opts into the smallest typography", async () => {
     assert.match(styles, /compact-typography\.less/);
     assert.match(page, /<custom-navigation[^>]*compact-title="\{\{true\}\}"/);
     assert.doesNotMatch(styles, /font-size:\s*(?:21|23|25|26|27|32)rpx/);
+    const appInputs = page.match(/<app-input\b[\s\S]*?\/>/g) || [];
+    const textareas = page.match(/<textarea\b[\s\S]*?\/>/g) || [];
+    for (const input of appInputs) assert.match(input, /font-size="20rpx"/);
+    for (const textarea of textareas) {
+      if (textarea.includes("placeholder=")) {
+        assert.match(textarea, /placeholder-style="font-size: 20rpx;"/);
+      }
+    }
   }
 });
 

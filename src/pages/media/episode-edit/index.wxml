@@ -15,11 +15,11 @@
   <view class="form-card">
     <view class="field">
       <view class="field-label">单集标题</view>
-      <app-input custom-class="field-input" name="title" value="{{title}}" maxlength="120" placeholder="例如：真相" bindinput="handleTitleInput" />
+      <app-input custom-class="field-input" font-size="20rpx" name="title" value="{{title}}" maxlength="120" placeholder="例如：真相" bindinput="handleTitleInput" />
     </view>
     <view class="field">
       <view class="field-label field-label--primary">整集概括</view>
-      <textarea class="summary-input" name="plot_summary" value="{{plotSummary}}" maxlength="2000" placeholder="概括这一整集发生了什么" bindinput="handleSummaryInput" />
+      <textarea class="summary-input" name="plot_summary" value="{{plotSummary}}" maxlength="2000" placeholder="概括这一整集发生了什么" placeholder-style="font-size: 20rpx;" bindinput="handleSummaryInput" />
       <view class="word-count">{{plotSummary.length}} / 2000</view>
     </view>
   </view>
@@ -79,6 +79,7 @@
                 <app-input
                   class="timeline-dialogue-speaker-host"
                   custom-class="timeline-dialogue-speaker"
+                  font-size="20rpx"
                   name="dialogue_speaker_{{noteIndex}}_{{dialogueIndex}}"
                   value="{{dialogue.speaker}}"
                   maxlength="40"
@@ -95,6 +96,7 @@
                   name="dialogue_content_{{noteIndex}}_{{dialogueIndex}}"
                   value="{{dialogue.content}}"
                   maxlength="500"
+                  placeholder-style="font-size: 20rpx;"
                   auto-height
                   cursor-spacing="32"
                   adjust-position="{{true}}"
@@ -122,6 +124,7 @@
               name="timeline_content_{{noteIndex}}"
               value="{{item.content}}"
               maxlength="500"
+              placeholder-style="font-size: 20rpx;"
               auto-height
               cursor-spacing="32"
               adjust-position="{{true}}"
