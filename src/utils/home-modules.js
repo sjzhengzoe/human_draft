@@ -3,12 +3,12 @@ const HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY = "HIDDEN_HOME_MODULE_KEYS_V1"
 const HOME_FEATURE_GROUPS = [
   {
     key: "creation",
-    title: "创作",
+    title: "内容创作",
     items: [
       {
         key: "text-card",
         icon: "notebook-pen",
-        title: "图文创作",
+        title: "图文卡片",
         path: "/pages/xiaohongshu/index",
         featured: true,
         available: true,
@@ -17,13 +17,13 @@ const HOME_FEATURE_GROUPS = [
     ]
   },
   {
-    key: "practical",
-    title: "实际问题",
+    key: "inspiration",
+    title: "生活灵感",
     items: [
       {
         key: "menu",
         icon: "cooking-pot",
-        title: "吃 / 饮食记录",
+        title: "我的菜单",
         path: "/pages/menu/index",
         available: true,
         requiresLogin: true
@@ -31,7 +31,7 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "media",
         icon: "clapperboard",
-        title: "看 / 影视记录",
+        title: "影视片单",
         path: "/pages/media/index",
         available: true,
         requiresLogin: true
@@ -39,7 +39,7 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "activities",
         icon: "sparkles",
-        title: "玩 / 活动清单",
+        title: "活动清单",
         path: "/pages/activities/index",
         available: true,
         requiresLogin: true
@@ -47,7 +47,7 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "chat-topics",
         icon: "messages-square",
-        title: "聊 / 聊天话题",
+        title: "聊天话题",
         path: "/pages/chat-topics/index",
         available: true,
         requiresLogin: true
@@ -55,17 +55,9 @@ const HOME_FEATURE_GROUPS = [
     ]
   },
   {
-    key: "life",
-    title: "生活",
+    key: "management",
+    title: "日常管理",
     items: [
-      {
-        key: "key-moments",
-        icon: "flag",
-        title: "关键节点",
-        path: "/pages/key-moments/index",
-        available: true,
-        requiresLogin: true
-      },
       {
         key: "exercise",
         icon: "dumbbell",
@@ -73,20 +65,6 @@ const HOME_FEATURE_GROUPS = [
         path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
-      }
-    ]
-  },
-  {
-    key: "records",
-    title: "记录",
-    items: [
-      {
-        key: "footprint",
-        icon: "map-pinned",
-        title: "走 / 全国足迹",
-        path: "/pages/footprint/index",
-        available: true,
-        requiresLogin: false
       },
       {
         key: "luggage",
@@ -99,10 +77,32 @@ const HOME_FEATURE_GROUPS = [
       {
         key: "wardrobe",
         icon: "shirt",
-        title: "衣橱尺寸",
+        title: "衣物尺寸",
         path: "/pages/wardrobe/index",
         available: true,
         requiresLogin: true
+      }
+    ]
+  },
+  {
+    key: "records",
+    title: "人生记录",
+    items: [
+      {
+        key: "key-moments",
+        icon: "flag",
+        title: "人生节点",
+        path: "/pages/key-moments/index",
+        available: true,
+        requiresLogin: true
+      },
+      {
+        key: "footprint",
+        icon: "map-pinned",
+        title: "全国足迹",
+        path: "/pages/footprint/index",
+        available: true,
+        requiresLogin: false
       }
     ]
   }
