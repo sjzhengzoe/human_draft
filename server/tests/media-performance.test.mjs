@@ -15,11 +15,18 @@ test("media pages reuse loaded data until a successful mutation invalidates it",
   assert.match(index, /sharedLoaded:\s*false/);
   assert.match(index, /overviewLoaded:\s*false/);
   assert.match(index, /recordLoaded:\s*false/);
-  assert.match(index, /if \(!this\.isCurrentCacheFresh\(\)\)/);
+  assert.match(index, /!this\.isCurrentCacheFresh\(\)[\s\S]*?localSyncExpiresAt/);
   assert.match(index, /handleContentLower\(\)/);
   assert.match(index, /handlePullRefresh\(\)/);
   assert.match(index, /this\.data\.mediaRevision !== mediaRevision/);
   assert.match(index, /syncLoadedDataFromCache\(mediaRevision\)/);
+  const revisionSyncBlock = index.match(
+    /if \(this\.data\.mediaRevision !== mediaRevision\) \{([\s\S]*?)\n    \}\n    if \(/
+  )?.[1] || "";
+  assert.match(revisionSyncBlock, /syncLoadedDataFromCache\(mediaRevision\)/);
+  assert.doesNotMatch(revisionSyncBlock, /forceRefresh|background/);
+  assert.match(index, /localSyncExpiresAt: Date\.now\(\) \+ MEDIA_CACHE_FRESH_MS/);
+  assert.match(index, /restoreContentScroll\(\)/);
   assert.match(categories, /this\.data\.mediaRevision !== getMediaDataRevision\(\)/);
   assert.match(detail, /this\.data\.mediaRevision !== getMediaDataRevision\(\)/);
   assert.match(revision, /mediaDataRevision \+= 1/);
@@ -46,6 +53,8 @@ test("media reads reuse session cache and successful writes update it", async ()
   assert.match(cache, /MAX_CACHED_MEDIA_DETAILS = 20/);
   assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
   assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);
+  assert.match(detail, /restoreRecordsScroll\(\)/);
+  assert.match(detail, /Math\.max\(EPISODE_RENDER_BATCH, this\.data\.visibleEpisodeCount\)/);
   assert.match(index, /getCachedMediaEntryPage/);
   assert.match(index, /hydrateCurrentViewFromCache/);
   assert.match(auth, /clearMediaDataCache\(\)/);

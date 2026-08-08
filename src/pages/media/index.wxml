@@ -60,7 +60,9 @@
     scroll-y
     enhanced
     show-scrollbar="{{false}}"
+    scroll-top="{{contentScrollTop}}"
     lower-threshold="240"
+    bindscroll="handleContentScroll"
     bindscrolltolower="handleContentLower"
     refresher-enabled
     refresher-triggered="{{refresherTriggered}}"

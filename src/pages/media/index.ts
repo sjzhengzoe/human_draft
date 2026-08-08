@@ -8,6 +8,7 @@ import {
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
 import {
+  MEDIA_CACHE_FRESH_MS,
   getCachedMediaCategories,
   getCachedMediaEntries,
   getCachedMediaEntryPage,
@@ -43,6 +44,7 @@ type CachedSequence = {
 const PAGE_SIZE = 60
 const SEARCH_DEBOUNCE_MS = 180
 let mediaSearchTimer: ReturnType<typeof setTimeout> | null = null
+const contentScrollPositions = new WeakMap<object, number>()
 
 function timestamp(value: string): number {
   const result = Date.parse(value)
@@ -201,11 +203,14 @@ Page({
     overviewLoaded: false,
     recordLoaded: false,
     mediaRevision: -1,
+    localSyncExpiresAt: 0,
+    contentScrollTop: 0,
     errorMessage: ""
   },
 
   onLoad() {
     activateAsyncPage(this)
+    contentScrollPositions.set(this, 0)
   },
 
   onShow() {
@@ -228,16 +233,13 @@ Page({
     if (this.data.mediaRevision !== mediaRevision) {
       if (!this.syncLoadedDataFromCache(mediaRevision)) {
         void this.loadCurrentView({ refreshShared: true, reset: true })
-      } else if (!this.isCurrentCacheFresh()) {
-        void this.loadCurrentView({
-          reset: true,
-          forceRefresh: true,
-          background: true
-        })
       }
       return
     }
-    if (!this.isCurrentCacheFresh()) {
+    if (
+      !this.isCurrentCacheFresh()
+      && Date.now() >= this.data.localSyncExpiresAt
+    ) {
       void this.loadCurrentView({
         refreshShared: true,
         reset: true,
@@ -249,6 +251,7 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
+    contentScrollPositions.delete(this)
     if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
     mediaSearchTimer = null
   },
@@ -371,9 +374,21 @@ Page({
       recordSourceItems,
       recordItems: recordSourceItems,
       recordTotal,
-      mediaRevision
-    })
+      mediaRevision,
+      localSyncExpiresAt: Date.now() + MEDIA_CACHE_FRESH_MS
+    }, () => this.restoreContentScroll())
     return true
+  },
+
+  handleContentScroll(event: WechatMiniprogram.CustomEvent<{ scrollTop: number }>) {
+    const scrollTop = Number(event.detail.scrollTop)
+    if (Number.isFinite(scrollTop)) contentScrollPositions.set(this, scrollTop)
+  },
+
+  restoreContentScroll() {
+    const contentScrollTop = contentScrollPositions.get(this) || 0
+    if (Math.abs(this.data.contentScrollTop - contentScrollTop) < 1) return
+    this.setData({ contentScrollTop })
   },
 
   async loadCurrentView(options: LoadCurrentViewOptions = {}) {
@@ -437,7 +452,8 @@ Page({
           overviewItems: items,
           overviewTotal: result.pagination.total,
           overviewLoaded: true,
-          mediaRevision: getMediaDataRevision()
+          mediaRevision: getMediaDataRevision(),
+          localSyncExpiresAt: 0
         })
       } else {
         const page = reset ? 1 : this.data.recordPage + 1
@@ -460,7 +476,8 @@ Page({
           recordHasMore: result.pagination.has_more,
           recordTotal: result.pagination.total,
           recordLoaded: true,
-          mediaRevision: getMediaDataRevision()
+          mediaRevision: getMediaDataRevision(),
+          localSyncExpiresAt: 0
         })
       }
     } catch (error) {

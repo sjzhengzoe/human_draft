@@ -118,6 +118,8 @@
         scroll-y
         enhanced
         show-scrollbar="{{false}}"
+        scroll-top="{{detailScrollTop}}"
+        bindscroll="handleDetailScroll"
         refresher-enabled
         refresher-triggered="{{detailRefresherTriggered}}"
         bindrefresherrefresh="handleDetailPullRefresh"
@@ -173,7 +175,9 @@
       scroll-y
       enhanced
       show-scrollbar="{{false}}"
+      scroll-top="{{recordsScrollTop}}"
       lower-threshold="240"
+      bindscroll="handleRecordsScroll"
       bindscrolltolower="handleRecordsLower"
       refresher-enabled="{{!editingEpisodeId}}"
       refresher-triggered="{{detailRefresherTriggered}}"

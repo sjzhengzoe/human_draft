@@ -46,6 +46,8 @@ import {
 let timelineNoteSequence = 0
 let timelineDialogueSequence = 0
 let episodeDraftTimer: ReturnType<typeof setTimeout> | null = null
+const detailScrollPositions = new WeakMap<object, number>()
+const recordsScrollPositions = new WeakMap<object, number>()
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const BUILTIN_PLATFORMS = [
@@ -288,12 +290,16 @@ Page({
     hasLoaded: false,
     mediaRevision: -1,
     operating: false,
+    detailScrollTop: 0,
+    recordsScrollTop: 0,
     errorMessage: "",
     ratingOptions: RATING_OPTIONS
   },
 
   onLoad(query: Record<string, string | undefined>) {
     activateAsyncPage(this)
+    detailScrollPositions.set(this, 0)
+    recordsScrollPositions.set(this, 0)
     this.setData({
       id: String(query.id || ""),
       requestedSeasonId: String(query.seasonId || "")
@@ -317,6 +323,8 @@ Page({
   onUnload() {
     this.flushEpisodeDraft()
     deactivateAsyncPage(this)
+    detailScrollPositions.delete(this)
+    recordsScrollPositions.delete(this)
   },
 
   onHide() {
@@ -396,13 +404,14 @@ Page({
       : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
     const activeSeason = normalizedSeasons[activeSeasonIndex] || null
     const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
+    const activeDetailTab = isEpisodic ? this.data.activeDetailTab : "detail"
     this.setData({
       entry,
       seasons: normalizedSeasons,
       activeSeasonIndex,
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      visibleEpisodeCount: EPISODE_RENDER_BATCH,
+      visibleEpisodeCount: Math.max(EPISODE_RENDER_BATCH, this.data.visibleEpisodeCount),
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
       coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
       platformText: platformText(entry.platforms),
@@ -410,11 +419,36 @@ Page({
       canWrite,
       isEpisodic,
       isAudio: entry.media_type === "广播剧",
-      activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
+      activeDetailTab,
       requestedSeasonId: "",
       mediaRevision: getMediaDataRevision()
+    }, () => {
+      if (activeDetailTab === "records") this.restoreRecordsScroll()
+      else this.restoreDetailScroll()
     })
     wx.setNavigationBarTitle({ title: entry.title })
+  },
+
+  handleDetailScroll(event: WechatMiniprogram.CustomEvent<{ scrollTop: number }>) {
+    const scrollTop = Number(event.detail.scrollTop)
+    if (Number.isFinite(scrollTop)) detailScrollPositions.set(this, scrollTop)
+  },
+
+  handleRecordsScroll(event: WechatMiniprogram.CustomEvent<{ scrollTop: number }>) {
+    const scrollTop = Number(event.detail.scrollTop)
+    if (Number.isFinite(scrollTop)) recordsScrollPositions.set(this, scrollTop)
+  },
+
+  restoreDetailScroll() {
+    const detailScrollTop = detailScrollPositions.get(this) || 0
+    if (Math.abs(this.data.detailScrollTop - detailScrollTop) < 1) return
+    this.setData({ detailScrollTop })
+  },
+
+  restoreRecordsScroll() {
+    const recordsScrollTop = recordsScrollPositions.get(this) || 0
+    if (Math.abs(this.data.recordsScrollTop - recordsScrollTop) < 1) return
+    this.setData({ recordsScrollTop })
   },
 
   handleDetailPullRefresh() {
@@ -730,7 +764,7 @@ Page({
         selectedEntryImagePath: "",
         savingEntry: false,
         mediaRevision
-      })
+      }, () => this.restoreDetailScroll())
       wx.disableAlertBeforeUnload()
       wx.setNavigationBarTitle({ title: persistedEntry.title })
       wx.showToast({ title: "编辑完成", icon: "success" })
@@ -1315,7 +1349,7 @@ Page({
         episodeDraftDirty: false,
         savingEpisode: false,
         mediaRevision
-      })
+      }, () => this.restoreRecordsScroll())
       wx.showToast({ title: "保存成功", icon: "success" })
     } catch (error) {
       if (isAsyncPageActive(this)) {

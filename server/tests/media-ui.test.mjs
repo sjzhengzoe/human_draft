@@ -266,6 +266,8 @@ test("media UI keeps dense controls compact while improving long-list interactio
 
   assert.match(page, /category-list category-list--wrap/);
   assert.doesNotMatch(page, /category-scroll/);
+  assert.match(page, /scroll-top="\{\{contentScrollTop\}\}"/);
+  assert.match(page, /bindscroll="handleContentScroll"/);
   assert.match(page, /src="\{\{item\.coverThumbnailUrl\}\}"/);
   assert.match(styles, /-webkit-line-clamp:\s*2/);
   assert.match(logic, /const PAGE_SIZE = 60/);
@@ -278,6 +280,10 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(detailPage, /wx:if="\{\{\(editingEntry \? entryDraftWatchStatus : entry\.watch_status\) === 'completed'\}\}" class="detail-rating"/);
   assert.match(detailPage, /bindtap="handlePersonalRatingTap"/);
   assert.match(detailPage, /bindtap="handlePersonalRatingClear"/);
+  assert.match(detailPage, /scroll-top="\{\{detailScrollTop\}\}"/);
+  assert.match(detailPage, /bindscroll="handleDetailScroll"/);
+  assert.match(detailPage, /scroll-top="\{\{recordsScrollTop\}\}"/);
+  assert.match(detailPage, /bindscroll="handleRecordsScroll"/);
   assert.match(detailLogic, /updateMediaEntry\(entry\.id, \{ personal_rating: personalRating \}\)/);
   assert.match(detailLogic, /if \(entry\.watch_status !== "completed"\) return/);
   assert.doesNotMatch(detailPage, /detail-heart|值得重温|值得重听/);
@@ -285,5 +291,6 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(detailPage, /index < visibleEpisodeCount/);
   assert.match(detailLogic, /EPISODE_RENDER_BATCH = 20/);
   assert.match(detailLogic, /persistEpisodeDraft/);
+  assert.match(detailLogic, /savingEpisode: false,[\s\S]*?mediaRevision[\s\S]*?restoreRecordsScroll\(\)/);
   assert.match(detailStyles, /\.episode-edit-save-bar\s*\{[^}]*position:\s*fixed;/s);
 });
