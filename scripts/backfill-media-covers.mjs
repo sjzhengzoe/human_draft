@@ -25,11 +25,12 @@ const RECORD_CORRECTIONS = [
     reason: "修正日文汉字误写",
   },
   {
-    fromTitle: "凡人修仙传",
+    fromTitle: "凡人修仙传：风起天南",
     fromMediaType: "动画片",
-    toTitle: "凡人修仙传：风起天南",
+    toTitle: "凡人修仙传",
     toMediaType: "动画片",
-    reason: "按豆瓣主条目补全第一季正式名称",
+    reason: "条目聚合哔哩哔哩全部篇章，名称不再限定为风起天南",
+    optional: true,
   },
   {
     fromTitle: "斗罗大陆",
@@ -39,11 +40,12 @@ const RECORD_CORRECTIONS = [
     reason: "按豆瓣主条目补全第一季正式名称",
   },
   {
-    fromTitle: "牧神记",
+    fromTitle: "牧神记 年番1",
     fromMediaType: "动画片",
-    toTitle: "牧神记 年番1",
+    toTitle: "牧神记",
     toMediaType: "动画片",
-    reason: "按豆瓣主条目补全年番名称",
+    reason: "按哔哩哔哩聚合条目恢复作品总名",
+    optional: true,
   },
   {
     fromTitle: "神探夏洛克",
@@ -69,11 +71,12 @@ const RECORD_CORRECTIONS = [
     reason: "按豆瓣主条目补全正式剧名",
   },
   {
-    fromTitle: "咒术回战",
+    fromTitle: "咒术回战 第一季",
     fromMediaType: "动画片",
-    toTitle: "咒术回战 第一季",
+    toTitle: "咒术回战",
     toMediaType: "动画片",
-    reason: "按豆瓣主条目补全季名",
+    reason: "条目聚合哔哩哔哩全部季，名称不再限定为第一季",
+    optional: true,
   },
   {
     fromTitle: "甄嬛传",
@@ -98,13 +101,13 @@ const COVER_PLANS = [
     sourcePage: "https://movie.douban.com/subject/10877415/",
   },
   {
-    title: "凡人修仙传：风起天南",
+    title: "凡人修仙传",
     mediaType: "动画片",
     sourceUrl: "https://img9.doubanio.com/view/photo/l/public/p2610801866.jpg",
     sourcePage: "https://movie.douban.com/photos/photo/2610801866/",
   },
   {
-    title: "咒术回战 第一季",
+    title: "咒术回战",
     mediaType: "动画片",
     sourceUrl: "https://img9.doubanio.com/view/photo/l/public/p2620216005.jpg",
     sourcePage: "https://movie.douban.com/subject/34895145/",
@@ -134,7 +137,7 @@ const COVER_PLANS = [
     sourcePage: "https://movie.douban.com/subject/27040807/",
   },
   {
-    title: "牧神记 年番1",
+    title: "牧神记",
     mediaType: "动画片",
     sourceUrl: "https://img9.doubanio.com/view/photo/l/public/p2916595576.jpg",
     sourcePage: "https://movie.douban.com/subject/36576581/",
@@ -247,39 +250,199 @@ const EPISODE_PLANS = [
     sourcePage: "https://movie.douban.com/subject/10877415/",
   },
   {
-    title: "凡人修仙传：风起天南",
+    title: "凡人修仙传",
     mediaType: "动画片",
     seasonName: "风起天南",
     episodeCount: 17,
-    sourcePage: "https://movie.douban.com/subject/34905694/",
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
   },
   {
-    title: "咒术回战 第一季",
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "燕家堡之战",
+    episodeCount: 4,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "魔道争锋",
+    episodeCount: 25,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "再别天南",
+    episodeCount: 14,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "初入星海",
+    episodeCount: 12,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "星海飞驰序章",
+    episodeCount: 4,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "星海飞驰",
+    episodeCount: 48,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "外海风云",
+    episodeCount: 28,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "重返天南",
+    episodeCount: 24,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "凡人修仙传",
+    mediaType: "动画片",
+    seasonName: "慕兰之战",
+    episodeCount: 9,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss28747",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "咒术回战",
     mediaType: "动画片",
     seasonName: "第一季",
     episodeCount: 24,
-    sourcePage: "https://movie.douban.com/subject/34895145/",
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss34430",
+  },
+  {
+    title: "咒术回战",
+    mediaType: "动画片",
+    seasonName: "第二季",
+    episodeCount: 23,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss45574",
+    allowAdditionalSeason: true,
   },
   {
     title: "夏目友人帐",
     mediaType: "动画片",
     seasonName: "第一季",
     episodeCount: 13,
-    sourcePage: "https://movie.douban.com/subject/3060542/",
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss1660",
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第二季",
+    episodeCount: 13,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss1661",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第三季",
+    episodeCount: 13,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss1662",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第四季",
+    episodeCount: 13,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss1663",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第五季",
+    episodeCount: 11,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss5550",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第六季",
+    episodeCount: 13,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss5977",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "夏目友人帐",
+    mediaType: "动画片",
+    seasonName: "第七季",
+    episodeCount: 13,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss48811",
+    allowAdditionalSeason: true,
   },
   {
     title: "工作细胞",
     mediaType: "动画片",
     seasonName: "第一季",
-    episodeCount: 13,
-    sourcePage: "https://movie.douban.com/subject/28514091/",
+    episodeCount: 14,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss24588",
+  },
+  {
+    title: "工作细胞",
+    mediaType: "动画片",
+    seasonName: "第二季",
+    episodeCount: 8,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss36174",
+    allowAdditionalSeason: true,
   },
   {
     title: "排球少年",
     mediaType: "动画片",
     seasonName: "第一季",
     episodeCount: 25,
-    sourcePage: "https://movie.douban.com/subject/25732103/",
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss2727",
+  },
+  {
+    title: "排球少年",
+    mediaType: "动画片",
+    seasonName: "第二季",
+    episodeCount: 25,
+    sourcePage: "https://movie.douban.com/subject/26285156/",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "排球少年",
+    mediaType: "动画片",
+    seasonName: "第三季",
+    episodeCount: 10,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ep277947",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "排球少年",
+    mediaType: "动画片",
+    seasonName: "第四季",
+    episodeCount: 25,
+    sourcePage: "https://haikyu.jp/season4/",
+    allowAdditionalSeason: true,
   },
   {
     title: "斗罗大陆1 第一季",
@@ -289,25 +452,43 @@ const EPISODE_PLANS = [
     sourcePage: "https://movie.douban.com/subject/27040807/",
   },
   {
-    title: "牧神记 年番1",
+    title: "牧神记",
     mediaType: "动画片",
-    seasonName: "年番1",
-    episodeCount: 52,
-    sourcePage: "https://movie.douban.com/subject/36576581/",
+    seasonName: "动画",
+    episodeCount: 94,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss45969",
+    previousSeasonName: "年番1",
   },
   {
     title: "罗小黑战记",
     mediaType: "动画片",
-    seasonName: "正剧",
-    episodeCount: 40,
-    sourcePage: "https://movie.douban.com/subject/10477598/",
+    seasonName: "第一季",
+    episodeCount: 43,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss1733",
+    previousSeasonName: "正剧",
   },
   {
     title: "致不灭的你",
     mediaType: "动画片",
     seasonName: "第一季",
     episodeCount: 20,
-    sourcePage: "https://www.bilibili.com/bangumi/media/md28233896",
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss38214",
+  },
+  {
+    title: "致不灭的你",
+    mediaType: "动画片",
+    seasonName: "第二季",
+    episodeCount: 20,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss43148",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "致不灭的你",
+    mediaType: "动画片",
+    seasonName: "第三季",
+    episodeCount: 8,
+    sourcePage: "https://www.bilibili.com/bangumi/play/ss113506",
+    allowAdditionalSeason: true,
   },
   {
     title: "小潭山没有天文台",
@@ -374,6 +555,23 @@ const EPISODE_PLANS = [
     seasonName: "正剧",
     episodeCount: 78,
     sourcePage: "https://movie.douban.com/subject/26928226/",
+  },
+];
+
+const SEASON_RENAME_PLANS = [
+  {
+    title: "牧神记",
+    mediaType: "动画片",
+    fromSeasonName: "年番1",
+    toSeasonName: "动画",
+    reason: "按哔哩哔哩当前分组名称修正",
+  },
+  {
+    title: "罗小黑战记",
+    mediaType: "动画片",
+    fromSeasonName: "正剧",
+    toSeasonName: "第一季",
+    reason: "按哔哩哔哩系列分组名称修正",
   },
 ];
 
@@ -668,6 +866,58 @@ async function applyAttributePlans(client, userId, entries) {
   return results;
 }
 
+async function applySeasonRenamePlans(client, userId, entries) {
+  const results = [];
+  for (const plan of SEASON_RENAME_PLANS) {
+    const entry = findExactEntry(entries, plan.title, plan.mediaType);
+    const query = await client
+      .from("media_seasons")
+      .select("id,name")
+      .eq("user_id", userId)
+      .eq("media_entry_id", entry.id);
+    if (query.error) throw query.error;
+    const seasons = query.data || [];
+    const fromMatches = seasons.filter((season) => season.name === plan.fromSeasonName);
+    const toMatches = seasons.filter((season) => season.name === plan.toSeasonName);
+    if (fromMatches.length === 0 && toMatches.length === 1) {
+      results.push({
+        title: plan.title,
+        mediaType: plan.mediaType,
+        fromSeasonName: plan.fromSeasonName,
+        toSeasonName: plan.toSeasonName,
+        status: "已是正确值",
+      });
+      continue;
+    }
+    if (fromMatches.length !== 1 || toMatches.length !== 0) {
+      throw new Error(
+        `${plan.mediaType}《${plan.title}》分季“${plan.fromSeasonName}”匹配到 ${fromMatches.length} 条，`
+          + `目标分季“${plan.toSeasonName}”匹配到 ${toMatches.length} 条。`,
+      );
+    }
+    if (APPLY) {
+      const update = await client
+        .from("media_seasons")
+        .update({ name: plan.toSeasonName })
+        .eq("id", fromMatches[0].id)
+        .eq("user_id", userId)
+        .eq("name", plan.fromSeasonName)
+        .select("id")
+        .single();
+      if (update.error) throw update.error;
+    }
+    results.push({
+      title: plan.title,
+      mediaType: plan.mediaType,
+      fromSeasonName: plan.fromSeasonName,
+      toSeasonName: plan.toSeasonName,
+      reason: plan.reason,
+      status: APPLY ? "已修正" : "待修正",
+    });
+  }
+  return results;
+}
+
 async function applyEpisodePlans(client, userId, entries) {
   const results = [];
   for (const plan of EPISODE_PLANS) {
@@ -680,7 +930,10 @@ async function applyEpisodePlans(client, userId, entries) {
       .order("sort_order", { ascending: true });
     if (seasonQuery.error) throw seasonQuery.error;
     const seasons = seasonQuery.data || [];
-    const matchingSeasons = seasons.filter((season) => season.name.trim() === plan.seasonName);
+    const matchingSeasons = seasons.filter(
+      (season) => season.name.trim() === plan.seasonName
+        || season.name.trim() === plan.previousSeasonName,
+    );
 
     if (!matchingSeasons.length && seasons.length && !plan.allowAdditionalSeason) {
       results.push({
@@ -787,6 +1040,7 @@ async function main() {
   const correctionResults = await applyRecordCorrections(client, userId, entries || []);
   const correctedEntries = buildCorrectedEntries(entries || []);
   const attributeResults = await applyAttributePlans(client, userId, correctedEntries);
+  const seasonRenameResults = await applySeasonRenamePlans(client, userId, correctedEntries);
   const episodeResults = await applyEpisodePlans(client, userId, correctedEntries);
   const results = [];
   const previews = [];
@@ -851,6 +1105,7 @@ async function main() {
     mode: APPLY ? "apply" : "dry-run",
     corrections: correctionResults,
     attributes: attributeResults,
+    seasonRenames: seasonRenameResults,
     episodes: episodeResults,
     planned: COVER_PLANS.length,
     updated: results.filter((result) => result.status === "已补充").length,
