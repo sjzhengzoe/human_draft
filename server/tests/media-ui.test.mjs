@@ -26,7 +26,10 @@ test("media overview and records share the same status-free four-column cards", 
   assert.doesNotMatch(page, /overview-list|overview-row/);
   assert.doesNotMatch(page, /swiper|status-badge|watch_status/);
   assert.doesNotMatch(page, /overviewCategoryOptions|handleOverviewCategoryChange/);
-  assert.match(page, /bindtap="handleOverviewCategoryTap"/);
+  assert.equal(page.match(/bindtap="handleCategoryTap"/g)?.length, 4);
+  assert.match(logic, /selectedCategory:[ \t]*"" as MediaType/);
+  assert.doesNotMatch(logic, /overviewCategory|activeRecordType/);
+  assert.match(logic, /this\.applyOverviewFilters\(\)[\s\S]*this\.applyRecordFilters\(\)/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(logic, /applyOverviewFilters\(\)/);
   assert.match(page, /catchtap="handleRevisitableTap"/);

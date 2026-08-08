@@ -18,8 +18,8 @@
       </view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
-          <view class="category-chip {{overviewCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleOverviewCategoryTap">全部</view>
-          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{overviewCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleOverviewCategoryTap">{{item}}</view>
+          <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
+          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
         </view>
       </scroll-view>
       <view class="filter-heading filter-heading--status">
@@ -37,8 +37,8 @@
       </view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
-          <view class="category-chip {{activeRecordType === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleRecordTypeTap">全部</view>
-          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{activeRecordType === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleRecordTypeTap">{{item}}</view>
+          <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
+          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
         </view>
       </scroll-view>
       <view class="search-row">
@@ -102,7 +102,7 @@
     <block wx:else>
       <view class="record-heading">
         <view class="record-heading__main">
-          <view class="record-heading__title">{{activeRecordType || '全部记录'}}</view>
+          <view class="record-heading__title">{{selectedCategory || '全部记录'}}</view>
           <view class="record-heading__count">{{recordItems.length}} 条记录</view>
         </view>
       </view>

@@ -92,12 +92,11 @@ Page({
   data: {
     displayMode: "overview" as DisplayMode,
     mediaTypes: [] as MediaType[],
-    overviewCategory: "" as MediaType,
+    selectedCategory: "" as MediaType,
     overviewStatus: "in_progress" as OverviewStatus,
     overviewInProgressSource: [] as DisplayMediaEntry[],
     overviewPlannedSource: [] as DisplayMediaEntry[],
     overviewItems: [] as DisplayMediaEntry[],
-    activeRecordType: "" as MediaType,
     recordSourceItems: [] as DisplayMediaEntry[],
     recordItems: [] as DisplayMediaEntry[],
     revisitableUpdatingId: "",
@@ -152,8 +151,7 @@ Page({
     try {
       let sharedData = {
         mediaTypes: this.data.mediaTypes,
-        overviewCategory: this.data.overviewCategory,
-        activeRecordType: this.data.activeRecordType,
+        selectedCategory: this.data.selectedCategory,
         canWrite: this.data.canWrite,
         sharedLoaded: this.data.sharedLoaded
       }
@@ -164,22 +162,18 @@ Page({
         ])
         if (!isAsyncPageRequestCurrent(this, generation)) return
         const mediaTypes = categories.map((category) => category.name)
-        const overviewCategory = mediaTypes.includes(this.data.overviewCategory)
-          ? this.data.overviewCategory
-          : ""
-        const activeRecordType = mediaTypes.includes(this.data.activeRecordType)
-          ? this.data.activeRecordType
+        const selectedCategory = mediaTypes.includes(this.data.selectedCategory)
+          ? this.data.selectedCategory
           : ""
         sharedData = {
           mediaTypes,
-          overviewCategory,
-          activeRecordType,
+          selectedCategory,
           canWrite: session.user.can_write,
           sharedLoaded: true
         }
       }
 
-      const { overviewCategory, activeRecordType } = sharedData
+      const { selectedCategory } = sharedData
 
       if (displayMode === "overview") {
         const [inProgressEntries, plannedEntries] = await Promise.all([
@@ -195,7 +189,7 @@ Page({
           overviewPlannedSource,
           overviewItems: filterOverviewItems(
             this.data.overviewStatus,
-            overviewCategory,
+            selectedCategory,
             overviewInProgressSource,
             overviewPlannedSource
           ),
@@ -210,7 +204,7 @@ Page({
           ...sharedData,
           recordSourceItems,
           recordItems: recordSourceItems.filter((item) =>
-            (!activeRecordType || item.media_type === activeRecordType) &&
+            (!selectedCategory || item.media_type === selectedCategory) &&
             (!appliedKeyword || item.title.toLocaleLowerCase().includes(appliedKeyword))
           ),
           recordLoaded: true,
@@ -244,10 +238,13 @@ Page({
     })
   },
 
-  handleOverviewCategoryTap(event: WechatMiniprogram.TouchEvent) {
-    const overviewCategory = String(event.currentTarget.dataset.type || "")
-    if (overviewCategory === this.data.overviewCategory) return
-    this.setData({ overviewCategory }, () => this.applyOverviewFilters())
+  handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
+    const selectedCategory = String(event.currentTarget.dataset.type || "")
+    if (selectedCategory === this.data.selectedCategory) return
+    this.setData({ selectedCategory }, () => {
+      this.applyOverviewFilters()
+      this.applyRecordFilters()
+    })
   },
 
   handleOverviewStatusTap(event: WechatMiniprogram.TouchEvent) {
@@ -260,17 +257,11 @@ Page({
     this.setData({
       overviewItems: filterOverviewItems(
         this.data.overviewStatus,
-        this.data.overviewCategory,
+        this.data.selectedCategory,
         this.data.overviewInProgressSource,
         this.data.overviewPlannedSource
       )
     })
-  },
-
-  handleRecordTypeTap(event: WechatMiniprogram.TouchEvent) {
-    const activeRecordType = String(event.currentTarget.dataset.type || "")
-    if (activeRecordType === this.data.activeRecordType) return
-    this.setData({ activeRecordType }, () => this.applyRecordFilters())
   },
 
   handleKeywordInput(event: WechatMiniprogram.Input) {
@@ -291,10 +282,10 @@ Page({
 
   applyRecordFilters() {
     const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
-    const activeRecordType = this.data.activeRecordType
+    const selectedCategory = this.data.selectedCategory
     this.setData({
       recordItems: this.data.recordSourceItems.filter((item) =>
-        (!activeRecordType || item.media_type === activeRecordType) &&
+        (!selectedCategory || item.media_type === selectedCategory) &&
         (!keyword || item.title.toLocaleLowerCase().includes(keyword))
       )
     })
@@ -307,9 +298,7 @@ Page({
       wx.navigateTo({ url: "/pages/media/categories/index" })
       return
     }
-    const mediaType = this.data.displayMode === "overview"
-      ? this.data.overviewCategory || this.data.mediaTypes[0]
-      : this.data.activeRecordType || this.data.mediaTypes[0]
+    const mediaType = this.data.selectedCategory || this.data.mediaTypes[0]
     wx.removeStorageSync("MEDIA_EDIT_ITEM")
     wx.navigateTo({
       url: `/pages/media/edit/index?mediaType=${encodeURIComponent(mediaType)}`
