@@ -1,6 +1,5 @@
 {
   "navigationBarTitleText": "衣物",
-  "disableScroll": true,
   "usingComponents": {
     "image-cropper": "/components/image-cropper/index"
   }
