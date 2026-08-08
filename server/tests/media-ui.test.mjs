@@ -11,6 +11,17 @@ const editConfigUrl = new URL("../../src/pages/media/edit/index.json", import.me
 const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.meta.url);
 const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
 const detailStylesUrl = new URL("../../src/pages/media/detail/index.less", import.meta.url);
+const compactTypographyUrl = new URL("../../src/pages/media/compact-typography.less", import.meta.url);
+const navigationStylesUrl = new URL("../../src/components/custom-navigation/index.less", import.meta.url);
+
+const mediaPageBases = [
+  "../../src/pages/media/index",
+  "../../src/pages/media/categories/index",
+  "../../src/pages/media/category-edit/index",
+  "../../src/pages/media/edit/index",
+  "../../src/pages/media/detail/index",
+  "../../src/pages/media/episode-edit/index",
+];
 
 test("media overview and records share the same status-free four-column cards", async () => {
   const [page, styles, logic] = await Promise.all([
@@ -45,23 +56,50 @@ test("media overview and records share the same status-free four-column cards", 
 });
 
 test("media controls are vertically centered and use shared typography sizes", async () => {
-  const styles = await readFile(stylesUrl, "utf8");
+  const [styles, page] = await Promise.all([
+    readFile(stylesUrl, "utf8"),
+    readFile(pageUrl, "utf8"),
+  ]);
   const explicitSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)]
     .map((match) => Number(match[1]));
 
   assert.match(styles, /\.record-card__revisit\s*\{[^}]*font-size:\s*36rpx;/s);
-  assert.deepEqual([...new Set(explicitSizes.filter((size) => size !== 36))], [25]);
+  assert.deepEqual([...new Set(explicitSizes.filter((size) => size !== 36))], []);
   assert.match(styles, /var\(--ui-font-size-small\)/);
   assert.match(styles, /var\(--ui-font-size-base\)/);
   assert.match(
     styles,
     /\.record-card__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s,
   );
+  assert.match(styles, /@import "\.\/compact-typography\.less";/);
+  assert.match(styles, /\.section-heading__title,[\s\S]*?font-size:\s*var\(--ui-font-size-small\);/);
+  assert.match(page, /<custom-navigation title="影视记录" compact-title="\{\{true\}\}"/);
   assert.match(styles, /\.record-grid\s*\{[^}]*align-items:\s*start;/s);
   assert.doesNotMatch(styles, /\.record-card__body\s*\{[^}]*min-height:/s);
   assert.match(styles, /\.view-switch__item\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.icon-button\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.search-row__button,[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/);
+});
+
+test("the whole media module opts into the smallest typography", async () => {
+  const [compactTypography, navigationStyles, ...pageFiles] = await Promise.all([
+    readFile(compactTypographyUrl, "utf8"),
+    readFile(navigationStylesUrl, "utf8"),
+    ...mediaPageBases.flatMap((base) => [
+      readFile(new URL(`${base}.less`, import.meta.url), "utf8"),
+      readFile(new URL(`${base}.wxml`, import.meta.url), "utf8"),
+    ]),
+  ]);
+
+  assert.match(compactTypography, /--ui-font-size-base:\s*var\(--ui-font-size-small\)/);
+  assert.match(navigationStyles, /\.custom-navigation__title--compact\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
+  for (let index = 0; index < pageFiles.length; index += 2) {
+    const styles = pageFiles[index];
+    const page = pageFiles[index + 1];
+    assert.match(styles, /compact-typography\.less/);
+    assert.match(page, /<custom-navigation[^>]*compact-title="\{\{true\}\}"/);
+    assert.doesNotMatch(styles, /font-size:\s*(?:21|23|25|26|27|32)rpx/);
+  }
 });
 
 test("media cards show only titles, revisit hearts, and category-specific placeholders", async () => {
@@ -88,6 +126,7 @@ test("media editing supports a shared 3:4 cover crop and upload", async () => {
   assert.match(config, /"image-cropper":\s*"\/components\/image-cropper\/index"/);
   assert.match(page, /aspect-ratio="0\.75"/);
   assert.match(page, /output-size="1080"/);
+  assert.match(page, /compact-typography="\{\{true\}\}"/);
   assert.match(page, /src="\{\{selectedImagePath \|\| coverUrl\}\}"/);
   assert.match(logic, /wx\.chooseMedia\(/);
   assert.match(logic, /replaceMediaEntryCover\(id, this\.data\.selectedImagePath\)/);

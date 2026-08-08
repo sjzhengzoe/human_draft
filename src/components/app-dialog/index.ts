@@ -35,6 +35,10 @@ Component({
     customActions: {
       type: Boolean,
       value: false
+    },
+    compactTypography: {
+      type: Boolean,
+      value: false
     }
   },
   data: {

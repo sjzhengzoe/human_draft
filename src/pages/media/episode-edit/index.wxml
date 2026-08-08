@@ -1,4 +1,4 @@
-<custom-navigation title="单集记录" />
+<custom-navigation title="单集记录" compact-title="{{true}}" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

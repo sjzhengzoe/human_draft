@@ -1,6 +1,6 @@
 <view
   wx:if="{{visible}}"
-  class="app-dialog {{keyboardHeight > 0 ? 'app-dialog--with-keyboard' : ''}}"
+  class="app-dialog {{keyboardHeight > 0 ? 'app-dialog--with-keyboard' : ''}} {{compactTypography ? 'app-dialog--compact' : ''}}"
   style="{{keyboardStyle}}"
   catchtouchmove="noop"
 >

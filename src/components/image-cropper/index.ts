@@ -102,6 +102,10 @@ Component({
     aspectRatio: {
       type: Number,
       value: 1
+    },
+    compactTypography: {
+      type: Boolean,
+      value: false
     }
   },
 

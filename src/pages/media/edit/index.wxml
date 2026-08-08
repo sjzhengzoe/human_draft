@@ -1,4 +1,4 @@
-<custom-navigation title="影视条目" />
+<custom-navigation title="影视条目" compact-title="{{true}}" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -79,6 +79,7 @@
 
 <image-cropper
   wx:if="{{showImageCropper}}"
+  compact-typography="{{true}}"
   src="{{cropSourcePath}}"
   shape="rectangle"
   aspect-ratio="0.75"

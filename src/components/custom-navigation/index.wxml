@@ -16,7 +16,7 @@
       >
         <view class="custom-navigation__back-glyph">‹</view>
       </view>
-      <view wx:if="{{title}}" class="custom-navigation__title">{{title}}</view>
+      <view wx:if="{{title}}" class="custom-navigation__title {{compactTitle ? 'custom-navigation__title--compact' : ''}}">{{title}}</view>
     </view>
   </view>
 </view>
