@@ -34,7 +34,6 @@ import {
   markMediaDataChanged
 } from "../../../utils/media-data-revision"
 
-let savedPageScrollTop = 0
 let timelineNoteSequence = 0
 let timelineDialogueSequence = 0
 
@@ -278,7 +277,6 @@ Page({
   },
 
   onLoad(query: Record<string, string | undefined>) {
-    savedPageScrollTop = 0
     activateAsyncPage(this)
     this.setData({
       id: String(query.id || ""),
@@ -296,17 +294,11 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
-    savedPageScrollTop = 0
-  },
-
-  onPageScroll(event: { scrollTop: number }) {
-    savedPageScrollTop = event.scrollTop
   },
 
   async loadPage() {
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
-    const scrollTopBeforeRefresh = savedPageScrollTop
     this.setData({
       loading: showInitialLoading,
       contentLoading: !showInitialLoading,
@@ -352,11 +344,7 @@ Page({
       else wx.showToast({ title: message, icon: "none" })
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
-        this.setData({ loading: false, contentLoading: false, hasLoaded: true }, () => {
-          if (!showInitialLoading && scrollTopBeforeRefresh > 0) {
-            wx.pageScrollTo({ scrollTop: scrollTopBeforeRefresh, duration: 0 })
-          }
-        })
+        this.setData({ loading: false, contentLoading: false, hasLoaded: true })
       }
     }
   },
@@ -390,10 +378,7 @@ Page({
       wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
       return
     }
-    savedPageScrollTop = 0
-    this.setData({ activeDetailTab }, () => {
-      wx.pageScrollTo({ scrollTop: 0, duration: 0 })
-    })
+    this.setData({ activeDetailTab })
   },
 
   handleFavoriteEpisodesFilterTap(event: WechatMiniprogram.TouchEvent) {

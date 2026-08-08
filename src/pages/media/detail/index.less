@@ -1,9 +1,12 @@
 @import "../compact-typography.less";
 
 .page {
-  min-height: 100vh;
+  display: flex;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 0 0 60rpx;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
   background: var(--ui-page-background);
 }
 
@@ -43,9 +46,31 @@
   font-weight: 600;
 }
 
-.detail-content,
-.records-content {
+.detail-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
   padding: 30rpx var(--ui-page-gutter) 0;
+  box-sizing: border-box;
+}
+
+.detail-fixed {
+  flex: none;
+}
+
+.detail-attribute-scroll {
+  min-height: 0;
+  flex: 1;
+  box-sizing: border-box;
+  margin-top: 20rpx;
+}
+
+.records-content {
+  min-height: 0;
+  flex: 1;
+  box-sizing: border-box;
+  padding: 30rpx var(--ui-page-gutter) 60rpx;
 }
 
 .detail-cover-wrap {
@@ -176,7 +201,7 @@
 .detail-attributes {
   display: flex;
   flex-direction: column;
-  margin-top: 20rpx;
+  padding-bottom: 60rpx;
   border-top: 1rpx solid var(--ui-border);
 }
 

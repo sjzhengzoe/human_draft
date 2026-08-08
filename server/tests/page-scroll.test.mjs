@@ -26,11 +26,16 @@ test("document-flow pages keep native vertical scrolling enabled", async () => {
 });
 
 test("fixed media pages keep their own vertical scroll containers", async () => {
-  const [configSource, page] = await Promise.all([
+  const [configSource, page, detailConfigSource, detailPage] = await Promise.all([
     readFile(new URL("../../src/pages/media/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/media/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/detail/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/detail/index.wxml", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(configSource).disableScroll, true);
   assert.match(page, /<scroll-view class="content-scroll" scroll-y/);
+  assert.equal(JSON.parse(detailConfigSource).disableScroll, true);
+  assert.match(detailPage, /<scroll-view class="detail-attribute-scroll" scroll-y/);
+  assert.match(detailPage, /class="records-content" scroll-y/);
 });

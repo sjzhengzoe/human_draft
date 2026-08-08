@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "作品详情",
-  "disableScroll": false,
+  "disableScroll": true,
   "usingComponents": {
     "image-cropper": "/components/image-cropper/index"
   }

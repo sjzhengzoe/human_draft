@@ -185,12 +185,15 @@ test("all media cards open the shared read-only detail page before editing", asy
 });
 
 test("media detail defaults to the detail tab and keeps plot records fully expanded", async () => {
-  const [page, logic, styles] = await Promise.all([
+  const [page, logic, styles, config] = await Promise.all([
     readFile(detailPageUrl, "utf8"),
     readFile(detailLogicUrl, "utf8"),
     readFile(detailStylesUrl, "utf8"),
+    readFile(detailConfigUrl, "utf8"),
   ]);
 
+  assert.equal(JSON.parse(config).disableScroll, true);
+  assert.match(page, /class="page page--fixed"/);
   assert.ok(page.indexOf('class="detail-tabs"') < page.indexOf('class="detail-content"'));
   assert.match(page, /data-tab="detail"[\s\S]*?>详情<\/view>/);
   assert.match(page, /data-tab="records"[\s\S]*?>剧情记录<\/view>/);
@@ -217,11 +220,20 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(page, /data-status="completed"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('detail-attribute__label">名称'));
   assert.match(page, /detail-attribute__label">名称[\s\S]*?\{\{entry\.title\}\}/);
+  assert.ok(page.indexOf('class="detail-fixed"') < page.indexOf('class="detail-attribute-scroll"'));
+  assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('class="detail-attribute-scroll"'));
+  assert.match(page, /<scroll-view class="detail-attribute-scroll" scroll-y enhanced show-scrollbar="\{\{false\}\}">[\s\S]*?class="detail-attributes"/);
+  assert.match(page, /<scroll-view wx:elif="\{\{activeDetailTab === 'records'\}\}" class="records-content" scroll-y enhanced/);
   assert.match(logic, /updateMediaEntry\(entry\.id, \{ watch_status: watchStatus \}\)/);
+  assert.doesNotMatch(logic, /onPageScroll|pageScrollTo|savedPageScrollTop/);
   assert.doesNotMatch(page, /detail-attribute__label">状态/);
   assert.doesNotMatch(page, /handleDeleteEntry/);
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
   assert.match(styles, /\.detail-attributes\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+  assert.match(styles, /\.page\s*\{[^}]*display:\s*flex;[^}]*overflow:\s*hidden;/s);
+  assert.match(styles, /\.detail-content\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;[^}]*flex-direction:\s*column;/s);
+  assert.match(styles, /\.detail-attribute-scroll\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s);
+  assert.match(styles, /\.records-content\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s);
   assert.doesNotMatch(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:/s);
   assert.match(styles, /\.active-season-bar__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
   assert.match(page, /wx:if="\{\{activeSeason\.cover_url\}\}" class="active-season-bar__cover" src="\{\{activeSeason\.cover_url\}\}"/);
