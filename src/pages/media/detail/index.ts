@@ -4,7 +4,9 @@ import {
   createMediaSeason,
   deleteMediaSeason,
   getMediaEntry,
+  listMediaCategories,
   listMediaSeasons,
+  replaceMediaEntryCover,
   setMediaEntryCoverFromSeason,
   updateMediaEntry,
   updateMediaEpisode,
@@ -17,7 +19,8 @@ import type {
   MediaStatus,
   MediaTimelineDialogue,
   MediaTimelineNote,
-  MediaTimelineNoteType
+  MediaTimelineNoteType,
+  MediaType
 } from "../../../types/media"
 import {
   activateAsyncPage,
@@ -36,6 +39,18 @@ let timelineNoteSequence = 0
 let timelineDialogueSequence = 0
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
+const BUILTIN_PLATFORMS = [
+  "待定",
+  "腾讯视频",
+  "爱奇艺",
+  "哔哩哔哩",
+  "夸克",
+  "优酷",
+  "芒果 TV",
+  "猫耳",
+  "漫播",
+  "Books"
+]
 
 type TimePickerValue = [number, number, number]
 
@@ -157,6 +172,17 @@ function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
 
+function platformOptions(selectedPlatforms: string[]) {
+  const names = [
+    ...BUILTIN_PLATFORMS,
+    ...selectedPlatforms.filter((name) => !BUILTIN_PLATFORMS.includes(name))
+  ]
+  return names.map((name) => ({
+    name,
+    checked: selectedPlatforms.includes(name)
+  }))
+}
+
 function normalizedTimelineType(value: unknown): MediaTimelineNoteType {
   return value === "key" || value === "quote" ? value : "normal"
 }
@@ -212,10 +238,25 @@ Page({
     favoriteEpisodesOnly: false,
     coverUrl: "",
     platformText: "",
+    mediaTypes: [] as MediaType[],
     canWrite: false,
     isEpisodic: false,
     isAudio: false,
     activeDetailTab: "detail" as "detail" | "records",
+    editingEntry: false,
+    entryDraftTitle: "",
+    entryDraftMediaTypeIndex: 0,
+    entryDraftWatchStatus: "completed" as MediaStatus,
+    entryDraftIsRevisitable: false,
+    entryDraftPlatforms: [] as string[],
+    entryPlatformOptions: platformOptions([]),
+    entryDraftIsAudio: false,
+    entryDraftIsEpisodic: false,
+    selectedEntryImagePath: "",
+    selectingEntryImage: false,
+    showEntryImageCropper: false,
+    entryCropSourcePath: "",
+    savingEntry: false,
     editingEpisodeId: "",
     episodeDraftTitle: "",
     episodeDraftPlotSummary: "",
@@ -268,9 +309,10 @@ Page({
     })
     try {
       const session = await ensureLogin()
-      const [entry, seasons] = await Promise.all([
+      const [entry, seasons, categories] = await Promise.all([
         getMediaEntry(this.data.id),
-        listMediaSeasons(this.data.id)
+        listMediaSeasons(this.data.id),
+        listMediaCategories()
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const normalizedSeasons = normalizeMediaSeasons(seasons)
@@ -289,6 +331,7 @@ Page({
         activeSeasonFavoriteCount: favoriteCount(activeSeason),
         coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
         platformText: entry.platforms.join("、"),
+        mediaTypes: categories.map((category) => category.name),
         canWrite: session.user.can_write,
         isEpisodic,
         isAudio: entry.media_type === "广播剧",
@@ -334,6 +377,10 @@ Page({
     if (!(["detail", "records"] as string[]).includes(activeDetailTab)) return
     if (activeDetailTab === "records" && !this.data.isEpisodic) return
     if (activeDetailTab === this.data.activeDetailTab) return
+    if (this.data.editingEntry) {
+      wx.showToast({ title: "请先完成或取消作品编辑", icon: "none" })
+      return
+    }
     if (this.data.editingEpisodeId) {
       wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
       return
@@ -437,14 +484,224 @@ Page({
   },
 
   handleEditEntry() {
-    if (!this.data.canWrite || !this.data.entry || this.data.operating) return
-    wx.setStorageSync("MEDIA_EDIT_ITEM", this.data.entry)
-    wx.navigateTo({ url: `/pages/media/edit/index?id=${this.data.entry.id}` })
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    const mediaTypes = this.data.mediaTypes.includes(entry.media_type)
+      ? this.data.mediaTypes
+      : [...this.data.mediaTypes, entry.media_type]
+    this.setData({
+      editingEntry: true,
+      mediaTypes,
+      entryDraftTitle: entry.title,
+      entryDraftMediaTypeIndex: Math.max(0, mediaTypes.indexOf(entry.media_type)),
+      entryDraftWatchStatus: entry.watch_status,
+      entryDraftIsRevisitable: entry.is_revisitable,
+      entryDraftPlatforms: [...entry.platforms],
+      entryPlatformOptions: platformOptions(entry.platforms),
+      entryDraftIsAudio: entry.media_type === "广播剧",
+      entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
+      selectedEntryImagePath: ""
+    })
+  },
+
+  handleEntryEditCancel() {
+    if (this.data.savingEntry || this.data.selectingEntryImage) return
+    this.setData({
+      editingEntry: false,
+      entryDraftTitle: "",
+      entryDraftPlatforms: [],
+      entryPlatformOptions: platformOptions([]),
+      selectedEntryImagePath: "",
+      showEntryImageCropper: false,
+      entryCropSourcePath: ""
+    })
+  },
+
+  handleEntryTitleInput(event: WechatMiniprogram.Input) {
+    this.setData({ entryDraftTitle: event.detail.value })
+  },
+
+  handleEntryTypeChange(event: WechatMiniprogram.PickerChange) {
+    const entryDraftMediaTypeIndex = Number(event.detail.value)
+    const mediaType = this.data.mediaTypes[entryDraftMediaTypeIndex]
+    if (!mediaType) return
+    this.setData({
+      entryDraftMediaTypeIndex,
+      entryDraftIsAudio: mediaType === "广播剧",
+      entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType)
+    })
+  },
+
+  handleEntryPlatformTap(event: WechatMiniprogram.TouchEvent) {
+    const name = String(event.currentTarget.dataset.name || "")
+    if (!name || this.data.savingEntry) return
+    const selected = this.data.entryDraftPlatforms
+    let entryDraftPlatforms: string[]
+    if (name === "待定") {
+      entryDraftPlatforms = selected.includes(name) ? [] : [name]
+    } else {
+      const withoutPending = selected.filter((item) => item !== "待定")
+      entryDraftPlatforms = withoutPending.includes(name)
+        ? withoutPending.filter((item) => item !== name)
+        : [...withoutPending, name]
+    }
+    this.setData({
+      entryDraftPlatforms,
+      entryPlatformOptions: platformOptions(entryDraftPlatforms)
+    })
+  },
+
+  handleEntryCoverTap() {
+    if (
+      !this.data.editingEntry
+      || this.data.savingEntry
+      || this.data.selectingEntryImage
+      || this.data.showEntryImageCropper
+    ) return
+    this.setData({ selectingEntryImage: true })
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ["image"],
+      sourceType: ["album", "camera"],
+      success: (result) => {
+        if (!isAsyncPageActive(this)) return
+        const path = result.tempFiles[0]?.tempFilePath
+        this.setData(path
+          ? {
+              selectingEntryImage: false,
+              showEntryImageCropper: true,
+              entryCropSourcePath: path
+            }
+          : { selectingEntryImage: false })
+      },
+      fail: () => {
+        if (isAsyncPageActive(this)) this.setData({ selectingEntryImage: false })
+      }
+    })
+  },
+
+  handleEntryImageCropCancel() {
+    this.setData({ showEntryImageCropper: false, entryCropSourcePath: "" })
+  },
+
+  handleEntryImageCropConfirm(
+    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+  ) {
+    const selectedEntryImagePath = String(event.detail.tempFilePath || "")
+    if (!selectedEntryImagePath) return
+    this.setData({
+      selectedEntryImagePath,
+      showEntryImageCropper: false,
+      entryCropSourcePath: ""
+    })
+  },
+
+  handleEntryImageCropError(
+    event: WechatMiniprogram.CustomEvent<{ message?: string }>
+  ) {
+    wx.showToast({
+      title: event.detail.message || "图片裁剪失败，请重试",
+      icon: "none",
+      duration: 3000
+    })
+  },
+
+  async handleCompleteEntryEdit() {
+    const entry = this.data.entry
+    if (
+      !this.data.canWrite
+      || !entry
+      || !this.data.editingEntry
+      || this.data.savingEntry
+      || this.data.selectingEntryImage
+      || this.data.showEntryImageCropper
+    ) return
+    const title = this.data.entryDraftTitle.trim()
+    const mediaType = this.data.mediaTypes[this.data.entryDraftMediaTypeIndex]
+    const platforms = this.data.entryDraftPlatforms.includes("待定")
+      ? ["待定"]
+      : [...new Set(this.data.entryDraftPlatforms)]
+    if (!title || !mediaType) {
+      wx.showToast({ title: "请填写名称和分类", icon: "none" })
+      return
+    }
+    if (!platforms.length) {
+      wx.showToast({ title: "请选择平台/来源", icon: "none" })
+      return
+    }
+    this.setData({ savingEntry: true })
+    wx.showLoading({ title: "保存中", mask: true })
+    let persistedEntry: MediaEntry | null = null
+    try {
+      persistedEntry = await updateMediaEntry(entry.id, {
+        title,
+        media_type: mediaType,
+        watch_status: this.data.entryDraftWatchStatus,
+        platforms,
+        is_revisitable: this.data.entryDraftIsRevisitable
+      })
+      if (this.data.selectedEntryImagePath) {
+        persistedEntry = await replaceMediaEntryCover(
+          entry.id,
+          this.data.selectedEntryImagePath
+        )
+      }
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      const isEpisodic = this.data.seasons.length > 0
+        || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type)
+      this.setData({
+        entry: persistedEntry,
+        coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
+        platformText: persistedEntry.platforms.join("、"),
+        isAudio: persistedEntry.media_type === "广播剧",
+        isEpisodic,
+        activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
+        editingEntry: false,
+        entryDraftTitle: "",
+        entryDraftPlatforms: [],
+        entryPlatformOptions: platformOptions([]),
+        selectedEntryImagePath: "",
+        savingEntry: false,
+        mediaRevision
+      })
+      wx.setNavigationBarTitle({ title: persistedEntry.title })
+      wx.showToast({ title: "编辑完成", icon: "success" })
+    } catch (error) {
+      if (!isAsyncPageActive(this)) return
+      if (persistedEntry) {
+        const mediaRevision = markMediaDataChanged()
+        this.setData({
+          entry: persistedEntry,
+          coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
+          platformText: persistedEntry.platforms.join("、"),
+          isAudio: persistedEntry.media_type === "广播剧",
+          isEpisodic: this.data.seasons.length > 0
+            || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type),
+          mediaRevision
+        })
+      }
+      const message = error instanceof Error ? error.message : "保存失败，请稍后重试"
+      wx.showToast({
+        title: persistedEntry && this.data.selectedEntryImagePath
+          ? `资料已保存，封面上传失败：${message}`
+          : message,
+        icon: "none",
+        duration: 3000
+      })
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ savingEntry: false })
+    }
   },
 
   async handleToggleRevisitable() {
     const entry = this.data.entry
-    if (!this.data.canWrite || !entry || this.data.operating) return
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    if (this.data.editingEntry) {
+      this.setData({ entryDraftIsRevisitable: !this.data.entryDraftIsRevisitable })
+      return
+    }
     const nextValue = !entry.is_revisitable
     this.setData({ entry: { ...entry, is_revisitable: nextValue }, operating: true })
     try {
@@ -468,8 +725,12 @@ Page({
   async handleWatchStatusTap(event: WechatMiniprogram.TouchEvent) {
     const entry = this.data.entry
     const watchStatus = String(event.currentTarget.dataset.status || "") as MediaStatus
-    if (!this.data.canWrite || !entry || this.data.operating) return
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
     if (!(["planned", "in_progress", "completed"] as string[]).includes(watchStatus)) return
+    if (this.data.editingEntry) {
+      this.setData({ entryDraftWatchStatus: watchStatus })
+      return
+    }
     if (entry.watch_status === watchStatus) return
     this.setData({
       entry: { ...entry, watch_status: watchStatus },

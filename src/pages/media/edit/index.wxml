@@ -1,4 +1,4 @@
-<custom-navigation title="影视条目" compact-title="{{true}}" />
+<custom-navigation title="新增影视" compact-title="{{true}}" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -7,7 +7,7 @@
 
 <view wx:else class="page page--with-navigation">
   <view class="record-overview">
-    <view class="record-overview__title">{{id ? '编辑影视' : '新增影视'}}</view>
+    <view class="record-overview__title">新增影视</view>
     <view class="record-overview__stats">
       <view class="record-overview__stat">
         <view class="record-overview__value">{{mediaTypes[mediaTypeIndex]}}</view>
@@ -24,16 +24,16 @@
       <view class="field-label">封面</view>
       <view class="cover-editor" bindtap="handleChooseImage">
         <image
-          wx:if="{{selectedImagePath || coverUrl}}"
+          wx:if="{{selectedImagePath}}"
           class="cover-editor__preview"
-          src="{{selectedImagePath || coverUrl}}"
+          src="{{selectedImagePath}}"
           mode="aspectFill"
         />
         <view wx:else class="cover-editor__empty">
           <app-icon name="image-plus" size="42" />
           <view>选择封面</view>
         </view>
-        <view class="cover-editor__action">{{selectedImagePath || coverUrl ? '更换封面' : '选择封面'}}</view>
+        <view class="cover-editor__action">{{selectedImagePath ? '更换封面' : '选择封面'}}</view>
       </view>
       <view class="field-help cover-editor__help">建议使用 3:4 竖图，保存后统一输出为 1080 × 1440</view>
     </view>
@@ -73,8 +73,7 @@
       </checkbox-group>
     </view>
   </view>
-  <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage || showImageCropper}}" bindtap="handleSave">保存</button>
-  <button wx:if="{{id}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage || showImageCropper}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除</text></button>
+  <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage || showImageCropper}}" bindtap="handleSave">新增</button>
 </view>
 
 <image-cropper

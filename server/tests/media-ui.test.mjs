@@ -7,10 +7,10 @@ const stylesUrl = new URL("../../src/pages/media/index.less", import.meta.url);
 const logicUrl = new URL("../../src/pages/media/index.ts", import.meta.url);
 const editPageUrl = new URL("../../src/pages/media/edit/index.wxml", import.meta.url);
 const editLogicUrl = new URL("../../src/pages/media/edit/index.ts", import.meta.url);
-const editConfigUrl = new URL("../../src/pages/media/edit/index.json", import.meta.url);
 const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.meta.url);
 const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
 const detailStylesUrl = new URL("../../src/pages/media/detail/index.less", import.meta.url);
+const detailConfigUrl = new URL("../../src/pages/media/detail/index.json", import.meta.url);
 const compactTypographyUrl = new URL("../../src/pages/media/compact-typography.less", import.meta.url);
 const navigationStylesUrl = new URL("../../src/components/custom-navigation/index.less", import.meta.url);
 
@@ -124,20 +124,28 @@ test("media cards show only titles, revisit hearts, and category-specific placeh
   }
 });
 
-test("media editing supports a shared 3:4 cover crop and upload", async () => {
-  const [page, logic, config] = await Promise.all([
+test("media detail inline editing supports a shared 3:4 cover crop and deferred save", async () => {
+  const [page, logic, config, createPage, createLogic] = await Promise.all([
+    readFile(detailPageUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+    readFile(detailConfigUrl, "utf8"),
     readFile(editPageUrl, "utf8"),
     readFile(editLogicUrl, "utf8"),
-    readFile(editConfigUrl, "utf8"),
   ]);
 
   assert.match(config, /"image-cropper":\s*"\/components\/image-cropper\/index"/);
   assert.match(page, /aspect-ratio="0\.75"/);
   assert.match(page, /output-size="1080"/);
   assert.match(page, /compact-typography="\{\{true\}\}"/);
-  assert.match(page, /src="\{\{selectedImagePath \|\| coverUrl\}\}"/);
+  assert.match(page, /selectedEntryImagePath/);
   assert.match(logic, /wx\.chooseMedia\(/);
-  assert.match(logic, /replaceMediaEntryCover\(id, this\.data\.selectedImagePath\)/);
+  assert.match(logic, /async handleCompleteEntryEdit\(\)/);
+  assert.match(logic, /persistedEntry = await updateMediaEntry\(entry\.id,/);
+  assert.match(logic, /persistedEntry = await replaceMediaEntryCover\(/);
+  assert.doesNotMatch(logic, /pages\/media\/edit\/index\?id|MEDIA_EDIT_ITEM/);
+  assert.match(createPage, />新增影视<\/view>/);
+  assert.match(createLogic, /await createMediaEntry\(input\)/);
+  assert.doesNotMatch(createLogic, /getMediaEntry|updateMediaEntry|deleteMediaEntry|MEDIA_EDIT_ITEM/);
 });
 
 test("all media cards open the shared read-only detail page before editing", async () => {
@@ -155,6 +163,9 @@ test("all media cards open the shared read-only detail page before editing", asy
   assert.doesNotMatch(openEntry, /pages\/media\/edit|EPISODIC_MEDIA_TYPES|MEDIA_EDIT_ITEM/);
   assert.match(detailPage, /wx:if="\{\{isEpisodic\}\}"/);
   assert.match(detailPage, /bindtap="handleEditEntry"/);
+  assert.match(detailPage, /bindtap="handleCompleteEntryEdit"[\s\S]*?>完成编辑<\/button>/);
+  assert.match(detailPage, /wx:if="\{\{editingEntry\}\}"/);
+  assert.doesNotMatch(detailLogic, /wx\.navigateTo\(\{ url: `\/pages\/media\/edit/);
   assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
 });
 
@@ -193,7 +204,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.doesNotMatch(page, /detail-attribute__label">状态/);
   assert.doesNotMatch(page, /handleDeleteEntry/);
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
-  assert.match(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+  assert.match(styles, /\.detail-attributes\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+  assert.doesNotMatch(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:/s);
   assert.match(styles, /\.active-season-bar__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
   assert.match(page, /wx:if="\{\{activeSeason\.cover_url\}\}" class="active-season-bar__cover" src="\{\{activeSeason\.cover_url\}\}"/);
   assert.match(styles, /\.active-season-bar__cover\s*\{[^}]*width:\s*112rpx;[^}]*height:\s*149rpx;/s);

@@ -299,7 +299,6 @@ Page({
       return
     }
     const mediaType = this.data.selectedCategory || this.data.mediaTypes[0]
-    wx.removeStorageSync("MEDIA_EDIT_ITEM")
     wx.navigateTo({
       url: `/pages/media/edit/index?mediaType=${encodeURIComponent(mediaType)}`
     })

@@ -26,67 +26,110 @@
     </view>
 
     <view wx:if="{{activeDetailTab === 'detail' || !isEpisodic}}" class="detail-content">
-      <view class="detail-cover-wrap">
-        <image wx:if="{{coverUrl}}" class="detail-cover" src="{{coverUrl}}" mode="aspectFill" />
+      <view class="detail-cover-wrap" bindtap="handleEntryCoverTap">
+        <image wx:if="{{selectedEntryImagePath || coverUrl}}" class="detail-cover" src="{{editingEntry && selectedEntryImagePath ? selectedEntryImagePath : coverUrl}}" mode="aspectFill" />
         <view wx:else class="detail-cover detail-cover--empty">
           <app-icon name="clapperboard" size="42" />
           <text>暂无封面</text>
         </view>
+        <view wx:if="{{editingEntry}}" class="detail-cover-action">
+          <app-icon name="image-plus" size="23" />
+          <text>{{selectedEntryImagePath || coverUrl ? '更换封面' : '选择封面'}}</text>
+        </view>
       </view>
 
       <view class="detail-title-row">
-        <view class="detail-title">{{entry.title}}</view>
+        <app-input
+          wx:if="{{editingEntry}}"
+          class="detail-title-input-host"
+          custom-class="detail-title-input"
+          font-size="20rpx"
+          value="{{entryDraftTitle}}"
+          maxlength="120"
+          placeholder="输入作品名称"
+          bindinput="handleEntryTitleInput"
+        />
+        <view wx:else class="detail-title">{{entry.title}}</view>
         <view class="detail-title-actions">
           <view
-            class="detail-icon-button detail-heart {{entry.is_revisitable ? 'detail-heart--active' : ''}} {{operating ? 'detail-icon-button--disabled' : ''}}"
+            class="detail-icon-button detail-heart {{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? 'detail-heart--active' : ''}} {{operating || savingEntry ? 'detail-icon-button--disabled' : ''}}"
             role="button"
-            aria-label="{{entry.is_revisitable ? (isAudio ? '取消值得重听' : '取消值得重温') : (isAudio ? '设为值得重听' : '设为值得重温')}}"
+            aria-label="{{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? ((editingEntry ? entryDraftIsAudio : isAudio) ? '取消值得重听' : '取消值得重温') : ((editingEntry ? entryDraftIsAudio : isAudio) ? '设为值得重听' : '设为值得重温')}}"
             bindtap="handleToggleRevisitable"
-          >{{entry.is_revisitable ? '♥' : '♡'}}</view>
+          >{{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? '♥' : '♡'}}</view>
           <view
-            wx:if="{{canWrite}}"
+            wx:if="{{canWrite && !editingEntry}}"
             class="detail-icon-button {{operating ? 'detail-icon-button--disabled' : ''}}"
             role="button"
             aria-label="编辑作品"
             bindtap="handleEditEntry"
           ><app-icon name="pencil" size="24" /></view>
+          <block wx:if="{{canWrite && editingEntry}}">
+            <view
+              class="detail-icon-button"
+              role="button"
+              aria-label="取消编辑"
+              bindtap="handleEntryEditCancel"
+            ><app-icon name="x-muted" size="23" /></view>
+            <button
+              class="detail-edit-complete"
+              loading="{{savingEntry}}"
+              disabled="{{savingEntry || selectingEntryImage || showEntryImageCropper}}"
+              bindtap="handleCompleteEntryEdit"
+            >完成编辑</button>
+          </block>
         </view>
       </view>
 
-      <view class="detail-status-options {{operating ? 'detail-status-options--disabled' : ''}}" role="group" aria-label="切换观看状态">
+      <view class="detail-status-options {{operating || savingEntry ? 'detail-status-options--disabled' : ''}}" role="group" aria-label="切换观看状态">
         <view
-          class="detail-status-option {{entry.watch_status === 'planned' ? 'detail-status-option--active' : ''}}"
+          class="detail-status-option {{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'planned' ? 'detail-status-option--active' : ''}}"
           role="button"
-          aria-pressed="{{entry.watch_status === 'planned'}}"
+          aria-pressed="{{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'planned'}}"
           data-status="planned"
           bindtap="handleWatchStatusTap"
-        >{{isAudio ? '想听' : '想看'}}</view>
+        >{{(editingEntry ? entryDraftIsAudio : isAudio) ? '想听' : '想看'}}</view>
         <view
-          class="detail-status-option {{entry.watch_status === 'in_progress' ? 'detail-status-option--active' : ''}}"
+          class="detail-status-option {{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'in_progress' ? 'detail-status-option--active' : ''}}"
           role="button"
-          aria-pressed="{{entry.watch_status === 'in_progress'}}"
+          aria-pressed="{{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'in_progress'}}"
           data-status="in_progress"
           bindtap="handleWatchStatusTap"
-        >{{isAudio ? '在听' : '在看'}}</view>
+        >{{(editingEntry ? entryDraftIsAudio : isAudio) ? '在听' : '在看'}}</view>
         <view
-          class="detail-status-option {{entry.watch_status === 'completed' ? 'detail-status-option--active' : ''}}"
+          class="detail-status-option {{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'completed' ? 'detail-status-option--active' : ''}}"
           role="button"
-          aria-pressed="{{entry.watch_status === 'completed'}}"
+          aria-pressed="{{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'completed'}}"
           data-status="completed"
           bindtap="handleWatchStatusTap"
-        >{{isAudio ? '听过' : '看过'}}</view>
+        >{{(editingEntry ? entryDraftIsAudio : isAudio) ? '听过' : '看过'}}</view>
       </view>
 
       <view class="detail-attributes">
         <view class="detail-attribute">
           <view class="detail-attribute__label">分类</view>
-          <view class="detail-attribute__value">{{entry.media_type}}</view>
+          <picker wx:if="{{editingEntry}}" mode="selector" range="{{mediaTypes}}" value="{{entryDraftMediaTypeIndex}}" bindchange="handleEntryTypeChange">
+            <view class="detail-attribute__picker">
+              <text>{{mediaTypes[entryDraftMediaTypeIndex]}}</text>
+              <app-icon name="chevron-right" size="23" />
+            </view>
+          </picker>
+          <view wx:else class="detail-attribute__value">{{entry.media_type}}</view>
         </view>
         <view class="detail-attribute">
           <view class="detail-attribute__label">平台/来源</view>
-          <view class="detail-attribute__value">{{platformText}}</view>
+          <view wx:if="{{editingEntry}}" class="detail-platform-options">
+            <view
+              wx:for="{{entryPlatformOptions}}"
+              wx:key="name"
+              class="detail-platform-option {{item.checked ? 'detail-platform-option--active' : ''}}"
+              data-name="{{item.name}}"
+              bindtap="handleEntryPlatformTap"
+            >{{item.name}}</view>
+          </view>
+          <view wx:else class="detail-attribute__value">{{platformText}}</view>
         </view>
-        <view wx:if="{{isEpisodic}}" class="detail-attribute detail-attribute--wide">
+        <view wx:if="{{editingEntry ? (isEpisodic || entryDraftIsEpisodic) : isEpisodic}}" class="detail-attribute">
           <view class="detail-attribute__label">剧集</view>
           <view class="detail-attribute__value">{{entry.season_count || 0}} 季 · {{entry.episode_count || 0}} 集 · {{entry.favorite_episode_count || 0}} 集喜欢</view>
         </view>
@@ -423,3 +466,16 @@
     </view>
   </block>
 </view>
+
+<image-cropper
+  wx:if="{{showEntryImageCropper}}"
+  compact-typography="{{true}}"
+  src="{{entryCropSourcePath}}"
+  shape="rectangle"
+  aspect-ratio="0.75"
+  output-size="1080"
+  title="裁剪为 3:4 影视封面"
+  bind:cancel="handleEntryImageCropCancel"
+  bind:confirm="handleEntryImageCropConfirm"
+  bind:error="handleEntryImageCropError"
+/>

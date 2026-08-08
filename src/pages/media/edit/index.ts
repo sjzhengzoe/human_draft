@@ -1,13 +1,10 @@
 import { ensureLogin } from "../../../services/auth"
 import {
   createMediaEntry,
-  deleteMediaEntry,
-  getMediaEntry,
   listMediaCategories,
-  replaceMediaEntryCover,
-  updateMediaEntry
+  replaceMediaEntryCover
 } from "../../../services/media"
-import type { MediaEntry, MediaStatus, MediaType } from "../../../types/media"
+import type { MediaStatus, MediaType } from "../../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -38,9 +35,7 @@ function showErrorToast(title: string) {
 
 Page({
   data: {
-    id: "",
     title: "",
-    coverUrl: "",
     selectedImagePath: "",
     selectingImage: false,
     showImageCropper: false,
@@ -54,8 +49,7 @@ Page({
     platformOptions: BUILTIN_PLATFORMS.map((name) => ({ name, checked: false })),
     selectedBuiltinPlatforms: [] as string[],
     loading: true,
-    saving: false,
-    deleting: false
+    saving: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -91,28 +85,16 @@ Page({
         })
         return
       }
-      this.setData({ mediaTypes })
-
-      const id = String(query.id || "")
-      if (!id) {
-        const queryType = decodeURIComponent(query.mediaType || mediaTypes[0]) as MediaType
-        const mediaTypeIndex = Math.max(0, mediaTypes.indexOf(queryType))
-        const mediaType = mediaTypes[mediaTypeIndex]
-        this.setData({
-          mediaTypeIndex,
-          isEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType),
-          isAudio: mediaType === "广播剧"
-        })
-        wx.setNavigationBarTitle({ title: "新增影视" })
-        return
-      }
-
-      wx.setNavigationBarTitle({ title: "编辑影视" })
-      const stored = wx.getStorageSync("MEDIA_EDIT_ITEM") as MediaEntry | undefined
-      if (stored?.id === id) this.applyEntry(stored)
-      const entry = await getMediaEntry(id)
-      if (!isAsyncPageRequestCurrent(this, generation)) return
-      this.applyEntry(entry)
+      const queryType = decodeURIComponent(query.mediaType || mediaTypes[0]) as MediaType
+      const mediaTypeIndex = Math.max(0, mediaTypes.indexOf(queryType))
+      const mediaType = mediaTypes[mediaTypeIndex]
+      this.setData({
+        mediaTypes,
+        mediaTypeIndex,
+        isEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType),
+        isAudio: mediaType === "广播剧"
+      })
+      wx.setNavigationBarTitle({ title: "新增影视" })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       wx.showModal({
@@ -128,24 +110,6 @@ Page({
     }
   },
 
-  applyEntry(entry: MediaEntry) {
-    this.setData({
-      id: entry.id,
-      title: entry.title,
-      coverUrl: entry.cover_url || "",
-      mediaTypeIndex: Math.max(0, this.data.mediaTypes.indexOf(entry.media_type)),
-      watchStatus: entry.watch_status,
-      isEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
-      isAudio: entry.media_type === "广播剧",
-      isRevisitable: Boolean(entry.is_revisitable),
-      platformOptions: BUILTIN_PLATFORMS.map((name) => ({
-        name,
-        checked: entry.platforms.includes(name)
-      })),
-      selectedBuiltinPlatforms: entry.platforms.filter((name) => BUILTIN_PLATFORMS.includes(name))
-    })
-  },
-
   handleTitleInput(event: WechatMiniprogram.Input) {
     this.setData({ title: event.detail.value })
   },
@@ -154,7 +118,6 @@ Page({
     if (
       this.data.loading ||
       this.data.saving ||
-      this.data.deleting ||
       this.data.selectingImage ||
       this.data.showImageCropper
     ) return
@@ -242,7 +205,6 @@ Page({
     if (
       this.data.loading ||
       this.data.saving ||
-      this.data.deleting ||
       this.data.selectingImage ||
       this.data.showImageCropper
     ) return
@@ -268,36 +230,25 @@ Page({
       platforms: selectedPlatforms,
       is_revisitable: this.data.isRevisitable
     }
-    let entryPersisted = false
+    let entryCreated = false
     try {
-      const savedEntry = this.data.id
-        ? await updateMediaEntry(this.data.id, input)
-        : await createMediaEntry(input)
+      const savedEntry = await createMediaEntry(input)
       const id = savedEntry.id
-      entryPersisted = true
-      if (!this.data.id) {
-        this.setData({ id, coverUrl: savedEntry.cover_url || "" })
-        wx.setNavigationBarTitle({ title: "编辑影视" })
-      }
+      entryCreated = true
       if (this.data.selectedImagePath) {
-        const updatedEntry = await replaceMediaEntryCover(id, this.data.selectedImagePath)
-        this.setData({
-          coverUrl: updatedEntry.cover_url || "",
-          selectedImagePath: ""
-        })
+        await replaceMediaEntryCover(id, this.data.selectedImagePath)
       }
       markMediaDataChanged()
-      wx.removeStorageSync("MEDIA_EDIT_ITEM")
       if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: "已保存", icon: "success" })
+      wx.showToast({ title: "已新增", icon: "success" })
       wx.navigateBack()
     } catch (error) {
-      if (entryPersisted) markMediaDataChanged()
+      if (entryCreated) markMediaDataChanged()
       if (isAsyncPageActive(this)) {
         const message = error instanceof Error ? error.message : "保存失败"
         showErrorToast(
-          entryPersisted && this.data.selectedImagePath
-            ? `资料已保存，封面上传失败：${message}`
+          entryCreated && this.data.selectedImagePath
+            ? `作品已新增，封面上传失败：${message}`
             : message
         )
       }
@@ -305,44 +256,5 @@ Page({
       wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ saving: false })
     }
-  },
-
-  handleDelete() {
-    if (!this.data.id || this.data.loading || this.data.saving || this.data.deleting) return
-    const id = this.data.id
-    this.setData({ deleting: true })
-    wx.showModal({
-      title: "删除影视条目",
-      content: "删除后无法恢复。",
-      confirmText: "删除",
-      confirmColor: "#c9342f",
-      success: async (result) => {
-        if (!isAsyncPageActive(this)) return
-        if (!result.confirm) {
-          this.setData({ deleting: false })
-          return
-        }
-        wx.showLoading({ title: "删除中", mask: true })
-        let deleted = false
-        let failureMessage = ""
-        try {
-          await deleteMediaEntry(id)
-          markMediaDataChanged()
-          wx.removeStorageSync("MEDIA_EDIT_ITEM")
-          deleted = true
-        } catch (error) {
-          failureMessage = error instanceof Error ? error.message : "删除失败"
-        } finally {
-          wx.hideLoading()
-          if (isAsyncPageActive(this)) this.setData({ deleting: false })
-        }
-        if (!isAsyncPageActive(this)) return
-        if (deleted) wx.navigateBack()
-        else showErrorToast(failureMessage)
-      },
-      fail: () => {
-        if (isAsyncPageActive(this)) this.setData({ deleting: false })
-      }
-    })
   }
 })
