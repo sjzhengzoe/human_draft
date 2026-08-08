@@ -171,7 +171,13 @@
         <view wx:if="{{activeSeason.episodes.length === 0}}" class="empty-episodes">还没有单集，可从当前季的编辑入口增加</view>
         <view wx:elif="{{favoriteEpisodesOnly && filteredEpisodes.length === 0}}" class="empty-episodes">这一季还没有喜欢的单集</view>
         <view wx:else class="episode-list">
-          <view wx:for="{{filteredEpisodes}}" wx:key="id" class="episode-row">
+          <form
+            wx:for="{{filteredEpisodes}}"
+            wx:key="id"
+            class="episode-row {{editingEpisodeId === item.id ? 'episode-row--editing' : ''}}"
+            data-id="{{item.id}}"
+            bindsubmit="handleEpisodeSave"
+          >
             <view class="episode-row__header">
               <view class="episode-row__main">
                 <view class="episode-row__title"><text class="episode-row__number">EP{{item.episode_number}}</text><text>{{item.title || '第'}}<text wx:if="{{!item.title}}">{{item.episode_number}}集</text></text></view>
@@ -191,16 +197,192 @@
                   catchtap="handleFavoriteTap"
                 >{{item.is_favorite ? '♥' : '♡'}}</view>
                 <view
-                  wx:if="{{canWrite}}"
+                  wx:if="{{canWrite && editingEpisodeId !== item.id}}"
                   class="episode-row__edit"
                   role="button"
                   aria-label="编辑本集"
                   data-id="{{item.id}}"
                   catchtap="handleEpisodeEdit"
                 ><app-icon name="pencil" size="23" /></view>
+                <block wx:if="{{canWrite && editingEpisodeId === item.id}}">
+                  <view
+                    class="episode-row__cancel"
+                    role="button"
+                    aria-label="取消编辑"
+                    catchtap="handleEpisodeEditCancel"
+                  ><app-icon name="x-muted" size="23" /></view>
+                  <button
+                    class="episode-row__save"
+                    form-type="submit"
+                    loading="{{savingEpisode}}"
+                    disabled="{{savingEpisode}}"
+                    aria-label="保存本集"
+                  >保存</button>
+                </block>
               </view>
             </view>
-            <view wx:if="{{item.plot_summary || item.timeline_notes.length}}" class="episode-row__preview">
+            <view wx:if="{{editingEpisodeId === item.id}}" class="episode-editor">
+              <view class="episode-editor__property">
+                <view class="episode-editor__label">单集标题</view>
+                <app-input
+                  class="episode-editor__control"
+                  custom-class="episode-editor__input"
+                  name="title"
+                  value="{{episodeDraftTitle}}"
+                  maxlength="120"
+                  placeholder="例如：真相"
+                  bindinput="handleEpisodeTitleInput"
+                />
+              </view>
+              <view class="episode-editor__property episode-editor__property--multiline">
+                <view class="episode-editor__label">整集概括</view>
+                <view class="episode-editor__control">
+                  <textarea
+                    class="episode-editor__textarea episode-editor__textarea--summary"
+                    name="plot_summary"
+                    value="{{episodeDraftPlotSummary}}"
+                    maxlength="2000"
+                    auto-height
+                    cursor-spacing="32"
+                    adjust-position="{{true}}"
+                    placeholder="概括这一整集发生了什么"
+                    bindinput="handleEpisodeSummaryInput"
+                  />
+                  <view class="episode-editor__count">{{episodeDraftPlotSummary.length}} / 2000</view>
+                </view>
+              </view>
+
+              <view class="episode-editor__timeline-heading">
+                <view>
+                  <view class="episode-editor__timeline-title">时间点记录</view>
+                  <view class="episode-editor__timeline-help">类型、时间和内容分别编辑</view>
+                </view>
+                <view class="episode-editor__add" bindtap="handleEpisodeAddTimelineNote">
+                  <app-icon name="plus" size="23" />
+                  <text>新增</text>
+                </view>
+              </view>
+              <view wx:if="{{episodeDraftTimelineNotes.length === 0}}" class="episode-editor__empty">还没有时间点，点击“新增”开始记录</view>
+              <view wx:else class="episode-editor__notes">
+                <view
+                  wx:for="{{episodeDraftTimelineNotes}}"
+                  wx:for-item="draftNote"
+                  wx:for-index="noteIndex"
+                  wx:key="id"
+                  class="episode-editor__note"
+                >
+                  <view class="episode-editor__note-heading">
+                    <view class="episode-editor__note-title">记录 {{noteIndex + 1}}</view>
+                    <view
+                      class="episode-editor__remove"
+                      role="button"
+                      aria-label="删除时间点"
+                      data-index="{{noteIndex}}"
+                      bindtap="handleEpisodeRemoveTimelineNote"
+                    ><app-icon name="trash-2-danger" size="23" /></view>
+                  </view>
+                  <view class="episode-editor__property">
+                    <view class="episode-editor__label">记录类型</view>
+                    <view class="episode-editor__control episode-editor__type-options">
+                      <view
+                        wx:for="{{timelineNoteTypes}}"
+                        wx:for-item="typeOption"
+                        wx:key="value"
+                        class="episode-editor__type {{draftNote.type === typeOption.value ? 'episode-editor__type--active' : ''}}"
+                        data-index="{{noteIndex}}"
+                        data-type="{{typeOption.value}}"
+                        bindtap="handleEpisodeTimelineTypeChange"
+                      >{{typeOption.label}}</view>
+                    </view>
+                  </view>
+                  <view class="episode-editor__property">
+                    <view class="episode-editor__label">时间</view>
+                    <picker
+                      class="episode-editor__control"
+                      mode="multiSelector"
+                      range="{{timePickerRange}}"
+                      value="{{draftNote.timePickerValue}}"
+                      data-index="{{noteIndex}}"
+                      bindchange="handleEpisodeTimelineTimeChange"
+                      bindcolumnchange="handleEpisodeTimelineTimeColumnChange"
+                    >
+                      <view class="episode-editor__time">{{draftNote.timecode}}</view>
+                    </picker>
+                  </view>
+                  <block wx:if="{{draftNote.type === 'quote'}}">
+                    <view
+                      wx:for="{{draftNote.dialogues}}"
+                      wx:for-item="dialogue"
+                      wx:for-index="dialogueIndex"
+                      wx:key="id"
+                      class="episode-editor__dialogue"
+                    >
+                      <view class="episode-editor__property">
+                        <view class="episode-editor__label">人物</view>
+                        <app-input
+                          class="episode-editor__control"
+                          custom-class="episode-editor__input"
+                          name="dialogue_speaker_{{noteIndex}}_{{dialogueIndex}}"
+                          value="{{dialogue.speaker}}"
+                          maxlength="40"
+                          placeholder="人物名称"
+                          cursor-spacing="32"
+                          adjust-position="{{true}}"
+                          data-note-index="{{noteIndex}}"
+                          data-dialogue-index="{{dialogueIndex}}"
+                          bindinput="handleEpisodeDialogueSpeakerInput"
+                        />
+                      </view>
+                      <view class="episode-editor__property episode-editor__property--multiline">
+                        <view class="episode-editor__label">文案</view>
+                        <view class="episode-editor__control episode-editor__dialogue-content">
+                          <textarea
+                            class="episode-editor__textarea"
+                            name="dialogue_content_{{noteIndex}}_{{dialogueIndex}}"
+                            value="{{dialogue.content}}"
+                            maxlength="500"
+                            auto-height
+                            cursor-spacing="32"
+                            adjust-position="{{true}}"
+                            placeholder="记录这句对话"
+                            data-note-index="{{noteIndex}}"
+                            data-dialogue-index="{{dialogueIndex}}"
+                            bindinput="handleEpisodeDialogueContentInput"
+                          />
+                          <view
+                            wx:if="{{draftNote.dialogues.length > 1}}"
+                            class="episode-editor__dialogue-remove"
+                            role="button"
+                            aria-label="删除这句对话"
+                            data-note-index="{{noteIndex}}"
+                            data-dialogue-index="{{dialogueIndex}}"
+                            bindtap="handleEpisodeRemoveDialogue"
+                          >删除本句</view>
+                        </view>
+                      </view>
+                    </view>
+                    <view class="episode-editor__dialogue-add" data-index="{{noteIndex}}" bindtap="handleEpisodeAddDialogue">＋ 添加一句对话</view>
+                  </block>
+                  <view wx:else class="episode-editor__property episode-editor__property--multiline">
+                    <view class="episode-editor__label">剧情内容</view>
+                    <textarea
+                      class="episode-editor__control episode-editor__textarea"
+                      name="timeline_content_{{noteIndex}}"
+                      value="{{draftNote.content}}"
+                      maxlength="500"
+                      auto-height
+                      cursor-spacing="32"
+                      adjust-position="{{true}}"
+                      placeholder="记录这个时间点发生的内容"
+                      data-index="{{noteIndex}}"
+                      bindinput="handleEpisodeTimelineContentInput"
+                      bindblur="handleEpisodeTimelineContentBlur"
+                    />
+                  </view>
+                </view>
+              </view>
+            </view>
+            <view wx:elif="{{item.plot_summary || item.timeline_notes.length}}" class="episode-row__preview">
               <block wx:if="{{item.plot_summary}}">
                 <view class="episode-row__label">整集概括</view>
                 <view class="episode-row__summary">{{item.plot_summary}}</view>
@@ -229,7 +411,7 @@
                 </view>
               </block>
             </view>
-          </view>
+          </form>
         </view>
       </view>
       <view wx:else class="empty-seasons">还没有季或篇章，点击右上角新增后即可记录剧情。</view>

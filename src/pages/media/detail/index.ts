@@ -15,6 +15,7 @@ import type {
   MediaEpisode,
   MediaSeason,
   MediaStatus,
+  MediaTimelineDialogue,
   MediaTimelineNote,
   MediaTimelineNoteType
 } from "../../../types/media"
@@ -31,8 +32,32 @@ import {
 } from "../../../utils/media-data-revision"
 
 let savedPageScrollTop = 0
+let timelineNoteSequence = 0
+let timelineDialogueSequence = 0
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
+
+type TimePickerValue = [number, number, number]
+
+type EditableTimelineNote = Omit<MediaTimelineNote, "type" | "dialogues"> & {
+  type: MediaTimelineNoteType
+  dialogues: MediaTimelineDialogue[]
+  timePickerValue: TimePickerValue
+}
+
+const timePickerColumnSizes: TimePickerValue = [100, 60, 60]
+
+// 微信原生 picker 没有 circular 属性。每列重复三段，并始终将选中项
+// 归位到中间段，使首尾数字可以继续向两个方向滚动。
+const timePickerRange = timePickerColumnSizes.map((size) =>
+  Array.from({ length: size * 3 }, (_, index) => String(index % size).padStart(2, "0"))
+)
+
+const timelineNoteTypes: Array<{ value: MediaTimelineNoteType; label: string }> = [
+  { value: "normal", label: "普通剧情" },
+  { value: "key", label: "关键剧情" },
+  { value: "quote", label: "语录" }
+]
 
 const timelineFilterOptions: Array<{
   value: MediaTimelineNoteType
@@ -45,6 +70,76 @@ const timelineFilterOptions: Array<{
 ]
 
 const allTimelineTypes = timelineFilterOptions.map((option) => option.value)
+
+function isTimelineNoteType(value: unknown): value is MediaTimelineNoteType {
+  return value === "normal" || value === "key" || value === "quote"
+}
+
+function createTimelineDialogue(speaker = "", content = ""): MediaTimelineDialogue {
+  timelineDialogueSequence += 1
+  return {
+    id: `dialogue_${Date.now()}_${timelineDialogueSequence}`,
+    speaker,
+    content
+  }
+}
+
+function getTimeValue(timecode: string): TimePickerValue {
+  const match = /^(\d{2}):([0-5]\d):([0-5]\d)$/.exec(timecode.trim())
+  if (!match) return [0, 0, 0]
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function getLoopedTimePickerValue(value: TimePickerValue): TimePickerValue {
+  return value.map((part, index) => part + timePickerColumnSizes[index]) as TimePickerValue
+}
+
+function normalizeTimePickerValue(value: TimePickerValue): TimePickerValue {
+  return value.map((part, index) => part % timePickerColumnSizes[index]) as TimePickerValue
+}
+
+function formatTimecode(value: TimePickerValue) {
+  return value.map((part) => String(part).padStart(2, "0")).join(":")
+}
+
+function createEditableTimelineNote(note: MediaTimelineNote): EditableTimelineNote {
+  const timeValue = getTimeValue(note.timecode)
+  const type = isTimelineNoteType(note.type) ? note.type : "normal"
+  const dialogues = Array.isArray(note.dialogues)
+    ? note.dialogues.map((dialogue) => ({
+        id: String(dialogue.id || createTimelineDialogue().id),
+        speaker: String(dialogue.speaker || ""),
+        content: String(dialogue.content || "")
+      }))
+    : []
+  return {
+    ...note,
+    timecode: formatTimecode(timeValue),
+    type,
+    dialogues: type === "quote" && dialogues.length === 0
+      ? [createTimelineDialogue("", note.content)]
+      : dialogues,
+    timePickerValue: getLoopedTimePickerValue(timeValue)
+  }
+}
+
+function createTimelineNote(): EditableTimelineNote {
+  timelineNoteSequence += 1
+  return createEditableTimelineNote({
+    id: `note_${Date.now()}_${timelineNoteSequence}`,
+    timecode: "00:00:00",
+    content: ""
+  })
+}
+
+function getSubmittedText(
+  values: WechatMiniprogram.IAnyObject,
+  name: string,
+  fallback: string
+): string {
+  const value = values[name]
+  return typeof value === "string" ? value : fallback
+}
 
 function promptText(title: string, placeholder: string): Promise<string | null> {
   return new Promise((resolve) => {
@@ -121,6 +216,13 @@ Page({
     isEpisodic: false,
     isAudio: false,
     activeDetailTab: "detail" as "detail" | "records",
+    editingEpisodeId: "",
+    episodeDraftTitle: "",
+    episodeDraftPlotSummary: "",
+    episodeDraftTimelineNotes: [] as EditableTimelineNote[],
+    timelineNoteTypes,
+    timePickerRange,
+    savingEpisode: false,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -212,6 +314,10 @@ Page({
   },
 
   handleSeasonTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.editingEpisodeId) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
     const index = Number(event.currentTarget.dataset.index)
     const activeSeason = this.data.seasons[index]
     if (!activeSeason) return
@@ -228,6 +334,10 @@ Page({
     if (!(["detail", "records"] as string[]).includes(activeDetailTab)) return
     if (activeDetailTab === "records" && !this.data.isEpisodic) return
     if (activeDetailTab === this.data.activeDetailTab) return
+    if (this.data.editingEpisodeId) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
     savedPageScrollTop = 0
     this.setData({ activeDetailTab }, () => {
       wx.pageScrollTo({ scrollTop: 0, duration: 0 })
@@ -235,6 +345,10 @@ Page({
   },
 
   handleFavoriteEpisodesFilterTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.editingEpisodeId) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
     const favoriteEpisodesOnly = String(event.currentTarget.dataset.scope || "") === "favorites"
     this.setData({
       favoriteEpisodesOnly,
@@ -247,6 +361,10 @@ Page({
   },
 
   handleTimelineFilterTypeTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.editingEpisodeId) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
     const type = String(event.currentTarget.dataset.type || "") as MediaTimelineNoteType
     if (!allTimelineTypes.includes(type)) return
     const isSelected = this.data.timelineTypeFilters.includes(type)
@@ -268,6 +386,10 @@ Page({
   },
 
   handleTimelineFilterReset() {
+    if (this.data.editingEpisodeId) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
     const timelineTypeFilters = [...allTimelineTypes]
     this.setData({
       timelineTypeFilters,
@@ -465,16 +587,301 @@ Page({
   },
 
   handleEpisodeEdit(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite) return
+    if (!this.data.canWrite || this.data.savingEpisode) return
     const id = String(event.currentTarget.dataset.id || "")
     const episode = this.data.activeSeason?.episodes.find((item) => item.id === id)
-    if (!episode || !this.data.entry || !this.data.activeSeason) return
-    wx.setStorageSync("MEDIA_EPISODE_EDIT", {
-      episode,
-      mediaTitle: this.data.entry.title,
-      seasonName: this.data.activeSeason.name
+    if (!episode) return
+    if (this.data.editingEpisodeId && this.data.editingEpisodeId !== id) {
+      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
+      return
+    }
+    this.setData({
+      editingEpisodeId: id,
+      episodeDraftTitle: episode.title,
+      episodeDraftPlotSummary: episode.plot_summary,
+      episodeDraftTimelineNotes: Array.isArray(episode.timeline_notes)
+        ? episode.timeline_notes.map(createEditableTimelineNote)
+        : []
     })
-    wx.navigateTo({ url: `/pages/media/episode-edit/index?id=${id}` })
+  },
+
+  handleEpisodeEditCancel() {
+    if (this.data.savingEpisode) return
+    this.setData({
+      editingEpisodeId: "",
+      episodeDraftTitle: "",
+      episodeDraftPlotSummary: "",
+      episodeDraftTimelineNotes: []
+    })
+  },
+
+  handleEpisodeTitleInput(event: WechatMiniprogram.Input) {
+    this.setData({ episodeDraftTitle: event.detail.value })
+  },
+
+  handleEpisodeSummaryInput(event: WechatMiniprogram.TextareaInput) {
+    this.setData({ episodeDraftPlotSummary: event.detail.value })
+  },
+
+  handleEpisodeAddTimelineNote() {
+    if (this.data.episodeDraftTimelineNotes.length >= 100) {
+      wx.showToast({ title: "每集最多记录 100 个时间点", icon: "none" })
+      return
+    }
+    this.setData({
+      episodeDraftTimelineNotes: [
+        ...this.data.episodeDraftTimelineNotes,
+        createTimelineNote()
+      ]
+    })
+  },
+
+  handleEpisodeTimelineTimeChange(event: WechatMiniprogram.PickerChange) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
+    const pickerValue = event.detail.value as number[]
+    if (pickerValue.length !== 3 || pickerValue.some((value) => !Number.isInteger(value))) return
+    const rawPickerValue: TimePickerValue = [pickerValue[0], pickerValue[1], pickerValue[2]]
+    const timeValue = normalizeTimePickerValue(rawPickerValue)
+    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
+    episodeDraftTimelineNotes[index] = {
+      ...episodeDraftTimelineNotes[index],
+      timecode: formatTimecode(timeValue),
+      timePickerValue: getLoopedTimePickerValue(timeValue)
+    }
+    this.setData({ episodeDraftTimelineNotes })
+  },
+
+  handleEpisodeTimelineTimeColumnChange(event: WechatMiniprogram.PickerColumnChange) {
+    const index = Number(event.currentTarget.dataset.index)
+    const column = event.detail.column
+    const value = event.detail.value
+    const note = this.data.episodeDraftTimelineNotes[index]
+    const columnSize = timePickerColumnSizes[column]
+    if (!note || columnSize === undefined || !Number.isInteger(value)) return
+    if (value >= columnSize && value < columnSize * 2) {
+      note.timePickerValue[column] = value
+      return
+    }
+    const timePickerValue = [...note.timePickerValue] as TimePickerValue
+    timePickerValue[column] = columnSize + (value % columnSize)
+    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
+    episodeDraftTimelineNotes[index] = { ...note, timePickerValue }
+    this.setData({ episodeDraftTimelineNotes })
+  },
+
+  handleEpisodeTimelineTypeChange(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const type = String(event.currentTarget.dataset.type || "")
+    if (
+      !Number.isInteger(index)
+      || !this.data.episodeDraftTimelineNotes[index]
+      || !isTimelineNoteType(type)
+    ) return
+    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
+    const note = episodeDraftTimelineNotes[index]
+    if (note.type === type) return
+    let content = note.content
+    let dialogues = note.dialogues
+    if (type === "quote" && dialogues.length === 0) {
+      dialogues = [createTimelineDialogue("", content)]
+    } else if (note.type === "quote" && type !== "quote" && !content.trim()) {
+      content = dialogues
+        .map((dialogue) => `${dialogue.speaker.trim()}：${dialogue.content.trim()}`)
+        .join("\n")
+    }
+    episodeDraftTimelineNotes[index] = { ...note, type, content, dialogues }
+    this.setData({ episodeDraftTimelineNotes })
+  },
+
+  handleEpisodeTimelineContentInput(event: WechatMiniprogram.TextareaInput) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
+    this.data.episodeDraftTimelineNotes[index].content = event.detail.value
+  },
+
+  handleEpisodeTimelineContentBlur(event: WechatMiniprogram.TextareaBlur) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
+    this.data.episodeDraftTimelineNotes[index].content = event.detail.value
+  },
+
+  handleEpisodeDialogueSpeakerInput(event: WechatMiniprogram.Input) {
+    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
+    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
+    const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
+    if (!dialogue) return
+    dialogue.speaker = event.detail.value
+  },
+
+  handleEpisodeDialogueContentInput(event: WechatMiniprogram.TextareaInput) {
+    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
+    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
+    const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
+    if (!dialogue) return
+    dialogue.content = event.detail.value
+  },
+
+  handleEpisodeAddDialogue(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const note = this.data.episodeDraftTimelineNotes[index]
+    if (!note || note.type !== "quote") return
+    if (note.dialogues.length >= 20) {
+      wx.showToast({ title: "每个时间点最多记录 20 条对话", icon: "none" })
+      return
+    }
+    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
+    episodeDraftTimelineNotes[index] = {
+      ...note,
+      dialogues: [...note.dialogues, createTimelineDialogue()]
+    }
+    this.setData({ episodeDraftTimelineNotes })
+  },
+
+  handleEpisodeRemoveDialogue(event: WechatMiniprogram.TouchEvent) {
+    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
+    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
+    const note = this.data.episodeDraftTimelineNotes[noteIndex]
+    if (!note || note.type !== "quote" || note.dialogues.length <= 1 || !note.dialogues[dialogueIndex]) return
+    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
+    episodeDraftTimelineNotes[noteIndex] = {
+      ...note,
+      dialogues: note.dialogues.filter((_, index) => index !== dialogueIndex)
+    }
+    this.setData({ episodeDraftTimelineNotes })
+  },
+
+  handleEpisodeRemoveTimelineNote(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
+    this.setData({
+      episodeDraftTimelineNotes: this.data.episodeDraftTimelineNotes.filter(
+        (_, noteIndex) => noteIndex !== index
+      )
+    })
+  },
+
+  async handleEpisodeSave(event: WechatMiniprogram.FormSubmit) {
+    const id = String(event.currentTarget.dataset.id || "")
+    if (
+      !this.data.canWrite
+      || this.data.savingEpisode
+      || !id
+      || id !== this.data.editingEpisodeId
+    ) return
+    const submittedValues = event.detail.value
+    const title = getSubmittedText(submittedValues, "title", this.data.episodeDraftTitle)
+    const plotSummary = getSubmittedText(
+      submittedValues,
+      "plot_summary",
+      this.data.episodeDraftPlotSummary
+    )
+    const timelineNotes = this.data.episodeDraftTimelineNotes.map((note, noteIndex) => ({
+      ...note,
+      content: note.type === "quote"
+        ? note.content
+        : getSubmittedText(
+            submittedValues,
+            `timeline_content_${noteIndex}`,
+            note.content
+          ),
+      dialogues: note.type === "quote"
+        ? note.dialogues.map((dialogue, dialogueIndex) => ({
+            ...dialogue,
+            speaker: getSubmittedText(
+              submittedValues,
+              `dialogue_speaker_${noteIndex}_${dialogueIndex}`,
+              dialogue.speaker
+            ),
+            content: getSubmittedText(
+              submittedValues,
+              `dialogue_content_${noteIndex}_${dialogueIndex}`,
+              dialogue.content
+            )
+          }))
+        : note.dialogues
+    }))
+    this.data.episodeDraftTitle = title
+    this.data.episodeDraftPlotSummary = plotSummary
+    this.data.episodeDraftTimelineNotes = timelineNotes
+    if (timelineNotes.some((note) => !/^\d{2}:[0-5]\d:[0-5]\d$/.test(note.timecode.trim()))) {
+      wx.showToast({ title: "时间需使用 01:03:09 格式", icon: "none" })
+      return
+    }
+    if (timelineNotes.some((note) => note.type !== "quote" && !note.content.trim())) {
+      wx.showToast({ title: "请填写每条剧情内容", icon: "none" })
+      return
+    }
+    if (timelineNotes.some((note) =>
+      note.type === "quote"
+      && (note.dialogues.length === 0 || note.dialogues.some((dialogue) =>
+        !dialogue.speaker.trim() || !dialogue.content.trim()
+      ))
+    )) {
+      wx.showToast({ title: "请填写语录中的人物和文案", icon: "none" })
+      return
+    }
+    this.setData({ savingEpisode: true })
+    try {
+      const updatedEpisode = await updateMediaEpisode(id, {
+        title,
+        plot_summary: plotSummary,
+        timeline_notes: timelineNotes.map((note) => ({
+          id: note.id,
+          timecode: note.timecode.trim(),
+          type: note.type,
+          content: note.type === "quote" ? "" : note.content.trim(),
+          dialogues: note.type === "quote"
+            ? note.dialogues.map((dialogue) => ({
+                id: dialogue.id,
+                speaker: dialogue.speaker.trim(),
+                content: dialogue.content.trim()
+              }))
+            : []
+        }))
+      })
+      const normalizedEpisode = {
+        ...updatedEpisode,
+        timeline_notes: Array.isArray(updatedEpisode.timeline_notes)
+          ? updatedEpisode.timeline_notes.map(normalizeTimelineNote)
+          : []
+      }
+      const seasons = this.data.seasons.map((season) => ({
+        ...season,
+        episodes: season.episodes.map((episode) =>
+          episode.id === id ? normalizedEpisode : episode
+        )
+      }))
+      const activeSeason = seasons[this.data.activeSeasonIndex] || null
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        seasons,
+        activeSeason,
+        filteredEpisodes: filterTimelineEpisodes(
+          activeSeason,
+          this.data.timelineTypeFilters,
+          this.data.favoriteEpisodesOnly
+        ),
+        activeSeasonFavoriteCount: favoriteCount(activeSeason),
+        editingEpisodeId: "",
+        episodeDraftTitle: "",
+        episodeDraftPlotSummary: "",
+        episodeDraftTimelineNotes: [],
+        savingEpisode: false,
+        mediaRevision
+      })
+      wx.showToast({ title: "保存成功", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ savingEpisode: false })
+        wx.showToast({
+          title: error instanceof Error ? error.message : "保存失败，请稍后重试",
+          icon: "none",
+          duration: 3000
+        })
+      }
+    }
   },
 
   async handleFavoriteTap(event: WechatMiniprogram.TouchEvent) {

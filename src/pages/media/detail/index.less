@@ -101,7 +101,8 @@
 .detail-icon-button,
 .records-icon-button,
 .episode-row__heart,
-.episode-row__edit {
+.episode-row__edit,
+.episode-row__cancel {
   display: flex;
   width: 54rpx;
   height: 54rpx;
@@ -389,6 +390,10 @@
   border-bottom: 1rpx solid var(--ui-border);
 }
 
+.episode-row--editing {
+  padding-bottom: 22rpx;
+}
+
 .episode-row__header {
   display: flex;
   min-height: 70rpx;
@@ -421,6 +426,245 @@
   color: #888;
   font-size: var(--ui-font-size-small);
   line-height: 1.4;
+}
+
+.episode-row__save {
+  display: flex;
+  min-width: 0;
+  height: 48rpx;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 18rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-pill);
+  background: #111;
+  color: #fff;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.episode-row__save::after {
+  border: 0;
+}
+
+.episode-row__save[disabled] {
+  opacity: .55;
+}
+
+.episode-editor {
+  overflow: hidden;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+
+.episode-editor__property {
+  display: flex;
+  min-height: 72rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 18rpx;
+  padding: 14rpx 18rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+}
+
+.episode-editor__property--multiline {
+  align-items: flex-start;
+}
+
+.episode-editor__label {
+  width: 110rpx;
+  flex: 0 0 110rpx;
+  padding-top: 2rpx;
+  color: #777;
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.episode-editor__control {
+  min-width: 0;
+  flex: 1;
+}
+
+.episode-editor__input {
+  width: 100%;
+  height: 58rpx;
+  box-sizing: border-box;
+  padding: 0 14rpx;
+  border: 1rpx solid #d8d8d8;
+  border-radius: 8rpx;
+  background: var(--ui-page-background);
+  color: #222;
+  font-size: var(--ui-font-size-base);
+}
+
+.episode-editor__textarea {
+  width: 100%;
+  min-height: 108rpx;
+  box-sizing: border-box;
+  padding: 13rpx 14rpx;
+  border: 1rpx solid #d8d8d8;
+  border-radius: 8rpx;
+  background: var(--ui-page-background);
+  color: #222;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.6;
+}
+
+.episode-editor__textarea--summary {
+  min-height: 128rpx;
+}
+
+.episode-editor__count {
+  margin-top: 7rpx;
+  color: #aaa;
+  font-size: var(--ui-font-size-small);
+  text-align: right;
+}
+
+.episode-editor__timeline-heading,
+.episode-editor__note-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.episode-editor__timeline-heading {
+  padding: 18rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+  background: var(--ui-subtle-background);
+}
+
+.episode-editor__timeline-title {
+  color: #222;
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+}
+
+.episode-editor__timeline-help {
+  margin-top: 4rpx;
+  color: #999;
+  font-size: var(--ui-font-size-small);
+}
+
+.episode-editor__add {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4rpx;
+  padding: 8rpx 13rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-surface);
+  color: #333;
+  font-size: var(--ui-font-size-base);
+}
+
+.episode-editor__empty {
+  padding: 44rpx 20rpx;
+  color: #999;
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.episode-editor__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 16rpx;
+  background: var(--ui-subtle-background);
+}
+
+.episode-editor__note {
+  overflow: hidden;
+  border: 1rpx solid var(--ui-border);
+  border-radius: 12rpx;
+  background: var(--ui-surface);
+}
+
+.episode-editor__note-heading {
+  min-height: 58rpx;
+  padding: 7rpx 9rpx 7rpx 18rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+}
+
+.episode-editor__note-title {
+  color: #555;
+  font-size: var(--ui-font-size-small);
+  font-weight: 650;
+}
+
+.episode-editor__remove {
+  display: flex;
+  width: 44rpx;
+  height: 44rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.episode-editor__type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.episode-editor__type {
+  padding: 7rpx 12rpx;
+  border: 1rpx solid #dedede;
+  border-radius: var(--ui-radius-pill);
+  color: #888;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.episode-editor__type--active {
+  border-color: #222;
+  background: #222;
+  color: #fff;
+}
+
+.episode-editor__time {
+  display: flex;
+  width: 190rpx;
+  height: 58rpx;
+  box-sizing: border-box;
+  padding: 0 14rpx;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid #d8d8d8;
+  border-radius: 8rpx;
+  background: var(--ui-page-background);
+  color: #333;
+  font-size: var(--ui-font-size-base);
+}
+
+.episode-editor__dialogue + .episode-editor__dialogue {
+  border-top: 8rpx solid var(--ui-subtle-background);
+}
+
+.episode-editor__dialogue-content {
+  min-width: 0;
+}
+
+.episode-editor__dialogue-remove {
+  display: inline-flex;
+  margin-top: 7rpx;
+  padding: 5rpx 10rpx;
+  border-radius: var(--ui-radius-pill);
+  background: #fff3f3;
+  color: #a4504c;
+  font-size: var(--ui-font-size-small);
+}
+
+.episode-editor__dialogue-add {
+  padding: 13rpx 18rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+  color: #666;
+  font-size: var(--ui-font-size-base);
+  text-align: right;
 }
 
 .episode-row__preview {
