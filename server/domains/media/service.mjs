@@ -1,9 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
-import { HttpError, assertCondition } from "../../lib/errors.mjs";
+import { assertCondition } from "../../lib/errors.mjs";
 import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
-import { optimizeOriginalImage } from "../../lib/image-processing.mjs";
+import {
+  IMAGE_PROFILES,
+  IMAGE_STORAGE_VERSION,
+} from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
+import { uploadOptimizedImagePair } from "../shared/image-storage.mjs";
 import {
   booleanValue,
   enumValue,
@@ -46,7 +50,15 @@ function managedMediaCoverPath(url, userId, mediaEntryId) {
 
 async function removeManagedMediaCover(supabase, path) {
   if (!path) return;
-  const { error } = await supabase.storage.from(config.mediaCoverBucket).remove([path]);
+  const thumbnailPath = path.endsWith(`-${IMAGE_STORAGE_VERSION}.webp`)
+    ? path.replace(
+        `-${IMAGE_STORAGE_VERSION}.webp`,
+        `-${IMAGE_STORAGE_VERSION}-thumbnail.webp`,
+      )
+    : "";
+  const { error } = await supabase.storage
+    .from(config.mediaCoverBucket)
+    .remove([path, thumbnailPath].filter(Boolean));
   if (error) console.error("删除旧影视封面失败:", error);
 }
 
@@ -374,30 +386,16 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     "仅支持 PNG、JPEG 或 WebP 图片。",
   );
   const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
-  let optimized;
-  try {
-    optimized = await optimizeOriginalImage(image.buffer);
-  } catch (error) {
-    if (error instanceof HttpError) throw error;
-    const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。");
-    wrapped.cause = error;
-    throw wrapped;
-  }
-
-  const path = `users/${userId}/entries/${id}/${randomUUID()}.webp`;
-  const bucket = supabase.storage.from(config.mediaCoverBucket);
-  const { error: uploadError } = await bucket.upload(path, optimized.original, {
-    cacheControl: "31536000",
-    contentType: optimized.originalContentType,
-    upsert: false,
+  const { imagePath, thumbnailPath } = await uploadOptimizedImagePair(supabase, {
+    bucketName: config.mediaCoverBucket,
+    basePath: `users/${userId}/entries/${id}/${randomUUID()}`,
+    buffer: image.buffer,
+    profile: IMAGE_PROFILES.mediaCover,
+    uploadErrorMessage: "上传影视封面失败。",
+    thumbnailErrorMessage: "生成影视封面缩略图失败。",
   });
-  if (uploadError) {
-    const wrapped = new HttpError(500, "MEDIA_COVER_UPLOAD_FAILED", "上传影视封面失败。");
-    wrapped.cause = uploadError;
-    throw wrapped;
-  }
-
-  const coverUrl = bucket.getPublicUrl(path).data.publicUrl;
+  const bucket = supabase.storage.from(config.mediaCoverBucket);
+  const coverUrl = bucket.getPublicUrl(imagePath).data.publicUrl;
   const { data, error } = await supabase
     .from("media_entries")
     .update({ cover_url: coverUrl })
@@ -406,7 +404,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     .select("*")
     .single();
   if (error) {
-    await removeManagedMediaCover(supabase, path);
+    await bucket.remove([imagePath, thumbnailPath]);
     throwSupabaseError(error, "更新影视封面失败。");
   }
 

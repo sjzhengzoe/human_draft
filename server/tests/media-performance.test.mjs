@@ -15,7 +15,9 @@ test("media pages reuse loaded data until a successful mutation invalidates it",
   assert.match(index, /sharedLoaded:\s*false/);
   assert.match(index, /overviewLoaded:\s*false/);
   assert.match(index, /recordLoaded:\s*false/);
-  assert.match(index, /if \(!viewLoaded\) void this\.loadCurrentView\(\)/);
+  assert.match(index, /if \(!this\.isCurrentCacheFresh\(\)\)/);
+  assert.match(index, /handleContentLower\(\)/);
+  assert.match(index, /handlePullRefresh\(\)/);
   assert.match(index, /this\.data\.mediaRevision !== mediaRevision/);
   assert.match(index, /syncLoadedDataFromCache\(mediaRevision\)/);
   assert.match(categories, /this\.data\.mediaRevision !== getMediaDataRevision\(\)/);
@@ -32,17 +34,19 @@ test("media reads reuse session cache and successful writes update it", async ()
     readProjectFile("src/services/auth.ts"),
   ]);
 
-  assert.match(service, /const cached = options\.forceRefresh \? null : getCachedMediaEntry\(id\)/);
-  assert.match(service, /const cached = options\.forceRefresh \? null : getCachedMediaSeasons\(mediaEntryId\)/);
+  assert.match(service, /!isMediaEntryCacheFresh\(id\) \? null : getCachedMediaEntry\(id\)/);
+  assert.match(service, /!isMediaSeasonsCacheFresh\(mediaEntryId\)/);
   assert.match(service, /cacheMediaEntry\(data\.item\)/);
   assert.match(service, /updateCachedMediaEpisode\(data\.item\)/);
   assert.match(service, /invalidateCachedMediaSeasons\(mediaEntryId\)/);
-  assert.match(cache, /const cachedEntryCollections = new Map/);
-  assert.match(cache, /export function cacheMediaEntryCollection/);
+  assert.match(cache, /const cachedEntryPages = new Map/);
+  assert.match(cache, /export function cacheMediaEntryPage/);
+  assert.match(cache, /data\.items\.forEach\(storeEntryValue\)/);
+  assert.match(cache, /MAX_CACHED_MEDIA_DETAILS = 20/);
   assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
   assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);
-  assert.match(index, /getCachedMediaEntryCollection\(status\)/);
-  assert.match(index, /mergeCachedEntries/);
+  assert.match(index, /getCachedMediaEntryPage/);
+  assert.match(index, /hydrateCurrentViewFromCache/);
   assert.match(auth, /clearMediaDataCache\(\)/);
 });
 

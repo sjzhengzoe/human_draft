@@ -34,8 +34,8 @@ test("fixed media pages keep their own vertical scroll containers", async () => 
   ]);
 
   assert.equal(JSON.parse(configSource).disableScroll, true);
-  assert.match(page, /<scroll-view class="content-scroll" scroll-y/);
+  assert.match(page, /<scroll-view[\s\S]*?class="content-scroll"[\s\S]*?scroll-y/);
   assert.equal(JSON.parse(detailConfigSource).disableScroll, true);
-  assert.match(detailPage, /<scroll-view class="detail-attribute-scroll" scroll-y/);
-  assert.match(detailPage, /class="records-content" scroll-y/);
+  assert.match(detailPage, /<scroll-view[\s\S]*?class="detail-attribute-scroll"[\s\S]*?scroll-y/);
+  assert.match(detailPage, /<scroll-view[\s\S]*?class="records-content[^\"]*"[\s\S]*?scroll-y/);
 });

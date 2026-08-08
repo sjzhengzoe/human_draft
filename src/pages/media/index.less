@@ -64,6 +64,7 @@
 }
 
 .icon-button {
+  position: relative;
   display: flex;
   width: 54rpx;
   height: 54rpx;
@@ -73,6 +74,13 @@
   border: 1rpx solid var(--ui-border);
   border-radius: 50%;
   background: var(--ui-surface);
+}
+
+.icon-button::after,
+.record-card__revisit::after {
+  position: absolute;
+  content: "";
+  inset: -14rpx;
 }
 
 .icon-button--primary {
@@ -126,6 +134,12 @@
   display: inline-flex;
   gap: 8rpx;
   padding: 1rpx 2rpx;
+}
+
+.category-list--wrap {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 14rpx;
 }
 
 .status-list {
@@ -217,11 +231,16 @@
 }
 
 .record-card__title {
+  display: -webkit-box;
+  min-height: 54rpx;
   color: #171717;
   font-size: var(--ui-font-size-small);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   white-space: normal;
   word-break: break-word;
 }
@@ -329,6 +348,31 @@
 .record-card__body {
   box-sizing: border-box;
   padding: 14rpx 12rpx 16rpx;
+}
+
+.empty-action {
+  display: flex;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18rpx;
+  border-radius: var(--ui-radius-pill);
+  background: #111;
+  color: #fff;
+  font-size: var(--ui-font-size-small);
+  line-height: normal;
+}
+
+.section-empty {
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.load-more {
+  padding: 24rpx var(--ui-page-gutter) calc(24rpx + env(safe-area-inset-bottom));
+  color: #aaa;
+  font-size: var(--ui-font-size-small);
+  text-align: center;
 }
 
 .state-block {

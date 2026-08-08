@@ -6,37 +6,7 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <view class="record-overview">
-    <view class="record-overview__title">新增影视</view>
-    <view class="record-overview__stats">
-      <view class="record-overview__stat">
-        <view class="record-overview__value">{{mediaTypes[mediaTypeIndex]}}</view>
-        <view class="record-overview__label">分类</view>
-      </view>
-      <view class="record-overview__stat">
-        <view class="record-overview__value">{{isAudio ? (watchStatus === 'planned' ? '想听' : watchStatus === 'in_progress' ? '在听' : '听过') : (watchStatus === 'planned' ? '想看' : watchStatus === 'in_progress' ? (isEpisodic ? '在看' : '正在看') : (isEpisodic ? '看过' : '已阅'))}}</view>
-        <view class="record-overview__label">状态</view>
-      </view>
-    </view>
-  </view>
   <view class="form-card">
-    <view class="field">
-      <view class="field-label">封面</view>
-      <view class="cover-editor" bindtap="handleChooseImage">
-        <image
-          wx:if="{{selectedImagePath}}"
-          class="cover-editor__preview"
-          src="{{selectedImagePath}}"
-          mode="aspectFill"
-        />
-        <view wx:else class="cover-editor__empty">
-          <app-icon name="image-plus" size="42" />
-          <view>选择封面</view>
-        </view>
-        <view class="cover-editor__action">{{selectedImagePath ? '更换封面' : '选择封面'}}</view>
-      </view>
-      <view class="field-help cover-editor__help">建议使用 3:4 竖图，保存后统一输出为 1080 × 1440</view>
-    </view>
     <view class="field">
       <view class="field-label">名称</view>
       <app-input custom-class="field-input" font-size="20rpx" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
@@ -51,9 +21,21 @@
       <view class="field-label">状态</view>
       <view class="status-options">
         <view class="status-option {{watchStatus === 'planned' ? 'status-option--active' : ''}}" data-status="planned" bindtap="handleStatusTap">{{isAudio ? '想听' : '想看'}}</view>
-        <view class="status-option {{watchStatus === 'in_progress' ? 'status-option--active' : ''}}" data-status="in_progress" bindtap="handleStatusTap">{{isAudio ? '在听' : (isEpisodic ? '在看' : '正在看')}}</view>
-        <view class="status-option {{watchStatus === 'completed' ? 'status-option--active' : ''}}" data-status="completed" bindtap="handleStatusTap">{{isAudio ? '听过' : (isEpisodic ? '看过' : '已阅')}}</view>
+        <view class="status-option {{watchStatus === 'in_progress' ? 'status-option--active' : ''}}" data-status="in_progress" bindtap="handleStatusTap">{{isAudio ? '在听' : '在看'}}</view>
+        <view class="status-option {{watchStatus === 'completed' ? 'status-option--active' : ''}}" data-status="completed" bindtap="handleStatusTap">{{isAudio ? '听过' : '看过'}}</view>
       </view>
+    </view>
+    <view class="field">
+      <view class="field-label">封面（选填）</view>
+      <view class="cover-editor" bindtap="handleChooseImage">
+        <image wx:if="{{selectedImagePath}}" class="cover-editor__preview" src="{{selectedImagePath}}" mode="aspectFill" />
+        <view wx:else class="cover-editor__empty">
+          <app-icon name="image-plus" size="42" />
+          <view>选择封面</view>
+        </view>
+        <view class="cover-editor__action">{{selectedImagePath ? '更换封面' : '选择封面'}}</view>
+      </view>
+      <view class="field-help cover-editor__help">建议使用 3:4 竖图，保存后统一输出为 1080 × 1440</view>
     </view>
     <view class="field field--switch">
       <view>
@@ -72,7 +54,9 @@
       </checkbox-group>
     </view>
   </view>
-  <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage || showImageCropper}}" bindtap="handleSave">新增</button>
+  <view class="save-bar">
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage || showImageCropper}}" bindtap="handleSave">新增</button>
+  </view>
 </view>
 
 <image-cropper

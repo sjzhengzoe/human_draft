@@ -1,11 +1,6 @@
 @import "../compact-typography.less";
 
-.record-overview__title,
-.record-overview__value {
-  font-size: var(--ui-font-size-small);
-}
-
-.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx var(--ui-page-gutter) 48rpx; background: var(--ui-page-background); }
+.page { min-height: 100vh; box-sizing: border-box; padding: 30rpx var(--ui-page-gutter) 0; background: var(--ui-page-background); }
 .form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface); }
 .field { padding: 26rpx 28rpx; border-bottom: 1rpx solid var(--ui-border); }
 .field:last-child { border-bottom: 0; }
@@ -29,4 +24,5 @@
 .platform-option checkbox { transform: scale(.8); }
 .save-button { display: flex; height: 92rpx; box-sizing: border-box; padding: 0; align-items: center; justify-content: center; gap: 9rpx; border-radius: 46rpx; font-size: var(--ui-font-size-base); line-height: normal; }
 .save-button::after { border: 0; }
-.save-button { margin-top: 28rpx; background: #111; color: #fff; }
+.save-bar { position: sticky; z-index: 5; bottom: 0; margin: 28rpx calc(-1 * var(--ui-page-gutter)) 0; padding: 16rpx var(--ui-page-gutter) calc(16rpx + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(245, 245, 245, 0), var(--ui-page-background) 24rpx); }
+.save-button { margin: 0; background: #111; color: #fff; }

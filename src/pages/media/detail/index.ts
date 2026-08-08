@@ -33,7 +33,10 @@ import {
 import {
   getCachedMediaCategories,
   getCachedMediaEntry,
-  getCachedMediaSeasons
+  getCachedMediaSeasons,
+  isMediaCategoriesCacheFresh,
+  isMediaEntryCacheFresh,
+  isMediaSeasonsCacheFresh
 } from "../../../utils/media-data-cache"
 import {
   getMediaDataRevision,
@@ -42,6 +45,7 @@ import {
 
 let timelineNoteSequence = 0
 let timelineDialogueSequence = 0
+let episodeDraftTimer: ReturnType<typeof setTimeout> | null = null
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const BUILTIN_PLATFORMS = [
@@ -55,6 +59,8 @@ const BUILTIN_PLATFORMS = [
   "漫播",
   "Books"
 ]
+const EPISODE_RENDER_BATCH = 20
+const EPISODE_DRAFT_PREFIX = "media:episode-draft:v1:"
 
 type TimePickerValue = [number, number, number]
 
@@ -241,6 +247,7 @@ Page({
     seasons: [] as MediaSeason[],
     activeSeason: null as MediaSeason | null,
     filteredEpisodes: [] as MediaEpisode[],
+    visibleEpisodeCount: EPISODE_RENDER_BATCH,
     activeSeasonIndex: 0,
     activeSeasonFavoriteCount: 0,
     timelineFilterOptions,
@@ -274,8 +281,10 @@ Page({
     timelineNoteTypes,
     timePickerRange,
     savingEpisode: false,
+    episodeDraftDirty: false,
     loading: true,
     contentLoading: false,
+    detailRefresherTriggered: false,
     hasLoaded: false,
     mediaRevision: -1,
     operating: false,
@@ -295,17 +304,28 @@ Page({
     activateAsyncPage(this)
     if (!this.data.hasLoaded || this.data.mediaRevision !== getMediaDataRevision()) {
       void this.loadPage()
+    } else if (
+      !isMediaEntryCacheFresh(this.data.id)
+      || !isMediaSeasonsCacheFresh(this.data.id)
+      || !isMediaCategoriesCacheFresh()
+    ) {
+      void this.loadPage({ forceRefresh: true, background: true })
     }
   },
 
   onUnload() {
+    this.flushEpisodeDraft()
     deactivateAsyncPage(this)
   },
 
-  async loadPage() {
-    const cachedEntry = getCachedMediaEntry(this.data.id)
-    const cachedSeasons = getCachedMediaSeasons(this.data.id)
-    const cachedCategories = getCachedMediaCategories()
+  onHide() {
+    this.flushEpisodeDraft()
+  },
+
+  async loadPage(options: { forceRefresh?: boolean; background?: boolean } = {}) {
+    const cachedEntry = options.forceRefresh ? null : getCachedMediaEntry(this.data.id)
+    const cachedSeasons = options.forceRefresh ? null : getCachedMediaSeasons(this.data.id)
+    const cachedCategories = options.forceRefresh ? null : getCachedMediaCategories()
     const currentUser = getCurrentUser()
     if (cachedEntry && cachedSeasons && cachedCategories && currentUser) {
       this.applyPageData(cachedEntry, cachedSeasons, cachedCategories, currentUser.can_write)
@@ -315,33 +335,49 @@ Page({
         hasLoaded: true,
         errorMessage: ""
       })
+      if (
+        !isMediaEntryCacheFresh(this.data.id)
+        || !isMediaSeasonsCacheFresh(this.data.id)
+        || !isMediaCategoriesCacheFresh()
+      ) {
+        void this.loadPage({ forceRefresh: true, background: true })
+      }
       return
     }
 
     const generation = beginAsyncPageRequest(this)
-    const showInitialLoading = !this.data.hasLoaded
-    this.setData({
-      loading: showInitialLoading,
-      contentLoading: !showInitialLoading,
-      errorMessage: ""
-    })
+    const background = options.background === true
+    const showInitialLoading = !this.data.hasLoaded && !background
+    if (!background) {
+      this.setData({
+        loading: showInitialLoading,
+        contentLoading: !showInitialLoading,
+        errorMessage: ""
+      })
+    }
     try {
       const session = await ensureLogin()
       const [entry, seasons, categories] = await Promise.all([
-        getMediaEntry(this.data.id),
-        listMediaSeasons(this.data.id),
-        listMediaCategories()
+        getMediaEntry(this.data.id, { forceRefresh: options.forceRefresh }),
+        listMediaSeasons(this.data.id, { forceRefresh: options.forceRefresh }),
+        listMediaCategories({ forceRefresh: options.forceRefresh })
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.applyPageData(entry, seasons, categories, session.user.can_write)
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const message = error instanceof Error ? error.message : "加载失败"
+      if (background) return
       if (showInitialLoading) this.setData({ errorMessage: message })
       else wx.showToast({ title: message, icon: "none" })
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
-        this.setData({ loading: false, contentLoading: false, hasLoaded: true })
+        this.setData({
+          loading: false,
+          contentLoading: false,
+          detailRefresherTriggered: false,
+          hasLoaded: true
+        })
       }
     }
   },
@@ -365,6 +401,7 @@ Page({
       activeSeasonIndex,
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
+      visibleEpisodeCount: EPISODE_RENDER_BATCH,
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
       coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
       platformText: platformText(entry.platforms),
@@ -379,6 +416,22 @@ Page({
     wx.setNavigationBarTitle({ title: entry.title })
   },
 
+  handleDetailPullRefresh() {
+    if (this.data.operating || this.data.savingEntry || this.data.savingEpisode) return
+    this.setData({ detailRefresherTriggered: true })
+    void this.loadPage({ forceRefresh: true, background: true })
+  },
+
+  handleRecordsLower() {
+    if (this.data.visibleEpisodeCount >= this.data.filteredEpisodes.length) return
+    this.setData({
+      visibleEpisodeCount: Math.min(
+        this.data.filteredEpisodes.length,
+        this.data.visibleEpisodeCount + EPISODE_RENDER_BATCH
+      )
+    })
+  },
+
   handleSeasonTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.editingEpisodeId) {
       wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
@@ -391,6 +444,7 @@ Page({
       activeSeasonIndex: index,
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
+      visibleEpisodeCount: EPISODE_RENDER_BATCH,
       activeSeasonFavoriteCount: favoriteCount(activeSeason)
     })
   },
@@ -423,7 +477,8 @@ Page({
         this.data.activeSeason,
         this.data.timelineTypeFilters,
         favoriteEpisodesOnly
-      )
+      ),
+      visibleEpisodeCount: EPISODE_RENDER_BATCH
     })
   },
 
@@ -448,7 +503,8 @@ Page({
         ...option,
         selected: timelineTypeFilters.includes(option.value)
       })),
-      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters, this.data.favoriteEpisodesOnly)
+      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters, this.data.favoriteEpisodesOnly),
+      visibleEpisodeCount: EPISODE_RENDER_BATCH
     })
   },
 
@@ -465,7 +521,8 @@ Page({
         ...option,
         selected: true
       })),
-      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters)
+      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters),
+      visibleEpisodeCount: EPISODE_RENDER_BATCH
     })
   },
 
@@ -521,11 +578,12 @@ Page({
       entryDraftIsAudio: entry.media_type === "广播剧",
       entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
       selectedEntryImagePath: ""
-    })
+    }, () => wx.enableAlertBeforeUnload({ message: "作品修改还没有保存，确定离开吗？" }))
   },
 
   handleEntryEditCancel() {
     if (this.data.savingEntry || this.data.selectingEntryImage) return
+    wx.disableAlertBeforeUnload()
     this.setData({
       editingEntry: false,
       entryDraftTitle: "",
@@ -674,6 +732,7 @@ Page({
         savingEntry: false,
         mediaRevision
       })
+      wx.disableAlertBeforeUnload()
       wx.setNavigationBarTitle({ title: persistedEntry.title })
       wx.showToast({ title: "编辑完成", icon: "success" })
     } catch (error) {
@@ -856,6 +915,83 @@ Page({
     })
   },
 
+  episodeDraftKey(id: string) {
+    return `${EPISODE_DRAFT_PREFIX}${id}`
+  },
+
+  readEpisodeDraft(id: string): {
+    title: string
+    plotSummary: string
+    timelineNotes: MediaTimelineNote[]
+  } | null {
+    try {
+      const draft = wx.getStorageSync(this.episodeDraftKey(id)) as {
+        title?: unknown
+        plotSummary?: unknown
+        timelineNotes?: unknown
+      } | undefined
+      if (!draft || typeof draft.title !== "string" || typeof draft.plotSummary !== "string") return null
+      return {
+        title: draft.title,
+        plotSummary: draft.plotSummary,
+        timelineNotes: Array.isArray(draft.timelineNotes)
+          ? draft.timelineNotes as MediaTimelineNote[]
+          : []
+      }
+    } catch (_error) {
+      return null
+    }
+  },
+
+  persistEpisodeDraft() {
+    const id = this.data.editingEpisodeId
+    if (!id) return
+    const timelineNotes = this.data.episodeDraftTimelineNotes.map((note) => ({
+      id: note.id,
+      timecode: note.timecode,
+      type: note.type,
+      content: note.content,
+      dialogues: note.dialogues.map((dialogue) => ({ ...dialogue }))
+    }))
+    try {
+      wx.setStorageSync(this.episodeDraftKey(id), {
+        title: this.data.episodeDraftTitle,
+        plotSummary: this.data.episodeDraftPlotSummary,
+        timelineNotes
+      })
+    } catch (_error) {
+      // 本地空间不足时不阻断当前编辑。
+    }
+    if (!this.data.episodeDraftDirty) this.setData({ episodeDraftDirty: true })
+    wx.enableAlertBeforeUnload({ message: "剧情修改还没有保存，确定离开吗？" })
+  },
+
+  scheduleEpisodeDraftPersist() {
+    if (episodeDraftTimer) clearTimeout(episodeDraftTimer)
+    episodeDraftTimer = setTimeout(() => {
+      episodeDraftTimer = null
+      this.persistEpisodeDraft()
+    }, 240)
+  },
+
+  flushEpisodeDraft() {
+    if (!episodeDraftTimer) return
+    clearTimeout(episodeDraftTimer)
+    episodeDraftTimer = null
+    this.persistEpisodeDraft()
+  },
+
+  clearEpisodeDraft(id: string) {
+    if (episodeDraftTimer) clearTimeout(episodeDraftTimer)
+    episodeDraftTimer = null
+    try {
+      wx.removeStorageSync(this.episodeDraftKey(id))
+    } catch (_error) {
+      // 忽略草稿清理失败。
+    }
+    wx.disableAlertBeforeUnload()
+  },
+
   handleEpisodeEdit(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canWrite || this.data.savingEpisode) return
     const id = String(event.currentTarget.dataset.id || "")
@@ -865,32 +1001,39 @@ Page({
       wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
       return
     }
+    const draft = this.readEpisodeDraft(id)
     this.setData({
       editingEpisodeId: id,
-      episodeDraftTitle: episode.title,
-      episodeDraftPlotSummary: episode.plot_summary,
-      episodeDraftTimelineNotes: Array.isArray(episode.timeline_notes)
-        ? episode.timeline_notes.map(createEditableTimelineNote)
-        : []
+      episodeDraftTitle: draft?.title ?? episode.title,
+      episodeDraftPlotSummary: draft?.plotSummary ?? episode.plot_summary,
+      episodeDraftTimelineNotes: (draft?.timelineNotes || episode.timeline_notes || [])
+        .map(createEditableTimelineNote),
+      episodeDraftDirty: Boolean(draft)
+    }, () => {
+      wx.enableAlertBeforeUnload({ message: "剧情修改还没有保存，确定离开吗？" })
+      if (draft) wx.showToast({ title: "已恢复未保存剧情", icon: "none" })
     })
   },
 
   handleEpisodeEditCancel() {
     if (this.data.savingEpisode) return
+    const id = this.data.editingEpisodeId
+    if (id) this.clearEpisodeDraft(id)
     this.setData({
       editingEpisodeId: "",
       episodeDraftTitle: "",
       episodeDraftPlotSummary: "",
-      episodeDraftTimelineNotes: []
+      episodeDraftTimelineNotes: [],
+      episodeDraftDirty: false
     })
   },
 
   handleEpisodeTitleInput(event: WechatMiniprogram.Input) {
-    this.setData({ episodeDraftTitle: event.detail.value })
+    this.setData({ episodeDraftTitle: event.detail.value }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeSummaryInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ episodeDraftPlotSummary: event.detail.value })
+    this.setData({ episodeDraftPlotSummary: event.detail.value }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeAddTimelineNote() {
@@ -903,7 +1046,7 @@ Page({
         ...this.data.episodeDraftTimelineNotes,
         createTimelineNote()
       ]
-    })
+    }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeTimelineTimeChange(event: WechatMiniprogram.PickerChange) {
@@ -919,7 +1062,7 @@ Page({
       timecode: formatTimecode(timeValue),
       timePickerValue: getLoopedTimePickerValue(timeValue)
     }
-    this.setData({ episodeDraftTimelineNotes })
+    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeTimelineTimeColumnChange(event: WechatMiniprogram.PickerColumnChange) {
@@ -937,7 +1080,7 @@ Page({
     timePickerValue[column] = columnSize + (value % columnSize)
     const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
     episodeDraftTimelineNotes[index] = { ...note, timePickerValue }
-    this.setData({ episodeDraftTimelineNotes })
+    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeTimelineTypeChange(event: WechatMiniprogram.TouchEvent) {
@@ -961,19 +1104,21 @@ Page({
         .join("\n")
     }
     episodeDraftTimelineNotes[index] = { ...note, type, content, dialogues }
-    this.setData({ episodeDraftTimelineNotes })
+    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeTimelineContentInput(event: WechatMiniprogram.TextareaInput) {
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
     this.data.episodeDraftTimelineNotes[index].content = event.detail.value
+    this.scheduleEpisodeDraftPersist()
   },
 
   handleEpisodeTimelineContentBlur(event: WechatMiniprogram.TextareaBlur) {
     const index = Number(event.currentTarget.dataset.index)
     if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
     this.data.episodeDraftTimelineNotes[index].content = event.detail.value
+    this.scheduleEpisodeDraftPersist()
   },
 
   handleEpisodeDialogueSpeakerInput(event: WechatMiniprogram.Input) {
@@ -982,6 +1127,7 @@ Page({
     const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
     if (!dialogue) return
     dialogue.speaker = event.detail.value
+    this.scheduleEpisodeDraftPersist()
   },
 
   handleEpisodeDialogueContentInput(event: WechatMiniprogram.TextareaInput) {
@@ -990,6 +1136,7 @@ Page({
     const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
     if (!dialogue) return
     dialogue.content = event.detail.value
+    this.scheduleEpisodeDraftPersist()
   },
 
   handleEpisodeAddDialogue(event: WechatMiniprogram.TouchEvent) {
@@ -1005,7 +1152,7 @@ Page({
       ...note,
       dialogues: [...note.dialogues, createTimelineDialogue()]
     }
-    this.setData({ episodeDraftTimelineNotes })
+    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeRemoveDialogue(event: WechatMiniprogram.TouchEvent) {
@@ -1018,7 +1165,7 @@ Page({
       ...note,
       dialogues: note.dialogues.filter((_, index) => index !== dialogueIndex)
     }
-    this.setData({ episodeDraftTimelineNotes })
+    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
   },
 
   handleEpisodeRemoveTimelineNote(event: WechatMiniprogram.TouchEvent) {
@@ -1028,18 +1175,25 @@ Page({
       episodeDraftTimelineNotes: this.data.episodeDraftTimelineNotes.filter(
         (_, noteIndex) => noteIndex !== index
       )
-    })
+    }, () => this.scheduleEpisodeDraftPersist())
   },
 
-  async handleEpisodeSave(event: WechatMiniprogram.FormSubmit) {
+  handleEpisodeSave(event: WechatMiniprogram.FormSubmit) {
     const id = String(event.currentTarget.dataset.id || "")
+    void this.saveEpisodeDraft(id, event.detail.value)
+  },
+
+  handleEpisodeStickySave() {
+    void this.saveEpisodeDraft(this.data.editingEpisodeId, {})
+  },
+
+  async saveEpisodeDraft(id: string, submittedValues: WechatMiniprogram.IAnyObject) {
     if (
       !this.data.canWrite
       || this.data.savingEpisode
       || !id
       || id !== this.data.editingEpisodeId
     ) return
-    const submittedValues = event.detail.value
     const title = getSubmittedText(submittedValues, "title", this.data.episodeDraftTitle)
     const plotSummary = getSubmittedText(
       submittedValues,
@@ -1116,15 +1270,20 @@ Page({
           ? updatedEpisode.timeline_notes.map(normalizeTimelineNote)
           : []
       }
-      const seasons = this.data.seasons.map((season) => ({
-        ...season,
-        episodes: season.episodes.map((episode) =>
-          episode.id === id ? normalizedEpisode : episode
-        )
-      }))
-      const activeSeason = seasons[this.data.activeSeasonIndex] || null
+      const seasons = [...this.data.seasons]
+      const currentSeason = seasons[this.data.activeSeasonIndex]
+      const activeSeason = currentSeason
+        ? {
+            ...currentSeason,
+            episodes: currentSeason.episodes.map((episode) =>
+              episode.id === id ? normalizedEpisode : episode
+            )
+          }
+        : null
+      if (activeSeason) seasons[this.data.activeSeasonIndex] = activeSeason
       const mediaRevision = markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
+      this.clearEpisodeDraft(id)
       this.setData({
         seasons,
         activeSeason,
@@ -1138,6 +1297,7 @@ Page({
         episodeDraftTitle: "",
         episodeDraftPlotSummary: "",
         episodeDraftTimelineNotes: [],
+        episodeDraftDirty: false,
         savingEpisode: false,
         mediaRevision
       })
@@ -1160,21 +1320,23 @@ Page({
     const episode = this.data.activeSeason.episodes.find((item) => item.id === id)
     if (!episode) return
     const isFavorite = !episode.is_favorite
-    const seasons = this.data.seasons.map((season) => ({
-      ...season,
-      episodes: season.episodes.map((item) =>
+    const seasons = [...this.data.seasons]
+    const activeSeason = {
+      ...this.data.activeSeason,
+      episodes: this.data.activeSeason.episodes.map((item) =>
         item.id === id ? { ...item, is_favorite: isFavorite } : item
       )
-    }))
+    }
+    seasons[this.data.activeSeasonIndex] = activeSeason
     this.setData({
       seasons,
-      activeSeason: seasons[this.data.activeSeasonIndex],
+      activeSeason,
       filteredEpisodes: filterTimelineEpisodes(
-        seasons[this.data.activeSeasonIndex],
+        activeSeason,
         this.data.timelineTypeFilters,
         this.data.favoriteEpisodesOnly
       ),
-      activeSeasonFavoriteCount: favoriteCount(seasons[this.data.activeSeasonIndex]),
+      activeSeasonFavoriteCount: favoriteCount(activeSeason),
       entry: this.data.entry
         ? {
             ...this.data.entry,

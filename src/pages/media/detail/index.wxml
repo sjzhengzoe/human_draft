@@ -96,7 +96,15 @@
         </view>
       </view>
 
-      <scroll-view class="detail-attribute-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <scroll-view
+        class="detail-attribute-scroll"
+        scroll-y
+        enhanced
+        show-scrollbar="{{false}}"
+        refresher-enabled
+        refresher-triggered="{{detailRefresherTriggered}}"
+        bindrefresherrefresh="handleDetailPullRefresh"
+      >
         <view class="detail-attributes">
           <view class="detail-attribute">
             <view class="detail-attribute__label">名称</view>
@@ -142,7 +150,18 @@
       </scroll-view>
     </view>
 
-    <scroll-view wx:elif="{{activeDetailTab === 'records'}}" class="records-content" scroll-y enhanced show-scrollbar="{{false}}">
+    <scroll-view
+      wx:elif="{{activeDetailTab === 'records'}}"
+      class="records-content {{editingEpisodeId ? 'records-content--editing' : ''}}"
+      scroll-y
+      enhanced
+      show-scrollbar="{{false}}"
+      lower-threshold="240"
+      bindscrolltolower="handleRecordsLower"
+      refresher-enabled="{{!editingEpisodeId}}"
+      refresher-triggered="{{detailRefresherTriggered}}"
+      bindrefresherrefresh="handleDetailPullRefresh"
+    >
       <view class="records-toolbar">
         <scroll-view wx:if="{{seasons.length}}" class="season-scroll" scroll-x enhanced show-scrollbar="{{false}}">
           <view class="season-tabs">
@@ -161,32 +180,25 @@
       </view>
 
       <view class="timeline-filter-panel">
-        <view class="timeline-filter-panel__heading">
-          <view class="timeline-filter-panel__title">筛选剧情记录</view>
+        <view class="timeline-filter-row">
+          <view class="timeline-filter-options timeline-filter-options--compact">
+            <view class="timeline-filter-option {{!favoriteEpisodesOnly ? 'timeline-filter-option--active' : ''}}" data-scope="all" bindtap="handleFavoriteEpisodesFilterTap">全部单集</view>
+            <view class="timeline-filter-option {{favoriteEpisodesOnly ? 'timeline-filter-option--active' : ''}}" data-scope="favorites" bindtap="handleFavoriteEpisodesFilterTap">喜欢单集</view>
+          </view>
           <view
             wx:if="{{favoriteEpisodesOnly || timelineTypeFilters.length < timelineFilterOptions.length}}"
             class="timeline-filter-reset"
             bindtap="handleTimelineFilterReset"
           >重置</view>
         </view>
-        <view class="timeline-filter-section">
-          <view class="timeline-filter-section__title">单集范围</view>
-          <view class="timeline-filter-options">
-            <view class="timeline-filter-option {{!favoriteEpisodesOnly ? 'timeline-filter-option--active' : ''}}" data-scope="all" bindtap="handleFavoriteEpisodesFilterTap">全部单集</view>
-            <view class="timeline-filter-option {{favoriteEpisodesOnly ? 'timeline-filter-option--active' : ''}}" data-scope="favorites" bindtap="handleFavoriteEpisodesFilterTap">喜欢单集</view>
-          </view>
-        </view>
-        <view class="timeline-filter-section">
-          <view class="timeline-filter-section__title">记录类型</view>
-          <view class="timeline-filter-options">
-            <view
-              wx:for="{{timelineFilterOptions}}"
-              wx:key="value"
-              class="timeline-filter-option {{item.selected ? 'timeline-filter-option--active' : ''}}"
-              data-type="{{item.value}}"
-              bindtap="handleTimelineFilterTypeTap"
-            >{{item.label}}</view>
-          </view>
+        <view class="timeline-filter-options timeline-filter-options--types">
+          <view
+            wx:for="{{timelineFilterOptions}}"
+            wx:key="value"
+            class="timeline-filter-option {{item.selected ? 'timeline-filter-option--active' : ''}}"
+            data-type="{{item.value}}"
+            bindtap="handleTimelineFilterTypeTap"
+          >{{item.label}}</view>
         </view>
       </view>
 
@@ -220,9 +232,9 @@
         <view wx:if="{{activeSeason.episodes.length === 0}}" class="empty-episodes">还没有单集，可从当前季的编辑入口增加</view>
         <view wx:elif="{{favoriteEpisodesOnly && filteredEpisodes.length === 0}}" class="empty-episodes">这一季还没有喜欢的单集</view>
         <view wx:else class="episode-list">
+          <block wx:for="{{filteredEpisodes}}" wx:key="id">
           <form
-            wx:for="{{filteredEpisodes}}"
-            wx:key="id"
+            wx:if="{{index < visibleEpisodeCount}}"
             class="episode-row {{editingEpisodeId === item.id ? 'episode-row--editing' : ''}}"
             data-id="{{item.id}}"
             bindsubmit="handleEpisodeSave"
@@ -244,7 +256,7 @@
                   aria-label="{{item.is_favorite ? '取消喜欢本集' : '喜欢本集'}}"
                   data-id="{{item.id}}"
                   catchtap="handleFavoriteTap"
-                >{{item.is_favorite ? '♥' : '♡'}}</view>
+                >{{item.is_favorite ? '★' : '☆'}}</view>
                 <view
                   wx:if="{{canWrite && editingEpisodeId !== item.id}}"
                   class="episode-row__edit"
@@ -253,21 +265,6 @@
                   data-id="{{item.id}}"
                   catchtap="handleEpisodeEdit"
                 ><app-icon name="pencil" size="23" /></view>
-                <block wx:if="{{canWrite && editingEpisodeId === item.id}}">
-                  <view
-                    class="episode-row__cancel"
-                    role="button"
-                    aria-label="取消编辑"
-                    catchtap="handleEpisodeEditCancel"
-                  ><app-icon name="x-muted" size="23" /></view>
-                  <button
-                    class="episode-row__save"
-                    form-type="submit"
-                    loading="{{savingEpisode}}"
-                    disabled="{{savingEpisode}}"
-                    aria-label="保存本集"
-                  >保存</button>
-                </block>
               </view>
             </view>
             <view wx:if="{{editingEpisodeId === item.id}}" class="episode-editor">
@@ -466,11 +463,21 @@
               </block>
             </view>
           </form>
+          </block>
+          <view wx:if="{{visibleEpisodeCount < filteredEpisodes.length}}" class="records-load-more">继续向下滑动加载</view>
         </view>
       </view>
       <view wx:else class="empty-seasons">还没有季或篇章，点击右上角新增后即可记录剧情。</view>
     </scroll-view>
   </block>
+</view>
+
+<view wx:if="{{editingEpisodeId}}" class="episode-edit-save-bar">
+  <view class="episode-edit-save-bar__cancel" bindtap="handleEpisodeEditCancel">取消</view>
+  <button class="episode-edit-save-bar__save" loading="{{savingEpisode}}" disabled="{{savingEpisode}}" bindtap="handleEpisodeStickySave">
+    <app-icon name="check" size="22" inverse="{{true}}" />
+    <text>保存</text>
+  </button>
 </view>
 
 <image-cropper

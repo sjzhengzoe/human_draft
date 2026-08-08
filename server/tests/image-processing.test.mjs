@@ -84,6 +84,13 @@ test("image optimization never enlarges small images", async () => {
   assert.deepEqual([thumbnail.width, thumbnail.height], [300, 200]);
 });
 
+test("media cover optimization creates a 3:4 list thumbnail", async () => {
+  const input = await createTestImage(1_080, 1_440);
+  const result = await optimizeImage(input, IMAGE_PROFILES.mediaCover);
+  const thumbnail = await sharp(result.thumbnail).metadata();
+  assert.deepEqual([thumbnail.width, thumbnail.height], [240, 320]);
+});
+
 test("image optimization preserves transparent pixels", async () => {
   const input = await sharp({
     create: {

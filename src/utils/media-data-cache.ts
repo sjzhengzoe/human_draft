@@ -1,6 +1,7 @@
 import type {
   MediaCategory,
   MediaEntry,
+  MediaEntryPage,
   MediaEpisode,
   MediaSeason,
   MediaStatus,
@@ -8,15 +9,54 @@ import type {
   MediaTimelineNote
 } from "../types/media"
 
+export const MEDIA_CACHE_FRESH_MS = 3 * 60 * 1000
+const MAX_CACHED_MEDIA_DETAILS = 20
+
+export type MediaEntryQuery = {
+  mediaType?: string
+  status?: MediaStatus
+  revisitable?: boolean
+  keyword?: string
+  sort?: "created_desc"
+  page?: number
+  pageSize?: number
+}
+
+type CachedEntryPage = {
+  input: MediaEntryQuery
+  data: MediaEntryPage
+  cachedAt: number
+}
+
 let cachedCategories: MediaCategory[] | null = null
+let cachedCategoriesAt = 0
 const cachedEntries = new Map<string, MediaEntry>()
+const cachedEntriesAt = new Map<string, number>()
 const cachedSeasons = new Map<string, MediaSeason[]>()
+const cachedSeasonsAt = new Map<string, number>()
+const cachedSeasonsAccessedAt = new Map<string, number>()
 const cachedEpisodes = new Map<string, MediaEpisode>()
-const cachedEntryCollections = new Map<string, MediaEntry[]>()
+const cachedEntryPages = new Map<string, CachedEntryPage>()
 const deletedEntryIds = new Set<string>()
 
-function collectionKey(status?: string) {
-  return status || "all"
+function entryPageKey(input: MediaEntryQuery) {
+  return JSON.stringify({
+    mediaType: input.mediaType || "",
+    status: input.status || "",
+    revisitable: input.revisitable === true,
+    keyword: String(input.keyword || "").trim().toLocaleLowerCase(),
+    sort: input.sort || "",
+    page: input.page || 1,
+    pageSize: input.pageSize || 20
+  })
+}
+
+function entryMatchesQuery(entry: MediaEntry, input: MediaEntryQuery) {
+  const keyword = String(input.keyword || "").trim().toLocaleLowerCase()
+  return (!input.mediaType || entry.media_type === input.mediaType) &&
+    (!input.status || entry.watch_status === input.status) &&
+    (!input.revisitable || entry.is_revisitable) &&
+    (!keyword || entry.title.toLocaleLowerCase().includes(keyword))
 }
 
 function cloneCategory(category: MediaCategory): MediaCategory {
@@ -58,17 +98,49 @@ function cloneSeason(season: MediaSeason): MediaSeason {
   }
 }
 
-function cacheEntryValue(entry: MediaEntry) {
+function cloneEntryPage(page: MediaEntryPage): MediaEntryPage {
+  return {
+    items: page.items.map(cloneEntry),
+    pagination: { ...page.pagination }
+  }
+}
+
+function storeEntryValue(entry: MediaEntry) {
   const previous = cachedEntries.get(entry.id)
   const nextEntry = cloneEntry({ ...previous, ...entry })
   cachedEntries.set(entry.id, nextEntry)
-  for (const [key, entries] of cachedEntryCollections) {
-    const includesEntry = key === "all" || nextEntry.watch_status === key
-    const nextEntries = entries.filter((item) => item.id !== nextEntry.id)
-    if (includesEntry) nextEntries.push(cloneEntry(nextEntry))
-    cachedEntryCollections.set(key, nextEntries)
-  }
+  cachedEntriesAt.set(entry.id, Date.now())
   deletedEntryIds.delete(entry.id)
+  return { previous, nextEntry }
+}
+
+function cacheEntryValue(entry: MediaEntry) {
+  const { previous, nextEntry } = storeEntryValue(entry)
+  for (const [key, page] of cachedEntryPages) {
+    const existingIndex = page.data.items.findIndex((item) => item.id === nextEntry.id)
+    const matchedBefore = previous
+      ? entryMatchesQuery(previous, page.input)
+      : existingIndex >= 0
+    const matches = entryMatchesQuery(nextEntry, page.input)
+    const membershipChanged = Boolean(previous) && matches !== matchedBefore
+    let nextItems = page.data.items.filter((item) => item.id !== nextEntry.id)
+    if (matches && existingIndex >= 0) {
+      nextItems.push(cloneEntry(nextEntry))
+    } else if (membershipChanged && matches && (page.input.page || 1) === 1) {
+      nextItems = [cloneEntry(nextEntry), ...nextItems]
+    }
+    cachedEntryPages.set(key, {
+      ...page,
+      cachedAt: (!previous && matches) || membershipChanged ? 0 : page.cachedAt,
+      data: {
+        items: nextItems,
+        pagination: {
+          ...page.data.pagination,
+          total: Math.max(0, page.data.pagination.total + (membershipChanged ? (matches ? 1 : -1) : 0))
+        }
+      }
+    })
+  }
 }
 
 function updateCachedEntryStats(mediaEntryId: string, seasons: MediaSeason[]) {
@@ -87,14 +159,20 @@ export function getCachedMediaCategories(): MediaCategory[] | null {
   return cachedCategories?.map(cloneCategory) || null
 }
 
+export function isMediaCategoriesCacheFresh() {
+  return Boolean(cachedCategories && Date.now() - cachedCategoriesAt < MEDIA_CACHE_FRESH_MS)
+}
+
 export function cacheMediaCategories(categories: MediaCategory[]) {
   cachedCategories = categories.map(cloneCategory)
+  cachedCategoriesAt = Date.now()
 }
 
 export function addCachedMediaCategory(category: MediaCategory) {
   if (!cachedCategories) return
   cachedCategories = [...cachedCategories, cloneCategory(category)]
     .sort((left, right) => left.sort_order - right.sort_order)
+  cachedCategoriesAt = Date.now()
 }
 
 export function updateCachedMediaCategory(category: MediaCategory) {
@@ -102,11 +180,13 @@ export function updateCachedMediaCategory(category: MediaCategory) {
   cachedCategories = cachedCategories.map((item) =>
     item.id === category.id ? cloneCategory(category) : item
   )
+  cachedCategoriesAt = Date.now()
 }
 
 export function removeCachedMediaCategory(id: string) {
   if (!cachedCategories) return
   cachedCategories = cachedCategories.filter((category) => category.id !== id)
+  cachedCategoriesAt = Date.now()
 }
 
 export function swapCachedMediaCategorySortOrders(sourceId: string, targetId: string) {
@@ -123,6 +203,7 @@ export function swapCachedMediaCategorySortOrders(sourceId: string, targetId: st
       return category
     })
     .sort((left, right) => left.sort_order - right.sort_order)
+  cachedCategoriesAt = Date.now()
 }
 
 export function getCachedMediaEntry(id: string): MediaEntry | null {
@@ -130,18 +211,33 @@ export function getCachedMediaEntry(id: string): MediaEntry | null {
   return entry ? cloneEntry(entry) : null
 }
 
+export function isMediaEntryCacheFresh(id: string) {
+  return Boolean(cachedEntries.has(id) && Date.now() - (cachedEntriesAt.get(id) || 0) < MEDIA_CACHE_FRESH_MS)
+}
+
+export function getCachedMediaEntryPage(input: MediaEntryQuery): {
+  data: MediaEntryPage
+  fresh: boolean
+} | null {
+  const cached = cachedEntryPages.get(entryPageKey(input))
+  if (!cached) return null
+  return {
+    data: cloneEntryPage(cached.data),
+    fresh: Date.now() - cached.cachedAt < MEDIA_CACHE_FRESH_MS
+  }
+}
+
+export function cacheMediaEntryPage(input: MediaEntryQuery, data: MediaEntryPage) {
+  data.items.forEach(storeEntryValue)
+  cachedEntryPages.set(entryPageKey(input), {
+    input: { ...input },
+    data: cloneEntryPage(data),
+    cachedAt: Date.now()
+  })
+}
+
 export function getCachedMediaEntries(): MediaEntry[] {
   return [...cachedEntries.values()].map(cloneEntry)
-}
-
-export function getCachedMediaEntryCollection(status?: MediaStatus): MediaEntry[] | null {
-  const entries = cachedEntryCollections.get(collectionKey(status))
-  return entries?.map(cloneEntry) || null
-}
-
-export function cacheMediaEntryCollection(status: MediaStatus | undefined, entries: MediaEntry[]) {
-  entries.forEach(cacheEntryValue)
-  cachedEntryCollections.set(collectionKey(status), entries.map(cloneEntry))
 }
 
 export function getDeletedMediaEntryIds(): string[] {
@@ -152,17 +248,32 @@ export function cacheMediaEntry(entry: MediaEntry) {
   cacheEntryValue(entry)
 }
 
-export function cacheMediaEntries(entries: MediaEntry[]) {
-  entries.forEach(cacheEntryValue)
-}
-
 export function removeCachedMediaEntry(id: string) {
+  const previous = cachedEntries.get(id)
   cachedEntries.delete(id)
+  cachedEntriesAt.delete(id)
   const seasons = cachedSeasons.get(id) || []
   seasons.forEach((season) => season.episodes.forEach((episode) => cachedEpisodes.delete(episode.id)))
   cachedSeasons.delete(id)
-  for (const [key, entries] of cachedEntryCollections) {
-    cachedEntryCollections.set(key, entries.filter((entry) => entry.id !== id))
+  cachedSeasonsAt.delete(id)
+  cachedSeasonsAccessedAt.delete(id)
+  for (const [key, page] of cachedEntryPages) {
+    const hadEntry = page.data.items.some((entry) => entry.id === id)
+    const matchedBefore = previous
+      ? entryMatchesQuery(previous, page.input)
+      : hadEntry
+    if (!matchedBefore && !hadEntry) continue
+    cachedEntryPages.set(key, {
+      ...page,
+      cachedAt: 0,
+      data: {
+        items: page.data.items.filter((entry) => entry.id !== id),
+        pagination: {
+          ...page.data.pagination,
+          total: Math.max(0, page.data.pagination.total - (matchedBefore ? 1 : 0))
+        }
+      }
+    })
   }
   deletedEntryIds.add(id)
 }
@@ -190,7 +301,12 @@ export function adjustCachedMediaEntryStats(
 
 export function getCachedMediaSeasons(mediaEntryId: string): MediaSeason[] | null {
   const seasons = cachedSeasons.get(mediaEntryId)
+  if (seasons) cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
   return seasons?.map(cloneSeason) || null
+}
+
+export function isMediaSeasonsCacheFresh(mediaEntryId: string) {
+  return Boolean(cachedSeasons.has(mediaEntryId) && Date.now() - (cachedSeasonsAt.get(mediaEntryId) || 0) < MEDIA_CACHE_FRESH_MS)
 }
 
 export function cacheMediaSeasons(mediaEntryId: string, seasons: MediaSeason[]) {
@@ -200,16 +316,26 @@ export function cacheMediaSeasons(mediaEntryId: string, seasons: MediaSeason[]) 
   })
   const normalized = seasons.map(cloneSeason)
   cachedSeasons.set(mediaEntryId, normalized)
+  cachedSeasonsAt.set(mediaEntryId, Date.now())
+  cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
   normalized.forEach((season) => {
     season.episodes.forEach((episode) => cachedEpisodes.set(episode.id, cloneEpisode(episode)))
   })
   updateCachedEntryStats(mediaEntryId, normalized)
+  while (cachedSeasons.size > MAX_CACHED_MEDIA_DETAILS) {
+    const oldest = [...cachedSeasonsAccessedAt.entries()]
+      .sort((left, right) => left[1] - right[1])[0]?.[0]
+    if (!oldest) break
+    invalidateCachedMediaSeasons(oldest)
+  }
 }
 
 export function invalidateCachedMediaSeasons(mediaEntryId: string) {
   const seasons = cachedSeasons.get(mediaEntryId) || []
   seasons.forEach((season) => season.episodes.forEach((episode) => cachedEpisodes.delete(episode.id)))
   cachedSeasons.delete(mediaEntryId)
+  cachedSeasonsAt.delete(mediaEntryId)
+  cachedSeasonsAccessedAt.delete(mediaEntryId)
 }
 
 export function updateCachedMediaSeason(updatedSeason: MediaSeason) {
@@ -226,6 +352,8 @@ export function updateCachedMediaSeason(updatedSeason: MediaSeason) {
         : existing.episodes
     })
     cachedSeasons.set(mediaEntryId, nextSeasons)
+    cachedSeasonsAt.set(mediaEntryId, Date.now())
+    cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
     return
   }
 }
@@ -237,6 +365,8 @@ export function removeCachedMediaSeason(id: string) {
     removedSeason.episodes.forEach((episode) => cachedEpisodes.delete(episode.id))
     const nextSeasons = seasons.filter((season) => season.id !== id)
     cachedSeasons.set(mediaEntryId, nextSeasons)
+    cachedSeasonsAt.set(mediaEntryId, Date.now())
+    cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
     updateCachedEntryStats(mediaEntryId, nextSeasons)
     return
   }
@@ -255,6 +385,8 @@ export function cacheAddedMediaEpisode(episode: MediaEpisode) {
         }
       : season)
     cachedSeasons.set(mediaEntryId, nextSeasons)
+    cachedSeasonsAt.set(mediaEntryId, Date.now())
+    cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
     updateCachedEntryStats(mediaEntryId, nextSeasons)
     return
   }
@@ -287,6 +419,8 @@ export function updateCachedMediaEpisode(updatedEpisode: MediaEpisode) {
     }))
     if (!changed) continue
     cachedSeasons.set(mediaEntryId, nextSeasons)
+    cachedSeasonsAt.set(mediaEntryId, Date.now())
+    cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
     updateCachedEntryStats(mediaEntryId, nextSeasons)
     return
   }
@@ -294,9 +428,13 @@ export function updateCachedMediaEpisode(updatedEpisode: MediaEpisode) {
 
 export function clearMediaDataCache() {
   cachedCategories = null
+  cachedCategoriesAt = 0
   cachedEntries.clear()
+  cachedEntriesAt.clear()
   cachedSeasons.clear()
+  cachedSeasonsAt.clear()
+  cachedSeasonsAccessedAt.clear()
   cachedEpisodes.clear()
-  cachedEntryCollections.clear()
+  cachedEntryPages.clear()
   deletedEntryIds.clear()
 }

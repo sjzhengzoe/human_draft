@@ -73,6 +73,10 @@
   padding: 30rpx var(--ui-page-gutter) 60rpx;
 }
 
+.records-content--editing {
+  padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
+}
+
 .detail-cover-wrap {
   position: relative;
   width: 320rpx;
@@ -136,6 +140,7 @@
 .episode-row__heart,
 .episode-row__edit,
 .episode-row__cancel {
+  position: relative;
   display: flex;
   width: 54rpx;
   height: 54rpx;
@@ -144,6 +149,16 @@
   justify-content: center;
   border-radius: 50%;
   background: transparent;
+}
+
+.detail-icon-button::after,
+.records-icon-button::after,
+.episode-row__heart::after,
+.episode-row__edit::after,
+.episode-row__cancel::after {
+  position: absolute;
+  content: "";
+  inset: -14rpx;
 }
 
 .detail-icon-button--disabled {
@@ -159,6 +174,10 @@
   color: #aaa;
   font-size: 34rpx;
   line-height: 1;
+}
+
+.episode-row__heart {
+  font-size: 31rpx;
 }
 
 .detail-heart--active,
@@ -331,10 +350,17 @@
 
 .timeline-filter-panel {
   margin-top: 16rpx;
-  padding: 22rpx;
+  padding: 14rpx;
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
+}
+
+.timeline-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
 }
 
 .timeline-filter-panel__heading {
@@ -380,8 +406,17 @@
   margin-top: 12rpx;
 }
 
+.timeline-filter-options--compact,
+.timeline-filter-options--types {
+  margin-top: 0;
+}
+
+.timeline-filter-options--types {
+  margin-top: 10rpx;
+}
+
 .timeline-filter-option {
-  padding: 9rpx 16rpx;
+  padding: 7rpx 13rpx;
   border: 1rpx solid #dedede;
   border-radius: var(--ui-radius-pill);
   color: #888;
@@ -889,6 +924,60 @@
   padding: 14rpx;
   border-radius: 10rpx;
   background: #f8f5fb;
+}
+
+.records-load-more {
+  padding: 24rpx 0;
+  color: #aaa;
+  font-size: var(--ui-font-size-small);
+  text-align: center;
+}
+
+.episode-edit-save-bar {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 14rpx var(--ui-page-gutter) calc(14rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid var(--ui-border);
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, .06);
+}
+
+.episode-edit-save-bar__cancel,
+.episode-edit-save-bar__save {
+  display: flex;
+  height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-pill);
+  font-size: var(--ui-font-size-small);
+  line-height: normal;
+}
+
+.episode-edit-save-bar__cancel {
+  padding: 0 22rpx;
+  background: var(--ui-subtle-background);
+  color: #666;
+}
+
+.episode-edit-save-bar__save {
+  min-width: 0;
+  flex: 1;
+  gap: 6rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  background: #111;
+  color: #fff;
+}
+
+.episode-edit-save-bar__save::after {
+  border: 0;
 }
 
 .episode-timeline__dialogue {

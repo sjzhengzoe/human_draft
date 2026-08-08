@@ -27,6 +27,15 @@ const BUILTIN_PLATFORMS = [
 ]
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const ERROR_TOAST_DURATION = 3000
+const MEDIA_CREATE_DRAFT_KEY = "media:create:draft:v1"
+
+type MediaCreateDraft = {
+  title: string
+  mediaType: string
+  watchStatus: MediaStatus
+  isRevisitable: boolean
+  platforms: string[]
+}
 
 function showErrorToast(title: string) {
   wx.showToast({ title, icon: "none", duration: ERROR_TOAST_DURATION })
@@ -48,7 +57,8 @@ Page({
     platformOptions: BUILTIN_PLATFORMS.map((name) => ({ name, checked: false })),
     selectedBuiltinPlatforms: [] as string[],
     loading: true,
-    saving: false
+    saving: false,
+    draftDirty: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -85,14 +95,33 @@ Page({
         return
       }
       const queryType = decodeURIComponent(query.mediaType || mediaTypes[0]) as MediaType
-      const mediaTypeIndex = Math.max(0, mediaTypes.indexOf(queryType))
+      const savedDraft = this.readDraft()
+      const draftType = savedDraft && mediaTypes.includes(savedDraft.mediaType)
+        ? savedDraft.mediaType
+        : queryType
+      const mediaTypeIndex = Math.max(0, mediaTypes.indexOf(draftType))
       const mediaType = mediaTypes[mediaTypeIndex]
+      const selectedBuiltinPlatforms = (savedDraft?.platforms || [])
+        .filter((name) => BUILTIN_PLATFORMS.includes(name))
       this.setData({
+        title: savedDraft?.title || "",
         mediaTypes,
         mediaTypeIndex,
+        watchStatus: savedDraft?.watchStatus || "completed",
+        isRevisitable: savedDraft?.isRevisitable || false,
+        selectedBuiltinPlatforms,
+        platformOptions: BUILTIN_PLATFORMS.map((name) => ({
+          name,
+          checked: selectedBuiltinPlatforms.includes(name)
+        })),
         isEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType),
-        isAudio: mediaType === "广播剧"
+        isAudio: mediaType === "广播剧",
+        draftDirty: Boolean(savedDraft)
       })
+      if (savedDraft) {
+        this.enableDraftGuard()
+        wx.showToast({ title: "已恢复未完成内容", icon: "none" })
+      }
       wx.setNavigationBarTitle({ title: "新增影视" })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -109,8 +138,62 @@ Page({
     }
   },
 
+  readDraft(): MediaCreateDraft | null {
+    try {
+      const value = wx.getStorageSync(MEDIA_CREATE_DRAFT_KEY) as Partial<MediaCreateDraft> | undefined
+      if (!value || typeof value.title !== "string") return null
+      return {
+        title: value.title,
+        mediaType: String(value.mediaType || ""),
+        watchStatus: (["planned", "in_progress", "completed"] as unknown[]).includes(value.watchStatus)
+          ? value.watchStatus as MediaStatus
+          : "completed",
+        isRevisitable: value.isRevisitable === true,
+        platforms: Array.isArray(value.platforms) ? value.platforms.map(String) : []
+      }
+    } catch (_error) {
+      return null
+    }
+  },
+
+  persistDraft() {
+    const mediaType = this.data.mediaTypes[this.data.mediaTypeIndex] || ""
+    const draft: MediaCreateDraft = {
+      title: this.data.title,
+      mediaType,
+      watchStatus: this.data.watchStatus,
+      isRevisitable: this.data.isRevisitable,
+      platforms: [...this.data.selectedBuiltinPlatforms]
+    }
+    try {
+      wx.setStorageSync(MEDIA_CREATE_DRAFT_KEY, draft)
+    } catch (_error) {
+      // 本地空间不足时不影响正常新增。
+    }
+  },
+
+  enableDraftGuard() {
+    if (!this.data.draftDirty) this.setData({ draftDirty: true })
+    wx.enableAlertBeforeUnload({ message: "新增内容还没有保存，确定离开吗？" })
+  },
+
+  markDraftDirty() {
+    this.enableDraftGuard()
+    this.persistDraft()
+  },
+
+  clearDraft() {
+    try {
+      wx.removeStorageSync(MEDIA_CREATE_DRAFT_KEY)
+    } catch (_error) {
+      // 忽略本地草稿清理失败。
+    }
+    wx.disableAlertBeforeUnload()
+    this.setData({ draftDirty: false })
+  },
+
   handleTitleInput(event: WechatMiniprogram.Input) {
-    this.setData({ title: event.detail.value })
+    this.setData({ title: event.detail.value }, () => this.markDraftDirty())
   },
 
   handleChooseImage() {
@@ -157,7 +240,7 @@ Page({
       selectedImagePath: path,
       showImageCropper: false,
       cropSourcePath: ""
-    })
+    }, () => this.enableDraftGuard())
   },
 
   handleImageCropError(
@@ -173,11 +256,11 @@ Page({
       mediaTypeIndex,
       isEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType),
       isAudio: mediaType === "广播剧"
-    })
+    }, () => this.markDraftDirty())
   },
 
   handleStatusTap(event: WechatMiniprogram.TouchEvent) {
-    this.setData({ watchStatus: event.currentTarget.dataset.status as MediaStatus })
+    this.setData({ watchStatus: event.currentTarget.dataset.status as MediaStatus }, () => this.markDraftDirty())
   },
 
   handlePlatformsChange(event: WechatMiniprogram.CheckboxGroupChange) {
@@ -189,11 +272,11 @@ Page({
         name,
         checked: selectedBuiltinPlatforms.includes(name)
       }))
-    })
+    }, () => this.markDraftDirty())
   },
 
   handleRevisitableChange(event: WechatMiniprogram.SwitchChange) {
-    this.setData({ isRevisitable: event.detail.value })
+    this.setData({ isRevisitable: event.detail.value }, () => this.markDraftDirty())
   },
 
   async handleSave() {
@@ -230,6 +313,7 @@ Page({
       }
       markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
+      this.clearDraft()
       wx.showToast({ title: "已新增", icon: "success" })
       wx.navigateBack()
     } catch (error) {

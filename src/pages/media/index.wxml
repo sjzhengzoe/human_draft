@@ -16,17 +16,15 @@
       <view class="filter-heading">
         <text>选择分类</text>
       </view>
-      <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-        <view class="category-list">
-          <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
-          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
-        </view>
-      </scroll-view>
+      <view class="category-list category-list--wrap">
+        <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
+        <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
+      </view>
       <view class="filter-heading filter-heading--status">
         <text>选择状态</text>
       </view>
       <view class="category-list status-list">
-        <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">正在看</view>
+        <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">在看</view>
         <view class="category-chip {{overviewStatus === 'planned' ? 'category-chip--active' : ''}}" data-status="planned" bindtap="handleOverviewStatusTap">想看</view>
       </view>
     </block>
@@ -35,16 +33,13 @@
       <view class="filter-heading">
         <text>选择分类</text>
       </view>
-      <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-        <view class="category-list">
-          <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
-          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
-        </view>
-      </scroll-view>
+      <view class="category-list category-list--wrap">
+        <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
+        <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
+      </view>
       <view class="search-row">
         <app-input custom-class="search-row__input" font-size="20rpx" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
-        <view class="search-row__button" bindtap="handleSearch">搜索</view>
       </view>
     </block>
 
@@ -60,7 +55,17 @@
     </view>
   </view>
 
-  <scroll-view class="content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view
+    class="content-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    lower-threshold="240"
+    bindscrolltolower="handleContentLower"
+    refresher-enabled
+    refresher-triggered="{{refresherTriggered}}"
+    bindrefresherrefresh="handlePullRefresh"
+  >
     <view wx:if="{{contentLoading}}" class="content-loading">
       <view class="content-loading__spinner" />
       <view class="content-loading__text">正在加载影视记录…</view>
@@ -73,13 +78,13 @@
     <block wx:elif="{{displayMode === 'overview'}}">
       <view class="overview-section">
         <view class="section-heading">
-          <view class="section-heading__title">{{overviewStatus === 'in_progress' ? '正在看' : '想看'}}</view>
-          <view class="section-heading__count">{{overviewItems.length}} 部</view>
+          <view class="section-heading__title">{{overviewStatus === 'in_progress' ? '在看' : '想看'}}</view>
+          <view class="section-heading__count">{{overviewTotal}} 部</view>
         </view>
         <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
           <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
             <view class="record-card__cover-frame">
-              <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+              <image wx:if="{{item.coverThumbnailUrl}}" class="record-card__cover" src="{{item.coverThumbnailUrl}}" mode="aspectFill" lazy-load />
               <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
               <view
                 class="record-card__revisit {{item.is_revisitable ? 'record-card__revisit--active' : ''}} {{revisitableUpdatingId === item.id ? 'record-card__revisit--updating' : ''}}"
@@ -94,22 +99,25 @@
             </view>
           </view>
         </view>
-        <view wx:else class="section-empty">{{overviewStatus === 'in_progress' ? '没有正在看的作品' : '还没有想看的作品'}}</view>
+        <view wx:else class="section-empty">
+          <text>{{overviewStatus === 'in_progress' ? '没有在看的作品' : '还没有想看的作品'}}</text>
+          <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增</view>
+        </view>
       </view>
-      <view class="content-footer">没有更多了</view>
+      <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>
 
     <block wx:else>
       <view class="record-heading">
         <view class="record-heading__main">
           <view class="record-heading__title">{{selectedCategory || '全部记录'}}</view>
-          <view class="record-heading__count">{{recordItems.length}} 条记录</view>
+          <view class="record-heading__count">{{recordTotal}} 条记录</view>
         </view>
       </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
           <view class="record-card__cover-frame">
-            <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+            <image wx:if="{{item.coverThumbnailUrl}}" class="record-card__cover" src="{{item.coverThumbnailUrl}}" mode="aspectFill" lazy-load />
             <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
             <view
               class="record-card__revisit {{item.is_revisitable ? 'record-card__revisit--active' : ''}} {{revisitableUpdatingId === item.id ? 'record-card__revisit--updating' : ''}}"
@@ -124,8 +132,11 @@
           </view>
         </view>
       </view>
-      <view wx:else class="state-block">{{appliedKeyword ? '没有找到相关作品' : '这个分类还没有记录'}}</view>
-      <view wx:if="{{recordItems.length}}" class="content-footer">共 {{recordItems.length}} 条记录</view>
+      <view wx:else class="state-block">
+        <text>{{appliedKeyword ? '没有找到相关作品' : '这个分类还没有记录'}}</text>
+        <view wx:if="{{canWrite && !appliedKeyword}}" class="empty-action" bindtap="handleAdd">新增</view>
+      </view>
+      <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>
   </scroll-view>
 </view>

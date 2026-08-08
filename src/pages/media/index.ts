@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../services/auth"
 import { listMediaCategories, listMediaEntries, updateMediaEntry } from "../../services/media"
 import type { MediaEntry, MediaStatus, MediaType } from "../../types/media"
 import {
@@ -8,23 +8,40 @@ import {
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
 import {
-  cacheMediaEntryCollection,
   getCachedMediaCategories,
-  getCachedMediaEntryCollection,
   getCachedMediaEntries,
-  getDeletedMediaEntryIds
+  getCachedMediaEntryPage,
+  getDeletedMediaEntryIds,
+  isMediaCategoriesCacheFresh,
+  type MediaEntryQuery
 } from "../../utils/media-data-cache"
 import { getMediaDataRevision, markMediaDataChanged } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
-type LoadCurrentViewOptions = { refreshShared?: boolean }
+type LoadCurrentViewOptions = {
+  refreshShared?: boolean
+  reset?: boolean
+  forceRefresh?: boolean
+  background?: boolean
+}
 
 type DisplayMediaEntry = MediaEntry & {
   placeholderIcon: string
+  coverThumbnailUrl: string
 }
 
-const PAGE_SIZE = 100
+type CachedSequence = {
+  items: MediaEntry[]
+  page: number
+  total: number
+  hasMore: boolean
+  fresh: boolean
+}
+
+const PAGE_SIZE = 60
+const SEARCH_DEBOUNCE_MS = 180
+let mediaSearchTimer: ReturnType<typeof setTimeout> | null = null
 
 function timestamp(value: string): number {
   const result = Date.parse(value)
@@ -40,10 +57,19 @@ function mediaPlaceholderIcon(mediaType: MediaType): string {
   return "clapperboard"
 }
 
+function mediaCoverThumbnailUrl(url: string): string {
+  if (!url.includes("/media-covers/")) return url
+  return url.replace(
+    /-normalized-v3\.webp(?=($|\?))/,
+    "-normalized-v3-thumbnail.webp"
+  )
+}
+
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
   return {
     ...entry,
-    placeholderIcon: mediaPlaceholderIcon(entry.media_type)
+    placeholderIcon: mediaPlaceholderIcon(entry.media_type),
+    coverThumbnailUrl: mediaCoverThumbnailUrl(entry.cover_url || "")
   }
 }
 
@@ -56,16 +82,13 @@ function sortByRecent(entries: MediaEntry[]): DisplayMediaEntry[] {
     .map(toDisplayEntry)
 }
 
-function filterOverviewItems(
-  status: OverviewStatus,
-  category: MediaType,
-  inProgressItems: DisplayMediaEntry[],
-  plannedItems: DisplayMediaEntry[]
+function mergeEntries(
+  current: DisplayMediaEntry[],
+  additions: MediaEntry[]
 ): DisplayMediaEntry[] {
-  const sourceItems = status === "in_progress" ? inProgressItems : plannedItems
-  return category
-    ? sourceItems.filter((item) => item.media_type === category)
-    : sourceItems
+  const merged = new Map<string, MediaEntry>(current.map((entry) => [entry.id, entry]))
+  additions.forEach((entry) => merged.set(entry.id, entry))
+  return sortByRecent([...merged.values()])
 }
 
 function updateRevisitableValue(
@@ -78,35 +101,57 @@ function updateRevisitableValue(
   )
 }
 
-function mergeCachedEntries(
-  entries: DisplayMediaEntry[],
-  cachedEntries: MediaEntry[],
-  deletedIds: string[]
-): DisplayMediaEntry[] {
-  const merged = new Map<string, MediaEntry>(entries.map((entry) => [entry.id, entry]))
-  cachedEntries.forEach((entry) => merged.set(entry.id, entry))
-  deletedIds.forEach((id) => merged.delete(id))
-  return sortByRecent([...merged.values()])
+function overviewQuery(
+  status: OverviewStatus,
+  category: MediaType,
+  page: number
+): MediaEntryQuery {
+  return {
+    mediaType: category || undefined,
+    status,
+    sort: "created_desc",
+    page,
+    pageSize: PAGE_SIZE
+  }
 }
 
-async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
-  const cached = getCachedMediaEntryCollection(status)
-  if (cached) return cached
+function recordQuery(
+  category: MediaType,
+  keyword: string,
+  page: number
+): MediaEntryQuery {
+  return {
+    mediaType: category || undefined,
+    keyword: keyword.trim() || undefined,
+    sort: "created_desc",
+    page,
+    pageSize: PAGE_SIZE
+  }
+}
+
+function cachedSequence(inputForPage: (page: number) => MediaEntryQuery): CachedSequence | null {
   const items: MediaEntry[] = []
   let page = 1
+  let total = 0
   let hasMore = true
+  let fresh = true
   while (hasMore) {
-    const result = await listMediaEntries({
-      status,
-      page,
-      pageSize: PAGE_SIZE
-    })
-    items.push(...result.items)
-    hasMore = result.pagination.has_more
+    const cached = getCachedMediaEntryPage(inputForPage(page))
+    if (!cached) break
+    items.push(...cached.data.items)
+    total = cached.data.pagination.total
+    hasMore = cached.data.pagination.has_more
+    fresh = fresh && cached.fresh
     page += 1
   }
-  cacheMediaEntryCollection(status, items)
-  return items
+  if (page === 1) return null
+  return {
+    items,
+    page: page - 1,
+    total,
+    hasMore,
+    fresh
+  }
 }
 
 Page({
@@ -118,14 +163,26 @@ Page({
     overviewInProgressSource: [] as DisplayMediaEntry[],
     overviewPlannedSource: [] as DisplayMediaEntry[],
     overviewItems: [] as DisplayMediaEntry[],
+    overviewInProgressPage: 0,
+    overviewPlannedPage: 0,
+    overviewInProgressHasMore: true,
+    overviewPlannedHasMore: true,
+    overviewInProgressTotal: 0,
+    overviewPlannedTotal: 0,
+    overviewTotal: 0,
     recordSourceItems: [] as DisplayMediaEntry[],
     recordItems: [] as DisplayMediaEntry[],
+    recordPage: 0,
+    recordHasMore: true,
+    recordTotal: 0,
     revisitableUpdatingId: "",
     keyword: "",
     appliedKeyword: "",
     canWrite: false,
     loading: true,
     contentLoading: false,
+    loadingMore: false,
+    refresherTriggered: false,
     hasLoaded: false,
     sharedLoaded: false,
     overviewLoaded: false,
@@ -139,21 +196,103 @@ Page({
   },
 
   onShow() {
+    activateAsyncPage(this)
     const mediaRevision = getMediaDataRevision()
     if (!this.data.hasLoaded) {
-      void this.loadCurrentView({ refreshShared: true })
+      const hydrated = this.hydrateCurrentViewFromCache()
+      if (!hydrated) {
+        void this.loadCurrentView({ refreshShared: true, reset: true })
+      } else if (!hydrated.fresh) {
+        void this.loadCurrentView({
+          refreshShared: true,
+          reset: true,
+          forceRefresh: true,
+          background: true
+        })
+      }
       return
     }
     if (this.data.mediaRevision !== mediaRevision) {
-      if (this.syncLoadedDataFromCache(mediaRevision)) return
-      this.setData({ sharedLoaded: false }, () => {
-        void this.loadCurrentView({ refreshShared: true })
+      if (!this.syncLoadedDataFromCache(mediaRevision)) {
+        void this.loadCurrentView({ refreshShared: true, reset: true })
+      } else if (!this.isCurrentCacheFresh()) {
+        void this.loadCurrentView({
+          reset: true,
+          forceRefresh: true,
+          background: true
+        })
+      }
+      return
+    }
+    if (!this.isCurrentCacheFresh()) {
+      void this.loadCurrentView({
+        refreshShared: true,
+        reset: true,
+        forceRefresh: true,
+        background: true
       })
     }
   },
 
   onUnload() {
     deactivateAsyncPage(this)
+    if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
+    mediaSearchTimer = null
+  },
+
+  hydrateCurrentViewFromCache(): { fresh: boolean } | null {
+    const categories = getCachedMediaCategories()
+    const currentUser = getCurrentUser()
+    if (!categories || !currentUser) return null
+    const mediaTypes = categories.map((category) => category.name)
+    const selectedCategory = mediaTypes.includes(this.data.selectedCategory)
+      ? this.data.selectedCategory
+      : ""
+    const sequence = this.data.displayMode === "overview"
+      ? cachedSequence((page) => overviewQuery(this.data.overviewStatus, selectedCategory, page))
+      : cachedSequence((page) => recordQuery(selectedCategory, this.data.appliedKeyword, page))
+    if (!sequence) return null
+    const displayItems = sortByRecent(sequence.items)
+    const update: Record<string, unknown> = {
+      mediaTypes,
+      selectedCategory,
+      canWrite: currentUser.can_write,
+      sharedLoaded: true,
+      loading: false,
+      contentLoading: false,
+      hasLoaded: true,
+      mediaRevision: getMediaDataRevision(),
+      errorMessage: ""
+    }
+    if (this.data.displayMode === "overview") {
+      const prefix = this.data.overviewStatus === "in_progress"
+        ? "overviewInProgress"
+        : "overviewPlanned"
+      update[`${prefix}Source`] = displayItems
+      update[`${prefix}Page`] = sequence.page
+      update[`${prefix}HasMore`] = sequence.hasMore
+      update[`${prefix}Total`] = sequence.total
+      update.overviewItems = displayItems
+      update.overviewTotal = sequence.total
+      update.overviewLoaded = true
+    } else {
+      update.recordSourceItems = displayItems
+      update.recordItems = displayItems
+      update.recordPage = sequence.page
+      update.recordHasMore = sequence.hasMore
+      update.recordTotal = sequence.total
+      update.recordLoaded = true
+    }
+    this.setData(update)
+    return { fresh: sequence.fresh && isMediaCategoriesCacheFresh() }
+  },
+
+  isCurrentCacheFresh(): boolean {
+    if (!isMediaCategoriesCacheFresh()) return false
+    const input = this.data.displayMode === "overview"
+      ? overviewQuery(this.data.overviewStatus, this.data.selectedCategory, 1)
+      : recordQuery(this.data.selectedCategory, this.data.appliedKeyword, 1)
+    return getCachedMediaEntryPage(input)?.fresh === true
   },
 
   syncLoadedDataFromCache(mediaRevision: number): boolean {
@@ -163,20 +302,42 @@ Page({
     const selectedCategory = mediaTypes.includes(this.data.selectedCategory)
       ? this.data.selectedCategory
       : ""
+    const deletedIds = new Set(getDeletedMediaEntryIds())
     const cachedEntries = getCachedMediaEntries()
-    const deletedIds = getDeletedMediaEntryIds()
-    const overviewInProgressSource = this.data.overviewLoaded
-      ? mergeCachedEntries(this.data.overviewInProgressSource, cachedEntries, deletedIds)
-        .filter((entry) => entry.watch_status === "in_progress")
+    const mergeLocal = (entries: DisplayMediaEntry[], status?: MediaStatus) =>
+      mergeEntries(entries, cachedEntries)
+        .filter((entry) => !deletedIds.has(entry.id))
+        .filter((entry) => !selectedCategory || entry.media_type === selectedCategory)
+        .filter((entry) => !status || entry.watch_status === status)
+    const overviewInProgressSource = this.data.overviewInProgressPage > 0
+      ? mergeLocal(this.data.overviewInProgressSource, "in_progress")
       : this.data.overviewInProgressSource
-    const overviewPlannedSource = this.data.overviewLoaded
-      ? mergeCachedEntries(this.data.overviewPlannedSource, cachedEntries, deletedIds)
-        .filter((entry) => entry.watch_status === "planned")
+    const overviewPlannedSource = this.data.overviewPlannedPage > 0
+      ? mergeLocal(this.data.overviewPlannedSource, "planned")
       : this.data.overviewPlannedSource
-    const recordSourceItems = this.data.recordLoaded
-      ? mergeCachedEntries(this.data.recordSourceItems, cachedEntries, deletedIds)
-      : this.data.recordSourceItems
     const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+    const recordSourceItems = this.data.recordLoaded
+      ? mergeLocal(this.data.recordSourceItems)
+        .filter((entry) => !keyword || entry.title.toLocaleLowerCase().includes(keyword))
+      : this.data.recordSourceItems
+    const overviewItems = this.data.overviewStatus === "in_progress"
+      ? overviewInProgressSource
+      : overviewPlannedSource
+    const inProgressTotal = getCachedMediaEntryPage(
+      overviewQuery("in_progress", selectedCategory, 1)
+    )?.data.pagination.total ?? Math.max(
+      this.data.overviewInProgressTotal,
+      overviewInProgressSource.length
+    )
+    const plannedTotal = getCachedMediaEntryPage(
+      overviewQuery("planned", selectedCategory, 1)
+    )?.data.pagination.total ?? Math.max(
+      this.data.overviewPlannedTotal,
+      overviewPlannedSource.length
+    )
+    const recordTotal = getCachedMediaEntryPage(
+      recordQuery(selectedCategory, this.data.appliedKeyword, 1)
+    )?.data.pagination.total ?? Math.max(this.data.recordTotal, recordSourceItems.length)
 
     this.setData({
       mediaTypes,
@@ -184,21 +345,13 @@ Page({
       sharedLoaded: true,
       overviewInProgressSource,
       overviewPlannedSource,
-      overviewItems: this.data.overviewLoaded
-        ? filterOverviewItems(
-            this.data.overviewStatus,
-            selectedCategory,
-            overviewInProgressSource,
-            overviewPlannedSource
-          )
-        : this.data.overviewItems,
+      overviewItems,
+      overviewInProgressTotal: inProgressTotal,
+      overviewPlannedTotal: plannedTotal,
+      overviewTotal: this.data.overviewStatus === "in_progress" ? inProgressTotal : plannedTotal,
       recordSourceItems,
-      recordItems: this.data.recordLoaded
-        ? recordSourceItems.filter((item) =>
-            (!selectedCategory || item.media_type === selectedCategory) &&
-            (!keyword || item.title.toLocaleLowerCase().includes(keyword))
-          )
-        : this.data.recordItems,
+      recordItems: recordSourceItems,
+      recordTotal,
       mediaRevision
     })
     return true
@@ -206,79 +359,93 @@ Page({
 
   async loadCurrentView(options: LoadCurrentViewOptions = {}) {
     const generation = beginAsyncPageRequest(this)
-    const showInitialLoading = !this.data.hasLoaded
-    const displayMode = this.data.displayMode
-    this.setData({
-      loading: showInitialLoading,
-      contentLoading: !showInitialLoading,
-      errorMessage: ""
-    })
+    const reset = options.reset !== false
+    const background = options.background === true
+    const showInitialLoading = !this.data.hasLoaded && !background
+    if (!background) {
+      this.setData({
+        loading: showInitialLoading,
+        contentLoading: reset && !showInitialLoading,
+        loadingMore: !reset,
+        errorMessage: ""
+      })
+    }
 
     try {
-      let sharedData = {
-        mediaTypes: this.data.mediaTypes,
-        selectedCategory: this.data.selectedCategory,
-        canWrite: this.data.canWrite,
-        sharedLoaded: this.data.sharedLoaded
-      }
-      if (options.refreshShared || !this.data.sharedLoaded) {
+      let mediaTypes = this.data.mediaTypes
+      let selectedCategory = this.data.selectedCategory
+      let canWrite = this.data.canWrite
+      let sharedLoaded = this.data.sharedLoaded
+      if (options.refreshShared || !sharedLoaded) {
         const [session, categories] = await Promise.all([
           ensureLogin(),
-          listMediaCategories()
+          listMediaCategories({ forceRefresh: options.forceRefresh })
         ])
         if (!isAsyncPageRequestCurrent(this, generation)) return
-        const mediaTypes = categories.map((category) => category.name)
-        const selectedCategory = mediaTypes.includes(this.data.selectedCategory)
-          ? this.data.selectedCategory
-          : ""
-        sharedData = {
-          mediaTypes,
-          selectedCategory,
-          canWrite: session.user.can_write,
-          sharedLoaded: true
-        }
+        mediaTypes = categories.map((category) => category.name)
+        selectedCategory = mediaTypes.includes(selectedCategory) ? selectedCategory : ""
+        canWrite = session.user.can_write
+        sharedLoaded = true
       }
 
-      const { selectedCategory } = sharedData
-
-      if (displayMode === "overview") {
-        const [inProgressEntries, plannedEntries] = await Promise.all([
-          listAllEntries("in_progress"),
-          listAllEntries("planned")
-        ])
+      if (this.data.displayMode === "overview") {
+        const status = this.data.overviewStatus
+        const prefix = status === "in_progress" ? "overviewInProgress" : "overviewPlanned"
+        const currentPage = status === "in_progress"
+          ? this.data.overviewInProgressPage
+          : this.data.overviewPlannedPage
+        const currentItems = status === "in_progress"
+          ? this.data.overviewInProgressSource
+          : this.data.overviewPlannedSource
+        const page = reset ? 1 : currentPage + 1
+        const result = await listMediaEntries(
+          overviewQuery(status, selectedCategory, page),
+          { forceRefresh: options.forceRefresh }
+        )
         if (!isAsyncPageRequestCurrent(this, generation)) return
-        const overviewInProgressSource = sortByRecent(inProgressEntries)
-        const overviewPlannedSource = sortByRecent(plannedEntries)
+        const items = reset
+          ? sortByRecent(result.items)
+          : mergeEntries(currentItems, result.items)
         this.setData({
-          ...sharedData,
-          overviewInProgressSource,
-          overviewPlannedSource,
-          overviewItems: filterOverviewItems(
-            this.data.overviewStatus,
-            selectedCategory,
-            overviewInProgressSource,
-            overviewPlannedSource
-          ),
+          mediaTypes,
+          selectedCategory,
+          canWrite,
+          sharedLoaded,
+          [`${prefix}Source`]: items,
+          [`${prefix}Page`]: page,
+          [`${prefix}HasMore`]: result.pagination.has_more,
+          [`${prefix}Total`]: result.pagination.total,
+          overviewItems: items,
+          overviewTotal: result.pagination.total,
           overviewLoaded: true,
           mediaRevision: getMediaDataRevision()
         })
       } else {
-        const recordSourceItems = sortByRecent(await listAllEntries())
+        const page = reset ? 1 : this.data.recordPage + 1
+        const result = await listMediaEntries(
+          recordQuery(selectedCategory, this.data.appliedKeyword, page),
+          { forceRefresh: options.forceRefresh }
+        )
         if (!isAsyncPageRequestCurrent(this, generation)) return
-        const appliedKeyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+        const recordItems = reset
+          ? sortByRecent(result.items)
+          : mergeEntries(this.data.recordSourceItems, result.items)
         this.setData({
-          ...sharedData,
-          recordSourceItems,
-          recordItems: recordSourceItems.filter((item) =>
-            (!selectedCategory || item.media_type === selectedCategory) &&
-            (!appliedKeyword || item.title.toLocaleLowerCase().includes(appliedKeyword))
-          ),
+          mediaTypes,
+          selectedCategory,
+          canWrite,
+          sharedLoaded,
+          recordSourceItems: recordItems,
+          recordItems,
+          recordPage: page,
+          recordHasMore: result.pagination.has_more,
+          recordTotal: result.pagination.total,
           recordLoaded: true,
           mediaRevision: getMediaDataRevision()
         })
       }
     } catch (error) {
-      if (!isAsyncPageRequestCurrent(this, generation)) return
+      if (!isAsyncPageRequestCurrent(this, generation) || background) return
       this.setData({
         errorMessage: error instanceof Error ? error.message : "影视记录加载失败"
       })
@@ -287,6 +454,8 @@ Page({
         this.setData({
           loading: false,
           contentLoading: false,
+          loadingMore: false,
+          refresherTriggered: false,
           hasLoaded: true
         })
       }
@@ -297,63 +466,128 @@ Page({
     const displayMode = event.currentTarget.dataset.mode as DisplayMode
     if (!displayMode || displayMode === this.data.displayMode) return
     const viewLoaded = displayMode === "overview"
-      ? this.data.overviewLoaded
+      ? (this.data.overviewStatus === "in_progress"
+          ? this.data.overviewInProgressPage > 0
+          : this.data.overviewPlannedPage > 0)
       : this.data.recordLoaded
-    this.setData({ displayMode, errorMessage: "" }, () => {
-      if (!viewLoaded) void this.loadCurrentView()
+    this.setData({
+      displayMode,
+      overviewLoaded: displayMode === "overview" && viewLoaded,
+      errorMessage: ""
+    }, () => {
+      if (displayMode === "overview" && viewLoaded) {
+        this.showSelectedOverviewStatus()
+      } else if (!viewLoaded) {
+        void this.loadCurrentView({ reset: true })
+      }
     })
   },
 
   handleCategoryTap(event: WechatMiniprogram.TouchEvent) {
     const selectedCategory = String(event.currentTarget.dataset.type || "")
     if (selectedCategory === this.data.selectedCategory) return
-    this.setData({ selectedCategory }, () => {
-      this.applyOverviewFilters()
-      this.applyRecordFilters()
-    })
+    this.setData({
+      selectedCategory,
+      overviewInProgressSource: [],
+      overviewPlannedSource: [],
+      overviewItems: [],
+      overviewInProgressPage: 0,
+      overviewPlannedPage: 0,
+      overviewInProgressHasMore: true,
+      overviewPlannedHasMore: true,
+      overviewInProgressTotal: 0,
+      overviewPlannedTotal: 0,
+      overviewTotal: 0,
+      overviewLoaded: false,
+      recordSourceItems: [],
+      recordItems: [],
+      recordPage: 0,
+      recordHasMore: true,
+      recordTotal: 0,
+      recordLoaded: false
+    }, () => void this.loadCurrentView({ reset: true }))
   },
 
   handleOverviewStatusTap(event: WechatMiniprogram.TouchEvent) {
     const overviewStatus = String(event.currentTarget.dataset.status || "") as OverviewStatus
-    if (!["in_progress", "planned"].includes(overviewStatus) || overviewStatus === this.data.overviewStatus) return
-    this.setData({ overviewStatus }, () => this.applyOverviewFilters())
+    if (!(["in_progress", "planned"] as string[]).includes(overviewStatus) || overviewStatus === this.data.overviewStatus) return
+    const loaded = overviewStatus === "in_progress"
+      ? this.data.overviewInProgressPage > 0
+      : this.data.overviewPlannedPage > 0
+    this.setData({ overviewStatus, overviewLoaded: loaded }, () => {
+      if (loaded) this.showSelectedOverviewStatus()
+      else void this.loadCurrentView({ reset: true })
+    })
   },
 
-  applyOverviewFilters() {
+  showSelectedOverviewStatus() {
+    const inProgress = this.data.overviewStatus === "in_progress"
     this.setData({
-      overviewItems: filterOverviewItems(
-        this.data.overviewStatus,
-        this.data.selectedCategory,
-        this.data.overviewInProgressSource,
-        this.data.overviewPlannedSource
-      )
+      overviewItems: inProgress
+        ? this.data.overviewInProgressSource
+        : this.data.overviewPlannedSource,
+      overviewTotal: inProgress
+        ? this.data.overviewInProgressTotal
+        : this.data.overviewPlannedTotal
     })
   },
 
   handleKeywordInput(event: WechatMiniprogram.Input) {
-    this.setData({ keyword: event.detail.value })
+    const keyword = event.detail.value
+    this.setData({ keyword })
+    if (this.data.displayMode !== "record") return
+    if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
+    mediaSearchTimer = setTimeout(() => {
+      mediaSearchTimer = null
+      if (this.data.displayMode !== "record") return
+      this.applySearch(keyword)
+    }, SEARCH_DEBOUNCE_MS)
   },
 
   handleSearch() {
-    this.setData({ appliedKeyword: this.data.keyword.trim() }, () => {
-      this.applyRecordFilters()
-    })
+    if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
+    mediaSearchTimer = null
+    this.applySearch(this.data.keyword)
+  },
+
+  applySearch(keyword: string) {
+    const appliedKeyword = keyword.trim()
+    if (appliedKeyword === this.data.appliedKeyword && this.data.recordLoaded) return
+    this.setData({
+      appliedKeyword,
+      recordSourceItems: [],
+      recordItems: [],
+      recordPage: 0,
+      recordHasMore: true,
+      recordTotal: 0,
+      recordLoaded: false
+    }, () => void this.loadCurrentView({ reset: true }))
   },
 
   handleClearSearch() {
-    this.setData({ keyword: "", appliedKeyword: "" }, () => {
-      this.applyRecordFilters()
-    })
+    if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
+    mediaSearchTimer = null
+    this.setData({ keyword: "" }, () => this.applySearch(""))
   },
 
-  applyRecordFilters() {
-    const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
-    const selectedCategory = this.data.selectedCategory
-    this.setData({
-      recordItems: this.data.recordSourceItems.filter((item) =>
-        (!selectedCategory || item.media_type === selectedCategory) &&
-        (!keyword || item.title.toLocaleLowerCase().includes(keyword))
-      )
+  handleContentLower() {
+    if (this.data.loading || this.data.contentLoading || this.data.loadingMore) return
+    const hasMore = this.data.displayMode === "overview"
+      ? (this.data.overviewStatus === "in_progress"
+          ? this.data.overviewInProgressHasMore
+          : this.data.overviewPlannedHasMore)
+      : this.data.recordHasMore
+    if (hasMore) void this.loadCurrentView({ reset: false })
+  },
+
+  handlePullRefresh() {
+    if (this.data.loading || this.data.contentLoading || this.data.loadingMore) return
+    this.setData({ refresherTriggered: true })
+    void this.loadCurrentView({
+      refreshShared: true,
+      reset: true,
+      forceRefresh: true,
+      background: true
     })
   },
 
@@ -377,22 +611,10 @@ Page({
 
   setRevisitableValue(id: string, isRevisitable: boolean) {
     this.setData({
-      overviewInProgressSource: updateRevisitableValue(
-        this.data.overviewInProgressSource,
-        id,
-        isRevisitable
-      ),
-      overviewPlannedSource: updateRevisitableValue(
-        this.data.overviewPlannedSource,
-        id,
-        isRevisitable
-      ),
+      overviewInProgressSource: updateRevisitableValue(this.data.overviewInProgressSource, id, isRevisitable),
+      overviewPlannedSource: updateRevisitableValue(this.data.overviewPlannedSource, id, isRevisitable),
       overviewItems: updateRevisitableValue(this.data.overviewItems, id, isRevisitable),
-      recordSourceItems: updateRevisitableValue(
-        this.data.recordSourceItems,
-        id,
-        isRevisitable
-      ),
+      recordSourceItems: updateRevisitableValue(this.data.recordSourceItems, id, isRevisitable),
       recordItems: updateRevisitableValue(this.data.recordItems, id, isRevisitable)
     })
   },
@@ -431,16 +653,18 @@ Page({
   },
 
   handleItemTap(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || "")
-    this.openMediaEntry(id)
+    this.openMediaEntry(String(event.currentTarget.dataset.id || ""))
   },
 
   openMediaEntry(id: string) {
-    if (!id) return
-    wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
+    if (id) wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
   },
 
   handleRetry() {
-    void this.loadCurrentView({ refreshShared: !this.data.sharedLoaded })
+    void this.loadCurrentView({
+      refreshShared: !this.data.sharedLoaded,
+      reset: true,
+      forceRefresh: true
+    })
   }
 })

@@ -13,14 +13,18 @@ import {
   adjustCachedMediaEntryStats,
   cacheAddedMediaEpisode,
   cacheMediaCategories,
-  cacheMediaEntries,
   cacheMediaEntry,
+  cacheMediaEntryPage,
   cacheMediaSeasons,
   getCachedMediaCategories,
   getCachedMediaEntry,
+  getCachedMediaEntryPage,
   getCachedMediaEpisode,
   getCachedMediaSeasons,
   invalidateCachedMediaSeasons,
+  isMediaCategoriesCacheFresh,
+  isMediaEntryCacheFresh,
+  isMediaSeasonsCacheFresh,
   removeCachedMediaCategory,
   removeCachedMediaEntry,
   removeCachedMediaSeason,
@@ -42,25 +46,29 @@ export async function listMediaEntries(input: {
   status?: MediaStatus
   revisitable?: boolean
   keyword?: string
+  sort?: "created_desc"
   page?: number
   pageSize?: number
-}): Promise<MediaEntryPage> {
+}, options: CacheReadOptions = {}): Promise<MediaEntryPage> {
+  const cached = options.forceRefresh ? null : getCachedMediaEntryPage(input)
+  if (cached?.fresh) return cached.data
   const data = await request<MediaEntryPage>({
     path: `/api/media${queryString({
       media_type: input.mediaType,
       watch_status: input.status,
       is_revisitable: input.revisitable ? "true" : undefined,
       keyword: input.keyword,
+      sort: input.sort,
       page: input.page ? String(input.page) : undefined,
       page_size: input.pageSize ? String(input.pageSize) : undefined
     })}`
   })
-  cacheMediaEntries(data.items)
+  cacheMediaEntryPage(input, data)
   return data
 }
 
 export async function getMediaEntry(id: string, options: CacheReadOptions = {}): Promise<MediaEntry> {
-  const cached = options.forceRefresh ? null : getCachedMediaEntry(id)
+  const cached = options.forceRefresh || !isMediaEntryCacheFresh(id) ? null : getCachedMediaEntry(id)
   if (cached) return cached
   const data = await request<{ item: MediaEntry }>({ path: `/api/media/${id}` })
   cacheMediaEntry(data.item)
@@ -68,7 +76,9 @@ export async function getMediaEntry(id: string, options: CacheReadOptions = {}):
 }
 
 export async function listMediaCategories(options: CacheReadOptions = {}): Promise<MediaCategory[]> {
-  const cached = options.forceRefresh ? null : getCachedMediaCategories()
+  const cached = options.forceRefresh || !isMediaCategoriesCacheFresh()
+    ? null
+    : getCachedMediaCategories()
   if (cached) return cached
   const data = await request<{ items: MediaCategory[] }>({ path: "/api/media-categories" })
   cacheMediaCategories(data.items)
@@ -198,7 +208,9 @@ export async function listMediaSeasons(
   mediaEntryId: string,
   options: CacheReadOptions = {}
 ): Promise<MediaSeason[]> {
-  const cached = options.forceRefresh ? null : getCachedMediaSeasons(mediaEntryId)
+  const cached = options.forceRefresh || !isMediaSeasonsCacheFresh(mediaEntryId)
+    ? null
+    : getCachedMediaSeasons(mediaEntryId)
   if (cached) return cached
   const data = await request<{ items: MediaSeason[] }>({
     path: `/api/media/${mediaEntryId}/seasons`

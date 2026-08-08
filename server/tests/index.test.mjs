@@ -1202,8 +1202,8 @@ test("media cover upload stores a WebP image and updates the existing entry", as
 
   const sourceImage = await sharp({
     create: {
-      width: 30,
-      height: 40,
+      width: 300,
+      height: 400,
       channels: 3,
       background: { r: 120, g: 80, b: 40 },
     },
@@ -1228,8 +1228,11 @@ test("media cover upload stores a WebP image and updates the existing entry", as
 
   assert.equal(response.statusCode, 200);
   assert.equal(checkedImages.length, 1);
-  assert.equal(supabase.storageUploads.length, 1);
-  const upload = supabase.storageUploads[0];
+  assert.equal(supabase.storageUploads.length, 2);
+  const upload = supabase.storageUploads.find(({ path }) => !path.includes("-thumbnail.webp"));
+  const thumbnailUpload = supabase.storageUploads.find(({ path }) => path.includes("-thumbnail.webp"));
+  assert.ok(upload);
+  assert.ok(thumbnailUpload);
   assert.equal(upload.bucket, "media-covers");
   assert.match(upload.path, new RegExp(`^users/${USER_ID}/entries/${MEDIA_ID}/.+\\.webp$`));
   assert.equal(upload.options.contentType, "image/webp");
@@ -1239,7 +1242,15 @@ test("media cover upload stores a WebP image and updates the existing entry", as
       width,
       height,
     })),
-    { format: "webp", width: 30, height: 40 },
+    { format: "webp", width: 300, height: 400 },
+  );
+  assert.deepEqual(
+    await sharp(thumbnailUpload.buffer).metadata().then(({ format, width, height }) => ({
+      format,
+      width,
+      height,
+    })),
+    { format: "webp", width: 240, height: 320 },
   );
   assert.equal(response.json().data.item.cover_url.includes(upload.path), true);
 });

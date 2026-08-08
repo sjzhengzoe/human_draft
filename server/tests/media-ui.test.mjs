@@ -40,9 +40,9 @@ test("media overview and records share the same status-free four-column cards", 
   assert.equal(page.match(/bindtap="handleCategoryTap"/g)?.length, 4);
   assert.match(logic, /selectedCategory:[ \t]*"" as MediaType/);
   assert.doesNotMatch(logic, /overviewCategory|activeRecordType/);
-  assert.match(logic, /this\.applyOverviewFilters\(\)[\s\S]*this\.applyRecordFilters\(\)/);
+  assert.match(logic, /handleCategoryTap[\s\S]*loadCurrentView\(\{ reset: true \}\)/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
-  assert.match(logic, /applyOverviewFilters\(\)/);
+  assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.match(page, /catchtap="handleRevisitableTap"/);
   assert.match(page, /item\.is_revisitable \? '♥' : '♡'/);
   assert.doesNotMatch(page, />值得重温<\/view>/);
@@ -143,7 +143,9 @@ test("media detail inline editing supports a shared 3:4 cover crop and deferred 
   assert.match(logic, /persistedEntry = await updateMediaEntry\(entry\.id,/);
   assert.match(logic, /persistedEntry = await replaceMediaEntryCover\(/);
   assert.doesNotMatch(logic, /pages\/media\/edit\/index\?id|MEDIA_EDIT_ITEM/);
-  assert.match(createPage, />新增影视<\/view>/);
+  assert.match(createPage, /<custom-navigation title="新增影视"/);
+  assert.doesNotMatch(createPage, /record-overview/);
+  assert.match(createPage, /class="save-bar"/);
   assert.match(createLogic, /await createMediaEntry\(input\)/);
   assert.doesNotMatch(createLogic, /getMediaEntry|updateMediaEntry|deleteMediaEntry|MEDIA_EDIT_ITEM/);
 });
@@ -203,7 +205,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.doesNotMatch(page, /episode-row__chevron|chevron-down/);
   assert.match(page, /catchtap="handleEpisodeEdit"/);
   assert.match(page, /bindsubmit="handleEpisodeSave"/);
-  assert.match(page, /form-type="submit"[\s\S]*?>保存<\/button>/);
+  assert.match(page, /class="episode-edit-save-bar"/);
+  assert.match(page, /bindtap="handleEpisodeStickySave"/);
   assert.match(page, /wx:if="\{\{editingEpisodeId === item\.id\}\}" class="episode-editor"/);
   assert.match(page, /episode-editor__label">单集标题/);
   assert.match(page, /episode-editor__label">整集概括/);
@@ -222,8 +225,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(page, /detail-attribute__label">名称[\s\S]*?\{\{entry\.title\}\}/);
   assert.ok(page.indexOf('class="detail-fixed"') < page.indexOf('class="detail-attribute-scroll"'));
   assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('class="detail-attribute-scroll"'));
-  assert.match(page, /<scroll-view class="detail-attribute-scroll" scroll-y enhanced show-scrollbar="\{\{false\}\}">[\s\S]*?class="detail-attributes"/);
-  assert.match(page, /<scroll-view wx:elif="\{\{activeDetailTab === 'records'\}\}" class="records-content" scroll-y enhanced/);
+  assert.match(page, /class="detail-attribute-scroll"[\s\S]*?bindrefresherrefresh="handleDetailPullRefresh"[\s\S]*?class="detail-attributes"/);
+  assert.match(page, /class="records-content \{\{editingEpisodeId[\s\S]*?bindscrolltolower="handleRecordsLower"/);
   assert.match(logic, /updateMediaEntry\(entry\.id, \{ watch_status: watchStatus \}\)/);
   assert.doesNotMatch(logic, /onPageScroll|pageScrollTo|savedPageScrollTop/);
   assert.doesNotMatch(page, /detail-attribute__label">状态/);
@@ -240,4 +243,32 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(styles, /\.active-season-bar__cover\s*\{[^}]*width:\s*112rpx;[^}]*height:\s*149rpx;/s);
   assert.match(styles, /\.episode-row__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
   assert.match(styles, /\.episode-row__meta\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
+});
+
+test("media UI keeps dense controls compact while improving long-list interactions", async () => {
+  const [page, styles, logic, createPage, createLogic, detailPage, detailLogic, detailStyles] = await Promise.all([
+    readFile(pageUrl, "utf8"),
+    readFile(stylesUrl, "utf8"),
+    readFile(logicUrl, "utf8"),
+    readFile(editPageUrl, "utf8"),
+    readFile(editLogicUrl, "utf8"),
+    readFile(detailPageUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+    readFile(detailStylesUrl, "utf8"),
+  ]);
+
+  assert.match(page, /category-list category-list--wrap/);
+  assert.doesNotMatch(page, /category-scroll/);
+  assert.match(page, /src="\{\{item\.coverThumbnailUrl\}\}"/);
+  assert.match(styles, /-webkit-line-clamp:\s*2/);
+  assert.match(logic, /const PAGE_SIZE = 60/);
+  assert.match(logic, /SEARCH_DEBOUNCE_MS = 180/);
+  assert.match(createPage, /field-label">名称[\s\S]*field-label">封面（选填）/);
+  assert.match(createLogic, /MEDIA_CREATE_DRAFT_KEY/);
+  assert.match(createLogic, /enableAlertBeforeUnload/);
+  assert.match(detailPage, /\{\{item\.is_favorite \? '★' : '☆'\}\}/);
+  assert.match(detailPage, /index < visibleEpisodeCount/);
+  assert.match(detailLogic, /EPISODE_RENDER_BATCH = 20/);
+  assert.match(detailLogic, /persistEpisodeDraft/);
+  assert.match(detailStyles, /\.episode-edit-save-bar\s*\{[^}]*position:\s*fixed;/s);
 });

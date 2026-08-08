@@ -16,6 +16,10 @@ export const IMAGE_PROFILES = Object.freeze({
     original: Object.freeze({}),
     thumbnail: Object.freeze({ width: 900, height: 900 }),
   }),
+  mediaCover: Object.freeze({
+    original: Object.freeze({}),
+    thumbnail: Object.freeze({ width: 240, height: 320 }),
+  }),
 });
 
 function toWebp(source, options) {
