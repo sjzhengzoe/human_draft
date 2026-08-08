@@ -27,6 +27,9 @@ test("media overview and records share the same status-free four-column cards", 
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(logic, /applyOverviewFilters\(\)/);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
+  assert.doesNotMatch(page, /包含全部分类|包含全部记录/);
+  assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
+  assert.ok(page.indexOf('class="category-list status-list"') < page.indexOf('class="media-toolbar"'));
 });
 
 test("media controls are vertically centered and use shared typography sizes", async () => {

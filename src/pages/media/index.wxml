@@ -12,21 +12,9 @@
       <view class="view-switch__item {{displayMode === 'record' ? 'view-switch__item--active' : ''}}" data-mode="record" bindtap="handleDisplayModeTap" role="tab">记录</view>
     </view>
 
-    <view wx:if="{{canWrite}}" class="media-toolbar">
-      <view class="media-toolbar__actions">
-        <view wx:if="{{canWrite}}" class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
-          <app-icon name="settings-2" size="23" />
-        </view>
-        <view wx:if="{{canWrite}}" class="icon-button icon-button--primary" role="button" aria-label="新增影视" bindtap="handleAdd">
-          <app-icon name="plus-white" size="23" />
-        </view>
-      </view>
-    </view>
-
     <block wx:if="{{displayMode === 'overview'}}">
       <view class="filter-heading">
         <text>选择分类</text>
-        <text class="filter-heading__hint">包含全部分类</text>
       </view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
@@ -47,7 +35,6 @@
     <block wx:else>
       <view class="filter-heading">
         <text>选择分类</text>
-        <text class="filter-heading__hint">包含全部记录</text>
       </view>
       <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="category-list">
@@ -61,6 +48,17 @@
         <view class="search-row__button" bindtap="handleSearch">搜索</view>
       </view>
     </block>
+
+    <view wx:if="{{canWrite}}" class="media-toolbar">
+      <view class="media-toolbar__actions">
+        <view class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
+          <app-icon name="settings-2" size="23" />
+        </view>
+        <view class="icon-button icon-button--primary" role="button" aria-label="新增影视" bindtap="handleAdd">
+          <app-icon name="plus-white" size="23" />
+        </view>
+      </view>
+    </view>
   </view>
 
   <scroll-view class="content-scroll" scroll-y enhanced show-scrollbar="{{false}}">
