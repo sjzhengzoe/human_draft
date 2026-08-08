@@ -33,11 +33,12 @@ const RECORD_CORRECTIONS = [
     optional: true,
   },
   {
-    fromTitle: "斗罗大陆",
+    fromTitle: "斗罗大陆1 第一季",
     fromMediaType: "动画片",
-    toTitle: "斗罗大陆1 第一季",
+    toTitle: "斗罗大陆",
     toMediaType: "动画片",
-    reason: "按豆瓣主条目补全第一季正式名称",
+    reason: "按腾讯官方聚合动画条目恢复作品总名",
+    optional: true,
   },
   {
     fromTitle: "牧神记 年番1",
@@ -131,7 +132,7 @@ const COVER_PLANS = [
     sourcePage: "https://movie.douban.com/subject/25732103/",
   },
   {
-    title: "斗罗大陆1 第一季",
+    title: "斗罗大陆",
     mediaType: "动画片",
     sourceUrl: "https://img3.doubanio.com/view/photo/l/public/p2510966013.jpg",
     sourcePage: "https://movie.douban.com/subject/27040807/",
@@ -439,11 +440,11 @@ const EPISODE_PLANS = [
     allowAdditionalSeason: true,
   },
   {
-    title: "斗罗大陆1 第一季",
+    title: "斗罗大陆",
     mediaType: "动画片",
-    seasonName: "第一季",
-    episodeCount: 26,
-    sourcePage: "https://movie.douban.com/subject/27040807/",
+    seasonName: "动画第1季",
+    episodeCount: 266,
+    sourcePage: "https://wetv.vip/zh-cn/play/wzx7pbebgpxlqqr/d0036l0kfn9",
   },
   {
     title: "牧神记",
@@ -553,6 +554,13 @@ const EPISODE_PLANS = [
 ];
 
 const SEASON_RENAME_PLANS = [
+  {
+    title: "斗罗大陆",
+    mediaType: "动画片",
+    fromSeasonName: "第一季",
+    toSeasonName: "动画第1季",
+    reason: "按腾讯官方聚合播放页修正分组名称",
+  },
   {
     title: "牧神记",
     mediaType: "动画片",
