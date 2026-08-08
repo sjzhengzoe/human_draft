@@ -8,6 +8,8 @@ const logicUrl = new URL("../../src/pages/media/index.ts", import.meta.url);
 const editPageUrl = new URL("../../src/pages/media/edit/index.wxml", import.meta.url);
 const editLogicUrl = new URL("../../src/pages/media/edit/index.ts", import.meta.url);
 const editConfigUrl = new URL("../../src/pages/media/edit/index.json", import.meta.url);
+const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.meta.url);
+const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
 
 test("media overview and records share the same status-free four-column cards", async () => {
   const [page, styles, logic] = await Promise.all([
@@ -85,4 +87,22 @@ test("media editing supports a shared 3:4 cover crop and upload", async () => {
   assert.match(page, /src="\{\{selectedImagePath \|\| coverUrl\}\}"/);
   assert.match(logic, /wx\.chooseMedia\(/);
   assert.match(logic, /replaceMediaEntryCover\(id, this\.data\.selectedImagePath\)/);
+});
+
+test("all media cards open the shared read-only detail page before editing", async () => {
+  const [indexLogic, detailPage, detailLogic] = await Promise.all([
+    readFile(logicUrl, "utf8"),
+    readFile(detailPageUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+  ]);
+
+  const openEntry = indexLogic.slice(
+    indexLogic.indexOf("openMediaEntry(id: string)"),
+    indexLogic.indexOf("handleRetry()"),
+  );
+  assert.match(openEntry, /pages\/media\/detail\/index\?id=\$\{id\}/);
+  assert.doesNotMatch(openEntry, /pages\/media\/edit|EPISODIC_MEDIA_TYPES|MEDIA_EDIT_ITEM/);
+  assert.match(detailPage, /wx:if="\{\{isEpisodic\}\}"/);
+  assert.match(detailPage, /bindtap="handleEditEntry"/);
+  assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
 });

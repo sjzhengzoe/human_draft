@@ -1,85 +1,597 @@
-.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx var(--ui-page-gutter) 60rpx; background: var(--ui-page-background); }
-.state, .empty-seasons, .empty-episodes { padding: 100rpx 24rpx; color: #999; font-size: var(--ui-font-size-base); line-height: 1.6; text-align: center; }
-.detail-card { padding: 28rpx; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-panel); background: var(--ui-surface); }
-.detail-card__content { display: flex; align-items: flex-start; gap: 22rpx; }
-.detail-card__cover { width: 180rpx; height: 240rpx; flex: 0 0 180rpx; border-radius: 12rpx; background: #eee; }
-.detail-card__main { min-width: 0; flex: 1; }
-.detail-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20rpx; }
-.detail-card__title { flex: 1; color: #171717; font-size: 36rpx; font-weight: 650; line-height: 1.35; }
-.detail-card__actions { display: flex; flex: none; align-items: center; gap: 10rpx; }
-.detail-action { display: flex; width: 52rpx; height: 52rpx; align-items: center; justify-content: center; background: transparent; }
-.detail-action--disabled { opacity: .45; }
-.detail-meta { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 18rpx; color: #777; font-size: 23rpx; }
-.detail-stats { margin-top: 14rpx; color: #555; font-size: 24rpx; }
-.revisit-button { display: inline-flex; margin-top: 22rpx; padding: 11rpx 18rpx; border: 1rpx solid #dedede; border-radius: 24rpx; color: #999; font-size: var(--ui-font-size-base); }
-.revisit-button--active { border-color: #111; background: #111; color: #fff; }
-.season-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 34rpx; }
-.season-heading__title { color: #222; font-size: 29rpx; font-weight: 650; }
-.season-heading__actions { display: flex; align-items: center; gap: 22rpx; }
-.season-add, .season-manage { color: #555; font-size: var(--ui-font-size-base); }
-.timeline-filter-button { padding: 8rpx 14rpx; border: 1rpx solid #d8d8d8; border-radius: 20rpx; background: var(--ui-surface); color: #666; font-size: var(--ui-font-size-base); }
-.timeline-filter-button--active { border-color: #222; background: #222; color: #fff; }
-.timeline-filter-panel { margin-top: 14rpx; padding: 22rpx; border: 1rpx solid var(--ui-border); border-radius: 18rpx; background: var(--ui-surface); }
-.timeline-filter-panel__heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18rpx; border-bottom: 1rpx solid var(--ui-border); }
-.timeline-filter-panel__title { color: #222; font-size: 26rpx; font-weight: 650; }
-.timeline-filter-reset { padding: 6rpx 12rpx; border-radius: 16rpx; background: var(--ui-subtle-background); color: #666; font-size: var(--ui-font-size-base); }
-.timeline-filter-section { margin-top: 20rpx; }
-.timeline-filter-section + .timeline-filter-section { margin-top: 24rpx; }
-.timeline-filter-section__title { color: #888; font-size: 19rpx; font-weight: 600; letter-spacing: 1rpx; }
-.timeline-filter-options { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
-.timeline-filter-option { padding: 9rpx 16rpx; border: 1rpx solid #dedede; border-radius: 20rpx; color: #888; font-size: var(--ui-font-size-base); }
-.timeline-filter-option--active { border-color: #222; background: #222; color: #fff; }
-.season-scroll { margin-top: 18rpx; white-space: nowrap; }
-.season-tabs { display: inline-flex; gap: 10rpx; padding-bottom: 12rpx; }
-.season-tab { padding: 13rpx 22rpx; border-radius: 25rpx; background: #e9e9e9; color: #666; font-size: var(--ui-font-size-base); }
-.season-tab--active { background: #111; color: #fff; }
-.season-profile { display: flex; gap: 20rpx; margin-top: 8rpx; padding: 20rpx; border: 1rpx solid var(--ui-border); border-radius: 18rpx; background: var(--ui-surface); }
-.season-profile__cover { display: flex; width: 128rpx; height: 170rpx; flex: 0 0 128rpx; align-items: center; justify-content: center; border-radius: 10rpx; background: #eee; color: #aaa; font-size: 20rpx; }
-.season-profile__cover--empty { box-sizing: border-box; padding: 12rpx; text-align: center; }
-.season-profile__main { min-width: 0; flex: 1; }
-.season-profile__title { color: #222; font-size: 28rpx; font-weight: 650; line-height: 1.4; }
-.season-profile__stats { margin-top: 10rpx; color: #777; font-size: 22rpx; }
-.season-profile__actions { display: flex; align-items: center; gap: 22rpx; margin-top: 22rpx; }
-.season-cover-button { display: inline-flex; align-items: center; gap: 7rpx; padding: 9rpx 14rpx; border: 1rpx solid #dedede; border-radius: 20rpx; color: #666; font-size: var(--ui-font-size-base); }
-.season-cover-button--active { border-color: #111; background: #111; color: #fff; }
-.episode-section { margin-top: 20rpx; }
-.episode-section__heading { display: flex; align-items: center; justify-content: space-between; padding: 14rpx 4rpx 18rpx; }
-.episode-section__title { color: #222; font-size: 28rpx; font-weight: 600; }
-.episode-section__count { margin-top: 5rpx; color: #999; font-size: 21rpx; }
-.episode-list { display: flex; flex-direction: column; gap: 14rpx; }
-.episode-row { padding: 24rpx; border: 1rpx solid var(--ui-border); border-radius: 20rpx; background: var(--ui-surface); }
-.episode-row__header { display: flex; min-height: 52rpx; align-items: center; gap: 14rpx; }
-.episode-row__number { flex: none; padding: 6rpx 10rpx; border-radius: 7rpx; background: #ededed; color: #444; font-size: 20rpx; font-weight: 600; }
-.episode-row__title { min-width: 0; flex: 1; color: #222; font-size: 26rpx; font-weight: 600; line-height: 1.4; }
-.episode-row__actions { display: flex; flex: none; align-items: center; gap: 8rpx; }
-.episode-row__preview { margin-top: 18rpx; padding-top: 20rpx; border-top: 1rpx solid var(--ui-border); }
-.episode-row__label { color: #777; font-size: 20rpx; font-weight: 600; letter-spacing: 1rpx; }
-.episode-row__label--timeline { margin-top: 24rpx; }
-.episode-row__summary { margin-top: 10rpx; color: #333; font-size: var(--ui-font-size-base); line-height: 1.7; white-space: pre-wrap; }
-.episode-row__heart { display: flex; width: 48rpx; height: 48rpx; align-items: center; justify-content: center; border-radius: 50%; color: #aaa; font-size: 38rpx; line-height: 1; }
-.episode-row__heart--active { background: transparent; color: #c74646; }
-.episode-row__edit { display: flex; width: 48rpx; height: 48rpx; align-items: center; justify-content: center; background: transparent; }
-.episode-row__timeline { margin-top: 14rpx; }
-.episode-timeline__item { display: flex; align-items: stretch; gap: 16rpx; }
-.episode-timeline__rail { position: relative; width: 18rpx; flex: 0 0 18rpx; }
-.episode-timeline__dot { position: relative; z-index: 1; width: 12rpx; height: 12rpx; box-sizing: border-box; margin: 7rpx auto 0; border: 3rpx solid #fff; border-radius: 50%; background: #333; box-shadow: 0 0 0 1rpx #777; }
-.episode-timeline__line { position: absolute; top: 20rpx; bottom: -3rpx; left: 50%; width: 1rpx; background: #d5d5d5; transform: translateX(-50%); }
-.episode-timeline__time { width: 110rpx; flex: 0 0 110rpx; box-sizing: border-box; padding: 3rpx 8rpx; color: #666; font-size: 19rpx; line-height: 26rpx; }
-.episode-timeline__content { min-width: 0; flex: 1; padding-bottom: 22rpx; color: #333; font-size: var(--ui-font-size-base); line-height: 1.6; word-break: break-all; }
-.episode-timeline__item:last-child .episode-timeline__content { padding-bottom: 0; }
-.episode-timeline__item--normal .episode-timeline__dot { background: #b8b8b8; box-shadow: 0 0 0 1rpx #c9c9c9; }
-.episode-timeline__item--normal .episode-timeline__time { color: #aaa; }
-.episode-timeline__item--normal .episode-timeline__narrative { color: #888; }
-.episode-timeline__item--key .episode-timeline__dot { background: #b45f42; box-shadow: 0 0 0 1rpx #c98972; }
-.episode-timeline__item--key .episode-timeline__time { color: #8d4d38; }
-.episode-timeline__item--key .episode-timeline__narrative { padding: 12rpx 14rpx; border-left: 4rpx solid #c98268; border-radius: 0 8rpx 8rpx 0; background: #fff8f5; color: #3e2a24; font-weight: 550; }
-.episode-timeline__item--quote .episode-timeline__dot { background: #75599a; box-shadow: 0 0 0 1rpx #9c87b8; }
-.episode-timeline__item--quote .episode-timeline__time { color: #71598f; }
-.episode-timeline__badge { display: inline-flex; margin-bottom: 8rpx; padding: 4rpx 9rpx; border-radius: 10rpx; font-size: 17rpx; font-weight: 600; line-height: normal; }
-.episode-timeline__badge--key { background: #f6e4dc; color: #914b34; }
-.episode-timeline__badge--quote { background: #eae3f2; color: #654785; }
-.episode-timeline__narrative { white-space: pre-wrap; }
-.episode-timeline__dialogues { display: flex; flex-direction: column; gap: 10rpx; padding: 14rpx; border-radius: 10rpx; background: #f8f5fb; }
-.episode-timeline__dialogue { display: flex; min-width: 0; align-items: flex-start; gap: 14rpx; }
-.episode-timeline__speaker { width: 92rpx; flex: 0 0 92rpx; color: #71598f; font-size: 20rpx; font-weight: 600; line-height: 1.6; text-align: right; }
-.episode-timeline__quote { min-width: 0; flex: 1; padding-left: 14rpx; border-left: 2rpx solid #d8cce5; color: #342c3d; white-space: pre-wrap; }
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 28rpx var(--ui-page-gutter) 60rpx;
+  background: var(--ui-page-background);
+}
+
+.state,
+.empty-seasons,
+.empty-episodes {
+  padding: 80rpx 24rpx;
+  color: #999;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.detail-card {
+  padding: 24rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+
+.detail-card__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+}
+
+.detail-card__cover {
+  display: flex;
+  width: 156rpx;
+  height: 208rpx;
+  box-sizing: border-box;
+  flex: 0 0 156rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: var(--ui-subtle-background);
+}
+
+.detail-card__cover--empty {
+  flex-direction: column;
+  gap: 8rpx;
+  color: #999;
+  font-size: var(--ui-font-size-small);
+}
+
+.detail-card__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.detail-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.detail-card__title {
+  min-width: 0;
+  flex: 1;
+  color: #171717;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.detail-card__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.detail-action {
+  display: flex;
+  width: 46rpx;
+  height: 46rpx;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.detail-action--disabled {
+  opacity: .45;
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+
+.detail-meta__item {
+  padding: 7rpx 11rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-subtle-background);
+  color: #666;
+  font-size: var(--ui-font-size-small);
+  line-height: normal;
+}
+
+.detail-stats {
+  margin-top: 14rpx;
+  color: #777;
+  font-size: var(--ui-font-size-small);
+  line-height: 1.45;
+}
+
+.revisit-button {
+  display: inline-flex;
+  min-height: 46rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 18rpx;
+  padding: 0 15rpx;
+  border: 1rpx solid #dedede;
+  border-radius: var(--ui-radius-pill);
+  color: #888;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.revisit-button--active {
+  border-color: #e6b5b5;
+  background: #fff5f5;
+  color: #c74646;
+}
+
+.revisit-button__heart {
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.season-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 34rpx;
+}
+
+.season-heading__title {
+  color: #222;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.season-heading__count {
+  margin-top: 5rpx;
+  color: #999;
+  font-size: var(--ui-font-size-small);
+  line-height: normal;
+}
+
+.season-heading__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.season-add,
+.season-manage {
+  color: #555;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.timeline-filter-button {
+  padding: 9rpx 14rpx;
+  border: 1rpx solid #d8d8d8;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-surface);
+  color: #666;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.timeline-filter-button--active {
+  border-color: #222;
+  background: #222;
+  color: #fff;
+}
+
+.timeline-filter-panel {
+  margin-top: 14rpx;
+  padding: 22rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+
+.timeline-filter-panel__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18rpx;
+  border-bottom: 1rpx solid var(--ui-border);
+}
+
+.timeline-filter-panel__title {
+  color: #222;
+  font-size: 25rpx;
+  font-weight: 650;
+}
+
+.timeline-filter-reset {
+  padding: 7rpx 12rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-subtle-background);
+  color: #666;
+  font-size: var(--ui-font-size-base);
+}
+
+.timeline-filter-section {
+  margin-top: 20rpx;
+}
+
+.timeline-filter-section + .timeline-filter-section {
+  margin-top: 24rpx;
+}
+
+.timeline-filter-section__title {
+  color: #888;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+}
+
+.timeline-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.timeline-filter-option {
+  padding: 9rpx 16rpx;
+  border: 1rpx solid #dedede;
+  border-radius: var(--ui-radius-pill);
+  color: #888;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.timeline-filter-option--active {
+  border-color: #222;
+  background: #222;
+  color: #fff;
+}
+
+.season-scroll {
+  margin-top: 18rpx;
+  white-space: nowrap;
+}
+
+.season-tabs {
+  display: inline-flex;
+  gap: 10rpx;
+  padding: 1rpx 1rpx 12rpx;
+}
+
+.season-tab {
+  padding: 12rpx 20rpx;
+  border: 1rpx solid transparent;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-subtle-background);
+  color: #666;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.season-tab--active {
+  border-color: #111;
+  background: var(--ui-surface);
+  color: #111;
+  font-weight: 600;
+}
+
+.season-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 4rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+
+.season-summary__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.season-summary__title {
+  color: #222;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.season-summary__stats {
+  margin-top: 6rpx;
+  color: #888;
+  font-size: var(--ui-font-size-small);
+}
+
+.season-summary__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.season-cover-button {
+  display: inline-flex;
+  min-height: 44rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 6rpx;
+  padding: 0 13rpx;
+  border: 1rpx solid #dedede;
+  border-radius: var(--ui-radius-pill);
+  color: #666;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.season-cover-button--active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.episode-section {
+  margin-top: 14rpx;
+}
+
+.episode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.episode-row {
+  padding: 22rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+
+.episode-row__header {
+  display: flex;
+  min-height: 48rpx;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.episode-row__number {
+  flex: none;
+  padding: 6rpx 10rpx;
+  border-radius: 7rpx;
+  background: var(--ui-subtle-background);
+  color: #555;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+}
+
+.episode-row__title {
+  min-width: 0;
+  flex: 1;
+  color: #222;
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.episode-row__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.episode-row__heart,
+.episode-row__edit {
+  display: flex;
+  width: 46rpx;
+  height: 46rpx;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.episode-row__heart {
+  color: #aaa;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.episode-row__heart--active {
+  color: #c74646;
+}
+
+.episode-row__preview {
+  margin-top: 16rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--ui-border);
+}
+
+.episode-row__label {
+  color: #777;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+}
+
+.episode-row__label--timeline {
+  margin-top: 22rpx;
+}
+
+.episode-row__summary {
+  margin-top: 9rpx;
+  color: #333;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.episode-row__timeline {
+  margin-top: 14rpx;
+}
+
+.episode-timeline__item {
+  display: flex;
+  align-items: stretch;
+  gap: 14rpx;
+}
+
+.episode-timeline__rail {
+  position: relative;
+  width: 18rpx;
+  flex: 0 0 18rpx;
+}
+
+.episode-timeline__dot {
+  position: relative;
+  z-index: 1;
+  width: 12rpx;
+  height: 12rpx;
+  box-sizing: border-box;
+  margin: 7rpx auto 0;
+  border: 3rpx solid #fff;
+  border-radius: 50%;
+  background: #333;
+  box-shadow: 0 0 0 1rpx #777;
+}
+
+.episode-timeline__line {
+  position: absolute;
+  top: 20rpx;
+  bottom: -3rpx;
+  left: 50%;
+  width: 1rpx;
+  background: #d5d5d5;
+  transform: translateX(-50%);
+}
+
+.episode-timeline__time {
+  width: 100rpx;
+  flex: 0 0 100rpx;
+  box-sizing: border-box;
+  padding: 3rpx 6rpx;
+  color: #777;
+  font-size: var(--ui-font-size-small);
+  line-height: 1.45;
+}
+
+.episode-timeline__content {
+  min-width: 0;
+  flex: 1;
+  padding-bottom: 20rpx;
+  color: #333;
+  font-size: var(--ui-font-size-base);
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.episode-timeline__item:last-child .episode-timeline__content {
+  padding-bottom: 0;
+}
+
+.episode-timeline__item--normal .episode-timeline__dot {
+  background: #b8b8b8;
+  box-shadow: 0 0 0 1rpx #c9c9c9;
+}
+
+.episode-timeline__item--normal .episode-timeline__time,
+.episode-timeline__item--normal .episode-timeline__narrative {
+  color: #888;
+}
+
+.episode-timeline__item--key .episode-timeline__dot {
+  background: #b45f42;
+  box-shadow: 0 0 0 1rpx #c98972;
+}
+
+.episode-timeline__item--key .episode-timeline__time {
+  color: #8d4d38;
+}
+
+.episode-timeline__item--key .episode-timeline__narrative {
+  padding: 12rpx 14rpx;
+  border-left: 4rpx solid #c98268;
+  border-radius: 0 8rpx 8rpx 0;
+  background: #fff8f5;
+  color: #3e2a24;
+  font-weight: 550;
+}
+
+.episode-timeline__item--quote .episode-timeline__dot {
+  background: #75599a;
+  box-shadow: 0 0 0 1rpx #9c87b8;
+}
+
+.episode-timeline__item--quote .episode-timeline__time {
+  color: #71598f;
+}
+
+.episode-timeline__badge {
+  display: inline-flex;
+  margin-bottom: 8rpx;
+  padding: 4rpx 9rpx;
+  border-radius: 10rpx;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.episode-timeline__badge--key {
+  background: #f6e4dc;
+  color: #914b34;
+}
+
+.episode-timeline__badge--quote {
+  background: #eae3f2;
+  color: #654785;
+}
+
+.episode-timeline__narrative {
+  white-space: pre-wrap;
+}
+
+.episode-timeline__dialogues {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 14rpx;
+  border-radius: 10rpx;
+  background: #f8f5fb;
+}
+
+.episode-timeline__dialogue {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.episode-timeline__speaker {
+  width: 88rpx;
+  flex: 0 0 88rpx;
+  color: #71598f;
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.episode-timeline__quote {
+  min-width: 0;
+  flex: 1;
+  padding-left: 12rpx;
+  border-left: 2rpx solid #d8cce5;
+  color: #342c3d;
+  white-space: pre-wrap;
+}

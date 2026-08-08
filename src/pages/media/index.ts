@@ -17,7 +17,6 @@ type DisplayMediaEntry = MediaEntry & {
   placeholderIcon: string
 }
 
-const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const PAGE_SIZE = 100
 
 function timestamp(value: string): number {
@@ -384,20 +383,7 @@ Page({
 
   openMediaEntry(id: string) {
     if (!id) return
-    const entries = [
-      ...this.data.overviewInProgressSource,
-      ...this.data.overviewPlannedSource,
-      ...this.data.recordSourceItems
-    ]
-    const item = entries.find((entry) => entry.id === id)
-    if (!item) return
-    if (EPISODIC_MEDIA_TYPES.includes(item.media_type)) {
-      wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
-      return
-    }
-    if (!this.data.canWrite) return
-    wx.setStorageSync("MEDIA_EDIT_ITEM", item)
-    wx.navigateTo({ url: `/pages/media/edit/index?id=${id}` })
+    wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
   },
 
   handleRetry() {

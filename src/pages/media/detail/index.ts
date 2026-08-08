@@ -32,6 +32,8 @@ import {
 
 let savedPageScrollTop = 0
 
+const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
+
 const timelineFilterOptions: Array<{
   value: MediaTimelineNoteType
   label: string
@@ -116,6 +118,7 @@ Page({
     favoriteEpisodesOnly: false,
     coverUrl: "",
     canWrite: false,
+    isEpisodic: false,
     isAudio: false,
     loading: true,
     contentLoading: false,
@@ -182,6 +185,7 @@ Page({
         activeSeasonFavoriteCount: favoriteCount(activeSeason),
         coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
         canWrite: session.user.can_write,
+        isEpisodic: normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type),
         isAudio: entry.media_type === "广播剧",
         requestedSeasonId: "",
         mediaRevision: getMediaDataRevision()
