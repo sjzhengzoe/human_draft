@@ -44,6 +44,7 @@ type CacheReadOptions = {
 export async function listMediaEntries(input: {
   mediaType?: MediaType
   status?: MediaStatus
+  personalRating?: number
   revisitable?: boolean
   keyword?: string
   sort?: "created_desc" | "rating_desc"
@@ -56,6 +57,7 @@ export async function listMediaEntries(input: {
     path: `/api/media${queryString({
       media_type: input.mediaType,
       watch_status: input.status,
+      personal_rating: input.personalRating ? String(input.personalRating) : undefined,
       is_revisitable: input.revisitable ? "true" : undefined,
       keyword: input.keyword,
       sort: input.sort,

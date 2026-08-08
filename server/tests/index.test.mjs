@@ -809,6 +809,64 @@ test("media records can request personal-rating priority", async (t) => {
   ]);
 });
 
+test("media records can filter by an exact completed personal rating", async (t) => {
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [
+        {
+          id: MEDIA_ID,
+          title: "五星作品",
+          media_type: "电影",
+          watch_status: "completed",
+          personal_rating: 5,
+          completed_personal_rating: 5,
+          platforms: [],
+          sort_order: 1000,
+        },
+        {
+          id: TARGET_ID,
+          title: "四星作品",
+          media_type: "电影",
+          watch_status: "completed",
+          personal_rating: 4,
+          completed_personal_rating: 4,
+          platforms: [],
+          sort_order: 2000,
+        },
+        {
+          id: SOURCE_ID,
+          title: "隐藏的五星",
+          media_type: "电影",
+          watch_status: "in_progress",
+          personal_rating: 5,
+          completed_personal_rating: null,
+          platforms: [],
+          sort_order: 3000,
+        },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/media?personal_rating=5&sort=rating_desc",
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().data.items.map((item) => item.id), [MEDIA_ID]);
+  assert.equal(response.json().data.pagination.total, 1);
+
+  const invalidResponse = await app.inject({
+    method: "GET",
+    url: "/api/media?personal_rating=0",
+    headers: authHeaders,
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_INTEGER");
+});
+
 test("media list can include every category when media type is omitted", async (t) => {
   const entries = [
     {

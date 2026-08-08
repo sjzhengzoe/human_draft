@@ -44,12 +44,15 @@ test("media reads reuse session cache and successful writes update it", async ()
   assert.match(service, /!isMediaEntryCacheFresh\(id\) \? null : getCachedMediaEntry\(id\)/);
   assert.match(service, /!isMediaSeasonsCacheFresh\(mediaEntryId\)/);
   assert.match(service, /cacheMediaEntry\(data\.item\)/);
+  assert.match(service, /personal_rating: input\.personalRating \? String\(input\.personalRating\) : undefined/);
   assert.match(service, /updateCachedMediaEpisode\(data\.item\)/);
   assert.match(service, /invalidateCachedMediaSeasons\(mediaEntryId\)/);
   assert.match(cache, /const cachedEntryPages = new Map/);
   assert.match(cache, /export function cacheMediaEntryPage/);
   assert.match(cache, /data\.items\.forEach\(storeEntryValue\)/);
   assert.match(cache, /page\.input\.sort === "rating_desc"/);
+  assert.match(cache, /personalRating: input\.personalRating \|\| 0/);
+  assert.match(cache, /entry\.watch_status === "completed"[\s\S]*?entry\.personal_rating === input\.personalRating/);
   assert.match(cache, /MAX_CACHED_MEDIA_DETAILS = 20/);
   assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
   assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);

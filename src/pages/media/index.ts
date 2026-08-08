@@ -20,6 +20,7 @@ import { getMediaDataRevision } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
+type RatingFilter = 0 | 1 | 2 | 3 | 4 | 5
 type LoadCurrentViewOptions = {
   refreshShared?: boolean
   reset?: boolean
@@ -134,11 +135,13 @@ function overviewQuery(
 function recordQuery(
   category: MediaType,
   keyword: string,
+  personalRating: RatingFilter,
   page: number
 ): MediaEntryQuery {
   return {
     mediaType: category || undefined,
     keyword: keyword.trim() || undefined,
+    personalRating: personalRating || undefined,
     sort: "rating_desc",
     page,
     pageSize: PAGE_SIZE
@@ -193,6 +196,8 @@ Page({
     recordTotal: 0,
     keyword: "",
     appliedKeyword: "",
+    selectedRating: 0 as RatingFilter,
+    ratingOptions: [1, 2, 3, 4, 5] as RatingFilter[],
     canWrite: false,
     loading: true,
     contentLoading: false,
@@ -266,7 +271,12 @@ Page({
       : ""
     const sequence = this.data.displayMode === "overview"
       ? cachedSequence((page) => overviewQuery(this.data.overviewStatus, selectedCategory, page))
-      : cachedSequence((page) => recordQuery(selectedCategory, this.data.appliedKeyword, page))
+      : cachedSequence((page) => recordQuery(
+          selectedCategory,
+          this.data.appliedKeyword,
+          this.data.selectedRating,
+          page
+        ))
     if (!sequence) return null
     const displayItems = this.data.displayMode === "record"
       ? sortByRating(sequence.items)
@@ -309,7 +319,12 @@ Page({
     if (!isMediaCategoriesCacheFresh()) return false
     const input = this.data.displayMode === "overview"
       ? overviewQuery(this.data.overviewStatus, this.data.selectedCategory, 1)
-      : recordQuery(this.data.selectedCategory, this.data.appliedKeyword, 1)
+      : recordQuery(
+          this.data.selectedCategory,
+          this.data.appliedKeyword,
+          this.data.selectedRating,
+          1
+        )
     return getCachedMediaEntryPage(input)?.fresh === true
   },
 
@@ -338,9 +353,14 @@ Page({
       ? mergeLocal(this.data.overviewPlannedSource, "planned")
       : this.data.overviewPlannedSource
     const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+    const selectedRating = this.data.selectedRating
     const recordSourceItems = this.data.recordLoaded
       ? mergeLocal(this.data.recordSourceItems, undefined, true)
         .filter((entry) => !keyword || entry.title.toLocaleLowerCase().includes(keyword))
+        .filter((entry) => !selectedRating || (
+          entry.watch_status === "completed"
+          && entry.personal_rating === selectedRating
+        ))
       : this.data.recordSourceItems
     const overviewItems = this.data.overviewStatus === "in_progress"
       ? overviewInProgressSource
@@ -358,7 +378,7 @@ Page({
       overviewPlannedSource.length
     )
     const recordTotal = getCachedMediaEntryPage(
-      recordQuery(selectedCategory, this.data.appliedKeyword, 1)
+      recordQuery(selectedCategory, this.data.appliedKeyword, selectedRating, 1)
     )?.data.pagination.total ?? Math.max(this.data.recordTotal, recordSourceItems.length)
 
     this.setData({
@@ -389,6 +409,14 @@ Page({
     const contentScrollTop = contentScrollPositions.get(this) || 0
     if (Math.abs(this.data.contentScrollTop - contentScrollTop) < 1) return
     this.setData({ contentScrollTop })
+  },
+
+  resetContentScroll(callback: () => void) {
+    contentScrollPositions.set(this, 0)
+    const intermediateScrollTop = this.data.contentScrollTop === 0 ? 1 : 0
+    this.setData({ contentScrollTop: intermediateScrollTop }, () => {
+      this.setData({ contentScrollTop: 0 }, callback)
+    })
   },
 
   async loadCurrentView(options: LoadCurrentViewOptions = {}) {
@@ -458,7 +486,12 @@ Page({
       } else {
         const page = reset ? 1 : this.data.recordPage + 1
         const result = await listMediaEntries(
-          recordQuery(selectedCategory, this.data.appliedKeyword, page),
+          recordQuery(
+            selectedCategory,
+            this.data.appliedKeyword,
+            this.data.selectedRating,
+            page
+          ),
           { forceRefresh: options.forceRefresh }
         )
         if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -554,6 +587,21 @@ Page({
       if (loaded) this.showSelectedOverviewStatus()
       else void this.loadCurrentView({ reset: true })
     })
+  },
+
+  handleRatingTap(event: WechatMiniprogram.TouchEvent) {
+    const selectedRating = Number(event.currentTarget.dataset.rating) as RatingFilter
+    if (!Number.isInteger(selectedRating) || selectedRating < 0 || selectedRating > 5) return
+    if (selectedRating === this.data.selectedRating) return
+    this.setData({
+      selectedRating,
+      recordSourceItems: [],
+      recordItems: [],
+      recordPage: 0,
+      recordHasMore: true,
+      recordTotal: 0,
+      recordLoaded: false
+    }, () => this.resetContentScroll(() => void this.loadCurrentView({ reset: true })))
   },
 
   showSelectedOverviewStatus() {

@@ -198,6 +198,12 @@ export async function listMediaEntries(supabase, userId, query) {
       enumValue(query.watch_status, MEDIA_STATUSES, "观看状态"),
     );
   }
+  if (query.personal_rating !== undefined && query.personal_rating !== "") {
+    request = request.eq(
+      "completed_personal_rating",
+      integerValue(Number(query.personal_rating), "我的评分", 1, 5),
+    );
+  }
   if (query.is_revisitable === "true") request = request.eq("is_revisitable", true);
   if (typeof query.keyword === "string" && query.keyword.trim()) {
     request = request.ilike("title", `%${query.keyword.trim().slice(0, 80)}%`);

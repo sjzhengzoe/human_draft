@@ -37,6 +37,13 @@
         <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
         <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
       </view>
+      <view class="filter-heading filter-heading--rating">
+        <text>选择评分</text>
+      </view>
+      <view class="category-list rating-list" role="group" aria-label="按评分筛选">
+        <view class="category-chip {{selectedRating === 0 ? 'category-chip--active' : ''}}" data-rating="0" bindtap="handleRatingTap">全部</view>
+        <view wx:for="{{ratingOptions}}" wx:key="*this" class="category-chip {{selectedRating === item ? 'category-chip--active' : ''}}" data-rating="{{item}}" bindtap="handleRatingTap">{{item}}★</view>
+      </view>
       <view class="search-row">
         <app-input custom-class="search-row__input" font-size="20rpx" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
@@ -129,8 +136,8 @@
         </view>
       </view>
       <view wx:else class="state-block">
-        <text>{{appliedKeyword ? '没有找到相关作品' : '这个分类还没有记录'}}</text>
-        <view wx:if="{{canWrite && !appliedKeyword}}" class="empty-action" bindtap="handleAdd">新增</view>
+        <text>{{appliedKeyword || selectedRating ? '没有找到符合筛选的作品' : '这个分类还没有记录'}}</text>
+        <view wx:if="{{canWrite && !appliedKeyword && !selectedRating}}" class="empty-action" bindtap="handleAdd">新增</view>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>

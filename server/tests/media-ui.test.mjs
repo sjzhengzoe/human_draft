@@ -42,6 +42,10 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.doesNotMatch(logic, /overviewCategory|activeRecordType/);
   assert.match(logic, /handleCategoryTap[\s\S]*loadCurrentView\(\{ reset: true \}\)/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
+  assert.match(page, />选择评分<\/text>/);
+  assert.match(page, /data-rating="0" bindtap="handleRatingTap">全部<\/view>/);
+  assert.match(page, /wx:for="\{\{ratingOptions\}\}"[\s\S]*?bindtap="handleRatingTap">\{\{item\}\}★<\/view>/);
+  assert.ok(page.indexOf("<block wx:else>") < page.indexOf(">选择评分"));
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);
   assert.match(page, /wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/);
@@ -52,6 +56,8 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(logic, /entry\.watch_status === "completed" && Number\.isInteger\(entry\.personal_rating\)/);
   assert.match(logic, /function overviewQuery[\s\S]*?sort: "created_desc"/);
   assert.match(logic, /function recordQuery[\s\S]*?sort: "rating_desc"/);
+  assert.match(logic, /personalRating: personalRating \|\| undefined/);
+  assert.match(logic, /handleRatingTap[\s\S]*?selectedRating[\s\S]*?loadCurrentView\(\{ reset: true \}\)/);
   assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
   assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*#d99116;/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);

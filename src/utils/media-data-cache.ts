@@ -15,6 +15,7 @@ const MAX_CACHED_MEDIA_DETAILS = 20
 export type MediaEntryQuery = {
   mediaType?: string
   status?: MediaStatus
+  personalRating?: number
   revisitable?: boolean
   keyword?: string
   sort?: "created_desc" | "rating_desc"
@@ -43,6 +44,7 @@ function entryPageKey(input: MediaEntryQuery) {
   return JSON.stringify({
     mediaType: input.mediaType || "",
     status: input.status || "",
+    personalRating: input.personalRating || 0,
     revisitable: input.revisitable === true,
     keyword: String(input.keyword || "").trim().toLocaleLowerCase(),
     sort: input.sort || "",
@@ -55,6 +57,10 @@ function entryMatchesQuery(entry: MediaEntry, input: MediaEntryQuery) {
   const keyword = String(input.keyword || "").trim().toLocaleLowerCase()
   return (!input.mediaType || entry.media_type === input.mediaType) &&
     (!input.status || entry.watch_status === input.status) &&
+    (!input.personalRating || (
+      entry.watch_status === "completed"
+      && entry.personal_rating === input.personalRating
+    )) &&
     (!input.revisitable || entry.is_revisitable) &&
     (!keyword || entry.title.toLocaleLowerCase().includes(keyword))
 }
