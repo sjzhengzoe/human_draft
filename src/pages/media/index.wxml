@@ -105,7 +105,6 @@
           <view class="record-heading__title">{{activeRecordType || '全部记录'}}</view>
           <view class="record-heading__count">{{recordItems.length}} 条记录</view>
         </view>
-        <view class="record-heading__hint">四列卡片</view>
       </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
