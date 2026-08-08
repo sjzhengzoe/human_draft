@@ -1276,7 +1276,7 @@ test("delete routes return a JSON success envelope", async (t) => {
   }
 });
 
-test("media writes validate and normalize platforms before the create RPC", async (t) => {
+test("media writes accept an omitted platform and validate selected platforms before the create RPC", async (t) => {
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -1320,32 +1320,18 @@ test("media writes validate and normalize platforms before the create RPC", asyn
   assert.equal(invalidResponse.json().error.code, "INVALID_MEDIA_PLATFORM");
   assert.equal(supabase.rpcCalls.length, 0);
 
-  const emptyResponse = await app.inject({
+  const pendingResponse = await app.inject({
     method: "POST",
     url: "/api/media",
     headers: authHeaders,
     payload: {
-      title: "缺少平台条目",
+      title: "旧待定平台条目",
       media_type: "电影",
-      platforms: [],
+      platforms: ["待定"],
     },
   });
-  assert.equal(emptyResponse.statusCode, 400);
-  assert.equal(emptyResponse.json().error.code, "MEDIA_PLATFORM_REQUIRED");
-  assert.equal(supabase.rpcCalls.length, 0);
-
-  const mixedPendingResponse = await app.inject({
-    method: "POST",
-    url: "/api/media",
-    headers: authHeaders,
-    payload: {
-      title: "矛盾平台条目",
-      media_type: "电影",
-      platforms: ["待定", "腾讯视频"],
-    },
-  });
-  assert.equal(mixedPendingResponse.statusCode, 400);
-  assert.equal(mixedPendingResponse.json().error.code, "INVALID_MEDIA_PLATFORM_SELECTION");
+  assert.equal(pendingResponse.statusCode, 400);
+  assert.equal(pendingResponse.json().error.code, "INVALID_MEDIA_PLATFORM");
   assert.equal(supabase.rpcCalls.length, 0);
 
   const duplicateResponse = await app.inject({
@@ -1355,12 +1341,23 @@ test("media writes validate and normalize platforms before the create RPC", asyn
     payload: {
       title: " 千与千寻 ",
       media_type: "电影",
-      platforms: ["待定"],
     },
   });
   assert.equal(duplicateResponse.statusCode, 409);
   assert.equal(duplicateResponse.json().error.code, "MEDIA_TITLE_EXISTS");
   assert.equal(supabase.rpcCalls.length, 0);
+
+  const emptyResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: "未填写平台条目",
+      media_type: "电影",
+    },
+  });
+  assert.equal(emptyResponse.statusCode, 201);
+  assert.deepEqual(supabase.rpcCalls[0].params.p_platforms, []);
 
   const validResponse = await app.inject({
     method: "POST",
@@ -1373,7 +1370,7 @@ test("media writes validate and normalize platforms before the create RPC", asyn
     },
   });
   assert.equal(validResponse.statusCode, 201);
-  assert.deepEqual(supabase.rpcCalls[0], {
+  assert.deepEqual(supabase.rpcCalls[1], {
     name: "create_media_entry_at_end",
     params: {
       p_user_id: USER_ID,
@@ -1383,19 +1380,6 @@ test("media writes validate and normalize platforms before the create RPC", asyn
       p_platforms: ["猫耳", "漫播", "Books"],
     },
   });
-
-  const pendingResponse = await app.inject({
-    method: "POST",
-    url: "/api/media",
-    headers: authHeaders,
-    payload: {
-      title: "来源待确认",
-      media_type: "电影",
-      platforms: ["待定"],
-    },
-  });
-  assert.equal(pendingResponse.statusCode, 201);
-  assert.deepEqual(supabase.rpcCalls[1].params.p_platforms, ["待定"]);
 });
 
 test("cross-type media updates use the destination-locked move RPC", async (t) => {
@@ -1433,6 +1417,7 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
     payload: {
       title: "新标题",
       media_type: "动漫",
+      platforms: [],
     },
   });
 
@@ -1446,7 +1431,7 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
         p_title: "新标题",
         p_media_type: "动漫",
         p_watch_status: null,
-        p_platforms: null,
+        p_platforms: [],
       },
     },
   ]);
@@ -1455,7 +1440,7 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
     title: "新标题",
     media_type: "动漫",
     watch_status: "planned",
-    platforms: ["腾讯视频"],
+    platforms: [],
     sort_order: 2000,
   });
 });
@@ -2005,6 +1990,19 @@ test("Books media-platform migration updates novel sources and keeps the platfor
   assert.match(migration, /set platforms = array\['Books'\]::text\[\]/);
   assert.match(migration, /where media_type = '小说'/);
   assert.match(migration, /'待定'.*'猫耳'.*'漫播'.*'Books'/s);
+});
+
+test("optional media-platform migration converts pending sources to empty arrays", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608080001_optional_media_platforms.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /set platforms = array\[\]::text\[\]/i);
+  assert.match(migration, /where platforms = array\['待定'\]::text\[\]/i);
+  assert.match(migration, /alter column platforms set default array\[\]::text\[\]/i);
+  assert.doesNotMatch(migration, /cardinality\(platforms\) > 0/i);
+  assert.equal(migration.match(/'待定'/g)?.length, 1);
+  assert.match(migration, /'腾讯视频'.*'猫耳'.*'漫播'.*'Books'/s);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {

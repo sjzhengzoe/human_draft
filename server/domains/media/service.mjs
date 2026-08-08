@@ -16,7 +16,6 @@ import {
 
 export const MEDIA_STATUSES = ["planned", "in_progress", "completed"];
 export const MEDIA_PLATFORMS = [
-  "待定",
   "腾讯视频",
   "爱奇艺",
   "哔哩哔哩",
@@ -54,22 +53,10 @@ async function removeManagedMediaCover(supabase, path) {
 function mediaPlatforms(value) {
   const platforms = textArray(value, "平台", MEDIA_PLATFORMS.length);
   assertCondition(
-    platforms.length > 0,
-    400,
-    "MEDIA_PLATFORM_REQUIRED",
-    "请选择平台/来源。",
-  );
-  assertCondition(
     platforms.every((platform) => MEDIA_PLATFORMS.includes(platform)),
     400,
     "INVALID_MEDIA_PLATFORM",
     "影视平台无效，请从给出的选项中选择。",
-  );
-  assertCondition(
-    !platforms.includes("待定") || platforms.length === 1,
-    400,
-    "INVALID_MEDIA_PLATFORM_SELECTION",
-    "“待定”不能和其他平台同时选择。",
   );
   return platforms;
 }

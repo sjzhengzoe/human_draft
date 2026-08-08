@@ -15,7 +15,6 @@ import {
 import { markMediaDataChanged } from "../../../utils/media-data-revision"
 
 const BUILTIN_PLATFORMS = [
-  "待定",
   "腾讯视频",
   "爱奇艺",
   "哔哩哔哩",
@@ -182,12 +181,8 @@ Page({
   },
 
   handlePlatformsChange(event: WechatMiniprogram.CheckboxGroupChange) {
-    const values = event.detail.value
-    const selectedPending = values.includes("待定")
-    const previouslyPending = this.data.selectedBuiltinPlatforms.includes("待定")
-    const selectedBuiltinPlatforms = selectedPending && !previouslyPending
-      ? ["待定"]
-      : values.filter((name) => name !== "待定")
+    const selectedBuiltinPlatforms = event.detail.value
+      .filter((name) => BUILTIN_PLATFORMS.includes(name))
     this.setData({
       selectedBuiltinPlatforms,
       platformOptions: BUILTIN_PLATFORMS.map((name) => ({
@@ -214,13 +209,8 @@ Page({
       showErrorToast("请填写名称和分类")
       return
     }
-    const selectedPlatforms = this.data.selectedBuiltinPlatforms.includes("待定")
-      ? ["待定"]
-      : [...new Set(this.data.selectedBuiltinPlatforms)].filter((name) => BUILTIN_PLATFORMS.includes(name))
-    if (selectedPlatforms.length === 0) {
-      showErrorToast("请选择平台/来源")
-      return
-    }
+    const selectedPlatforms = [...new Set(this.data.selectedBuiltinPlatforms)]
+      .filter((name) => BUILTIN_PLATFORMS.includes(name))
     this.setData({ saving: true })
     wx.showLoading({ title: "保存中" })
     const input = {

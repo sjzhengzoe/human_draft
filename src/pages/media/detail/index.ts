@@ -40,7 +40,6 @@ let timelineDialogueSequence = 0
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const BUILTIN_PLATFORMS = [
-  "待定",
   "腾讯视频",
   "爱奇艺",
   "哔哩哔哩",
@@ -172,15 +171,21 @@ function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
 
+function supportedPlatforms(platforms: string[]) {
+  return platforms.filter((name) => BUILTIN_PLATFORMS.includes(name))
+}
+
 function platformOptions(selectedPlatforms: string[]) {
-  const names = [
-    ...BUILTIN_PLATFORMS,
-    ...selectedPlatforms.filter((name) => !BUILTIN_PLATFORMS.includes(name))
-  ]
-  return names.map((name) => ({
+  const supported = supportedPlatforms(selectedPlatforms)
+  return BUILTIN_PLATFORMS.map((name) => ({
     name,
-    checked: selectedPlatforms.includes(name)
+    checked: supported.includes(name)
   }))
+}
+
+function platformText(platforms: string[]) {
+  const supported = supportedPlatforms(platforms)
+  return supported.length ? supported.join("、") : "未填写"
 }
 
 function normalizedTimelineType(value: unknown): MediaTimelineNoteType {
@@ -330,7 +335,7 @@ Page({
         filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
         activeSeasonFavoriteCount: favoriteCount(activeSeason),
         coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
-        platformText: entry.platforms.join("、"),
+        platformText: platformText(entry.platforms),
         mediaTypes: categories.map((category) => category.name),
         canWrite: session.user.can_write,
         isEpisodic,
@@ -496,7 +501,7 @@ Page({
       entryDraftMediaTypeIndex: Math.max(0, mediaTypes.indexOf(entry.media_type)),
       entryDraftWatchStatus: entry.watch_status,
       entryDraftIsRevisitable: entry.is_revisitable,
-      entryDraftPlatforms: [...entry.platforms],
+      entryDraftPlatforms: supportedPlatforms(entry.platforms),
       entryPlatformOptions: platformOptions(entry.platforms),
       entryDraftIsAudio: entry.media_type === "广播剧",
       entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
@@ -536,15 +541,9 @@ Page({
     const name = String(event.currentTarget.dataset.name || "")
     if (!name || this.data.savingEntry) return
     const selected = this.data.entryDraftPlatforms
-    let entryDraftPlatforms: string[]
-    if (name === "待定") {
-      entryDraftPlatforms = selected.includes(name) ? [] : [name]
-    } else {
-      const withoutPending = selected.filter((item) => item !== "待定")
-      entryDraftPlatforms = withoutPending.includes(name)
-        ? withoutPending.filter((item) => item !== name)
-        : [...withoutPending, name]
-    }
+    const entryDraftPlatforms = selected.includes(name)
+      ? selected.filter((item) => item !== name)
+      : [...selected, name]
     this.setData({
       entryDraftPlatforms,
       entryPlatformOptions: platformOptions(entryDraftPlatforms)
@@ -618,15 +617,10 @@ Page({
     ) return
     const title = this.data.entryDraftTitle.trim()
     const mediaType = this.data.mediaTypes[this.data.entryDraftMediaTypeIndex]
-    const platforms = this.data.entryDraftPlatforms.includes("待定")
-      ? ["待定"]
-      : [...new Set(this.data.entryDraftPlatforms)]
+    const platforms = [...new Set(this.data.entryDraftPlatforms)]
+      .filter((name) => BUILTIN_PLATFORMS.includes(name))
     if (!title || !mediaType) {
       wx.showToast({ title: "请填写名称和分类", icon: "none" })
-      return
-    }
-    if (!platforms.length) {
-      wx.showToast({ title: "请选择平台/来源", icon: "none" })
       return
     }
     this.setData({ savingEntry: true })
@@ -653,7 +647,7 @@ Page({
       this.setData({
         entry: persistedEntry,
         coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
-        platformText: persistedEntry.platforms.join("、"),
+        platformText: platformText(persistedEntry.platforms),
         isAudio: persistedEntry.media_type === "广播剧",
         isEpisodic,
         activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
@@ -674,7 +668,7 @@ Page({
         this.setData({
           entry: persistedEntry,
           coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
-          platformText: persistedEntry.platforms.join("、"),
+          platformText: platformText(persistedEntry.platforms),
           isAudio: persistedEntry.media_type === "广播剧",
           isEpisodic: this.data.seasons.length > 0
             || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type),

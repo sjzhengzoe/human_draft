@@ -148,6 +148,21 @@ test("media detail inline editing supports a shared 3:4 cover crop and deferred 
   assert.doesNotMatch(createLogic, /getMediaEntry|updateMediaEntry|deleteMediaEntry|MEDIA_EDIT_ITEM/);
 });
 
+test("media platform/source is optional and no longer offers the pending placeholder", async () => {
+  const [createPage, createLogic, detailLogic] = await Promise.all([
+    readFile(editPageUrl, "utf8"),
+    readFile(editLogicUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+  ]);
+
+  assert.match(createPage, /平台\/来源（选填，可多选）/);
+  assert.doesNotMatch(createPage, /待定|平台\/来源（必填/);
+  assert.doesNotMatch(createLogic, /待定|请选择平台\/来源/);
+  assert.doesNotMatch(detailLogic, /待定|请选择平台\/来源/);
+  assert.match(detailLogic, /return supported\.length \? supported\.join\("、"\) : "未填写"/);
+  assert.match(detailLogic, /platforms = \[\.\.\.new Set\(this\.data\.entryDraftPlatforms\)\]/);
+});
+
 test("all media cards open the shared read-only detail page before editing", async () => {
   const [indexLogic, detailPage, detailLogic] = await Promise.all([
     readFile(logicUrl, "utf8"),

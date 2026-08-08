@@ -63,8 +63,7 @@
       <switch checked="{{isRevisitable}}" color="#111111" bindchange="handleRevisitableChange" />
     </view>
     <view class="field">
-      <view class="field-label">平台/来源（必填，可多选）</view>
-      <view class="field-help platform-help">不知道具体来源时选择“待定”；待定不能和其他平台同时选择</view>
+      <view class="field-label">平台/来源（选填，可多选）</view>
       <checkbox-group class="platform-options" bindchange="handlePlatformsChange">
         <label wx:for="{{platformOptions}}" wx:key="name" class="platform-option">
           <checkbox value="{{item.name}}" checked="{{item.checked}}" color="#111111" />
