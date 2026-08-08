@@ -798,7 +798,7 @@ test("media records can request personal-rating priority", async (t) => {
   assert.deepEqual(supabase.orderCalls.slice(-2), [
     {
       table: "media_entries",
-      field: "personal_rating",
+      field: "completed_personal_rating",
       options: { ascending: false, nullsFirst: false },
     },
     {
@@ -1387,6 +1387,21 @@ test("media writes accept an omitted platform and validate selected platforms be
   assert.equal(pendingResponse.json().error.code, "INVALID_MEDIA_PLATFORM");
   assert.equal(supabase.rpcCalls.length, 0);
 
+  const plannedRatingResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: "想看但未评分的作品",
+      media_type: "电影",
+      watch_status: "planned",
+      personal_rating: 5,
+    },
+  });
+  assert.equal(plannedRatingResponse.statusCode, 400);
+  assert.equal(plannedRatingResponse.json().error.code, "RATING_REQUIRES_COMPLETED");
+  assert.equal(supabase.rpcCalls.length, 0);
+
   const duplicateResponse = await app.inject({
     method: "POST",
     url: "/api/media",
@@ -1555,6 +1570,25 @@ test("personal media ratings stay optional, validate one to five, and sync legac
   });
   assert.equal(invalidResponse.statusCode, 400);
   assert.equal(invalidResponse.json().error.code, "INVALID_INTEGER");
+
+  const inProgressResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { watch_status: "in_progress" },
+  });
+  assert.equal(inProgressResponse.statusCode, 200);
+  assert.equal(inProgressResponse.json().data.item.watch_status, "in_progress");
+  assert.equal(inProgressResponse.json().data.item.personal_rating, 5);
+
+  const inProgressRatingResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: 4 },
+  });
+  assert.equal(inProgressRatingResponse.statusCode, 400);
+  assert.equal(inProgressRatingResponse.json().error.code, "RATING_REQUIRES_COMPLETED");
 });
 
 test("media edits reject a duplicate title in the same category", async (t) => {
@@ -2142,6 +2176,19 @@ test("revisit-rating upgrade moves historical four-star marks to five stars", as
   assert.match(migration, /new\.personal_rating := 5/i);
   assert.match(migration, /new\.personal_rating := case when new\.is_revisitable then 5 else null end/i);
   assert.doesNotMatch(migration, /where personal_rating is null/i);
+});
+
+test("completed-rating sort migration hides non-completed scores without deleting them", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608080004_media_completed_rating_sort.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists completed_personal_rating smallint/i);
+  assert.match(migration, /generated always as/i);
+  assert.match(migration, /case when watch_status = 'completed' then personal_rating else null end/i);
+  assert.match(migration, /completed_personal_rating desc nulls last[\s\S]*updated_at desc/i);
+  assert.doesNotMatch(migration, /update public\.media_entries[\s\S]*set personal_rating = null/i);
+  assert.doesNotMatch(migration, /delete from public\.media_entries/i);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {

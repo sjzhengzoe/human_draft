@@ -204,7 +204,7 @@ export async function listMediaEntries(supabase, userId, query) {
   }
   if (query.sort === "rating_desc") {
     request = request
-      .order("personal_rating", { ascending: false, nullsFirst: false })
+      .order("completed_personal_rating", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false });
   } else if (query.sort === "created_desc") {
     request = request.order("created_at", { ascending: false });
@@ -236,27 +236,36 @@ export async function createMediaEntry(supabase, userId, body) {
   const mediaType = requiredText(body.media_type, "影视分类", 40);
   const title = requiredText(body.title, "名称");
   const platforms = mediaPlatforms(body.platforms || []);
-  await assertMediaTitleAvailable(supabase, userId, title, mediaType);
-  let { data, error } = await supabase
-    .rpc("create_media_entry_at_end", {
-      p_user_id: userId,
-      p_title: title,
-      p_media_type: mediaType,
-      p_watch_status: enumValue(
-        body.watch_status || "completed",
-        MEDIA_STATUSES,
-        "观看状态",
-      ),
-      p_platforms: platforms,
-    })
-    .single();
-  throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
+  const watchStatusValue = enumValue(
+    body.watch_status || "completed",
+    MEDIA_STATUSES,
+    "观看状态",
+  );
   let personalRatingValue;
   if (body.personal_rating !== undefined) {
     personalRatingValue = personalRating(body.personal_rating);
   } else if (body.is_revisitable !== undefined) {
     personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记") ? 5 : null;
   }
+  if (personalRatingValue !== undefined && personalRatingValue !== null) {
+    assertCondition(
+      watchStatusValue === "completed",
+      400,
+      "RATING_REQUIRES_COMPLETED",
+      "只有看过或听过的作品可以评分。",
+    );
+  }
+  await assertMediaTitleAvailable(supabase, userId, title, mediaType);
+  let { data, error } = await supabase
+    .rpc("create_media_entry_at_end", {
+      p_user_id: userId,
+      p_title: title,
+      p_media_type: mediaType,
+      p_watch_status: watchStatusValue,
+      p_platforms: platforms,
+    })
+    .single();
+  throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
   if (personalRatingValue !== undefined) {
     const result = await supabase
       .from("media_entries")
@@ -291,6 +300,14 @@ export async function updateMediaEntry(supabase, userId, id, body) {
   } else if (body.is_revisitable !== undefined) {
     changes.is_revisitable = booleanValue(body.is_revisitable, "值得重温标记");
     changes.personal_rating = changes.is_revisitable ? 5 : null;
+  }
+  if (changes.personal_rating !== undefined && changes.personal_rating !== null) {
+    assertCondition(
+      (changes.watch_status ?? current.watch_status) === "completed",
+      400,
+      "RATING_REQUIRES_COMPLETED",
+      "只有看过或听过的作品可以评分。",
+    );
   }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
   if (changes.title !== undefined || changes.media_type !== undefined) {

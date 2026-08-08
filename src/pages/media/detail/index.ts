@@ -779,6 +779,7 @@ Page({
       wx.showToast({ title: "请先完成或取消作品编辑", icon: "none" })
       return
     }
+    if (entry.watch_status !== "completed") return
     if (entry.personal_rating === personalRating) return
     this.setData({
       entry: {

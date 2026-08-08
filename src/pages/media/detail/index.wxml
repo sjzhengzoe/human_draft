@@ -89,7 +89,7 @@
           >{{(editingEntry ? entryDraftIsAudio : isAudio) ? '听过' : '看过'}}</view>
         </view>
 
-        <view class="detail-rating">
+        <view wx:if="{{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'completed'}}" class="detail-rating">
           <view class="detail-rating__heading">
             <text>我的评分</text>
             <view

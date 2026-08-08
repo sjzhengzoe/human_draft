@@ -115,7 +115,7 @@
           </view>
           <view class="record-card__body">
             <view class="record-card__title">{{item.title}}</view>
-            <view class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
+            <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
               <text
                 wx:for="{{item.ratingStars}}"
                 wx:for-item="ratingStar"

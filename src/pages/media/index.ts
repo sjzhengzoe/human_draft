@@ -67,7 +67,7 @@ function mediaCoverThumbnailUrl(url: string): string {
 }
 
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
-  const personalRating = Number.isInteger(entry.personal_rating)
+  const personalRating = entry.watch_status === "completed" && Number.isInteger(entry.personal_rating)
     ? Math.min(5, Math.max(1, Number(entry.personal_rating)))
     : null
   return {
@@ -94,7 +94,9 @@ function sortByRecent(entries: MediaEntry[]): DisplayMediaEntry[] {
 function sortByRating(entries: MediaEntry[]): DisplayMediaEntry[] {
   return [...entries]
     .sort((left, right) => {
-      const ratingDifference = Number(right.personal_rating || 0) - Number(left.personal_rating || 0)
+      const rightRating = right.watch_status === "completed" ? Number(right.personal_rating || 0) : 0
+      const leftRating = left.watch_status === "completed" ? Number(left.personal_rating || 0) : 0
+      const ratingDifference = rightRating - leftRating
       if (ratingDifference) return ratingDifference
       return timestamp(right.updated_at || right.created_at) - timestamp(left.updated_at || left.created_at)
     })

@@ -35,7 +35,7 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.equal(page.match(/class="record-grid/g)?.length, 2);
   assert.equal(page.match(/class="record-card"/g)?.length, 2);
   assert.doesNotMatch(page, /overview-list|overview-row/);
-  assert.doesNotMatch(page, /swiper|status-badge|watch_status/);
+  assert.doesNotMatch(page, /swiper|status-badge/);
   assert.doesNotMatch(page, /overviewCategoryOptions|handleOverviewCategoryChange/);
   assert.equal(page.match(/bindtap="handleCategoryTap"/g)?.length, 4);
   assert.match(logic, /selectedCategory:[ \t]*"" as MediaType/);
@@ -44,10 +44,12 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);
+  assert.match(page, /wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/);
   assert.match(page, /wx:for="\{\{item\.ratingStars\}\}"/);
   assert.match(page, /ratingStar\.filled \? '★' : '☆'/);
   assert.doesNotMatch(page, /handleRevisitableTap|record-card__revisit|值得重温/);
   assert.match(logic, /function sortByRating/);
+  assert.match(logic, /entry\.watch_status === "completed" && Number\.isInteger\(entry\.personal_rating\)/);
   assert.match(logic, /function overviewQuery[\s\S]*?sort: "created_desc"/);
   assert.match(logic, /function recordQuery[\s\S]*?sort: "rating_desc"/);
   assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
@@ -273,9 +275,11 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createLogic, /enableAlertBeforeUnload/);
   assert.match(detailPage, /\{\{item\.is_favorite \? '★' : '☆'\}\}/);
   assert.match(detailPage, />我的评分<\/text>/);
+  assert.match(detailPage, /wx:if="\{\{\(editingEntry \? entryDraftWatchStatus : entry\.watch_status\) === 'completed'\}\}" class="detail-rating"/);
   assert.match(detailPage, /bindtap="handlePersonalRatingTap"/);
   assert.match(detailPage, /bindtap="handlePersonalRatingClear"/);
   assert.match(detailLogic, /updateMediaEntry\(entry\.id, \{ personal_rating: personalRating \}\)/);
+  assert.match(detailLogic, /if \(entry\.watch_status !== "completed"\) return/);
   assert.doesNotMatch(detailPage, /detail-heart|值得重温|值得重听/);
   assert.doesNotMatch(createPage, /值得重温|值得重听|handleRevisitableChange/);
   assert.match(detailPage, /index < visibleEpisodeCount/);
