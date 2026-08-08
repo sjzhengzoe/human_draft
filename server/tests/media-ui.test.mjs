@@ -123,7 +123,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.doesNotMatch(logic, /handleEpisodePreviewTap|expandedEpisodeId/);
   assert.doesNotMatch(page, /episode-row__chevron|chevron-down/);
   assert.match(page, /catchtap="handleEpisodeEdit"/);
-  assert.match(page, /aria-label="筛选剧情记录"/);
+  assert.match(page, /<view class="timeline-filter-panel">/);
+  assert.doesNotMatch(logic, /timelineFilterOpen|handleTimelineFilterToggle/);
   assert.match(page, /aria-label="新增季"/);
   assert.match(page, /data-status="planned"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="in_progress"[\s\S]*?bindtap="handleWatchStatusTap"/);

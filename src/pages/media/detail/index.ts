@@ -112,7 +112,6 @@ Page({
     filteredEpisodes: [] as MediaEpisode[],
     activeSeasonIndex: 0,
     activeSeasonFavoriteCount: 0,
-    timelineFilterOpen: false,
     timelineFilterOptions,
     timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
     favoriteEpisodesOnly: false,
@@ -220,8 +219,7 @@ Page({
       activeSeasonIndex: index,
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      activeSeasonFavoriteCount: favoriteCount(activeSeason),
-      timelineFilterOpen: false
+      activeSeasonFavoriteCount: favoriteCount(activeSeason)
     })
   },
 
@@ -231,13 +229,9 @@ Page({
     if (activeDetailTab === "records" && !this.data.isEpisodic) return
     if (activeDetailTab === this.data.activeDetailTab) return
     savedPageScrollTop = 0
-    this.setData({ activeDetailTab, timelineFilterOpen: false }, () => {
+    this.setData({ activeDetailTab }, () => {
       wx.pageScrollTo({ scrollTop: 0, duration: 0 })
     })
-  },
-
-  handleTimelineFilterToggle() {
-    this.setData({ timelineFilterOpen: !this.data.timelineFilterOpen })
   },
 
   handleFavoriteEpisodesFilterTap(event: WechatMiniprogram.TouchEvent) {

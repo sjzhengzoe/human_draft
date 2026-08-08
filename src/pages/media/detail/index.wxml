@@ -101,15 +101,8 @@
           </view>
         </scroll-view>
         <view wx:else class="records-toolbar__placeholder">暂无季</view>
-        <view class="records-toolbar__actions">
+        <view wx:if="{{canWrite}}" class="records-toolbar__actions">
           <view
-            class="records-icon-button {{favoriteEpisodesOnly || timelineTypeFilters.length < timelineFilterOptions.length ? 'records-icon-button--active' : ''}}"
-            role="button"
-            aria-label="筛选剧情记录"
-            bindtap="handleTimelineFilterToggle"
-          ><app-icon name="settings-2" size="23" /></view>
-          <view
-            wx:if="{{canWrite}}"
             class="records-icon-button"
             role="button"
             aria-label="新增季"
@@ -118,7 +111,7 @@
         </view>
       </view>
 
-      <view wx:if="{{timelineFilterOpen}}" class="timeline-filter-panel">
+      <view class="timeline-filter-panel">
         <view class="timeline-filter-panel__heading">
           <view class="timeline-filter-panel__title">筛选剧情记录</view>
           <view
