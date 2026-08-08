@@ -48,9 +48,18 @@ const RECORD_CORRECTIONS = [
   {
     fromTitle: "神探夏洛克",
     fromMediaType: "电影",
-    toTitle: "神探夏洛克 第一季",
+    toTitle: "神探夏洛克",
     toMediaType: "电视剧",
-    reason: "按豆瓣主条目补全季名，并修正电视剧误分类",
+    reason: "将整部剧的聚合记录修正为电视剧分类",
+    optional: true,
+  },
+  {
+    fromTitle: "神探夏洛克 第一季",
+    fromMediaType: "电视剧",
+    toTitle: "神探夏洛克",
+    toMediaType: "电视剧",
+    reason: "条目聚合四季，名称不再限定为第一季",
+    optional: true,
   },
   {
     fromTitle: "知否",
@@ -185,7 +194,7 @@ const COVER_PLANS = [
     sourcePage: "https://movie.douban.com/subject/25662329/",
   },
   {
-    title: "神探夏洛克 第一季",
+    title: "神探夏洛克",
     mediaType: "电视剧",
     sourceUrl: "https://img3.doubanio.com/view/photo/l/public/p1461954452.jpg",
     sourcePage: "https://movie.douban.com/subject/3986493/",
@@ -308,11 +317,35 @@ const EPISODE_PLANS = [
     sourcePage: "https://www.kilamanbo.world/manbo/pc/detail?id=1755103514939359249",
   },
   {
-    title: "神探夏洛克 第一季",
+    title: "神探夏洛克",
     mediaType: "电视剧",
     seasonName: "第一季",
     episodeCount: 3,
     sourcePage: "https://movie.douban.com/subject/3986493/",
+  },
+  {
+    title: "神探夏洛克",
+    mediaType: "电视剧",
+    seasonName: "第二季",
+    episodeCount: 3,
+    sourcePage: "https://movie.douban.com/subject/6522269/",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "神探夏洛克",
+    mediaType: "电视剧",
+    seasonName: "第三季",
+    episodeCount: 3,
+    sourcePage: "https://movie.douban.com/subject/10455629/",
+    allowAdditionalSeason: true,
+  },
+  {
+    title: "神探夏洛克",
+    mediaType: "电视剧",
+    seasonName: "第四季",
+    episodeCount: 3,
+    sourcePage: "https://movie.douban.com/subject/25750923/",
+    allowAdditionalSeason: true,
   },
   {
     title: "凪的新生活",
@@ -522,6 +555,15 @@ async function applyRecordCorrections(client, userId, entries) {
       });
       continue;
     }
+    if (correction.optional && matches.length === 0 && correctedMatches.length === 0) {
+      results.push({
+        from: `${correction.fromMediaType}《${correction.fromTitle}》`,
+        to: `${correction.toMediaType}《${correction.toTitle}》`,
+        reason: correction.reason,
+        status: "当前记录无需处理",
+      });
+      continue;
+    }
     if (matches.length !== 1 || correctedMatches.length !== 0) {
       throw new Error(
         `${correction.fromMediaType}《${correction.fromTitle}》匹配到 ${matches.length} 条待修正记录，`
@@ -640,7 +682,7 @@ async function applyEpisodePlans(client, userId, entries) {
     const seasons = seasonQuery.data || [];
     const matchingSeasons = seasons.filter((season) => season.name.trim() === plan.seasonName);
 
-    if (!matchingSeasons.length && seasons.length) {
+    if (!matchingSeasons.length && seasons.length && !plan.allowAdditionalSeason) {
       results.push({
         title: plan.title,
         mediaType: plan.mediaType,
