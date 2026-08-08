@@ -255,7 +255,7 @@ export async function createMediaEntry(supabase, userId, body) {
   if (body.personal_rating !== undefined) {
     personalRatingValue = personalRating(body.personal_rating);
   } else if (body.is_revisitable !== undefined) {
-    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记") ? 4 : null;
+    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记") ? 5 : null;
   }
   if (personalRatingValue !== undefined) {
     const result = await supabase
@@ -290,7 +290,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     changes.is_revisitable = changes.personal_rating !== null && changes.personal_rating >= 4;
   } else if (body.is_revisitable !== undefined) {
     changes.is_revisitable = booleanValue(body.is_revisitable, "值得重温标记");
-    changes.personal_rating = changes.is_revisitable ? 4 : null;
+    changes.personal_rating = changes.is_revisitable ? 5 : null;
   }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
   if (changes.title !== undefined || changes.media_type !== undefined) {

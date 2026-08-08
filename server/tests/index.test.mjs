@@ -1544,7 +1544,7 @@ test("personal media ratings stay optional, validate one to five, and sync legac
     payload: { is_revisitable: true },
   });
   assert.equal(legacyResponse.statusCode, 200);
-  assert.equal(legacyResponse.json().data.item.personal_rating, 4);
+  assert.equal(legacyResponse.json().data.item.personal_rating, 5);
   assert.equal(legacyResponse.json().data.item.is_revisitable, true);
 
   const invalidResponse = await app.inject({
@@ -2131,6 +2131,17 @@ test("personal-rating migration preserves unmarked records and upgrades revisit 
   assert.match(migration, /personal_rating desc nulls last[\s\S]*updated_at desc/i);
   assert.doesNotMatch(migration, /where is_revisitable is false/i);
   assert.doesNotMatch(migration, /drop column.*is_revisitable/i);
+});
+
+test("revisit-rating upgrade moves historical four-star marks to five stars", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608080003_media_revisit_ratings_to_five.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /set personal_rating = 5[\s\S]*where personal_rating = 4/i);
+  assert.match(migration, /new\.personal_rating := 5/i);
+  assert.match(migration, /new\.personal_rating := case when new\.is_revisitable then 5 else null end/i);
+  assert.doesNotMatch(migration, /where personal_rating is null/i);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {
