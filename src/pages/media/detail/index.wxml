@@ -142,6 +142,11 @@
       </view>
 
       <view wx:if="{{activeSeason}}" class="active-season-bar">
+        <image wx:if="{{activeSeason.cover_url}}" class="active-season-bar__cover" src="{{activeSeason.cover_url}}" mode="aspectFill" />
+        <view wx:else class="active-season-bar__cover active-season-bar__cover--empty">
+          <app-icon name="clapperboard" size="28" />
+          <text>暂无图片</text>
+        </view>
         <view class="active-season-bar__main">
           <view class="active-season-bar__title">{{activeSeason.name}}</view>
           <view class="active-season-bar__stats">{{activeSeason.episodes.length}} 集 · {{activeSeasonFavoriteCount}} 集喜欢</view>

@@ -135,6 +135,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
   assert.match(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
   assert.match(styles, /\.active-season-bar__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
+  assert.match(page, /wx:if="\{\{activeSeason\.cover_url\}\}" class="active-season-bar__cover" src="\{\{activeSeason\.cover_url\}\}"/);
+  assert.match(styles, /\.active-season-bar__cover\s*\{[^}]*width:\s*112rpx;[^}]*height:\s*149rpx;/s);
   assert.match(styles, /\.episode-row__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
   assert.match(styles, /\.episode-row__meta\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
 });
