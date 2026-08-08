@@ -163,7 +163,7 @@ test("all media cards open the shared read-only detail page before editing", asy
   assert.doesNotMatch(openEntry, /pages\/media\/edit|EPISODIC_MEDIA_TYPES|MEDIA_EDIT_ITEM/);
   assert.match(detailPage, /wx:if="\{\{isEpisodic\}\}"/);
   assert.match(detailPage, /bindtap="handleEditEntry"/);
-  assert.match(detailPage, /bindtap="handleCompleteEntryEdit"[\s\S]*?>完成编辑<\/button>/);
+  assert.match(detailPage, /aria-label="完成编辑"[\s\S]*?bindtap="handleCompleteEntryEdit"[\s\S]*?name="check"/);
   assert.match(detailPage, /wx:if="\{\{editingEntry\}\}"/);
   assert.doesNotMatch(detailLogic, /wx\.navigateTo\(\{ url: `\/pages\/media\/edit/);
   assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
@@ -200,6 +200,8 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(page, /data-status="planned"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="in_progress"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="completed"[\s\S]*?bindtap="handleWatchStatusTap"/);
+  assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('detail-attribute__label">名称'));
+  assert.match(page, /detail-attribute__label">名称[\s\S]*?\{\{entry\.title\}\}/);
   assert.match(logic, /updateMediaEntry\(entry\.id, \{ watch_status: watchStatus \}\)/);
   assert.doesNotMatch(page, /detail-attribute__label">状态/);
   assert.doesNotMatch(page, /handleDeleteEntry/);

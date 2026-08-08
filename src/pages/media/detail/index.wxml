@@ -38,18 +38,7 @@
         </view>
       </view>
 
-      <view class="detail-title-row">
-        <app-input
-          wx:if="{{editingEntry}}"
-          class="detail-title-input-host"
-          custom-class="detail-title-input"
-          font-size="20rpx"
-          value="{{entryDraftTitle}}"
-          maxlength="120"
-          placeholder="输入作品名称"
-          bindinput="handleEntryTitleInput"
-        />
-        <view wx:else class="detail-title">{{entry.title}}</view>
+      <view class="detail-action-row">
         <view class="detail-title-actions">
           <view
             class="detail-icon-button detail-heart {{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? 'detail-heart--active' : ''}} {{operating || savingEntry ? 'detail-icon-button--disabled' : ''}}"
@@ -71,12 +60,12 @@
               aria-label="取消编辑"
               bindtap="handleEntryEditCancel"
             ><app-icon name="x-muted" size="23" /></view>
-            <button
-              class="detail-edit-complete"
-              loading="{{savingEntry}}"
-              disabled="{{savingEntry || selectingEntryImage || showEntryImageCropper}}"
+            <view
+              class="detail-icon-button detail-icon-button--save {{savingEntry || selectingEntryImage || showEntryImageCropper ? 'detail-icon-button--disabled' : ''}}"
+              role="button"
+              aria-label="完成编辑"
               bindtap="handleCompleteEntryEdit"
-            >完成编辑</button>
+            ><app-icon name="check" size="23" inverse="{{true}}" /></view>
           </block>
         </view>
       </view>
@@ -106,6 +95,19 @@
       </view>
 
       <view class="detail-attributes">
+        <view class="detail-attribute">
+          <view class="detail-attribute__label">名称</view>
+          <app-input
+            wx:if="{{editingEntry}}"
+            custom-class="detail-attribute__input"
+            font-size="20rpx"
+            value="{{entryDraftTitle}}"
+            maxlength="120"
+            placeholder="输入作品名称"
+            bindinput="handleEntryTitleInput"
+          />
+          <view wx:else class="detail-attribute__value">{{entry.title}}</view>
+        </view>
         <view class="detail-attribute">
           <view class="detail-attribute__label">分类</view>
           <picker wx:if="{{editingEntry}}" mode="selector" range="{{mediaTypes}}" value="{{entryDraftMediaTypeIndex}}" bindchange="handleEntryTypeChange">
