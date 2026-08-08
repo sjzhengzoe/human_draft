@@ -10,6 +10,7 @@ const editLogicUrl = new URL("../../src/pages/media/edit/index.ts", import.meta.
 const editConfigUrl = new URL("../../src/pages/media/edit/index.json", import.meta.url);
 const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.meta.url);
 const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
+const detailStylesUrl = new URL("../../src/pages/media/detail/index.less", import.meta.url);
 
 test("media overview and records share the same status-free four-column cards", async () => {
   const [page, styles, logic] = await Promise.all([
@@ -105,4 +106,25 @@ test("all media cards open the shared read-only detail page before editing", asy
   assert.match(detailPage, /wx:if="\{\{isEpisodic\}\}"/);
   assert.match(detailPage, /bindtap="handleEditEntry"/);
   assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
+});
+
+test("media detail defaults to the detail tab and keeps plot records in a compact preview flow", async () => {
+  const [page, logic, styles] = await Promise.all([
+    readFile(detailPageUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+    readFile(detailStylesUrl, "utf8"),
+  ]);
+
+  assert.ok(page.indexOf('class="detail-tabs"') < page.indexOf('class="detail-content"'));
+  assert.match(page, /data-tab="detail"[\s\S]*?>详情<\/view>/);
+  assert.match(page, /data-tab="records"[\s\S]*?>剧情记录<\/view>/);
+  assert.match(logic, /activeDetailTab:\s*"detail"/);
+  assert.match(logic, /handleEpisodePreviewTap/);
+  assert.match(page, /bindtap="handleEpisodePreviewTap"/);
+  assert.match(page, /catchtap="handleEpisodeEdit"/);
+  assert.match(page, /aria-label="筛选剧情记录"/);
+  assert.match(page, /aria-label="新增季"/);
+  assert.doesNotMatch(page, /handleDeleteEntry|trash-2-danger/);
+  assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
+  assert.match(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
 });

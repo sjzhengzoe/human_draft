@@ -2,7 +2,6 @@ import { ensureLogin } from "../../../services/auth"
 import {
   addNextMediaEpisode,
   createMediaSeason,
-  deleteMediaEntry,
   deleteMediaSeason,
   getMediaEntry,
   listMediaSeasons,
@@ -62,6 +61,12 @@ function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
 
+function defaultExpandedEpisodeId(episodes: MediaEpisode[]): string {
+  return episodes.find((episode) => episode.plot_summary || episode.timeline_notes.length)?.id
+    || episodes[0]?.id
+    || ""
+}
+
 function normalizedTimelineType(value: unknown): MediaTimelineNoteType {
   return value === "key" || value === "quote" ? value : "normal"
 }
@@ -117,9 +122,12 @@ Page({
     timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
     favoriteEpisodesOnly: false,
     coverUrl: "",
+    platformText: "",
     canWrite: false,
     isEpisodic: false,
     isAudio: false,
+    activeDetailTab: "detail" as "detail" | "records",
+    expandedEpisodeId: "",
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -176,6 +184,10 @@ Page({
         ? requestedIndex
         : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
       const activeSeason = normalizedSeasons[activeSeasonIndex] || null
+      const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
+      const expandedEpisodeId = activeSeason?.episodes.some((episode) => episode.id === this.data.expandedEpisodeId)
+        ? this.data.expandedEpisodeId
+        : defaultExpandedEpisodeId(activeSeason?.episodes || [])
       this.setData({
         entry,
         seasons: normalizedSeasons,
@@ -184,9 +196,12 @@ Page({
         filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
         activeSeasonFavoriteCount: favoriteCount(activeSeason),
         coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
+        platformText: entry.platforms.join("、"),
         canWrite: session.user.can_write,
-        isEpisodic: normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type),
+        isEpisodic,
         isAudio: entry.media_type === "广播剧",
+        activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
+        expandedEpisodeId,
         requestedSeasonId: "",
         mediaRevision: getMediaDataRevision()
       })
@@ -215,7 +230,28 @@ Page({
       activeSeasonIndex: index,
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      activeSeasonFavoriteCount: favoriteCount(activeSeason)
+      activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      expandedEpisodeId: defaultExpandedEpisodeId(activeSeason.episodes),
+      timelineFilterOpen: false
+    })
+  },
+
+  handleDetailTabTap(event: WechatMiniprogram.TouchEvent) {
+    const activeDetailTab = String(event.currentTarget.dataset.tab || "") as "detail" | "records"
+    if (!(["detail", "records"] as string[]).includes(activeDetailTab)) return
+    if (activeDetailTab === "records" && !this.data.isEpisodic) return
+    if (activeDetailTab === this.data.activeDetailTab) return
+    savedPageScrollTop = 0
+    this.setData({ activeDetailTab, timelineFilterOpen: false }, () => {
+      wx.pageScrollTo({ scrollTop: 0, duration: 0 })
+    })
+  },
+
+  handleEpisodePreviewTap(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || "")
+    if (!id) return
+    this.setData({
+      expandedEpisodeId: this.data.expandedEpisodeId === id ? "" : id
     })
   },
 
@@ -307,38 +343,6 @@ Page({
     if (!this.data.canWrite || !this.data.entry || this.data.operating) return
     wx.setStorageSync("MEDIA_EDIT_ITEM", this.data.entry)
     wx.navigateTo({ url: `/pages/media/edit/index?id=${this.data.entry.id}` })
-  },
-
-  handleDeleteEntry() {
-    const entry = this.data.entry
-    if (!this.data.canWrite || !entry || this.data.operating) return
-    wx.showModal({
-      title: `删除《${entry.title}》？`,
-      content: `删除后，这部作品的 ${entry.season_count || 0} 个季和 ${entry.episode_count || 0} 集记录也会一起删除，且无法恢复。`,
-      confirmText: "删除",
-      confirmColor: "#c9342f",
-      success: async (result) => {
-        if (!result.confirm || !isAsyncPageActive(this)) return
-        this.setData({ operating: true })
-        wx.showLoading({ title: "删除中", mask: true })
-        try {
-          await deleteMediaEntry(entry.id)
-          markMediaDataChanged()
-          wx.removeStorageSync("MEDIA_EDIT_ITEM")
-          wx.removeStorageSync("MEDIA_EPISODE_EDIT")
-          if (!isAsyncPageActive(this)) return
-          wx.showToast({ title: "已删除", icon: "success" })
-          wx.navigateBack()
-        } catch (error) {
-          if (isAsyncPageActive(this)) {
-            wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })
-          }
-        } finally {
-          wx.hideLoading()
-          if (isAsyncPageActive(this)) this.setData({ operating: false })
-        }
-      }
-    })
   },
 
   async handleToggleRevisitable() {
