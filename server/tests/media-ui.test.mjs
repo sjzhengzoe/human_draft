@@ -6,19 +6,24 @@ const pageUrl = new URL("../../src/pages/media/index.wxml", import.meta.url);
 const stylesUrl = new URL("../../src/pages/media/index.less", import.meta.url);
 const logicUrl = new URL("../../src/pages/media/index.ts", import.meta.url);
 
-test("media overview and records share the same status-free three-column cards", async () => {
-  const [page, styles] = await Promise.all([
+test("media overview and records share the same status-free four-column cards", async () => {
+  const [page, styles, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(stylesUrl, "utf8"),
+    readFile(logicUrl, "utf8"),
   ]);
 
   assert.match(page, />速览<\/view>/);
   assert.match(page, />记录<\/view>/);
-  assert.equal(page.match(/class="record-grid/g)?.length, 3);
-  assert.equal(page.match(/class="record-card"/g)?.length, 3);
+  assert.equal(page.match(/class="record-grid/g)?.length, 2);
+  assert.equal(page.match(/class="record-card"/g)?.length, 2);
   assert.doesNotMatch(page, /overview-list|overview-row/);
   assert.doesNotMatch(page, /swiper|status-badge|watch_status/);
-  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
+  assert.doesNotMatch(page, /overviewCategoryOptions|handleOverviewCategoryChange/);
+  assert.match(page, /bindtap="handleOverviewCategoryTap"/);
+  assert.match(page, /bindtap="handleOverviewStatusTap"/);
+  assert.match(logic, /applyOverviewFilters\(\)/);
+  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
 });
 
 test("media controls are vertically centered and use shared typography sizes", async () => {

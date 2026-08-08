@@ -10,6 +10,7 @@ import {
 import { getMediaDataRevision } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
+type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
 type LoadCurrentViewOptions = { refreshShared?: boolean }
 
 type DisplayMediaEntry = MediaEntry & {
@@ -63,6 +64,18 @@ function sortByRecent(entries: MediaEntry[]): DisplayMediaEntry[] {
     .map(toDisplayEntry)
 }
 
+function filterOverviewItems(
+  status: OverviewStatus,
+  category: MediaType,
+  inProgressItems: DisplayMediaEntry[],
+  plannedItems: DisplayMediaEntry[]
+): DisplayMediaEntry[] {
+  const sourceItems = status === "in_progress" ? inProgressItems : plannedItems
+  return category
+    ? sourceItems.filter((item) => item.media_type === category)
+    : sourceItems
+}
+
 async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
   const items: MediaEntry[] = []
   let page = 1
@@ -84,13 +97,11 @@ Page({
   data: {
     displayMode: "overview" as DisplayMode,
     mediaTypes: [] as MediaType[],
-    overviewCategoryOptions: ["全部分类"],
-    overviewCategoryIndex: 0,
     overviewCategory: "" as MediaType,
+    overviewStatus: "in_progress" as OverviewStatus,
     overviewInProgressSource: [] as DisplayMediaEntry[],
     overviewPlannedSource: [] as DisplayMediaEntry[],
-    inProgressItems: [] as DisplayMediaEntry[],
-    plannedItems: [] as DisplayMediaEntry[],
+    overviewItems: [] as DisplayMediaEntry[],
     activeRecordType: "" as MediaType,
     recordSourceItems: [] as DisplayMediaEntry[],
     recordItems: [] as DisplayMediaEntry[],
@@ -145,8 +156,6 @@ Page({
     try {
       let sharedData = {
         mediaTypes: this.data.mediaTypes,
-        overviewCategoryOptions: this.data.overviewCategoryOptions,
-        overviewCategoryIndex: this.data.overviewCategoryIndex,
         overviewCategory: this.data.overviewCategory,
         activeRecordType: this.data.activeRecordType,
         canWrite: this.data.canWrite,
@@ -167,8 +176,6 @@ Page({
           : ""
         sharedData = {
           mediaTypes,
-          overviewCategoryOptions: ["全部分类", ...mediaTypes],
-          overviewCategoryIndex: overviewCategory ? mediaTypes.indexOf(overviewCategory) + 1 : 0,
           overviewCategory,
           activeRecordType,
           canWrite: session.user.can_write,
@@ -190,12 +197,12 @@ Page({
           ...sharedData,
           overviewInProgressSource,
           overviewPlannedSource,
-          inProgressItems: overviewCategory
-            ? overviewInProgressSource.filter((item) => item.media_type === overviewCategory)
-            : overviewInProgressSource,
-          plannedItems: overviewCategory
-            ? overviewPlannedSource.filter((item) => item.media_type === overviewCategory)
-            : overviewPlannedSource,
+          overviewItems: filterOverviewItems(
+            this.data.overviewStatus,
+            overviewCategory,
+            overviewInProgressSource,
+            overviewPlannedSource
+          ),
           overviewLoaded: true,
           mediaRevision: getMediaDataRevision()
         })
@@ -241,20 +248,26 @@ Page({
     })
   },
 
-  handleOverviewCategoryChange(event: WechatMiniprogram.PickerChange) {
-    const overviewCategoryIndex = Number(event.detail.value)
-    const overviewCategory = overviewCategoryIndex
-      ? this.data.mediaTypes[overviewCategoryIndex - 1] || ""
-      : ""
+  handleOverviewCategoryTap(event: WechatMiniprogram.TouchEvent) {
+    const overviewCategory = String(event.currentTarget.dataset.type || "")
+    if (overviewCategory === this.data.overviewCategory) return
+    this.setData({ overviewCategory }, () => this.applyOverviewFilters())
+  },
+
+  handleOverviewStatusTap(event: WechatMiniprogram.TouchEvent) {
+    const overviewStatus = String(event.currentTarget.dataset.status || "") as OverviewStatus
+    if (!["in_progress", "planned"].includes(overviewStatus) || overviewStatus === this.data.overviewStatus) return
+    this.setData({ overviewStatus }, () => this.applyOverviewFilters())
+  },
+
+  applyOverviewFilters() {
     this.setData({
-      overviewCategoryIndex,
-      overviewCategory,
-      inProgressItems: overviewCategory
-        ? this.data.overviewInProgressSource.filter((item) => item.media_type === overviewCategory)
-        : this.data.overviewInProgressSource,
-      plannedItems: overviewCategory
-        ? this.data.overviewPlannedSource.filter((item) => item.media_type === overviewCategory)
-        : this.data.overviewPlannedSource
+      overviewItems: filterOverviewItems(
+        this.data.overviewStatus,
+        this.data.overviewCategory,
+        this.data.overviewInProgressSource,
+        this.data.overviewPlannedSource
+      )
     })
   },
 
