@@ -62,12 +62,6 @@ function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
 
-function defaultExpandedEpisodeId(episodes: MediaEpisode[]): string {
-  return episodes.find((episode) => episode.plot_summary || episode.timeline_notes.length)?.id
-    || episodes[0]?.id
-    || ""
-}
-
 function normalizedTimelineType(value: unknown): MediaTimelineNoteType {
   return value === "key" || value === "quote" ? value : "normal"
 }
@@ -128,7 +122,6 @@ Page({
     isEpisodic: false,
     isAudio: false,
     activeDetailTab: "detail" as "detail" | "records",
-    expandedEpisodeId: "",
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -186,9 +179,6 @@ Page({
         : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
       const activeSeason = normalizedSeasons[activeSeasonIndex] || null
       const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
-      const expandedEpisodeId = activeSeason?.episodes.some((episode) => episode.id === this.data.expandedEpisodeId)
-        ? this.data.expandedEpisodeId
-        : defaultExpandedEpisodeId(activeSeason?.episodes || [])
       this.setData({
         entry,
         seasons: normalizedSeasons,
@@ -202,7 +192,6 @@ Page({
         isEpisodic,
         isAudio: entry.media_type === "广播剧",
         activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
-        expandedEpisodeId,
         requestedSeasonId: "",
         mediaRevision: getMediaDataRevision()
       })
@@ -232,7 +221,6 @@ Page({
       activeSeason,
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
-      expandedEpisodeId: defaultExpandedEpisodeId(activeSeason.episodes),
       timelineFilterOpen: false
     })
   },
@@ -245,14 +233,6 @@ Page({
     savedPageScrollTop = 0
     this.setData({ activeDetailTab, timelineFilterOpen: false }, () => {
       wx.pageScrollTo({ scrollTop: 0, duration: 0 })
-    })
-  },
-
-  handleEpisodePreviewTap(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || "")
-    if (!id) return
-    this.setData({
-      expandedEpisodeId: this.data.expandedEpisodeId === id ? "" : id
     })
   },
 

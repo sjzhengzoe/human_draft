@@ -174,7 +174,7 @@
         <view wx:elif="{{favoriteEpisodesOnly && filteredEpisodes.length === 0}}" class="empty-episodes">这一季还没有喜欢的单集</view>
         <view wx:else class="episode-list">
           <view wx:for="{{filteredEpisodes}}" wx:key="id" class="episode-row">
-            <view class="episode-row__header" data-id="{{item.id}}" bindtap="handleEpisodePreviewTap">
+            <view class="episode-row__header">
               <view class="episode-row__main">
                 <view class="episode-row__title"><text class="episode-row__number">EP{{item.episode_number}}</text><text>{{item.title || '第'}}<text wx:if="{{!item.title}}">{{item.episode_number}}集</text></text></view>
                 <view class="episode-row__meta">
@@ -193,17 +193,16 @@
                   catchtap="handleFavoriteTap"
                 >{{item.is_favorite ? '♥' : '♡'}}</view>
                 <view
-                  wx:if="{{canWrite && expandedEpisodeId === item.id}}"
+                  wx:if="{{canWrite}}"
                   class="episode-row__edit"
                   role="button"
                   aria-label="编辑本集"
                   data-id="{{item.id}}"
                   catchtap="handleEpisodeEdit"
                 ><app-icon name="pencil" size="23" /></view>
-                <view class="episode-row__chevron {{expandedEpisodeId === item.id ? 'episode-row__chevron--expanded' : ''}}"><app-icon name="chevron-down" size="23" /></view>
               </view>
             </view>
-            <view wx:if="{{expandedEpisodeId === item.id && (item.plot_summary || item.timeline_notes.length)}}" class="episode-row__preview">
+            <view wx:if="{{item.plot_summary || item.timeline_notes.length}}" class="episode-row__preview">
               <block wx:if="{{item.plot_summary}}">
                 <view class="episode-row__label">整集概括</view>
                 <view class="episode-row__summary">{{item.plot_summary}}</view>

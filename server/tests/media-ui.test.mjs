@@ -108,7 +108,7 @@ test("all media cards open the shared read-only detail page before editing", asy
   assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
 });
 
-test("media detail defaults to the detail tab and keeps plot records in a compact preview flow", async () => {
+test("media detail defaults to the detail tab and keeps plot records fully expanded", async () => {
   const [page, logic, styles] = await Promise.all([
     readFile(detailPageUrl, "utf8"),
     readFile(detailLogicUrl, "utf8"),
@@ -119,8 +119,9 @@ test("media detail defaults to the detail tab and keeps plot records in a compac
   assert.match(page, /data-tab="detail"[\s\S]*?>详情<\/view>/);
   assert.match(page, /data-tab="records"[\s\S]*?>剧情记录<\/view>/);
   assert.match(logic, /activeDetailTab:\s*"detail"/);
-  assert.match(logic, /handleEpisodePreviewTap/);
-  assert.match(page, /bindtap="handleEpisodePreviewTap"/);
+  assert.match(page, /wx:if="\{\{item\.plot_summary \|\| item\.timeline_notes\.length\}\}" class="episode-row__preview"/);
+  assert.doesNotMatch(logic, /handleEpisodePreviewTap|expandedEpisodeId/);
+  assert.doesNotMatch(page, /episode-row__chevron|chevron-down/);
   assert.match(page, /catchtap="handleEpisodeEdit"/);
   assert.match(page, /aria-label="筛选剧情记录"/);
   assert.match(page, /aria-label="新增季"/);
