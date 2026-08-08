@@ -17,7 +17,7 @@ export type MediaEntryQuery = {
   status?: MediaStatus
   revisitable?: boolean
   keyword?: string
-  sort?: "created_desc"
+  sort?: "created_desc" | "rating_desc"
   page?: number
   pageSize?: number
 }
@@ -123,6 +123,10 @@ function cacheEntryValue(entry: MediaEntry) {
       : existingIndex >= 0
     const matches = entryMatchesQuery(nextEntry, page.input)
     const membershipChanged = Boolean(previous) && matches !== matchedBefore
+    const ratingOrderChanged = page.input.sort === "rating_desc" && Boolean(previous) && (
+      previous?.personal_rating !== nextEntry.personal_rating
+      || previous?.updated_at !== nextEntry.updated_at
+    )
     let nextItems = page.data.items.filter((item) => item.id !== nextEntry.id)
     if (matches && existingIndex >= 0) {
       nextItems.push(cloneEntry(nextEntry))
@@ -131,7 +135,7 @@ function cacheEntryValue(entry: MediaEntry) {
     }
     cachedEntryPages.set(key, {
       ...page,
-      cachedAt: (!previous && matches) || membershipChanged ? 0 : page.cachedAt,
+      cachedAt: (!previous && matches) || membershipChanged || ratingOrderChanged ? 0 : page.cachedAt,
       data: {
         items: nextItems,
         pagination: {

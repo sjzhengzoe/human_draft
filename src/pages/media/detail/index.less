@@ -169,7 +169,6 @@
   background: #111;
 }
 
-.detail-heart,
 .episode-row__heart {
   color: #aaa;
   font-size: 34rpx;
@@ -180,7 +179,6 @@
   font-size: 31rpx;
 }
 
-.detail-heart--active,
 .episode-row__heart--active {
   background: #fff3f3;
   color: #c74646;
@@ -215,6 +213,59 @@
   background: #111;
   color: #fff;
   font-weight: 600;
+}
+
+.detail-rating {
+  margin-top: 18rpx;
+}
+
+.detail-rating__heading {
+  display: flex;
+  min-height: 42rpx;
+  align-items: center;
+  justify-content: space-between;
+  color: #777;
+  font-size: var(--ui-font-size-small);
+  line-height: normal;
+}
+
+.detail-rating__clear {
+  position: relative;
+  padding: 8rpx 12rpx;
+  color: #999;
+  font-size: var(--ui-font-size-small);
+}
+
+.detail-rating__clear::after {
+  position: absolute;
+  content: "";
+  inset: -10rpx;
+}
+
+.detail-rating__stars {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.detail-rating__stars--disabled {
+  opacity: .5;
+}
+
+.detail-rating__star {
+  position: relative;
+  display: flex;
+  width: 52rpx;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  color: #c8c8c8;
+  font-size: var(--ui-font-size-small);
+  line-height: 1;
+}
+
+.detail-rating__star--filled {
+  color: #d99116;
 }
 
 .detail-attributes {

@@ -33,7 +33,6 @@ type MediaCreateDraft = {
   title: string
   mediaType: string
   watchStatus: MediaStatus
-  isRevisitable: boolean
   platforms: string[]
 }
 
@@ -53,7 +52,6 @@ Page({
     watchStatus: "completed" as MediaStatus,
     isEpisodic: false,
     isAudio: false,
-    isRevisitable: false,
     platformOptions: BUILTIN_PLATFORMS.map((name) => ({ name, checked: false })),
     selectedBuiltinPlatforms: [] as string[],
     loading: true,
@@ -108,7 +106,6 @@ Page({
         mediaTypes,
         mediaTypeIndex,
         watchStatus: savedDraft?.watchStatus || "completed",
-        isRevisitable: savedDraft?.isRevisitable || false,
         selectedBuiltinPlatforms,
         platformOptions: BUILTIN_PLATFORMS.map((name) => ({
           name,
@@ -148,7 +145,6 @@ Page({
         watchStatus: (["planned", "in_progress", "completed"] as unknown[]).includes(value.watchStatus)
           ? value.watchStatus as MediaStatus
           : "completed",
-        isRevisitable: value.isRevisitable === true,
         platforms: Array.isArray(value.platforms) ? value.platforms.map(String) : []
       }
     } catch (_error) {
@@ -162,7 +158,6 @@ Page({
       title: this.data.title,
       mediaType,
       watchStatus: this.data.watchStatus,
-      isRevisitable: this.data.isRevisitable,
       platforms: [...this.data.selectedBuiltinPlatforms]
     }
     try {
@@ -275,10 +270,6 @@ Page({
     }, () => this.markDraftDirty())
   },
 
-  handleRevisitableChange(event: WechatMiniprogram.SwitchChange) {
-    this.setData({ isRevisitable: event.detail.value }, () => this.markDraftDirty())
-  },
-
   async handleSave() {
     if (
       this.data.loading ||
@@ -300,8 +291,7 @@ Page({
       title,
       media_type: mediaType,
       watch_status: this.data.watchStatus,
-      platforms: selectedPlatforms,
-      is_revisitable: this.data.isRevisitable
+      platforms: selectedPlatforms
     }
     let entryCreated = false
     try {

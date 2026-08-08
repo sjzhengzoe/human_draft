@@ -46,7 +46,7 @@ export async function listMediaEntries(input: {
   status?: MediaStatus
   revisitable?: boolean
   keyword?: string
-  sort?: "created_desc"
+  sort?: "created_desc" | "rating_desc"
   page?: number
   pageSize?: number
 }, options: CacheReadOptions = {}): Promise<MediaEntryPage> {
@@ -134,6 +134,7 @@ export async function createMediaEntry(input: {
   media_type: MediaType
   watch_status: MediaStatus
   platforms: string[]
+  personal_rating?: number | null
   is_revisitable?: boolean
 }): Promise<MediaEntry> {
   const data = await request<{ item: MediaEntry }>({
@@ -152,6 +153,7 @@ export async function updateMediaEntry(
     media_type?: MediaType
     watch_status?: MediaStatus
     platforms?: string[]
+    personal_rating?: number | null
     is_revisitable?: boolean
   }
 ): Promise<MediaEntry> {

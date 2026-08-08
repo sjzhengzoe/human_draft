@@ -76,8 +76,7 @@
   background: var(--ui-surface);
 }
 
-.icon-button::after,
-.record-card__revisit::after {
+.icon-button::after {
   position: absolute;
   content: "";
   inset: -14rpx;
@@ -319,35 +318,24 @@
   color: #999;
 }
 
-.record-card__revisit {
-  position: absolute;
-  z-index: 1;
-  top: 6rpx;
-  right: 6rpx;
-  display: flex;
-  width: 48rpx;
-  height: 48rpx;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 36rpx;
-  line-height: 1;
-  text-shadow: 0 1rpx 5rpx rgba(0, 0, 0, 0.62);
-}
-
-.record-card__revisit--active {
-  color: #e04444;
-  text-shadow: 0 1rpx 4rpx rgba(255, 255, 255, 0.9);
-}
-
-.record-card__revisit--updating {
-  opacity: 0.5;
-}
-
 .record-card__body {
   box-sizing: border-box;
   padding: 14rpx 12rpx 16rpx;
+}
+
+.record-card__rating {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  color: #c8c8c8;
+  font-size: var(--ui-font-size-small);
+  letter-spacing: -2rpx;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.record-card__rating-star--filled {
+  color: #d99116;
 }
 
 .empty-action {

@@ -61,6 +61,7 @@ const BUILTIN_PLATFORMS = [
 ]
 const EPISODE_RENDER_BATCH = 20
 const EPISODE_DRAFT_PREFIX = "media:episode-draft:v1:"
+const RATING_OPTIONS = [1, 2, 3, 4, 5]
 
 type TimePickerValue = [number, number, number]
 
@@ -264,7 +265,6 @@ Page({
     entryDraftTitle: "",
     entryDraftMediaTypeIndex: 0,
     entryDraftWatchStatus: "completed" as MediaStatus,
-    entryDraftIsRevisitable: false,
     entryDraftPlatforms: [] as string[],
     entryPlatformOptions: platformOptions([]),
     entryDraftIsAudio: false,
@@ -288,7 +288,8 @@ Page({
     hasLoaded: false,
     mediaRevision: -1,
     operating: false,
-    errorMessage: ""
+    errorMessage: "",
+    ratingOptions: RATING_OPTIONS
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -572,7 +573,6 @@ Page({
       entryDraftTitle: entry.title,
       entryDraftMediaTypeIndex: Math.max(0, mediaTypes.indexOf(entry.media_type)),
       entryDraftWatchStatus: entry.watch_status,
-      entryDraftIsRevisitable: entry.is_revisitable,
       entryDraftPlatforms: supportedPlatforms(entry.platforms),
       entryPlatformOptions: platformOptions(entry.platforms),
       entryDraftIsAudio: entry.media_type === "广播剧",
@@ -704,8 +704,7 @@ Page({
         title,
         media_type: mediaType,
         watch_status: this.data.entryDraftWatchStatus,
-        platforms,
-        is_revisitable: this.data.entryDraftIsRevisitable
+        platforms
       })
       if (this.data.selectedEntryImagePath) {
         persistedEntry = await replaceMediaEntryCover(
@@ -763,17 +762,38 @@ Page({
     }
   },
 
-  async handleToggleRevisitable() {
+  handlePersonalRatingTap(event: WechatMiniprogram.TouchEvent) {
+    const personalRating = Number(event.currentTarget.dataset.rating)
+    if (!Number.isInteger(personalRating) || personalRating < 1 || personalRating > 5) return
+    void this.setPersonalRating(personalRating)
+  },
+
+  handlePersonalRatingClear() {
+    void this.setPersonalRating(null)
+  },
+
+  async setPersonalRating(personalRating: number | null) {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
     if (this.data.editingEntry) {
-      this.setData({ entryDraftIsRevisitable: !this.data.entryDraftIsRevisitable })
+      wx.showToast({ title: "请先完成或取消作品编辑", icon: "none" })
       return
     }
-    const nextValue = !entry.is_revisitable
-    this.setData({ entry: { ...entry, is_revisitable: nextValue }, operating: true })
+    if (entry.personal_rating === personalRating) return
+    this.setData({
+      entry: {
+        ...entry,
+        personal_rating: personalRating,
+        is_revisitable: personalRating !== null && personalRating >= 4
+      },
+      operating: true
+    })
     try {
-      await updateMediaEntry(entry.id, { is_revisitable: nextValue })
+      const persistedEntry = await updateMediaEntry(entry.id, { personal_rating: personalRating })
+      const mediaRevision = markMediaDataChanged()
+      if (isAsyncPageActive(this)) {
+        this.setData({ entry: persistedEntry, mediaRevision })
+      }
     } catch (error) {
       if (isAsyncPageActive(this)) {
         this.setData({ entry, operating: false })
@@ -781,13 +801,7 @@ Page({
       }
       return
     }
-    const mediaRevision = markMediaDataChanged()
-    if (isAsyncPageActive(this)) {
-      this.setData({
-        operating: false,
-        mediaRevision
-      })
-    }
+    if (isAsyncPageActive(this)) this.setData({ operating: false })
   },
 
   async handleWatchStatusTap(event: WechatMiniprogram.TouchEvent) {

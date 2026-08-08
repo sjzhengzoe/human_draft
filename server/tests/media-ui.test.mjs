@@ -23,7 +23,7 @@ const mediaPageBases = [
   "../../src/pages/media/episode-edit/index",
 ];
 
-test("media overview and records share the same status-free four-column cards", async () => {
+test("media overview stays minimal while records show five-star personal ratings", async () => {
   const [page, styles, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(stylesUrl, "utf8"),
@@ -43,12 +43,15 @@ test("media overview and records share the same status-free four-column cards", 
   assert.match(logic, /handleCategoryTap[\s\S]*loadCurrentView\(\{ reset: true \}\)/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
-  assert.match(page, /catchtap="handleRevisitableTap"/);
-  assert.match(page, /item\.is_revisitable \? '♥' : '♡'/);
-  assert.doesNotMatch(page, />值得重温<\/view>/);
-  assert.match(logic, /updateMediaEntry\(id, \{ is_revisitable: nextValue \}\)/);
-  assert.match(logic, /setRevisitableValue\(id, entry\.is_revisitable\)/);
-  assert.match(styles, /\.record-card__revisit--active\s*\{[^}]*color:\s*#e04444;/s);
+  assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);
+  assert.match(page, /wx:for="\{\{item\.ratingStars\}\}"/);
+  assert.match(page, /ratingStar\.filled \? '★' : '☆'/);
+  assert.doesNotMatch(page, /handleRevisitableTap|record-card__revisit|值得重温/);
+  assert.match(logic, /function sortByRating/);
+  assert.match(logic, /function overviewQuery[\s\S]*?sort: "created_desc"/);
+  assert.match(logic, /function recordQuery[\s\S]*?sort: "rating_desc"/);
+  assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
+  assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*#d99116;/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
   assert.doesNotMatch(page, /包含全部分类|包含全部记录|只展示所选状态|四列卡片/);
   assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
@@ -63,8 +66,7 @@ test("media controls are vertically centered and use shared typography sizes", a
   const explicitSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)]
     .map((match) => Number(match[1]));
 
-  assert.match(styles, /\.record-card__revisit\s*\{[^}]*font-size:\s*36rpx;/s);
-  assert.deepEqual([...new Set(explicitSizes.filter((size) => size !== 36))], []);
+  assert.deepEqual([...new Set(explicitSizes)], []);
   assert.match(styles, /var\(--ui-font-size-small\)/);
   assert.match(styles, /var\(--ui-font-size-base\)/);
   assert.match(
@@ -75,6 +77,7 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /\.section-heading__title,[\s\S]*?font-size:\s*var\(--ui-font-size-small\);/);
   assert.match(page, /<custom-navigation title="影视记录" compact-title="\{\{true\}\}"/);
   assert.match(styles, /\.record-grid\s*\{[^}]*align-items:\s*start;/s);
+  assert.match(styles, /\.record-card__rating\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
   assert.doesNotMatch(styles, /\.record-card__body\s*\{[^}]*min-height:/s);
   assert.match(styles, /\.view-switch__item\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.icon-button\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
@@ -110,7 +113,7 @@ test("the whole media module opts into the smallest typography", async () => {
   }
 });
 
-test("media cards show only titles, revisit hearts, and category-specific placeholders", async () => {
+test("media cards show only titles, record ratings, and category-specific placeholders", async () => {
   const [page, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(logicUrl, "utf8"),
@@ -118,6 +121,8 @@ test("media cards show only titles, revisit hearts, and category-specific placeh
 
   assert.doesNotMatch(page, /record-card__meta|record-card__details/);
   assert.doesNotMatch(logic, /metaText|statsText|favoriteText/);
+  assert.doesNotMatch(page, /record-card__revisit|♥|♡/);
+  assert.match(page, /record-card__rating-star/);
   assert.match(page, /name="\{\{item\.placeholderIcon\}\}"/);
   for (const icon of ["book-open", "sparkles", "headphones", "tv", "clapperboard"]) {
     assert.match(logic, new RegExp(`"${icon}"`));
@@ -267,6 +272,12 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createLogic, /MEDIA_CREATE_DRAFT_KEY/);
   assert.match(createLogic, /enableAlertBeforeUnload/);
   assert.match(detailPage, /\{\{item\.is_favorite \? '★' : '☆'\}\}/);
+  assert.match(detailPage, />我的评分<\/text>/);
+  assert.match(detailPage, /bindtap="handlePersonalRatingTap"/);
+  assert.match(detailPage, /bindtap="handlePersonalRatingClear"/);
+  assert.match(detailLogic, /updateMediaEntry\(entry\.id, \{ personal_rating: personalRating \}\)/);
+  assert.doesNotMatch(detailPage, /detail-heart|值得重温|值得重听/);
+  assert.doesNotMatch(createPage, /值得重温|值得重听|handleRevisitableChange/);
   assert.match(detailPage, /index < visibleEpisodeCount/);
   assert.match(detailLogic, /EPISODE_RENDER_BATCH = 20/);
   assert.match(detailLogic, /persistEpisodeDraft/);

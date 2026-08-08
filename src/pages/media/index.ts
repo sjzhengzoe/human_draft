@@ -1,5 +1,5 @@
 import { ensureLogin, getCurrentUser } from "../../services/auth"
-import { listMediaCategories, listMediaEntries, updateMediaEntry } from "../../services/media"
+import { listMediaCategories, listMediaEntries } from "../../services/media"
 import type { MediaEntry, MediaStatus, MediaType } from "../../types/media"
 import {
   activateAsyncPage,
@@ -15,7 +15,7 @@ import {
   isMediaCategoriesCacheFresh,
   type MediaEntryQuery
 } from "../../utils/media-data-cache"
-import { getMediaDataRevision, markMediaDataChanged } from "../../utils/media-data-revision"
+import { getMediaDataRevision } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
@@ -29,6 +29,7 @@ type LoadCurrentViewOptions = {
 type DisplayMediaEntry = MediaEntry & {
   placeholderIcon: string
   coverThumbnailUrl: string
+  ratingStars: Array<{ position: number; filled: boolean }>
 }
 
 type CachedSequence = {
@@ -66,10 +67,18 @@ function mediaCoverThumbnailUrl(url: string): string {
 }
 
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
+  const personalRating = Number.isInteger(entry.personal_rating)
+    ? Math.min(5, Math.max(1, Number(entry.personal_rating)))
+    : null
   return {
     ...entry,
+    personal_rating: personalRating,
     placeholderIcon: mediaPlaceholderIcon(entry.media_type),
-    coverThumbnailUrl: mediaCoverThumbnailUrl(entry.cover_url || "")
+    coverThumbnailUrl: mediaCoverThumbnailUrl(entry.cover_url || ""),
+    ratingStars: [1, 2, 3, 4, 5].map((position) => ({
+      position,
+      filled: personalRating !== null && position <= personalRating
+    }))
   }
 }
 
@@ -82,23 +91,26 @@ function sortByRecent(entries: MediaEntry[]): DisplayMediaEntry[] {
     .map(toDisplayEntry)
 }
 
+function sortByRating(entries: MediaEntry[]): DisplayMediaEntry[] {
+  return [...entries]
+    .sort((left, right) => {
+      const ratingDifference = Number(right.personal_rating || 0) - Number(left.personal_rating || 0)
+      if (ratingDifference) return ratingDifference
+      return timestamp(right.updated_at || right.created_at) - timestamp(left.updated_at || left.created_at)
+    })
+    .map(toDisplayEntry)
+}
+
 function mergeEntries(
   current: DisplayMediaEntry[],
-  additions: MediaEntry[]
+  additions: MediaEntry[],
+  ratingFirst = false
 ): DisplayMediaEntry[] {
   const merged = new Map<string, MediaEntry>(current.map((entry) => [entry.id, entry]))
   additions.forEach((entry) => merged.set(entry.id, entry))
-  return sortByRecent([...merged.values()])
-}
-
-function updateRevisitableValue(
-  entries: DisplayMediaEntry[],
-  id: string,
-  isRevisitable: boolean
-): DisplayMediaEntry[] {
-  return entries.map((entry) =>
-    entry.id === id ? { ...entry, is_revisitable: isRevisitable } : entry
-  )
+  return ratingFirst
+    ? sortByRating([...merged.values()])
+    : sortByRecent([...merged.values()])
 }
 
 function overviewQuery(
@@ -123,7 +135,7 @@ function recordQuery(
   return {
     mediaType: category || undefined,
     keyword: keyword.trim() || undefined,
-    sort: "created_desc",
+    sort: "rating_desc",
     page,
     pageSize: PAGE_SIZE
   }
@@ -175,7 +187,6 @@ Page({
     recordPage: 0,
     recordHasMore: true,
     recordTotal: 0,
-    revisitableUpdatingId: "",
     keyword: "",
     appliedKeyword: "",
     canWrite: false,
@@ -252,7 +263,9 @@ Page({
       ? cachedSequence((page) => overviewQuery(this.data.overviewStatus, selectedCategory, page))
       : cachedSequence((page) => recordQuery(selectedCategory, this.data.appliedKeyword, page))
     if (!sequence) return null
-    const displayItems = sortByRecent(sequence.items)
+    const displayItems = this.data.displayMode === "record"
+      ? sortByRating(sequence.items)
+      : sortByRecent(sequence.items)
     const update: Record<string, unknown> = {
       mediaTypes,
       selectedCategory,
@@ -304,8 +317,12 @@ Page({
       : ""
     const deletedIds = new Set(getDeletedMediaEntryIds())
     const cachedEntries = getCachedMediaEntries()
-    const mergeLocal = (entries: DisplayMediaEntry[], status?: MediaStatus) =>
-      mergeEntries(entries, cachedEntries)
+    const mergeLocal = (
+      entries: DisplayMediaEntry[],
+      status?: MediaStatus,
+      ratingFirst = false
+    ) =>
+      mergeEntries(entries, cachedEntries, ratingFirst)
         .filter((entry) => !deletedIds.has(entry.id))
         .filter((entry) => !selectedCategory || entry.media_type === selectedCategory)
         .filter((entry) => !status || entry.watch_status === status)
@@ -317,7 +334,7 @@ Page({
       : this.data.overviewPlannedSource
     const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
     const recordSourceItems = this.data.recordLoaded
-      ? mergeLocal(this.data.recordSourceItems)
+      ? mergeLocal(this.data.recordSourceItems, undefined, true)
         .filter((entry) => !keyword || entry.title.toLocaleLowerCase().includes(keyword))
       : this.data.recordSourceItems
     const overviewItems = this.data.overviewStatus === "in_progress"
@@ -428,8 +445,8 @@ Page({
         )
         if (!isAsyncPageRequestCurrent(this, generation)) return
         const recordItems = reset
-          ? sortByRecent(result.items)
-          : mergeEntries(this.data.recordSourceItems, result.items)
+          ? sortByRating(result.items)
+          : mergeEntries(this.data.recordSourceItems, result.items, true)
         this.setData({
           mediaTypes,
           selectedCategory,
@@ -607,49 +624,6 @@ Page({
   handleManageCategories() {
     if (!this.data.canWrite || this.data.contentLoading) return
     wx.navigateTo({ url: "/pages/media/categories/index" })
-  },
-
-  setRevisitableValue(id: string, isRevisitable: boolean) {
-    this.setData({
-      overviewInProgressSource: updateRevisitableValue(this.data.overviewInProgressSource, id, isRevisitable),
-      overviewPlannedSource: updateRevisitableValue(this.data.overviewPlannedSource, id, isRevisitable),
-      overviewItems: updateRevisitableValue(this.data.overviewItems, id, isRevisitable),
-      recordSourceItems: updateRevisitableValue(this.data.recordSourceItems, id, isRevisitable),
-      recordItems: updateRevisitableValue(this.data.recordItems, id, isRevisitable)
-    })
-  },
-
-  async handleRevisitableTap(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || "")
-    if (!id) return
-    if (!this.data.canWrite) {
-      this.openMediaEntry(id)
-      return
-    }
-    if (this.data.contentLoading || this.data.revisitableUpdatingId) return
-    const entries = [
-      ...this.data.overviewInProgressSource,
-      ...this.data.overviewPlannedSource,
-      ...this.data.recordSourceItems
-    ]
-    const entry = entries.find((item) => item.id === id)
-    if (!entry) return
-    const nextValue = !entry.is_revisitable
-    this.setRevisitableValue(id, nextValue)
-    this.setData({ revisitableUpdatingId: id })
-    try {
-      await updateMediaEntry(id, { is_revisitable: nextValue })
-      const mediaRevision = markMediaDataChanged()
-      this.setData({ mediaRevision })
-    } catch (error) {
-      this.setRevisitableValue(id, entry.is_revisitable)
-      wx.showToast({
-        title: error instanceof Error ? error.message : "更新失败",
-        icon: "none"
-      })
-    } finally {
-      this.setData({ revisitableUpdatingId: "" })
-    }
   },
 
   handleItemTap(event: WechatMiniprogram.TouchEvent) {

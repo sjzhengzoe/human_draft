@@ -21,11 +21,13 @@ const OTHER_USER_ID = "10000000-0000-4000-8000-000000000009";
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const rpcCalls = [];
+  const orderCalls = [];
   const storageUploads = [];
   const storageRemovals = [];
 
   class Query {
     constructor(table) {
+      this.table = table;
       this.rows = [...(tables[table] || [])];
       this.changes = null;
     }
@@ -97,7 +99,8 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
-    order() {
+    order(field, options) {
+      orderCalls.push({ table: this.table, field, options });
       return this;
     }
 
@@ -132,6 +135,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
   const supabase = {
     rpcCalls,
+    orderCalls,
     storageUploads,
     storageRemovals,
     storage: {
@@ -765,6 +769,44 @@ test("media list supports server-side pagination and fuzzy title search", async 
     total: 2,
     has_more: true,
   });
+});
+
+test("media records can request personal-rating priority", async (t) => {
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [{
+        id: MEDIA_ID,
+        title: "五星作品",
+        media_type: "电影",
+        watch_status: "completed",
+        personal_rating: 5,
+        platforms: [],
+        sort_order: 1000,
+      }],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/media?sort=rating_desc",
+    headers: authHeaders,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(supabase.orderCalls.slice(-2), [
+    {
+      table: "media_entries",
+      field: "personal_rating",
+      options: { ascending: false, nullsFirst: false },
+    },
+    {
+      table: "media_entries",
+      field: "updated_at",
+      options: { ascending: false },
+    },
+  ]);
 });
 
 test("media list can include every category when media type is omitted", async (t) => {
@@ -1456,6 +1498,65 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
   });
 });
 
+test("personal media ratings stay optional, validate one to five, and sync legacy revisit state", async (t) => {
+  const existing = {
+    id: MEDIA_ID,
+    title: "评分测试",
+    media_type: "电影",
+    watch_status: "completed",
+    platforms: [],
+    personal_rating: null,
+    is_revisitable: false,
+    sort_order: 1000,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: [existing] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const fiveStarResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: 5 },
+  });
+  assert.equal(fiveStarResponse.statusCode, 200);
+  assert.equal(fiveStarResponse.json().data.item.personal_rating, 5);
+  assert.equal(fiveStarResponse.json().data.item.is_revisitable, true);
+
+  const clearResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: null },
+  });
+  assert.equal(clearResponse.statusCode, 200);
+  assert.equal(clearResponse.json().data.item.personal_rating, null);
+  assert.equal(clearResponse.json().data.item.is_revisitable, false);
+
+  const legacyResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { is_revisitable: true },
+  });
+  assert.equal(legacyResponse.statusCode, 200);
+  assert.equal(legacyResponse.json().data.item.personal_rating, 4);
+  assert.equal(legacyResponse.json().data.item.is_revisitable, true);
+
+  const invalidResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: 6 },
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_INTEGER");
+});
+
 test("media edits reject a duplicate title in the same category", async (t) => {
   const existing = {
     id: MEDIA_ID,
@@ -2014,6 +2115,22 @@ test("optional media-platform migration converts pending sources to empty arrays
   assert.doesNotMatch(migration, /cardinality\(platforms\) > 0/i);
   assert.equal(migration.match(/'待定'/g)?.length, 1);
   assert.match(migration, /'腾讯视频'.*'猫耳'.*'漫播'.*'Books'/s);
+});
+
+test("personal-rating migration preserves unmarked records and upgrades revisit marks to four stars", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608080002_media_personal_ratings.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists personal_rating smallint/i);
+  assert.match(migration, /set personal_rating = 4[\s\S]*where is_revisitable is true/i);
+  assert.match(migration, /personal_rating is null or personal_rating between 1 and 5/i);
+  assert.match(migration, /create or replace function public\.sync_media_personal_rating/i);
+  assert.match(migration, /new\.personal_rating := case when new\.is_revisitable then 4 else null end/i);
+  assert.match(migration, /before insert or update of personal_rating, is_revisitable/i);
+  assert.match(migration, /personal_rating desc nulls last[\s\S]*updated_at desc/i);
+  assert.doesNotMatch(migration, /where is_revisitable is false/i);
+  assert.doesNotMatch(migration, /drop column.*is_revisitable/i);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {

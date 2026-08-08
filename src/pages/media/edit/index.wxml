@@ -37,13 +37,6 @@
       </view>
       <view class="field-help cover-editor__help">建议使用 3:4 竖图，保存后统一输出为 1080 × 1440</view>
     </view>
-    <view class="field field--switch">
-      <view>
-        <view class="field-label field-label--primary">{{isAudio ? '值得重听' : '值得重温'}}</view>
-        <view class="field-help">以后想再次完整{{isAudio ? '收听' : '体验'}}这部作品</view>
-      </view>
-      <switch checked="{{isRevisitable}}" color="#111111" bindchange="handleRevisitableChange" />
-    </view>
     <view class="field">
       <view class="field-label">平台/来源（选填，可多选）</view>
       <checkbox-group class="platform-options" bindchange="handlePlatformsChange">

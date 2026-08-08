@@ -42,12 +42,6 @@
         <view class="detail-action-row">
           <view class="detail-title-actions">
             <view
-              class="detail-icon-button detail-heart {{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? 'detail-heart--active' : ''}} {{operating || savingEntry ? 'detail-icon-button--disabled' : ''}}"
-              role="button"
-              aria-label="{{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? ((editingEntry ? entryDraftIsAudio : isAudio) ? '取消值得重听' : '取消值得重温') : ((editingEntry ? entryDraftIsAudio : isAudio) ? '设为值得重听' : '设为值得重温')}}"
-              bindtap="handleToggleRevisitable"
-            >{{(editingEntry ? entryDraftIsRevisitable : entry.is_revisitable) ? '♥' : '♡'}}</view>
-            <view
               wx:if="{{canWrite && !editingEntry}}"
               class="detail-icon-button {{operating ? 'detail-icon-button--disabled' : ''}}"
               role="button"
@@ -93,6 +87,29 @@
             data-status="completed"
             bindtap="handleWatchStatusTap"
           >{{(editingEntry ? entryDraftIsAudio : isAudio) ? '听过' : '看过'}}</view>
+        </view>
+
+        <view class="detail-rating">
+          <view class="detail-rating__heading">
+            <text>我的评分</text>
+            <view
+              wx:if="{{canWrite && entry.personal_rating && !editingEntry}}"
+              class="detail-rating__clear"
+              role="button"
+              bindtap="handlePersonalRatingClear"
+            >清除</view>
+          </view>
+          <view class="detail-rating__stars {{!canWrite || editingEntry || operating || savingEntry ? 'detail-rating__stars--disabled' : ''}}" aria-label="{{entry.personal_rating ? entry.personal_rating + ' 星' : '未评分'}}">
+            <view
+              wx:for="{{ratingOptions}}"
+              wx:key="*this"
+              class="detail-rating__star {{item <= (entry.personal_rating || 0) ? 'detail-rating__star--filled' : ''}}"
+              data-rating="{{item}}"
+              role="button"
+              aria-label="评为 {{item}} 星"
+              bindtap="handlePersonalRatingTap"
+            >{{item <= (entry.personal_rating || 0) ? '★' : '☆'}}</view>
+          </view>
         </view>
       </view>
 

@@ -42,6 +42,7 @@ test("media reads reuse session cache and successful writes update it", async ()
   assert.match(cache, /const cachedEntryPages = new Map/);
   assert.match(cache, /export function cacheMediaEntryPage/);
   assert.match(cache, /data\.items\.forEach\(storeEntryValue\)/);
+  assert.match(cache, /page\.input\.sort === "rating_desc"/);
   assert.match(cache, /MAX_CACHED_MEDIA_DETAILS = 20/);
   assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
   assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);

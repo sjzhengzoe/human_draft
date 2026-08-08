@@ -73,6 +73,10 @@ function mediaPlatforms(value) {
   return platforms;
 }
 
+function personalRating(value) {
+  return value === null ? null : integerValue(value, "我的评分", 1, 5);
+}
+
 function timelineNotes(value) {
   assertCondition(Array.isArray(value), 400, "INVALID_TIMELINE_NOTES", "时间点记录格式无效。");
   assertCondition(value.length <= 100, 400, "TOO_MANY_TIMELINE_NOTES", "每集最多记录 100 个时间点。");
@@ -198,7 +202,11 @@ export async function listMediaEntries(supabase, userId, query) {
   if (typeof query.keyword === "string" && query.keyword.trim()) {
     request = request.ilike("title", `%${query.keyword.trim().slice(0, 80)}%`);
   }
-  if (query.sort === "created_desc") {
+  if (query.sort === "rating_desc") {
+    request = request
+      .order("personal_rating", { ascending: false, nullsFirst: false })
+      .order("updated_at", { ascending: false });
+  } else if (query.sort === "created_desc") {
     request = request.order("created_at", { ascending: false });
   } else {
     request = request
@@ -243,15 +251,24 @@ export async function createMediaEntry(supabase, userId, body) {
     })
     .single();
   throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  if (body.is_revisitable !== undefined && booleanValue(body.is_revisitable, "值得重温标记")) {
+  let personalRatingValue;
+  if (body.personal_rating !== undefined) {
+    personalRatingValue = personalRating(body.personal_rating);
+  } else if (body.is_revisitable !== undefined) {
+    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记") ? 4 : null;
+  }
+  if (personalRatingValue !== undefined) {
     const result = await supabase
       .from("media_entries")
-      .update({ is_revisitable: true })
+      .update({
+        personal_rating: personalRatingValue,
+        is_revisitable: personalRatingValue !== null && personalRatingValue >= 4,
+      })
       .eq("id", data.id)
       .eq("user_id", userId)
       .select("*")
       .single();
-    throwSupabaseError(result.error, "更新值得重温标记失败。");
+    throwSupabaseError(result.error, "更新我的评分失败。");
     data = result.data;
   }
   return data;
@@ -268,8 +285,12 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     changes.watch_status = enumValue(body.watch_status, MEDIA_STATUSES, "观看状态");
   }
   if (body.platforms !== undefined) changes.platforms = mediaPlatforms(body.platforms);
-  if (body.is_revisitable !== undefined) {
+  if (body.personal_rating !== undefined) {
+    changes.personal_rating = personalRating(body.personal_rating);
+    changes.is_revisitable = changes.personal_rating !== null && changes.personal_rating >= 4;
+  } else if (body.is_revisitable !== undefined) {
     changes.is_revisitable = booleanValue(body.is_revisitable, "值得重温标记");
+    changes.personal_rating = changes.is_revisitable ? 4 : null;
   }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
   if (changes.title !== undefined || changes.media_type !== undefined) {
@@ -302,15 +323,18 @@ export async function updateMediaEntry(supabase, userId, id, body) {
         message: "影视条目不存在。",
       },
     });
-    if (changes.is_revisitable !== undefined) {
+    if (changes.personal_rating !== undefined || changes.is_revisitable !== undefined) {
       const result = await supabase
         .from("media_entries")
-        .update({ is_revisitable: changes.is_revisitable })
+        .update({
+          personal_rating: changes.personal_rating,
+          is_revisitable: changes.is_revisitable,
+        })
         .eq("id", id)
         .eq("user_id", userId)
         .select("*")
         .single();
-      throwSupabaseError(result.error, "更新值得重温标记失败。");
+      throwSupabaseError(result.error, "更新我的评分失败。");
       data = result.data;
     }
     return data;

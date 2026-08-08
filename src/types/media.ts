@@ -16,6 +16,7 @@ export type MediaEntry = {
   watch_status: MediaStatus
   platforms: string[]
   cover_url: string
+  personal_rating: number | null
   is_revisitable: boolean
   season_count: number
   episode_count: number
