@@ -203,12 +203,6 @@ const COVER_PLANS = [
     sourcePage: "https://movie.douban.com/subject/3986493/",
   },
   {
-    title: "罗小黑战记",
-    mediaType: "电影",
-    sourceUrl: "https://img9.doubanio.com/view/photo/l/public/p2568288336.jpg",
-    sourcePage: "https://movie.douban.com/subject/26709258/",
-  },
-  {
     title: "凪的新生活",
     mediaType: "电视剧",
     sourceUrl: "https://img9.doubanio.com/view/photo/l/public/p2729144005.jpg",
@@ -575,6 +569,18 @@ const SEASON_RENAME_PLANS = [
   },
 ];
 
+const ENTRY_MERGE_PLANS = [
+  {
+    sourceTitle: "罗小黑战记",
+    sourceMediaType: "电影",
+    targetTitle: "罗小黑战记",
+    targetMediaType: "动画片",
+    seasonName: "电影版（2019）",
+    episodeTitle: "罗小黑战记（2019）",
+    reason: "将同名电影记录并入动画总条目，保留电影封面和已看状态",
+  },
+];
+
 const ATTRIBUTE_PLANS = [
   {
     title: "时间游戏",
@@ -918,6 +924,137 @@ async function applySeasonRenamePlans(client, userId, entries) {
   return results;
 }
 
+async function applyEntryMergePlans(client, userId, entries) {
+  const results = [];
+  for (const plan of ENTRY_MERGE_PLANS) {
+    const target = findExactEntry(entries, plan.targetTitle, plan.targetMediaType);
+    const sourceMatches = entries.filter(
+      (entry) => entry.title === plan.sourceTitle && entry.media_type === plan.sourceMediaType,
+    );
+    if (sourceMatches.length > 1) {
+      throw new Error(`${plan.sourceMediaType}《${plan.sourceTitle}》匹配到 ${sourceMatches.length} 条记录。`);
+    }
+
+    const seasonQuery = await client
+      .from("media_seasons")
+      .select("id,name,cover_url,media_episodes(id,episode_number,title)")
+      .eq("user_id", userId)
+      .eq("media_entry_id", target.id)
+      .eq("name", plan.seasonName);
+    if (seasonQuery.error) throw seasonQuery.error;
+    const mergedSeasons = seasonQuery.data || [];
+    if (mergedSeasons.length > 1) {
+      throw new Error(`${plan.targetMediaType}《${plan.targetTitle}》存在多个“${plan.seasonName}”分组。`);
+    }
+
+    if (!sourceMatches.length) {
+      if (mergedSeasons.length !== 1 || !(mergedSeasons[0].media_episodes || []).length) {
+        throw new Error(
+          `${plan.sourceMediaType}《${plan.sourceTitle}》已不存在，但“${plan.seasonName}”分组不完整。`,
+        );
+      }
+      results.push({
+        from: `${plan.sourceMediaType}《${plan.sourceTitle}》`,
+        to: `${plan.targetMediaType}《${plan.targetTitle}》·${plan.seasonName}`,
+        status: "已是合并状态",
+      });
+      continue;
+    }
+
+    const source = sourceMatches[0];
+    const sourceSeasonQuery = await client
+      .from("media_seasons")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("media_entry_id", source.id);
+    if (sourceSeasonQuery.error) throw sourceSeasonQuery.error;
+    if ((sourceSeasonQuery.data || []).length
+      || source.season_count !== 0
+      || source.episode_count !== 0
+      || source.favorite_episode_count !== 0
+      || source.is_revisitable
+      || source.watch_status !== target.watch_status
+      || !arraysEqual(source.platforms || [], target.platforms || [])
+      || !source.cover_url) {
+      throw new Error(`${plan.sourceMediaType}《${plan.sourceTitle}》包含未安全迁移的数据，已停止合并。`);
+    }
+
+    if (APPLY) {
+      let mergedSeason = mergedSeasons[0];
+      if (!mergedSeason) {
+        const created = await client
+          .rpc("create_media_season_with_episodes", {
+            p_user_id: userId,
+            p_media_entry_id: target.id,
+            p_name: plan.seasonName,
+            p_episode_count: 1,
+          })
+          .single();
+        if (created.error) throw created.error;
+        const createdQuery = await client
+          .from("media_seasons")
+          .select("id,name,cover_url,media_episodes(id,episode_number,title)")
+          .eq("id", created.data.id)
+          .eq("user_id", userId)
+          .single();
+        if (createdQuery.error) throw createdQuery.error;
+        mergedSeason = createdQuery.data;
+      }
+
+      let episodes = [...(mergedSeason.media_episodes || [])]
+        .sort((left, right) => left.episode_number - right.episode_number);
+      if (!episodes.length) {
+        const added = await client
+          .rpc("add_next_media_episode", { p_user_id: userId, p_season_id: mergedSeason.id })
+          .single();
+        if (added.error) throw added.error;
+        episodes = [added.data];
+      }
+      if (episodes.length !== 1) {
+        throw new Error(`${plan.targetMediaType}《${plan.targetTitle}》的“${plan.seasonName}”分组不是 1 集。`);
+      }
+      if (mergedSeason.cover_url && mergedSeason.cover_url !== source.cover_url) {
+        throw new Error(`${plan.targetMediaType}《${plan.targetTitle}》的“${plan.seasonName}”已有其他封面。`);
+      }
+      if (!mergedSeason.cover_url) {
+        const coverUpdate = await client
+          .from("media_seasons")
+          .update({ cover_url: source.cover_url })
+          .eq("id", mergedSeason.id)
+          .eq("user_id", userId);
+        if (coverUpdate.error) throw coverUpdate.error;
+      }
+      if (!episodes[0].title) {
+        const episodeUpdate = await client
+          .from("media_episodes")
+          .update({ title: plan.episodeTitle })
+          .eq("id", episodes[0].id)
+          .eq("user_id", userId);
+        if (episodeUpdate.error) throw episodeUpdate.error;
+      }
+
+      const deleted = await client
+        .from("media_entries")
+        .delete()
+        .eq("id", source.id)
+        .eq("user_id", userId)
+        .eq("title", plan.sourceTitle)
+        .eq("media_type", plan.sourceMediaType)
+        .select("id")
+        .single();
+      if (deleted.error) throw deleted.error;
+    }
+
+    results.push({
+      from: `${plan.sourceMediaType}《${plan.sourceTitle}》`,
+      to: `${plan.targetMediaType}《${plan.targetTitle}》·${plan.seasonName}`,
+      reason: plan.reason,
+      status: APPLY ? "已合并并删除重复条目" : "待合并",
+    });
+  }
+  return results;
+}
+
 async function applyEpisodePlans(client, userId, entries) {
   const results = [];
   for (const plan of EPISODE_PLANS) {
@@ -1033,7 +1170,10 @@ async function main() {
   const userId = await findWriterAccount(client, allowedOpenIds);
   const { data: entries, error } = await client
     .from("media_entries")
-    .select("id,title,media_type,cover_url,platforms")
+    .select(
+      "id,title,media_type,cover_url,platforms,watch_status,season_count,episode_count,"
+        + "favorite_episode_count,is_revisitable",
+    )
     .eq("user_id", userId);
   if (error) throw error;
 
@@ -1041,6 +1181,7 @@ async function main() {
   const correctedEntries = buildCorrectedEntries(entries || []);
   const attributeResults = await applyAttributePlans(client, userId, correctedEntries);
   const seasonRenameResults = await applySeasonRenamePlans(client, userId, correctedEntries);
+  const entryMergeResults = await applyEntryMergePlans(client, userId, correctedEntries);
   const episodeResults = await applyEpisodePlans(client, userId, correctedEntries);
   const results = [];
   const previews = [];
@@ -1106,6 +1247,7 @@ async function main() {
     corrections: correctionResults,
     attributes: attributeResults,
     seasonRenames: seasonRenameResults,
+    entryMerges: entryMergeResults,
     episodes: episodeResults,
     planned: COVER_PLANS.length,
     updated: results.filter((result) => result.status === "已补充").length,
