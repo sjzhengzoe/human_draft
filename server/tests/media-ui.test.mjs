@@ -26,6 +26,12 @@ test("media overview and records share the same status-free four-column cards", 
   assert.match(page, /bindtap="handleOverviewCategoryTap"/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(logic, /applyOverviewFilters\(\)/);
+  assert.match(page, /catchtap="handleRevisitableTap"/);
+  assert.match(page, /item\.is_revisitable \? '♥' : '♡'/);
+  assert.doesNotMatch(page, />值得重温<\/view>/);
+  assert.match(logic, /updateMediaEntry\(id, \{ is_revisitable: nextValue \}\)/);
+  assert.match(logic, /setRevisitableValue\(id, entry\.is_revisitable\)/);
+  assert.match(styles, /\.record-card__revisit--active\s*\{[^}]*color:\s*#e04444;/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
   assert.doesNotMatch(page, /包含全部分类|包含全部记录/);
   assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
@@ -37,7 +43,8 @@ test("media controls are vertically centered and use shared typography sizes", a
   const explicitSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)]
     .map((match) => Number(match[1]));
 
-  assert.deepEqual([...new Set(explicitSizes)], [25]);
+  assert.match(styles, /\.record-card__revisit\s*\{[^}]*font-size:\s*36rpx;/s);
+  assert.deepEqual([...new Set(explicitSizes.filter((size) => size !== 36))], [25]);
   assert.match(styles, /var\(--ui-font-size-small\)/);
   assert.match(styles, /var\(--ui-font-size-base\)/);
   assert.match(

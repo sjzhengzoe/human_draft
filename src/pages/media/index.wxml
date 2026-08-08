@@ -79,15 +79,23 @@
         </view>
         <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
           <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
-            <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
-            <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
+            <view class="record-card__cover-frame">
+              <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+              <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
+              <view
+                class="record-card__revisit {{item.is_revisitable ? 'record-card__revisit--active' : ''}} {{revisitableUpdatingId === item.id ? 'record-card__revisit--updating' : ''}}"
+                data-id="{{item.id}}"
+                role="button"
+                aria-label="{{item.is_revisitable ? '取消值得重温' : '设为值得重温'}}"
+                catchtap="handleRevisitableTap"
+              >{{item.is_revisitable ? '♥' : '♡'}}</view>
+            </view>
             <view class="record-card__body">
               <view class="record-card__title">{{item.title}}</view>
               <view class="record-card__meta">{{item.metaText}}</view>
-              <view wx:if="{{item.statsText || item.favoriteText || item.is_revisitable}}" class="record-card__details">
+              <view wx:if="{{item.statsText || item.favoriteText}}" class="record-card__details">
                 <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
                 <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
-                <view wx:if="{{item.is_revisitable}}">值得重温</view>
               </view>
             </view>
           </view>
@@ -107,15 +115,23 @@
       </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
-          <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
-          <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
+          <view class="record-card__cover-frame">
+            <image wx:if="{{item.cover_url}}" class="record-card__cover" src="{{item.cover_url}}" mode="aspectFill" lazy-load />
+            <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="38" /></view>
+            <view
+              class="record-card__revisit {{item.is_revisitable ? 'record-card__revisit--active' : ''}} {{revisitableUpdatingId === item.id ? 'record-card__revisit--updating' : ''}}"
+              data-id="{{item.id}}"
+              role="button"
+              aria-label="{{item.is_revisitable ? '取消值得重温' : '设为值得重温'}}"
+              catchtap="handleRevisitableTap"
+            >{{item.is_revisitable ? '♥' : '♡'}}</view>
+          </view>
           <view class="record-card__body">
             <view class="record-card__title">{{item.title}}</view>
             <view class="record-card__meta">{{item.metaText}}</view>
-            <view wx:if="{{item.statsText || item.favoriteText || item.is_revisitable}}" class="record-card__details">
+            <view wx:if="{{item.statsText || item.favoriteText}}" class="record-card__details">
               <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
               <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
-              <view wx:if="{{item.is_revisitable}}">值得重温</view>
             </view>
           </view>
         </view>

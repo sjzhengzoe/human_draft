@@ -1,5 +1,5 @@
 import { ensureLogin } from "../../services/auth"
-import { listMediaCategories, listMediaEntries } from "../../services/media"
+import { listMediaCategories, listMediaEntries, updateMediaEntry } from "../../services/media"
 import type { MediaEntry, MediaStatus, MediaType } from "../../types/media"
 import {
   activateAsyncPage,
@@ -7,7 +7,7 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { getMediaDataRevision } from "../../utils/media-data-revision"
+import { getMediaDataRevision, markMediaDataChanged } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
@@ -76,6 +76,16 @@ function filterOverviewItems(
     : sourceItems
 }
 
+function updateRevisitableValue(
+  entries: DisplayMediaEntry[],
+  id: string,
+  isRevisitable: boolean
+): DisplayMediaEntry[] {
+  return entries.map((entry) =>
+    entry.id === id ? { ...entry, is_revisitable: isRevisitable } : entry
+  )
+}
+
 async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
   const items: MediaEntry[] = []
   let page = 1
@@ -105,6 +115,7 @@ Page({
     activeRecordType: "" as MediaType,
     recordSourceItems: [] as DisplayMediaEntry[],
     recordItems: [] as DisplayMediaEntry[],
+    revisitableUpdatingId: "",
     keyword: "",
     appliedKeyword: "",
     canWrite: false,
@@ -325,8 +336,68 @@ Page({
     wx.navigateTo({ url: "/pages/media/categories/index" })
   },
 
+  setRevisitableValue(id: string, isRevisitable: boolean) {
+    this.setData({
+      overviewInProgressSource: updateRevisitableValue(
+        this.data.overviewInProgressSource,
+        id,
+        isRevisitable
+      ),
+      overviewPlannedSource: updateRevisitableValue(
+        this.data.overviewPlannedSource,
+        id,
+        isRevisitable
+      ),
+      overviewItems: updateRevisitableValue(this.data.overviewItems, id, isRevisitable),
+      recordSourceItems: updateRevisitableValue(
+        this.data.recordSourceItems,
+        id,
+        isRevisitable
+      ),
+      recordItems: updateRevisitableValue(this.data.recordItems, id, isRevisitable)
+    })
+  },
+
+  async handleRevisitableTap(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || "")
+    if (!id) return
+    if (!this.data.canWrite) {
+      this.openMediaEntry(id)
+      return
+    }
+    if (this.data.contentLoading || this.data.revisitableUpdatingId) return
+    const entries = [
+      ...this.data.overviewInProgressSource,
+      ...this.data.overviewPlannedSource,
+      ...this.data.recordSourceItems
+    ]
+    const entry = entries.find((item) => item.id === id)
+    if (!entry) return
+    const nextValue = !entry.is_revisitable
+    this.setRevisitableValue(id, nextValue)
+    this.setData({ revisitableUpdatingId: id })
+    try {
+      await updateMediaEntry(id, { is_revisitable: nextValue })
+      const mediaRevision = markMediaDataChanged()
+      this.setData({ mediaRevision })
+    } catch (error) {
+      this.setRevisitableValue(id, entry.is_revisitable)
+      wx.showToast({
+        title: error instanceof Error ? error.message : "更新失败",
+        icon: "none"
+      })
+    } finally {
+      this.setData({ revisitableUpdatingId: "" })
+    }
+  },
+
   handleItemTap(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || "")
+    this.openMediaEntry(id)
+  },
+
+  openMediaEntry(id: string) {
+    if (!id) return
     const entries = [
       ...this.data.overviewInProgressSource,
       ...this.data.overviewPlannedSource,

@@ -287,11 +287,18 @@
   box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.025);
 }
 
+.record-card__cover-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: #ededed;
+}
+
 .record-card__cover {
   display: flex;
   width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
+  height: 100%;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -300,6 +307,32 @@
 
 .record-card__cover--empty {
   color: #999;
+}
+
+.record-card__revisit {
+  position: absolute;
+  z-index: 1;
+  top: 6rpx;
+  right: 6rpx;
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 36rpx;
+  line-height: 1;
+  text-shadow: 0 1rpx 5rpx rgba(0, 0, 0, 0.62);
+}
+
+.record-card__revisit--active {
+  color: #e04444;
+  text-shadow: 0 1rpx 4rpx rgba(255, 255, 255, 0.9);
+}
+
+.record-card__revisit--updating {
+  opacity: 0.5;
 }
 
 .record-card__body {
