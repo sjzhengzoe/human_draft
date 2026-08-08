@@ -58,15 +58,15 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /\.search-row__button,[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/);
 });
 
-test("media cards hide empty episode counts and use category-specific placeholders", async () => {
+test("media cards show only titles, revisit hearts, and category-specific placeholders", async () => {
   const [page, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(logicUrl, "utf8"),
   ]);
 
-  assert.doesNotMatch(page, /最近记录|recordDateText/);
+  assert.doesNotMatch(page, /record-card__meta|record-card__details/);
+  assert.doesNotMatch(logic, /metaText|statsText|favoriteText/);
   assert.match(page, /name="\{\{item\.placeholderIcon\}\}"/);
-  assert.match(logic, /seasonCount > 0 \|\| episodeCount > 0/);
   for (const icon of ["book-open", "sparkles", "headphones", "tv", "clapperboard"]) {
     assert.match(logic, new RegExp(`"${icon}"`));
   }

@@ -14,9 +14,6 @@ type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
 type LoadCurrentViewOptions = { refreshShared?: boolean }
 
 type DisplayMediaEntry = MediaEntry & {
-  metaText: string
-  statsText: string
-  favoriteText: string
   placeholderIcon: string
 }
 
@@ -38,19 +35,8 @@ function mediaPlaceholderIcon(mediaType: MediaType): string {
 }
 
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
-  const isEpisodic = EPISODIC_MEDIA_TYPES.includes(entry.media_type)
-  const platformText = entry.platforms.length ? entry.platforms.join(" / ") : "未记录平台"
-  const seasonCount = entry.season_count || 0
-  const episodeCount = entry.episode_count || 0
   return {
     ...entry,
-    metaText: `${entry.media_type} · ${platformText}`,
-    statsText: isEpisodic && (seasonCount > 0 || episodeCount > 0)
-      ? `${seasonCount} 季 · ${episodeCount} 集`
-      : "",
-    favoriteText: entry.favorite_episode_count
-      ? `喜欢 ${entry.favorite_episode_count} 集`
-      : "",
     placeholderIcon: mediaPlaceholderIcon(entry.media_type)
   }
 }

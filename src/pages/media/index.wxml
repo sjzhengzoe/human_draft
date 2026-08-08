@@ -92,11 +92,6 @@
             </view>
             <view class="record-card__body">
               <view class="record-card__title">{{item.title}}</view>
-              <view class="record-card__meta">{{item.metaText}}</view>
-              <view wx:if="{{item.statsText || item.favoriteText}}" class="record-card__details">
-                <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
-                <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
-              </view>
             </view>
           </view>
         </view>
@@ -128,11 +123,6 @@
           </view>
           <view class="record-card__body">
             <view class="record-card__title">{{item.title}}</view>
-            <view class="record-card__meta">{{item.metaText}}</view>
-            <view wx:if="{{item.statsText || item.favoriteText}}" class="record-card__details">
-              <view wx:if="{{item.statsText}}">{{item.statsText}}</view>
-              <view wx:if="{{item.favoriteText}}">{{item.favoriteText}}</view>
-            </view>
           </view>
         </view>
       </view>
