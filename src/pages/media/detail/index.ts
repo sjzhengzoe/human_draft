@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../../services/auth"
 import {
   addNextMediaEpisode,
   createMediaSeason,
@@ -13,6 +13,7 @@ import {
   updateMediaSeason
 } from "../../../services/media"
 import type {
+  MediaCategory,
   MediaEntry,
   MediaEpisode,
   MediaSeason,
@@ -29,6 +30,11 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import {
+  getCachedMediaCategories,
+  getCachedMediaEntry,
+  getCachedMediaSeasons
+} from "../../../utils/media-data-cache"
 import {
   getMediaDataRevision,
   markMediaDataChanged
@@ -297,6 +303,21 @@ Page({
   },
 
   async loadPage() {
+    const cachedEntry = getCachedMediaEntry(this.data.id)
+    const cachedSeasons = getCachedMediaSeasons(this.data.id)
+    const cachedCategories = getCachedMediaCategories()
+    const currentUser = getCurrentUser()
+    if (cachedEntry && cachedSeasons && cachedCategories && currentUser) {
+      this.applyPageData(cachedEntry, cachedSeasons, cachedCategories, currentUser.can_write)
+      this.setData({
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        errorMessage: ""
+      })
+      return
+    }
+
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
@@ -312,31 +333,7 @@ Page({
         listMediaCategories()
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const normalizedSeasons = normalizeMediaSeasons(seasons)
-      const requestedIndex = normalizedSeasons.findIndex((season) => season.id === this.data.requestedSeasonId)
-      const activeSeasonIndex = requestedIndex >= 0
-        ? requestedIndex
-        : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
-      const activeSeason = normalizedSeasons[activeSeasonIndex] || null
-      const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
-      this.setData({
-        entry,
-        seasons: normalizedSeasons,
-        activeSeasonIndex,
-        activeSeason,
-        filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-        activeSeasonFavoriteCount: favoriteCount(activeSeason),
-        coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
-        platformText: platformText(entry.platforms),
-        mediaTypes: categories.map((category) => category.name),
-        canWrite: session.user.can_write,
-        isEpisodic,
-        isAudio: entry.media_type === "广播剧",
-        activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
-        requestedSeasonId: "",
-        mediaRevision: getMediaDataRevision()
-      })
-      wx.setNavigationBarTitle({ title: entry.title })
+      this.applyPageData(entry, seasons, categories, session.user.can_write)
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const message = error instanceof Error ? error.message : "加载失败"
@@ -347,6 +344,39 @@ Page({
         this.setData({ loading: false, contentLoading: false, hasLoaded: true })
       }
     }
+  },
+
+  applyPageData(
+    entry: MediaEntry,
+    seasons: MediaSeason[],
+    categories: MediaCategory[],
+    canWrite: boolean
+  ) {
+    const normalizedSeasons = normalizeMediaSeasons(seasons)
+    const requestedIndex = normalizedSeasons.findIndex((season) => season.id === this.data.requestedSeasonId)
+    const activeSeasonIndex = requestedIndex >= 0
+      ? requestedIndex
+      : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
+    const activeSeason = normalizedSeasons[activeSeasonIndex] || null
+    const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
+    this.setData({
+      entry,
+      seasons: normalizedSeasons,
+      activeSeasonIndex,
+      activeSeason,
+      filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
+      activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
+      platformText: platformText(entry.platforms),
+      mediaTypes: categories.map((category) => category.name),
+      canWrite,
+      isEpisodic,
+      isAudio: entry.media_type === "广播剧",
+      activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
+      requestedSeasonId: "",
+      mediaRevision: getMediaDataRevision()
+    })
+    wx.setNavigationBarTitle({ title: entry.title })
   },
 
   handleSeasonTap(event: WechatMiniprogram.TouchEvent) {

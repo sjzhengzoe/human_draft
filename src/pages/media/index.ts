@@ -7,6 +7,13 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import {
+  cacheMediaEntryCollection,
+  getCachedMediaCategories,
+  getCachedMediaEntryCollection,
+  getCachedMediaEntries,
+  getDeletedMediaEntryIds
+} from "../../utils/media-data-cache"
 import { getMediaDataRevision, markMediaDataChanged } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
@@ -71,7 +78,20 @@ function updateRevisitableValue(
   )
 }
 
+function mergeCachedEntries(
+  entries: DisplayMediaEntry[],
+  cachedEntries: MediaEntry[],
+  deletedIds: string[]
+): DisplayMediaEntry[] {
+  const merged = new Map<string, MediaEntry>(entries.map((entry) => [entry.id, entry]))
+  cachedEntries.forEach((entry) => merged.set(entry.id, entry))
+  deletedIds.forEach((id) => merged.delete(id))
+  return sortByRecent([...merged.values()])
+}
+
 async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
+  const cached = getCachedMediaEntryCollection(status)
+  if (cached) return cached
   const items: MediaEntry[] = []
   let page = 1
   let hasMore = true
@@ -85,6 +105,7 @@ async function listAllEntries(status?: MediaStatus): Promise<MediaEntry[]> {
     hasMore = result.pagination.has_more
     page += 1
   }
+  cacheMediaEntryCollection(status, items)
   return items
 }
 
@@ -124,11 +145,8 @@ Page({
       return
     }
     if (this.data.mediaRevision !== mediaRevision) {
-      this.setData({
-        sharedLoaded: false,
-        overviewLoaded: false,
-        recordLoaded: false
-      }, () => {
+      if (this.syncLoadedDataFromCache(mediaRevision)) return
+      this.setData({ sharedLoaded: false }, () => {
         void this.loadCurrentView({ refreshShared: true })
       })
     }
@@ -136,6 +154,54 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
+  },
+
+  syncLoadedDataFromCache(mediaRevision: number): boolean {
+    const categories = getCachedMediaCategories()
+    if (!categories) return false
+    const mediaTypes = categories.map((category) => category.name)
+    const selectedCategory = mediaTypes.includes(this.data.selectedCategory)
+      ? this.data.selectedCategory
+      : ""
+    const cachedEntries = getCachedMediaEntries()
+    const deletedIds = getDeletedMediaEntryIds()
+    const overviewInProgressSource = this.data.overviewLoaded
+      ? mergeCachedEntries(this.data.overviewInProgressSource, cachedEntries, deletedIds)
+        .filter((entry) => entry.watch_status === "in_progress")
+      : this.data.overviewInProgressSource
+    const overviewPlannedSource = this.data.overviewLoaded
+      ? mergeCachedEntries(this.data.overviewPlannedSource, cachedEntries, deletedIds)
+        .filter((entry) => entry.watch_status === "planned")
+      : this.data.overviewPlannedSource
+    const recordSourceItems = this.data.recordLoaded
+      ? mergeCachedEntries(this.data.recordSourceItems, cachedEntries, deletedIds)
+      : this.data.recordSourceItems
+    const keyword = this.data.appliedKeyword.trim().toLocaleLowerCase()
+
+    this.setData({
+      mediaTypes,
+      selectedCategory,
+      sharedLoaded: true,
+      overviewInProgressSource,
+      overviewPlannedSource,
+      overviewItems: this.data.overviewLoaded
+        ? filterOverviewItems(
+            this.data.overviewStatus,
+            selectedCategory,
+            overviewInProgressSource,
+            overviewPlannedSource
+          )
+        : this.data.overviewItems,
+      recordSourceItems,
+      recordItems: this.data.recordLoaded
+        ? recordSourceItems.filter((item) =>
+            (!selectedCategory || item.media_type === selectedCategory) &&
+            (!keyword || item.title.toLocaleLowerCase().includes(keyword))
+          )
+        : this.data.recordItems,
+      mediaRevision
+    })
+    return true
   },
 
   async loadCurrentView(options: LoadCurrentViewOptions = {}) {

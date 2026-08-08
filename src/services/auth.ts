@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope, AppUser, AuthSession } from "../types/api"
+import { clearMediaDataCache } from "../utils/media-data-cache"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
 
 let pendingLogin: Promise<AuthSession> | null = null
@@ -67,6 +68,7 @@ export function loginExistingUser(): Promise<AuthSession> {
 
 export function redirectToLogin(expectedToken?: string): void {
   if (!clearStoredSession(expectedToken)) return
+  clearMediaDataCache()
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {
@@ -109,6 +111,7 @@ export async function logout(): Promise<void> {
     })
   }
   clearStoredSession()
+  clearMediaDataCache()
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {

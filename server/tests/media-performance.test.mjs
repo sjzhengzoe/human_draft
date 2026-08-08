@@ -17,9 +17,33 @@ test("media pages reuse loaded data until a successful mutation invalidates it",
   assert.match(index, /recordLoaded:\s*false/);
   assert.match(index, /if \(!viewLoaded\) void this\.loadCurrentView\(\)/);
   assert.match(index, /this\.data\.mediaRevision !== mediaRevision/);
+  assert.match(index, /syncLoadedDataFromCache\(mediaRevision\)/);
   assert.match(categories, /this\.data\.mediaRevision !== getMediaDataRevision\(\)/);
   assert.match(detail, /this\.data\.mediaRevision !== getMediaDataRevision\(\)/);
   assert.match(revision, /mediaDataRevision \+= 1/);
+});
+
+test("media reads reuse session cache and successful writes update it", async () => {
+  const [service, cache, detail, index, auth] = await Promise.all([
+    readProjectFile("src/services/media.ts"),
+    readProjectFile("src/utils/media-data-cache.ts"),
+    readProjectFile("src/pages/media/detail/index.ts"),
+    readProjectFile("src/pages/media/index.ts"),
+    readProjectFile("src/services/auth.ts"),
+  ]);
+
+  assert.match(service, /const cached = options\.forceRefresh \? null : getCachedMediaEntry\(id\)/);
+  assert.match(service, /const cached = options\.forceRefresh \? null : getCachedMediaSeasons\(mediaEntryId\)/);
+  assert.match(service, /cacheMediaEntry\(data\.item\)/);
+  assert.match(service, /updateCachedMediaEpisode\(data\.item\)/);
+  assert.match(service, /invalidateCachedMediaSeasons\(mediaEntryId\)/);
+  assert.match(cache, /const cachedEntryCollections = new Map/);
+  assert.match(cache, /export function cacheMediaEntryCollection/);
+  assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
+  assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);
+  assert.match(index, /getCachedMediaEntryCollection\(status\)/);
+  assert.match(index, /mergeCachedEntries/);
+  assert.match(auth, /clearMediaDataCache\(\)/);
 });
 
 test("every media mutation page marks cached lists as changed", async () => {
