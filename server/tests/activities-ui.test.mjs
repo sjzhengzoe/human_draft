@@ -33,8 +33,9 @@ test("activity list uses top scene tabs and a button-free single-card swiper", a
 });
 
 test("activity editor reuses shared dialogs and the 4:3 image cropper", async () => {
-  const [template, config] = await Promise.all([
+  const [template, styles, config] = await Promise.all([
     readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/index.less", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.json", projectRoot), "utf8"),
   ]);
 
@@ -48,6 +49,10 @@ test("activity editor reuses shared dialogs and the 4:3 image cropper", async ()
   assert.match(template, /track-keyboard="\{\{false\}\}"/);
   assert.equal(template.match(/adjust-position="\{\{true\}\}"/g)?.length, 2);
   assert.equal(template.match(/^\s+persistent\s*$/gm)?.length, 2);
+  assert.match(template, /aria-label="\{\{selectedImagePath \|\| currentImageUrl \? '更换活动封面' : '添加活动封面'\}\}"/);
+  assert.match(template, /<text>添加封面<\/text>/);
+  assert.match(styles, /\.activity-editor__image\s*{[^}]*width:\s*320rpx/);
+  assert.doesNotMatch(template, /选择活动封面（选填）|例如：红花湖骑行|一句简介（选填）/);
   assert.doesNotMatch(template, /^\s+focus\s*$/m);
   assert.doesNotMatch(template, /wx\.showModal/);
   assert.match(config, /"image-cropper": "\/components\/image-cropper\/index"/);

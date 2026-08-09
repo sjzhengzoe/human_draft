@@ -137,7 +137,12 @@
     track-keyboard="{{false}}"
   >
     <view slot="body" class="activity-editor">
-      <view class="activity-editor__image" bindtap="handleChooseImage">
+      <view
+        class="activity-editor__image"
+        role="button"
+        aria-label="{{selectedImagePath || currentImageUrl ? '更换活动封面' : '添加活动封面'}}"
+        bindtap="handleChooseImage"
+      >
         <image
           wx:if="{{selectedImagePath || currentImageUrl}}"
           class="activity-editor__image-preview"
@@ -145,8 +150,8 @@
           mode="aspectFill"
         />
         <view wx:else class="activity-editor__image-empty">
-          <app-icon name="image-plus" size="38" />
-          <text>选择活动封面（选填）</text>
+          <app-icon name="image-plus" size="32" />
+          <text>添加封面</text>
         </view>
         <view wx:if="{{selectedImagePath || currentImageUrl}}" class="activity-editor__image-action">更换封面</view>
       </view>
@@ -154,7 +159,7 @@
         custom-class="editor-input"
         value="{{editorName}}"
         maxlength="120"
-        placeholder="活动名称，例如：红花湖骑行"
+        placeholder="活动名称"
         persistent
         adjust-position="{{true}}"
         bindinput="handleEditorNameInput"
@@ -163,7 +168,7 @@
         custom-class="editor-input editor-input--introduction"
         value="{{editorIntroduction}}"
         maxlength="200"
-        placeholder="一句简介（选填）"
+        placeholder="一句简介"
         confirm-type="done"
         persistent
         adjust-position="{{true}}"

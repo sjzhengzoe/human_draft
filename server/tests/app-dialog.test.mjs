@@ -19,7 +19,8 @@ test("app dialog centers within the keyboard-safe viewport", async () => {
   assert.match(componentSource, /padding-bottom: calc\(\$\{keyboardHeight\}px \+ 48rpx\)/);
   assert.match(template, /style="\{\{keyboardStyle\}\}"/);
   assert.match(styles, /align-items: center/);
-  assert.match(styles, /max-height: 100%/);
+  assert.match(styles, /\.app-dialog__panel\s*{[^}]*max-height:\s*68vh/);
+  assert.match(styles, /\.app-dialog--with-keyboard \.app-dialog__panel\s*{[^}]*max-height:\s*100%/);
   assert.match(styles, /overflow-y: auto/);
 });
 
