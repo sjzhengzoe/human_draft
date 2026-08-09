@@ -87,7 +87,9 @@ Component({
       this.triggerEvent("input", event.detail)
     },
     handleFocus(event: WechatMiniprogram.InputFocus) {
-      this.setData({ editing: true, nativeFocus: true })
+      if (!this.properties.persistent) {
+        this.setData({ editing: true, nativeFocus: true })
+      }
       this.triggerEvent("focus", event.detail)
     },
     handleBlur(event: WechatMiniprogram.InputBlur) {

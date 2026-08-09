@@ -273,21 +273,24 @@
 
 .activity-editor__image {
   position: relative;
-  width: 320rpx;
-  max-width: 100%;
+  width: 200rpx;
+  flex: none;
   aspect-ratio: 4 / 3;
-  margin: 0 auto 18rpx;
   overflow: hidden;
   border-radius: var(--ui-radius-card);
   background: var(--ui-color-background-subtle);
 }
 
-.activity-editor {
-  height: 520rpx;
+.activity-editor__main {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 18rpx;
 }
 
-.activity-editor__keyboard-spacer {
-  width: 100%;
+.activity-editor__fields {
+  min-width: 0;
+  flex: 1;
 }
 
 .activity-editor__image-preview {
@@ -302,16 +305,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: 8rpx;
   color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
 }
 
 .activity-editor__image-action {
   position: absolute;
-  right: 14rpx;
-  bottom: 14rpx;
-  padding: 9rpx 16rpx;
+  right: 8rpx;
+  bottom: 8rpx;
+  padding: 7rpx 10rpx;
   border-radius: var(--ui-radius-pill);
   background: var(--ui-color-overlay-strong);
   color: var(--ui-color-text-inverse);

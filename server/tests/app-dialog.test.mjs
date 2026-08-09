@@ -38,8 +38,8 @@ test("dialog inputs use one keyboard avoidance strategy at a time", async () => 
     assert.match(template, /adjust-position="\{\{false\}\}"/);
   }
   assert.match(activityTemplate, /track-keyboard="\{\{false\}\}"/);
-  assert.match(activityTemplate, /adjust-position="\{\{false\}\}"/);
-  assert.match(activityTemplate, /scroll-into-view="\{\{editorFocusAnchor\}\}"/);
+  assert.match(activityTemplate, /adjust-position="\{\{true\}\}"/);
+  assert.doesNotMatch(activityTemplate, /scroll-into-view=/);
   assert.match(activityTemplate, /<app-dialog/);
   assert.doesNotMatch(activityTemplate, /class="modal"/);
 });

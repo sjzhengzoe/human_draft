@@ -51,6 +51,7 @@ test("shared app-input keeps the project font outside native editing", async () 
   assert.match(logic, /persistent:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
   assert.match(logic, /fontSize:\s*UI_FONT_SIZES\.base/);
   assert.match(logic, /handleActivate\(\)/);
+  assert.match(logic, /handleFocus[\s\S]*?if \(!this\.properties\.persistent\)[\s\S]*?this\.triggerEvent\("focus", event\.detail\)/);
   assert.match(logic, /this\.triggerEvent\("input", event\.detail\)/);
   assert.match(styles, /\.app-input__display[^}]*font-family:\s*var\(--ui-font-family\)/);
   assert.match(styles, /\.app-input__display--placeholder/);
