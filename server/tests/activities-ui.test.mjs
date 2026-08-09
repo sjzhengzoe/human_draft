@@ -4,7 +4,7 @@ import test from "node:test";
 
 const projectRoot = new URL("../../", import.meta.url);
 
-test("activity list uses top scene tabs and a button-free single-card swiper", async () => {
+test("activity list uses top scene tabs and the same two-column image grid as menu quick view", async () => {
   const [template, styles, page, service] = await Promise.all([
     readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.less", projectRoot), "utf8"),
@@ -13,20 +13,22 @@ test("activity list uses top scene tabs and a button-free single-card swiper", a
   ]);
 
   assert.match(template, /class="activity-type-switch"/);
-  assert.match(template, /display-multiple-items="1"/);
-  assert.match(template, /bindchange="handleBrowseChange"/);
+  assert.match(template, /class="activity-list-scroll"[^>]*scroll-y/);
+  assert.match(template, /class="activity-grid"/);
   assert.match(template, /class="activity-card"/);
   assert.match(template, /item\.thumbnail_url \|\| item\.image_url/);
   assert.match(template, /item\.introduction/);
+  assert.doesNotMatch(template, /<swiper|<swiper-item/);
   assert.doesNotMatch(template, /室内活动/);
   assert.doesNotMatch(template, /class="(?:counter|pagination|swipe-button)/);
   assert.doesNotMatch(template, /bindtap="handle(?:Previous|Next|Prev)/);
   assert.doesNotMatch(template, /contentLoading|正在加载活动…[\s\S]*content-loading/);
-  assert.match(styles, /\.activity-card\s*{[^}]*width:\s*calc\(100% - 32rpx\)/);
+  assert.match(styles, /\.activity-grid\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)[^}]*column-gap:\s*24rpx[^}]*row-gap:\s*34rpx/);
   assert.match(styles, /\.activity-card__image-frame\s*{[^}]*width:\s*100%[^}]*aspect-ratio:\s*4\s*\/\s*3/);
-  assert.doesNotMatch(styles, /\.activity-card__image-frame\s*{[^}]*width:\s*480rpx/);
+  assert.doesNotMatch(styles, /\.browse-(?:carousel|swiper|slide)/);
   assert.match(page, /itemsByType: emptyActivityItemsByType\(\)/);
   assert.match(page, /const items = this\.data\.itemsByType\[type\]/);
+  assert.doesNotMatch(page, /browseCurrentIndex|browseIndices|handleBrowseChange/);
   const typeHandler = page.match(/handleTypeTap[\s\S]*?\n  },/)?.[0] || "";
   assert.doesNotMatch(typeHandler, /loadItems|listActivityItems/);
   assert.match(service, /all_types: activityType \? undefined : "true"/);

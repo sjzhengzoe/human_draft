@@ -75,54 +75,36 @@
   opacity: 0.58;
 }
 
-.browse-carousel {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  box-sizing: border-box;
-  padding: 16rpx 0 calc(24rpx + env(safe-area-inset-bottom));
-  background: var(--ui-page-background);
-}
-
-.browse-swiper {
-  width: 100%;
+.activity-list-scroll {
   min-height: 0;
   height: 0;
   flex: 1;
-  background: var(--ui-page-background);
+  box-sizing: border-box;
+  padding: var(--ui-page-gutter) var(--ui-page-gutter) calc(36rpx + env(safe-area-inset-bottom));
 }
 
-.browse-slide {
-  min-width: 0;
-  height: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.browse-slide-scroll {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24rpx;
+  row-gap: 34rpx;
 }
 
 .activity-card {
-  width: calc(100% - 32rpx);
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
-  margin: 0 auto;
   border: 1rpx solid var(--ui-border);
-  border-radius: 22rpx;
+  border-radius: 24rpx;
   background: var(--ui-surface);
-  box-shadow: 0 10rpx 32rpx var(--ui-color-shadow-soft);
 }
 
 .activity-card__image-frame {
   width: 100%;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: var(--ui-color-background-subtle);
+  border-radius: 23rpx 23rpx 0 0;
+  background: var(--ui-surface);
 }
 
 .activity-card__image,
@@ -136,30 +118,34 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: 8rpx;
   color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
 }
 
 .activity-card__body {
-  padding: 24rpx 28rpx 30rpx;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx 18rpx;
 }
 
 .activity-card__name {
+  overflow: hidden;
   color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-large);
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .activity-card__introduction {
-  margin-top: 12rpx;
+  margin-top: 4rpx;
+  overflow: hidden;
   color: var(--ui-color-text-secondary);
-  font-size: var(--ui-font-size-base);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-break: break-word;
+  font-size: var(--ui-font-size-small);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .content-state {

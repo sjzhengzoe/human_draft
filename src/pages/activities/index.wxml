@@ -40,42 +40,29 @@
     <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增活动</view>
   </view>
 
-  <view wx:else class="browse-carousel">
-    <swiper
-      class="browse-swiper"
-      current="{{browseCurrentIndex}}"
-      circular="{{false}}"
-      display-multiple-items="1"
-      acceleration="{{false}}"
-      duration="160"
-      skip-hidden-item-layout
-      bindchange="handleBrowseChange"
-    >
-      <swiper-item wx:for="{{items}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
-        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
-          <view class="activity-card">
-            <view class="activity-card__image-frame">
-              <image
-                wx:if="{{item.thumbnail_url || item.image_url}}"
-                class="activity-card__image"
-                src="{{item.thumbnail_url || item.image_url}}"
-                mode="aspectFill"
-                lazy-load
-              />
-              <view wx:else class="activity-card__image-empty">
-                <app-icon name="image-plus" size="38" />
-                <text>暂无封面</text>
-              </view>
-            </view>
-            <view class="activity-card__body">
-              <view class="activity-card__name">{{item.name}}</view>
-              <view wx:if="{{item.introduction}}" class="activity-card__introduction">{{item.introduction}}</view>
-            </view>
+  <scroll-view wx:else class="activity-list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="activity-grid">
+      <view wx:for="{{items}}" wx:key="id" class="activity-card">
+        <view class="activity-card__image-frame">
+          <image
+            wx:if="{{item.thumbnail_url || item.image_url}}"
+            class="activity-card__image"
+            src="{{item.thumbnail_url || item.image_url}}"
+            mode="aspectFill"
+            lazy-load
+          />
+          <view wx:else class="activity-card__image-empty">
+            <app-icon name="image-plus" size="28" />
+            <text>暂无封面</text>
           </view>
-        </scroll-view>
-      </swiper-item>
-    </swiper>
-  </view>
+        </view>
+        <view class="activity-card__body">
+          <view class="activity-card__name">{{item.name}}</view>
+          <view wx:if="{{item.introduction}}" class="activity-card__introduction">{{item.introduction}}</view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 

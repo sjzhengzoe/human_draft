@@ -39,19 +39,12 @@ function sortActivityItems(items: ActivityItem[]): ActivityItem[] {
   )
 }
 
-const browseIndices: Record<ActivityType, number> = {
-  室内: 0,
-  户外: 0,
-  居家: 0
-}
-
 Page({
   data: {
     activityTypes: ACTIVITY_TYPES,
     activeType: "室内" as ActivityType,
     itemsByType: emptyActivityItemsByType(),
     items: [] as ActivityItem[],
-    browseCurrentIndex: 0,
     canWrite: false,
     loading: true,
     hasLoaded: false,
@@ -81,16 +74,10 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
-    for (const type of ACTIVITY_TYPES) browseIndices[type] = 0
   },
 
-  async loadItems(
-    focusId = "",
-    focusType?: ActivityType,
-    silent = false
-  ) {
+  async loadItems(silent = false) {
     const generation = beginAsyncPageRequest(this)
-    const requestedFocusType = focusType || this.data.activeType
     const showInitialLoading = !silent && !this.data.hasLoaded
     if (showInitialLoading) this.setData({ loading: true })
     try {
@@ -100,20 +87,10 @@ Page({
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const itemsByType = groupActivityItems(items)
-      for (const type of ACTIVITY_TYPES) {
-        const typedItems = itemsByType[type]
-        const focusedIndex = focusId && type === requestedFocusType
-          ? typedItems.findIndex((item) => item.id === focusId)
-          : -1
-        browseIndices[type] = focusedIndex >= 0
-          ? focusedIndex
-          : Math.min(browseIndices[type], Math.max(0, typedItems.length - 1))
-      }
       const activeType = this.data.activeType
       this.setData({
         itemsByType,
         items: itemsByType[activeType],
-        browseCurrentIndex: browseIndices[activeType],
         canWrite: session.user.can_write,
         hasLoaded: true
       })
@@ -134,23 +111,10 @@ Page({
     const type = event.currentTarget.dataset.type as ActivityType
     if (!type || type === this.data.activeType) return
     const items = this.data.itemsByType[type]
-    const browseCurrentIndex = Math.min(
-      browseIndices[type],
-      Math.max(0, items.length - 1)
-    )
-    browseIndices[type] = browseCurrentIndex
     this.setData({
       activeType: type,
-      items,
-      browseCurrentIndex
+      items
     })
-  },
-
-  handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
-    const current = Number(event.detail.current)
-    if (!Number.isInteger(current) || current < 0 || current >= this.data.items.length) return
-    browseIndices[this.data.activeType] = current
-    if (current !== this.data.browseCurrentIndex) this.setData({ browseCurrentIndex: current })
   },
 
   handleAdd() {
@@ -207,16 +171,10 @@ Page({
       ...itemsByType[item.activity_type],
       item
     ])
-    const browseCurrentIndex = Math.max(
-      0,
-      itemsByType[item.activity_type].findIndex((entry) => entry.id === item.id)
-    )
-    browseIndices[item.activity_type] = browseCurrentIndex
     this.setData({
       activeType: item.activity_type,
       itemsByType,
-      items: itemsByType[item.activity_type],
-      browseCurrentIndex
+      items: itemsByType[item.activity_type]
     })
   },
 
@@ -224,16 +182,11 @@ Page({
     const itemsByType = emptyActivityItemsByType()
     for (const type of ACTIVITY_TYPES) {
       itemsByType[type] = this.data.itemsByType[type].filter((item) => item.id !== id)
-      browseIndices[type] = Math.min(
-        browseIndices[type],
-        Math.max(0, itemsByType[type].length - 1)
-      )
     }
     const activeType = this.data.activeType
     this.setData({
       itemsByType,
-      items: itemsByType[activeType],
-      browseCurrentIndex: browseIndices[activeType]
+      items: itemsByType[activeType]
     })
   },
 
@@ -336,7 +289,7 @@ Page({
         selectedImagePath: "",
         currentImageUrl: ""
       })
-      void this.loadItems(item.id, item.activity_type, true)
+      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -367,7 +320,6 @@ Page({
     const source = this.data.items[index]
     const target = this.data.items[targetIndex]
     if (!source || !target) return
-    const visibleId = this.data.items[this.data.browseCurrentIndex]?.id || ""
     this.setData({ ordering: true })
     try {
       await swapActivityItemSortOrders(source.id, target.id)
@@ -375,14 +327,12 @@ Page({
       const items = [...this.data.items]
       items[index] = target
       items[targetIndex] = source
-      const browseCurrentIndex = Math.max(0, items.findIndex((item) => item.id === visibleId))
-      browseIndices[this.data.activeType] = browseCurrentIndex
       const itemsByType = {
         ...this.data.itemsByType,
         [this.data.activeType]: items
       }
-      this.setData({ itemsByType, items, browseCurrentIndex })
-      void this.loadItems(visibleId, this.data.activeType, true)
+      this.setData({ itemsByType, items })
+      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -431,7 +381,7 @@ Page({
         pendingDeleteName: ""
       })
       this.removeActivityItemFromCache(id)
-      void this.loadItems("", this.data.activeType, true)
+      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
