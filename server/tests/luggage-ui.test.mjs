@@ -84,16 +84,48 @@ test("luggage empty states stay compact without blocking future item creation", 
 });
 
 test("luggage business dialogs use the shared app dialog", async () => {
-  const [page, editPage, logic, editLogic] = await Promise.all([
+  const [page, managerPage, sceneDialog, editPage, logic, managerLogic, editLogic] = await Promise.all([
     readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/scenes/index.wxml", "utf8"),
+    readFile("src/components/luggage-scene-dialog/index.wxml", "utf8"),
     readFile("src/pages/luggage/scene-edit/index.wxml", "utf8"),
     readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/pages/luggage/scenes/index.ts", "utf8"),
     readFile("src/pages/luggage/scene-edit/index.ts", "utf8"),
   ]);
 
   assert.match(page, /<app-dialog/);
   assert.match(editPage, /<app-dialog/);
-  assert.doesNotMatch(`${logic}\n${editLogic}`, /wx\.showModal/);
+  assert.match(page, /<luggage-scene-dialog/);
+  assert.match(managerPage, /<luggage-scene-dialog/);
+  assert.match(sceneDialog, /<app-dialog/);
+  assert.doesNotMatch(`${logic}\n${managerLogic}\n${editLogic}`, /wx\.showModal/);
+});
+
+test("both luggage scene add actions create from the shared dialog without navigation", async () => {
+  const [page, managerPage, editPage, logic, managerLogic, editLogic, dialog] = await Promise.all([
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/scenes/index.wxml", "utf8"),
+    readFile("src/pages/luggage/scene-edit/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/pages/luggage/scenes/index.ts", "utf8"),
+    readFile("src/pages/luggage/scene-edit/index.ts", "utf8"),
+    readFile("src/components/luggage-scene-dialog/index.wxml", "utf8"),
+  ]);
+
+  assert.match(dialog, /title="新增行李场景"/);
+  assert.match(dialog, /placeholder="例如：成都三日游"/);
+  assert.match(dialog, /maxlength="80"/);
+  assert.match(page, /bindconfirm="createScene"/);
+  assert.match(managerPage, /bindconfirm="createScene"/);
+  assert.match(logic, /const scene = await createLuggageScene\(name\)/);
+  assert.match(logic, /activeSceneId: scene\.id[\s\S]*?await this\.loadScenes\(\)/);
+  assert.match(managerLogic, /const scene = await createLuggageScene\(name\)/);
+  assert.match(managerLogic, /scenes: \[\.\.\.this\.data\.scenes/);
+  assert.doesNotMatch(logic, /navigateTo\(\{ url: "\/pages\/luggage\/scene-edit\/index" \}\)/);
+  assert.doesNotMatch(managerLogic, /navigateTo\(\{ url: "\/pages\/luggage\/scene-edit\/index" \}\)/);
+  assert.doesNotMatch(editLogic, /createLuggageScene/);
+  assert.doesNotMatch(editPage, /新增场景|创建场景|新增行李场景/);
 });
 
 test("luggage pages use only shared business typography sizes", async () => {

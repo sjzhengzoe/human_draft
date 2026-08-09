@@ -1,5 +1,6 @@
 import { ensureLogin } from "../../services/auth"
 import {
+  createLuggageScene,
   createLuggageGroup,
   createLuggageItem,
   deleteLuggageGroup,
@@ -202,6 +203,8 @@ Page({
     errorMessage: "",
     ordering: false,
     saving: false,
+    sceneCreating: false,
+    sceneCreateVisible: false,
     deleting: false,
     sortEditing: false,
     editorVisible: false,
@@ -352,12 +355,39 @@ Page({
   },
 
   handleAddScene() {
-    if (!this.data.canWrite || this.data.contentLoading) return
+    if (!this.data.canWrite || this.data.contentLoading || this.data.sceneCreating) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    wx.navigateTo({ url: "/pages/luggage/scene-edit/index" })
+    this.setData({ sceneCreateVisible: true })
+  },
+
+  closeSceneCreateDialog() {
+    if (!this.data.sceneCreating) this.setData({ sceneCreateVisible: false })
+  },
+
+  async createScene(event: WechatMiniprogram.CustomEvent<{ name?: string }>) {
+    const name = String(event.detail.name || "").trim()
+    if (!name || this.data.sceneCreating) return
+    this.setData({ sceneCreating: true })
+    try {
+      const scene = await createLuggageScene(name)
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        sceneCreateVisible: false,
+        activeSceneId: scene.id,
+        packingView: "unpacked"
+      })
+      await this.loadScenes()
+      if (isAsyncPageActive(this)) wx.showToast({ title: "场景已创建", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "创建失败", icon: "none" })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ sceneCreating: false })
+    }
   },
 
   handleManageScenes() {

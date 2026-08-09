@@ -80,5 +80,13 @@
     </view>
   </scroll-view>
 
+  <luggage-scene-dialog
+    wx:if="{{sceneCreateVisible}}"
+    visible="{{true}}"
+    saving="{{sceneCreating}}"
+    bindcancel="closeSceneCreateDialog"
+    bindconfirm="createScene"
+  />
+
   <operation-loading visible="{{savingOrder}}" text="正在保存排序…" />
 </view>

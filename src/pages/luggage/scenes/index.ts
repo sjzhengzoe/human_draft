@@ -1,4 +1,8 @@
-import { listLuggageScenes, reorderLuggageScenes } from "../../../services/luggage"
+import {
+  createLuggageScene,
+  listLuggageScenes,
+  reorderLuggageScenes
+} from "../../../services/luggage"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -16,6 +20,8 @@ Page({
     scenes: [] as Array<{ id: string; name: string; group_count: number; item_count: number }>,
     loading: true,
     hasLoaded: false,
+    sceneCreating: false,
+    sceneCreateVisible: false,
     savingOrder: false,
     sortEditing: false,
     luggageRevision: -1,
@@ -59,16 +65,47 @@ Page({
   },
 
   handleAdd() {
-    if (this.data.savingOrder) return
+    if (this.data.savingOrder || this.data.sceneCreating) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    wx.navigateTo({ url: "/pages/luggage/scene-edit/index" })
+    this.setData({ sceneCreateVisible: true })
+  },
+
+  closeSceneCreateDialog() {
+    if (!this.data.sceneCreating) this.setData({ sceneCreateVisible: false })
+  },
+
+  async createScene(event: WechatMiniprogram.CustomEvent<{ name?: string }>) {
+    const name = String(event.detail.name || "").trim()
+    if (!name || this.data.sceneCreating) return
+    this.setData({ sceneCreating: true })
+    try {
+      const scene = await createLuggageScene(name)
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        scenes: [...this.data.scenes, {
+          id: scene.id,
+          name: scene.name,
+          group_count: scene.groups.length,
+          item_count: scene.groups.reduce((total, group) => total + group.items.length, 0)
+        }],
+        sceneCreateVisible: false,
+        luggageRevision: getLuggageDataRevision()
+      })
+      wx.showToast({ title: "场景已创建", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "创建失败", icon: "none" })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ sceneCreating: false })
+    }
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.savingOrder || this.data.sortEditing) return
+    if (this.data.savingOrder || this.data.sceneCreating || this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
     if (id) wx.navigateTo({ url: `/pages/luggage/scene-edit/index?id=${id}` })
   },
@@ -87,7 +124,10 @@ Page({
   },
 
   async handleSortEditingToggle() {
-    if (this.data.savingOrder || this.data.loading || this.data.scenes.length < 2) return
+    if (
+      this.data.savingOrder || this.data.sceneCreating ||
+      this.data.loading || this.data.scenes.length < 2
+    ) return
     if (!this.data.sortEditing) {
       luggageSceneSortOriginalIds = this.data.scenes.map((scene) => scene.id)
       this.setData({ sortEditing: true })

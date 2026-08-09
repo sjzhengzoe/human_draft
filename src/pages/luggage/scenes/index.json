@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "行李场景",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "luggage-scene-dialog": "/components/luggage-scene-dialog/index"
+  }
 }

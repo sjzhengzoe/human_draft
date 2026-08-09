@@ -1,0 +1,30 @@
+<app-dialog
+  wx:if="{{visible}}"
+  visible="{{true}}"
+  title="新增行李场景"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body" class="scene-dialog__body">
+    <app-input
+      custom-class="scene-dialog__input"
+      value="{{name}}"
+      maxlength="80"
+      placeholder="例如：成都三日游"
+      focus
+      adjust-position="{{false}}"
+      disabled="{{saving}}"
+      bindinput="handleNameInput"
+      bindconfirm="handleConfirm"
+    />
+  </view>
+  <view slot="actions" class="scene-dialog__actions">
+    <button class="scene-dialog__button" disabled="{{saving}}" bindtap="handleCancel">取消</button>
+    <button
+      class="scene-dialog__button scene-dialog__button--primary"
+      loading="{{saving}}"
+      disabled="{{saving || !canSave}}"
+      bindtap="handleConfirm"
+    >创建</button>
+  </view>
+</app-dialog>

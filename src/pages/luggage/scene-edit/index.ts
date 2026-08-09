@@ -1,5 +1,4 @@
 import {
-  createLuggageScene,
   deleteLuggageScene,
   listLuggageScenes,
   updateLuggageScene
@@ -30,9 +29,16 @@ Page({
   onLoad(query: Record<string, string | undefined>) {
     activateAsyncPage(this)
     this.setData({ id: query.id || "" })
-    wx.setNavigationBarTitle({ title: this.data.id ? "编辑行李场景" : "新增行李场景" })
-    if (this.data.id) this.loadScene()
-    else this.setData({ loading: false })
+    wx.setNavigationBarTitle({ title: "编辑行李场景" })
+    if (this.data.id) {
+      void this.loadScene()
+      return
+    }
+    this.setData({
+      loading: false,
+      loadErrorVisible: true,
+      loadErrorMessage: "场景不存在"
+    })
   },
 
   onUnload() {
@@ -74,11 +80,10 @@ Page({
       wx.showToast({ title: "请输入场景名称", icon: "none" })
       return
     }
-    if (this.data.saving || this.data.deleting) return
+    if (!this.data.id || this.data.saving || this.data.deleting) return
     this.setData({ saving: true })
     try {
-      if (this.data.id) await updateLuggageScene(this.data.id, name)
-      else await createLuggageScene(name)
+      await updateLuggageScene(this.data.id, name)
       if (isAsyncPageActive(this)) wx.navigateBack()
     } catch (error) {
       if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })

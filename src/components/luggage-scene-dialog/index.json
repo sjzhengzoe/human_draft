@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "app-dialog": "/components/app-dialog/index",
+    "app-input": "/components/app-input/index"
+  }
+}

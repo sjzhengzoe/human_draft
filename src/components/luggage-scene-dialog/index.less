@@ -1,0 +1,46 @@
+.scene-dialog__body {
+  padding-top: 2rpx;
+}
+
+.scene-dialog__input {
+  height: 76rpx;
+  box-sizing: border-box;
+  padding: 0 20rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-color-background-page);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.scene-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.scene-dialog__button {
+  display: flex;
+  width: 100% !important;
+  height: 76rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 16rpx;
+  border-radius: 38rpx;
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.scene-dialog__button::after {
+  border: 0;
+}
+
+.scene-dialog__button--primary {
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+}

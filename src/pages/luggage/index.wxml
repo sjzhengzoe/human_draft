@@ -288,6 +288,14 @@
     </view>
   </app-dialog>
 
+  <luggage-scene-dialog
+    wx:if="{{sceneCreateVisible}}"
+    visible="{{true}}"
+    saving="{{sceneCreating}}"
+    bindcancel="closeSceneCreateDialog"
+    bindconfirm="createScene"
+  />
+
   <app-dialog
     wx:if="{{groupPickerVisible}}"
     visible="{{true}}"
