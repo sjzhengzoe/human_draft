@@ -231,12 +231,10 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       },
     },
     methods: {
-      handleTemplateChange(
-        event: WechatMiniprogram.CustomEvent<{ template?: string }>,
-      ) {
-        if (this.data.isGenerating) return;
+      prepareTemplateSwitch() {
+        if (this.data.isGenerating) return false;
         this.finalizeClearUndo();
-        this.triggerEvent("templatechange", event.detail);
+        return true;
       },
 
       handleCopyTemplate() {

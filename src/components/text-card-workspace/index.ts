@@ -1,13 +1,6 @@
 Component({
-  data: {
-    templates: [
-      { key: "xiaohongshu", label: "模板一" },
-      { key: "douyin2", label: "模板二" },
-      { key: "douyin3", label: "模板三" },
-    ],
-  },
-
   properties: {
+    embedded: { type: Boolean, value: false },
     activeTemplate: { type: String, value: "xiaohongshu" },
     disabled: { type: Boolean, value: false },
     isExampleContent: { type: Boolean, value: false },
@@ -33,11 +26,10 @@ Component({
   },
 
   methods: {
-    handleTemplateTap(event: WechatMiniprogram.TouchEvent) {
-      if (this.data.disabled) return;
-      const template = event.currentTarget.dataset.template;
-      if (!template || template === this.data.activeTemplate) return;
-      this.triggerEvent("templatechange", { template });
+    handleTemplateChange(
+      event: WechatMiniprogram.CustomEvent<{ template?: string }>,
+    ) {
+      this.triggerEvent("templatechange", event.detail);
     },
 
     handleCopyTemplate() {

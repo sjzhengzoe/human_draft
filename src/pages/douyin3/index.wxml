@@ -1,4 +1,5 @@
 <text-card-workspace
+  embedded="{{true}}"
   active-template="douyin3"
   variant="douyin3"
   disabled="{{isGenerating || selectingImage}}"
@@ -19,7 +20,6 @@
   selected-image-paths="{{selectedImagePaths}}"
   selecting-image="{{selectingImage}}"
   selecting-image-index="{{selectingImageIndex}}"
-  bind:templatechange="handleTemplateChange"
   bind:copytemplate="handleCopyTemplate"
   bind:swiperchange="handleSwiperChange"
   bind:retrypreview="retryPreview"

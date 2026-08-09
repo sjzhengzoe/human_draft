@@ -1,6 +1,38 @@
-.text-card-page,
-.text-card-page__template {
+.text-card-page {
+  display: flex;
   height: 100vh;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
   background: var(--ui-page-background);
+}
+
+.text-card-page__navigation,
+.text-card-page__switch {
+  flex: none;
+}
+
+.text-card-page__switch {
+  padding: 28rpx var(--ui-page-gutter) 28rpx;
+}
+
+.text-card-page__content {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.text-card-page__template {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+@media (max-height: 700px) {
+  .text-card-page__switch {
+    padding-top: 20rpx;
+    padding-bottom: 20rpx;
+  }
 }

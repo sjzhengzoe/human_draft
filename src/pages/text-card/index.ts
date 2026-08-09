@@ -17,6 +17,11 @@ Component({
       const template = normalizeTemplate(event.detail.template);
       if (!template || template === this.data.activeTemplate) return;
 
+      const currentTemplate = this.selectComponent(
+        `#text-card-template-${this.data.activeTemplate}`,
+      ) as unknown as { prepareTemplateSwitch?: () => boolean };
+      if (currentTemplate?.prepareTemplateSwitch?.() === false) return;
+
       this.setData({
         activeTemplate: template,
         [`mountedTemplates.${template}`]: true,

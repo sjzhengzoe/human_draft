@@ -4,6 +4,7 @@ import test from "node:test"
 import ts from "typescript"
 
 const projectRoot = new URL("../../", import.meta.url)
+let moduleLoadCount = 0
 
 function readProjectFile(path) {
   return readFile(new URL(path, projectRoot), "utf8")
@@ -21,7 +22,9 @@ async function loadHostDefinition() {
   globalThis.Component = (value) => {
     definition = value
   }
-  await import(`data:text/javascript;base64,${Buffer.from(output).toString("base64")}`)
+  await import(
+    `data:text/javascript;base64,${Buffer.from(output).toString("base64")}#${moduleLoadCount++}`
+  )
   return definition
 }
 
@@ -30,6 +33,9 @@ test("template switching changes host state without navigating", async () => {
   const updates = []
   const context = {
     data: { activeTemplate: "xiaohongshu" },
+    selectComponent() {
+      return { prepareTemplateSwitch: () => true }
+    },
     setData(update) {
       updates.push(update)
     }
@@ -51,34 +57,59 @@ test("template switching changes host state without navigating", async () => {
   )
 })
 
-test("the host lazily mounts and then preserves all three templates", async () => {
-  const [app, homeModules, hostTemplate, hostConfig] = await Promise.all([
+test("the host keeps one persistent switch and preserves all three templates", async () => {
+  const [app, homeModules, hostTemplate, hostConfig, switchTemplate] = await Promise.all([
     readProjectFile("src/app.json"),
     readProjectFile("src/utils/home-modules.js"),
     readProjectFile("src/pages/text-card/index.wxml"),
-    readProjectFile("src/pages/text-card/index.json")
+    readProjectFile("src/pages/text-card/index.json"),
+    readProjectFile("src/components/text-card-template-switch/index.wxml")
   ])
 
   assert.ok(JSON.parse(app).pages.includes("pages/text-card/index"))
   assert.match(homeModules, /path: "\/pages\/text-card\/index"/)
   assert.equal(hostTemplate.match(/wx:if="\{\{mountedTemplates\./g)?.length, 3)
   assert.equal(hostTemplate.match(/hidden="\{\{activeTemplate !==/g)?.length, 3)
-  assert.equal(hostTemplate.match(/bind:templatechange="handleTemplateChange"/g)?.length, 3)
+  assert.equal(hostTemplate.match(/bind:change="handleTemplateChange"/g)?.length, 1)
+  assert.ok(hostTemplate.indexOf("text-card-template-switch") < hostTemplate.indexOf("text-card-page__content"))
+  assert.equal(switchTemplate.match(/bindtap="handleTap"/g)?.length, 1)
   assert.deepEqual(Object.keys(JSON.parse(hostConfig).usingComponents), [
+    "text-card-template-switch",
     "text-card-template-one",
     "text-card-template-two",
     "text-card-template-three"
   ])
 })
 
-test("template components only report the selected value to the host", async () => {
+test("template components expose a guarded switch hook to the host", async () => {
   for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
     const [logic, config] = await Promise.all([
       readProjectFile(`src/pages/${page}/index.ts`),
       readProjectFile(`src/pages/${page}/index.json`)
     ])
-    assert.match(logic, /this\.triggerEvent\("templatechange", event\.detail\)/)
-    assert.doesNotMatch(logic, /switchTextCardTemplate|redirectToTextCardTemplate/)
+    assert.match(logic, /prepareTemplateSwitch\(\)/)
+    assert.match(logic, /return false/)
+    assert.doesNotMatch(logic, /triggerEvent\("templatechange"|switchTextCardTemplate|redirectToTextCardTemplate/)
     assert.equal(JSON.parse(config).component, true)
   }
+})
+
+test("the persistent switch respects an active template busy state", async () => {
+  const definition = await loadHostDefinition()
+  const updates = []
+  const context = {
+    data: { activeTemplate: "xiaohongshu" },
+    selectComponent() {
+      return { prepareTemplateSwitch: () => false }
+    },
+    setData(update) {
+      updates.push(update)
+    }
+  }
+
+  definition.methods.handleTemplateChange.call(context, {
+    detail: { template: "douyin2" }
+  })
+
+  assert.deepEqual(updates, [])
 })

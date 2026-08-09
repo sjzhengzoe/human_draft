@@ -1,4 +1,5 @@
 <text-card-workspace
+  embedded="{{true}}"
   active-template="xiaohongshu"
   disabled="{{isGenerating}}"
   is-example-content="{{isExampleContent}}"
@@ -16,7 +17,6 @@
   action-label="小红书图文操作"
   show-append="{{true}}"
   show-clear-undo="{{showClearUndo}}"
-  bind:templatechange="handleTemplateChange"
   bind:copytemplate="handleCopyTemplate"
   bind:swiperchange="handleSwiperChange"
   bind:retrypreview="retryPreview"

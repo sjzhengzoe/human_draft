@@ -1,6 +1,6 @@
 :host {
   display: block;
-  height: 100vh;
+  height: 100%;
 }
 
 .creation-screen {
@@ -10,6 +10,10 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--ui-page-background);
+}
+
+.creation-screen--embedded {
+  height: 100%;
 }
 
 .creation-navigation {
@@ -28,42 +32,9 @@
   background: var(--ui-page-background);
 }
 
-.template-switch {
-  display: flex;
+.page > text-card-template-switch {
   flex: none;
-  gap: 12rpx;
   margin-bottom: 28rpx;
-  padding: 14rpx;
-  border-radius: 999rpx;
-  background: #e9e9e9;
-}
-
-.template-switch__item {
-  display: flex;
-  height: 72rpx;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  color: #777772;
-  font-size: var(--ui-font-size-base);
-  font-weight: 500;
-  line-height: normal;
-}
-
-.template-switch__item--active {
-  background: #111111;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.14);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.template-switch--disabled {
-  opacity: 0.72;
-}
-
-.template-switch--disabled .template-switch__item {
-  pointer-events: none;
 }
 
 .example-notice {
@@ -293,6 +264,14 @@
   padding-top: 48rpx;
 }
 
+.page--embedded {
+  padding-top: 0;
+}
+
+.page--embedded.page--douyin3 {
+  padding-top: 20rpx;
+}
+
 .page--douyin3 .card-item {
   box-sizing: border-box;
   border: 0;
@@ -373,12 +352,8 @@
     padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
   }
 
-  .template-switch {
+  .page > text-card-template-switch {
     margin-bottom: 20rpx;
-  }
-
-  .template-switch__item {
-    height: 64rpx;
   }
 
   .card-item {

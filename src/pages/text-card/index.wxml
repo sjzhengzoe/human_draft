@@ -1,25 +1,38 @@
 <view class="text-card-page">
-  <view
-    wx:if="{{mountedTemplates.xiaohongshu}}"
-    hidden="{{activeTemplate !== 'xiaohongshu'}}"
-    class="text-card-page__template"
-  >
-    <text-card-template-one bind:templatechange="handleTemplateChange" />
+  <view class="text-card-page__navigation">
+    <custom-navigation title="图文卡片" />
   </view>
 
-  <view
-    wx:if="{{mountedTemplates.douyin2}}"
-    hidden="{{activeTemplate !== 'douyin2'}}"
-    class="text-card-page__template"
-  >
-    <text-card-template-two bind:templatechange="handleTemplateChange" />
+  <view class="text-card-page__switch">
+    <text-card-template-switch
+      active-template="{{activeTemplate}}"
+      bind:change="handleTemplateChange"
+    />
   </view>
 
-  <view
-    wx:if="{{mountedTemplates.douyin3}}"
-    hidden="{{activeTemplate !== 'douyin3'}}"
-    class="text-card-page__template"
-  >
-    <text-card-template-three bind:templatechange="handleTemplateChange" />
+  <view class="text-card-page__content">
+    <view
+      wx:if="{{mountedTemplates.xiaohongshu}}"
+      hidden="{{activeTemplate !== 'xiaohongshu'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-one id="text-card-template-xiaohongshu" />
+    </view>
+
+    <view
+      wx:if="{{mountedTemplates.douyin2}}"
+      hidden="{{activeTemplate !== 'douyin2'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-two id="text-card-template-douyin2" />
+    </view>
+
+    <view
+      wx:if="{{mountedTemplates.douyin3}}"
+      hidden="{{activeTemplate !== 'douyin3'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-three id="text-card-template-douyin3" />
+    </view>
   </view>
 </view>

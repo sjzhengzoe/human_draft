@@ -1,4 +1,5 @@
 <text-card-workspace
+  embedded="{{true}}"
   active-template="douyin2"
   disabled="{{isGenerating}}"
   is-example-content="{{isExampleContent}}"
@@ -14,7 +15,6 @@
   export-ready="{{hasCustomContent && !isRenderingCards && !renderError && renderedImageUrls.length === pages.length}}"
   action-label="抖音短句操作"
   show-clear-undo="{{showClearUndo}}"
-  bind:templatechange="handleTemplateChange"
   bind:copytemplate="handleCopyTemplate"
   bind:swiperchange="handleSwiperChange"
   bind:retrypreview="retryPreview"
