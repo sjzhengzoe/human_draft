@@ -49,18 +49,19 @@
 
   <view wx:elif="{{activeScene}}" class="packing-content">
     <view class="packing-overview">
+      <view class="packing-overview__topline">
+        <view class="packing-overview__label">收拾进度</view>
+        <view
+          wx:if="{{activePackedCount > 0 && !sortEditing}}"
+          class="packing-reset"
+          role="button"
+          aria-label="重新开始当前场景"
+          bindtap="openPackingResetConfirm"
+        ><app-icon name="rotate-ccw-white" size="25" /></view>
+      </view>
       <view class="packing-overview__summary">
         <view class="packing-overview__title">{{activeItemCount === 0 ? '清单还没有物品' : activeUnpackedCount ? '还剩 ' + activeUnpackedCount + ' 件未装' : '已经全部装好'}}</view>
-        <view class="packing-overview__meta">
-          <view class="packing-overview__count">{{activePackedCount}} / {{activeItemCount}}</view>
-          <view
-            wx:if="{{activePackedCount > 0 && !sortEditing}}"
-            class="packing-reset"
-            role="button"
-            aria-label="重新开始当前场景"
-            bindtap="openPackingResetConfirm"
-          ><app-icon name="rotate-ccw" size="25" /></view>
-        </view>
+        <view class="packing-overview__count">{{activePackedCount}} / {{activeItemCount}}</view>
       </view>
       <view class="packing-progress">
         <view class="packing-progress__value" style="width: {{activePackingPercent}}%;" />

@@ -80,13 +80,13 @@ page,
 
 .packing-overview {
   flex: 0 0 auto;
-  padding: 20rpx 22rpx;
-  border: 1rpx solid var(--ui-color-border-strong);
+  padding: 22rpx;
   border-radius: var(--ui-radius-card);
-  background: var(--ui-color-background-subtle);
-  box-shadow: 0 4rpx 16rpx var(--ui-color-shadow-subtle);
+  background: var(--luggage-color-overview-background);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-soft);
 }
 
+.packing-overview__topline,
 .packing-overview__summary {
   display: flex;
   align-items: center;
@@ -94,36 +94,40 @@ page,
   gap: 18rpx;
 }
 
+.packing-overview__topline {
+  min-height: 58rpx;
+}
+
+.packing-overview__label {
+  color: var(--ui-color-text-inverse-muted);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .packing-reset {
-  border: 1rpx solid var(--ui-color-border);
   border-radius: 50%;
-  background: var(--ui-color-background-surface);
+  background: var(--ui-color-surface-faint);
 }
 
 .packing-overview__title {
   min-width: 0;
-  color: var(--ui-color-text-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-large);
   font-weight: 700;
   line-height: 1.35;
 }
 
-.packing-overview__meta {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8rpx;
+.packing-overview__summary {
+  margin-top: 10rpx;
+  align-items: baseline;
 }
 
 .packing-overview__count {
   flex: 0 0 auto;
-  padding: 7rpx 14rpx;
-  border-radius: var(--ui-radius-pill);
-  background: var(--ui-color-action-primary);
-  color: var(--ui-color-text-inverse);
+  color: var(--ui-color-text-inverse-muted);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
-  line-height: 1.3;
 }
 
 .packing-progress {
@@ -131,13 +135,13 @@ page,
   margin-top: 20rpx;
   overflow: hidden;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-color-border-strong);
+  background: var(--ui-color-surface-faint);
 }
 
 .packing-progress__value {
   height: 100%;
   border-radius: inherit;
-  background: var(--ui-color-action-primary);
+  background: var(--ui-color-text-inverse);
   transition: width .18s ease;
 }
 
