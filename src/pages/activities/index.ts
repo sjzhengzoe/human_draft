@@ -15,6 +15,7 @@ import {
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
 import { hasSameOrder } from "../../utils/drag-sort"
+import { UI_COLORS } from "../../styles/colors"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
 let activitySortOriginalIds: string[] = []
@@ -209,7 +210,7 @@ Page({
       title: "删除活动",
       content: "删除后无法恢复。",
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!isAsyncPageActive(this)) return
         if (!result.confirm) {

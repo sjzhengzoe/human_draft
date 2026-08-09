@@ -15,8 +15,8 @@
   width: 100%;
 }
 
-.profile-login-button { display: flex; width: 96rpx; height: 52rpx; box-sizing: border-box; flex: 0 0 96rpx; align-items: center; justify-content: center; padding: 0; border-radius: 26rpx; background: #20241f; color: #fff; font-size: var(--ui-font-size-base); font-weight: 600; line-height: normal; }
-.profile-login-button--logout { border: 1rpx solid var(--ui-border); background: var(--ui-surface); color: #777777; }
+.profile-login-button { display: flex; width: 96rpx; height: 52rpx; box-sizing: border-box; flex: 0 0 96rpx; align-items: center; justify-content: center; padding: 0; border-radius: 26rpx; background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); font-size: var(--ui-font-size-base); font-weight: 600; line-height: normal; }
+.profile-login-button--logout { border: 1rpx solid var(--ui-border); background: var(--ui-surface); color: var(--ui-color-text-muted); }
 
 .profile-card {
   display: flex;
@@ -29,11 +29,11 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
-  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.03);
+  box-shadow: 0 10rpx 28rpx var(--ui-color-shadow-subtle);
 }
 
 .profile-card--accent {
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: var(--ui-color-shadow);
 }
 
 .profile-avatar,
@@ -44,16 +44,16 @@
   box-sizing: border-box;
   border: 4rpx solid var(--ui-surface);
   border-radius: 50%;
-  background: #e9e9e9;
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.07);
+  background: var(--ui-color-background-subtle);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow);
 }
 
 .profile-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e9e9e9;
-  color: #354036;
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-default);
   font-size: 38rpx;
   font-weight: 700;
   line-height: 1;
@@ -67,7 +67,7 @@
 .profile-name {
   min-width: 0;
   overflow: hidden;
-  color: #1a1e19;
+  color: var(--ui-color-text-strong);
   font-size: 32rpx;
   font-weight: 650;
   line-height: 1.35;
@@ -76,13 +76,13 @@
 }
 
 .profile-main { min-width: 0; flex: 1; }
-.profile-role { display: inline-flex; margin-top: 10rpx; padding: 7rpx 14rpx; border-radius: 999rpx; background: var(--ui-subtle-background); color: #777777; font-size: 21rpx; }
+.profile-role { display: inline-flex; margin-top: 10rpx; padding: 7rpx 14rpx; border-radius: 999rpx; background: var(--ui-subtle-background); color: var(--ui-color-text-muted); font-size: 21rpx; }
 
 .settings-section { margin-top: 32rpx; }
 
 .settings-section__title {
   padding: 16rpx 8rpx;
-  color: #686868;
+  color: var(--ui-color-text-subtle);
   font-size: 23rpx;
   font-weight: 500;
   line-height: 1.4;
@@ -93,7 +93,7 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.02);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
 }
 
 .settings-item {
@@ -110,7 +110,7 @@
 .settings-item--hover { background: var(--ui-hover-background); }
 
 .settings-item__label {
-  color: #171a16;
+  color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
   line-height: 1.4;
 }
@@ -133,7 +133,7 @@
 .settings-item__value {
   max-width: 380rpx;
   overflow: hidden;
-  color: #707070;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -141,7 +141,7 @@
 }
 
 .settings-item__arrow {
-  color: #999999;
+  color: var(--ui-color-text-placeholder);
   font-size: 40rpx;
   line-height: 1;
 }
@@ -162,11 +162,11 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.025);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
 }
 
 .module-settings-item__title {
-  color: #171a16;
+  color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
   font-weight: 500;
   line-height: 1.4;
@@ -182,7 +182,7 @@
 
 .module-settings-section__title {
   padding: 12rpx 8rpx;
-  color: #686868;
+  color: var(--ui-color-text-subtle);
   font-size: 23rpx;
   font-weight: 500;
   line-height: 1.4;
@@ -220,7 +220,7 @@
   justify-content: center;
   border-radius: 13rpx;
   background: var(--ui-subtle-background);
-  color: #666666;
+  color: var(--ui-color-text-subtle);
 }
 
 .module-settings-switch {

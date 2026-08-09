@@ -12,6 +12,7 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { markMediaDataChanged } from "../../../utils/media-data-revision"
+import { UI_COLORS } from "../../../styles/colors"
 
 Page({
   data: {
@@ -83,7 +84,7 @@ Page({
       title: "删除分类",
       content: "只有分类下没有影视条目时才能删除。",
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!isAsyncPageActive(this)) return
         if (!result.confirm) {

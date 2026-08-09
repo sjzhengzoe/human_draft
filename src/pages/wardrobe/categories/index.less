@@ -12,7 +12,7 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow-subtle);
 }
 
 .overview__topline {
@@ -25,7 +25,7 @@
 .overview__title {
   min-width: 0;
   flex: 1;
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
   letter-spacing: 1rpx;
@@ -46,8 +46,8 @@
   margin: 0 !important;
   padding: 0 !important;
   border-radius: 999rpx !important;
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: normal;
@@ -83,7 +83,7 @@
 }
 
 .overview-stat__value {
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
   line-height: 1.2;
@@ -91,14 +91,14 @@
 
 .overview-stat__label {
   margin-top: 7rpx;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: 1.2;
 }
 
 .state {
   padding: 120rpx 0;
-  color: #888883;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   text-align: center;
 }
@@ -112,8 +112,8 @@
   margin: 22rpx auto 0;
   padding: 0 28rpx;
   border-radius: 999rpx;
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
@@ -137,12 +137,12 @@
   min-height: 48rpx;
   align-items: center;
   gap: 7rpx;
-  color: #555555;
+  color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-base);
 }
 
 .sort-toolbar__action--active {
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-weight: 600;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .category-card__name {
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
 }
@@ -175,7 +175,7 @@
 .category-card__fields {
   margin-top: 8rpx;
   overflow: hidden;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -195,7 +195,7 @@
   justify-content: center;
   border-radius: 12rpx;
   background: var(--ui-subtle-background);
-  color: #333330;
+  color: var(--ui-color-text-default);
 }
 
 .sort-control--disabled {
@@ -207,5 +207,5 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b3b3ae;
+  color: var(--ui-color-text-disabled);
 }

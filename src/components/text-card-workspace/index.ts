@@ -1,4 +1,10 @@
+import { UI_COLORS } from "../../styles/colors";
+
 Component({
+  data: {
+    themeColors: UI_COLORS,
+  },
+
   properties: {
     embedded: { type: Boolean, value: false },
     activeTemplate: { type: String, value: "xiaohongshu" },

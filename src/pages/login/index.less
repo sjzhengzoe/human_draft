@@ -14,10 +14,10 @@
   width: 100%;
   box-sizing: border-box;
   padding: 48rpx 44rpx 32rpx;
-  border: 1rpx solid rgba(34, 42, 32, 0.08);
+  border: 1rpx solid var(--ui-color-shadow);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
-  box-shadow: 0 12rpx 36rpx rgba(32, 36, 31, 0.045);
+  box-shadow: 0 12rpx 36rpx var(--ui-color-shadow-soft);
   text-align: center;
 }
 
@@ -38,7 +38,7 @@
 
 .login-title {
   margin-top: 18rpx;
-  color: #171a16;
+  color: var(--ui-color-text-primary);
   font-size: 34rpx;
   font-weight: 700;
   letter-spacing: 0.5rpx;
@@ -55,8 +55,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 42rpx;
-  background: #20241f;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: normal;
@@ -64,11 +64,11 @@
 
 .primary-button::after,
 .back-button::after { border: 0; }
-.primary-button[disabled] { background: #737871; color: #ffffff; }
+.primary-button[disabled] { background: var(--ui-color-background-disabled); color: var(--ui-color-text-inverse); }
 
 .error-message {
   margin-top: 22rpx;
-  color: #b6463d;
+  color: var(--ui-color-danger);
   font-size: var(--ui-font-size-base);
   line-height: 1.5;
 }
@@ -83,7 +83,7 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  color: #777c75;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }

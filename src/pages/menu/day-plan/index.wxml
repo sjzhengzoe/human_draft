@@ -1,4 +1,4 @@
-<custom-navigation title="一日三餐" background="#ffffff" />
+<custom-navigation title="一日三餐" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

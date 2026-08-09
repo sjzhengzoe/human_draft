@@ -3,6 +3,7 @@ import { ensureLogin } from "../../../services/auth"
 import { loadAppFont } from "../../../services/font-loader"
 import { listCategories, listDishes, updatePrintStatus } from "../../../services/menu"
 import type { Category, Dish } from "../../../types/api"
+import { MENU_PRINT_COLORS } from "../../../styles/colors"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -205,7 +206,7 @@ function drawWebCaption(
 
   context.textBaseline = "middle"
   context.font = `600 ${EYEBROW_FONT_SIZE}px "${META_FONT_FAMILY}"`
-  context.fillStyle = "rgba(48, 39, 32, 0.5)"
+  context.fillStyle = MENU_PRINT_COLORS.overlay
   drawCenteredLetterSpacedText(
     context,
     "TODAY'S PICK",
@@ -215,12 +216,12 @@ function drawWebCaption(
   )
 
   context.font = `normal ${DISH_NAME_FONT_SIZE}px "${DISH_FONT_FAMILY}"`
-  context.fillStyle = "#302720"
+  context.fillStyle = MENU_PRINT_COLORS.ink
   context.textAlign = "center"
   context.fillText(fitText(context, dish.name, CAPTION_WIDTH), centerX, dishNameY)
 
   context.font = `600 ${META_FONT_SIZE}px "${META_FONT_FAMILY}"`
-  context.fillStyle = "rgba(48, 39, 32, 0.46)"
+  context.fillStyle = MENU_PRINT_COLORS.mutedInk
   drawCenteredLetterSpacedText(
     context,
     `${dish.category?.name || "菜单"} · MENU IDEA`,
@@ -418,7 +419,7 @@ Page({
       canvas.width = A4_WIDTH
       canvas.height = A4_HEIGHT
       context.clearRect(0, 0, A4_WIDTH, A4_HEIGHT)
-      context.fillStyle = "#ffffff"
+      context.fillStyle = MENU_PRINT_COLORS.paper
       context.fillRect(0, 0, A4_WIDTH, A4_HEIGHT)
 
       const [backgroundImage, ...dishImages] = await Promise.all(
@@ -444,7 +445,7 @@ Page({
         drawWebCaption(context, dish, cardX, cardY)
       }
 
-      context.strokeStyle = "rgba(48, 39, 32, 0.18)"
+      context.strokeStyle = MENU_PRINT_COLORS.border
       context.lineWidth = CUT_MARK_LINE_WIDTH
       context.beginPath()
       context.moveTo(CARD_OFFSET_X + CARD_WIDTH, CUT_MARK_EDGE_INSET)

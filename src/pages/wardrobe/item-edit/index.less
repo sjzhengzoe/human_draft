@@ -36,13 +36,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #92928c;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
 }
 
 .image-field__plus {
   margin-bottom: 8rpx;
-  color: #555550;
+  color: var(--ui-color-text-secondary);
 }
 
 .image-field__hint {
@@ -51,8 +51,8 @@
   bottom: 18rpx;
   padding: 10rpx 18rpx;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.62);
-  color: #ffffff;
+  background: var(--ui-color-overlay-strong);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
 }
 
@@ -62,7 +62,7 @@
 
 .field__label,
 .size-field__label {
-  color: #555550;
+  color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
 }
@@ -74,10 +74,10 @@
   box-sizing: border-box;
   margin-top: 12rpx;
   padding: 0 22rpx;
-  border: 1rpx solid #dedede;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: 14rpx;
   background: var(--ui-page-background);
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
 }
 
@@ -88,7 +88,7 @@
 }
 
 .field__arrow {
-  color: #aaa9a4;
+  color: var(--ui-color-text-disabled);
 }
 
 .size-card {
@@ -96,21 +96,21 @@
 }
 
 .size-card__title {
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
 }
 
 .size-card__desc {
   margin-top: 8rpx;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: 1.45;
 }
 
 .size-empty {
   padding: 64rpx 0 32rpx;
-  color: #aaa9a4;
+  color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-base);
   text-align: center;
 }
@@ -156,13 +156,13 @@
 }
 
 .save-button {
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .delete-button {
   background: transparent;
-  color: #c9342f;
+  color: var(--ui-color-danger);
 }
 
 .save-button::after,

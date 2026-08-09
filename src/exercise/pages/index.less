@@ -19,7 +19,7 @@
   justify-content: center;
   padding: 0;
   background: transparent;
-  color: #666660;
+  color: var(--ui-color-text-subtle);
 }
 
 .pet-card,
@@ -28,7 +28,7 @@
 .action-section {
   border: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow-subtle);
 }
 
 .pet-card {
@@ -66,7 +66,7 @@
   min-height: 52rpx;
   align-items: center;
   justify-content: center;
-  color: #22221f;
+  color: var(--ui-color-text-strong);
   font-size: 27rpx;
   font-weight: 680;
   line-height: 1.3;
@@ -74,7 +74,7 @@
 
 .mini-calendar__title-arrow {
   margin-left: 8rpx;
-  color: #8f8f89;
+  color: var(--ui-color-text-placeholder);
   font-size: 20rpx;
   font-weight: 500;
   transform: translateY(-2rpx);
@@ -86,14 +86,14 @@
   height: 52rpx;
   align-items: center;
   justify-content: center;
-  color: #333330;
+  color: var(--ui-color-text-default);
   font-size: 42rpx;
   font-weight: 350;
   line-height: 1;
 }
 
 .mini-calendar__arrow--disabled {
-  color: #d0d0cb;
+  color: var(--ui-color-text-disabled);
 }
 
 .mini-calendar__weekdays,
@@ -104,7 +104,7 @@
 
 .mini-calendar__weekdays {
   margin-top: 16rpx;
-  color: #a1a19b;
+  color: var(--ui-color-text-placeholder);
   font-size: 19rpx;
   line-height: 32rpx;
   text-align: center;
@@ -143,7 +143,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #8c8c86;
+  color: var(--ui-color-text-placeholder);
   font-size: 19rpx;
   line-height: 36rpx;
   text-align: center;
@@ -151,18 +151,18 @@
 
 .calendar-day--today .calendar-day__pet-frame,
 .calendar-day--today .calendar-day__number {
-  box-shadow: 0 0 0 3rpx #20201e;
+  box-shadow: 0 0 0 3rpx var(--ui-color-action-primary-pressed);
 }
 
 .calendar-day--untracked .calendar-day__number {
-  color: #c8c8c3;
+  color: var(--ui-color-text-disabled);
 }
 
 .calendar-day__rest-mark {
   position: absolute;
   right: 0;
   bottom: -2rpx;
-  color: #aaa48f;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
   line-height: 1;
@@ -202,7 +202,7 @@
   padding: 7rpx 14rpx;
   border-radius: 999rpx;
   background: var(--ui-subtle-background);
-  color: #777771;
+  color: var(--ui-color-text-muted);
   font-size: 19rpx;
   text-align: center;
 }
@@ -222,7 +222,7 @@
 }
 
 .balance-heading {
-  color: #22221f;
+  color: var(--ui-color-text-strong);
   font-size: 27rpx;
   font-weight: 680;
   line-height: 1.3;
@@ -235,7 +235,7 @@
 }
 
 .task-row__value {
-  color: #171715;
+  color: var(--ui-color-text-primary);
   font-size: 30rpx;
   font-weight: 700;
   line-height: 1.2;
@@ -243,18 +243,18 @@
 
 .task-row__unit {
   margin-left: 6rpx;
-  color: #777772;
+  color: var(--ui-color-text-muted);
   font-size: 21rpx;
 }
 
 .task-row__hint {
   margin-right: 8rpx;
-  color: #a2a29c;
+  color: var(--ui-color-text-placeholder);
   font-size: 21rpx;
 }
 
 .task-row__status {
-  color: #22221f;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.4;
@@ -264,7 +264,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  color: #777772;
+  color: var(--ui-color-text-muted);
   font-size: 21rpx;
   line-height: 1.35;
   white-space: nowrap;
@@ -272,14 +272,14 @@
 
 .task-completion-summary__value {
   margin: 0 5rpx;
-  color: #171715;
+  color: var(--ui-color-text-primary);
   font-size: 29rpx;
   font-weight: 700;
 }
 
 .task-completion-summary__extra {
   margin-left: 8rpx;
-  color: #8d856f;
+  color: var(--exercise-color-rest);
   font-size: 19rpx;
 }
 
@@ -300,13 +300,13 @@
 .minutes-dialog-control {
   min-width: 0;
   flex: 1;
-  color: #171715;
+  color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
 }
 
 .minutes-dialog-input text {
   margin-left: 12rpx;
-  color: #888882;
+  color: var(--ui-color-text-muted);
   font-size: 21rpx;
 }
 
@@ -320,8 +320,8 @@
   width: 100% !important;
   margin: 0 !important;
   border-radius: 14rpx;
-  background: #f1f1ee;
-  color: #333330;
+  background: var(--ui-color-background-hover);
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
 }
@@ -331,8 +331,8 @@
 }
 
 .minutes-dialog-button--confirm {
-  background: #171715;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .action-section {
@@ -346,7 +346,7 @@
 
 .rest-day-entry {
   min-height: 42rpx;
-  color: #969690;
+  color: var(--ui-color-text-placeholder);
   font-size: 20rpx;
   line-height: 42rpx;
   text-align: center;
@@ -362,10 +362,10 @@
   justify-content: center;
   margin: 0 !important;
   padding: 18rpx 19rpx !important;
-  border: 1rpx solid #dfdfdc;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: 15rpx;
   background: var(--ui-page-background);
-  color: #191917;
+  color: var(--ui-color-text-primary);
   line-height: 1.3;
   text-align: center;
 }
@@ -375,9 +375,9 @@
 }
 
 .task-button--dark {
-  border-color: #171717;
-  background: #171717;
-  color: #fff;
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .task-button__title {

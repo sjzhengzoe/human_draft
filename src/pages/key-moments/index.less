@@ -3,7 +3,7 @@
   height: 100vh;
   flex-direction: column;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--ui-color-background-soft);
 }
 
 .filter-panel {
@@ -33,13 +33,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: 22rpx;
 }
 
 .granularity-tab--active {
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-weight: 650;
 }
 
@@ -48,7 +48,7 @@
   min-height: 64rpx;
   align-items: center;
   gap: 5rpx;
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: 24rpx;
   font-weight: 600;
   white-space: nowrap;
@@ -66,8 +66,8 @@
   margin: 0 0 0 auto !important;
   padding: 0 22rpx !important;
   border-radius: 999rpx !important;
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: 22rpx;
   line-height: normal;
 }
@@ -96,7 +96,7 @@
 }
 
 .date-group-heading__day {
-  color: #111;
+  color: var(--ui-color-text-primary);
   font-size: 76rpx;
   font-weight: 750;
   letter-spacing: -4rpx;
@@ -110,14 +110,14 @@
 }
 
 .date-group-heading__month {
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: 26rpx;
   font-weight: 650;
   line-height: 1.15;
 }
 
 .date-group-heading__year {
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: 21rpx;
   line-height: 1.15;
 }
@@ -140,7 +140,7 @@
   bottom: 0;
   left: 10rpx;
   width: 1rpx;
-  background: #dedede;
+  background: var(--ui-color-background-disabled);
   content: "";
 }
 
@@ -156,10 +156,10 @@
   width: 18rpx;
   height: 18rpx;
   box-sizing: border-box;
-  border: 5rpx solid #111;
+  border: 5rpx solid var(--ui-color-action-primary);
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 5rpx #fafafa;
+  background: var(--ui-color-background-surface);
+  box-shadow: 0 0 0 5rpx var(--ui-color-background-soft);
 }
 
 .timeline-main {
@@ -176,7 +176,7 @@
 }
 
 .timeline-time {
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: 22rpx;
   font-variant-numeric: tabular-nums;
 }
@@ -205,14 +205,14 @@
   box-sizing: border-box;
   flex: 0 0 176rpx;
   border-radius: var(--ui-radius-small);
-  background: #ededeb;
+  background: var(--ui-color-background-subtle);
 }
 
 .moment-content {
   min-width: 0;
   flex: 1;
   padding: 3rpx 0;
-  color: #242424;
+  color: var(--ui-color-text-strong);
   font-size: 25rpx;
   line-height: 1.65;
   white-space: pre-wrap;
@@ -235,7 +235,7 @@
   bottom: 0;
   left: 10rpx;
   width: 1rpx;
-  background: #dedede;
+  background: var(--ui-color-background-disabled);
 }
 
 .timeline-gap__label {
@@ -246,7 +246,7 @@
   align-items: center;
   gap: 16rpx;
   padding: 0;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: 19rpx;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -256,13 +256,13 @@
 .timeline-gap__label::after {
   height: 1rpx;
   flex: 1;
-  background: #e6e6e6;
+  background: var(--ui-color-background-subtle);
   content: "";
 }
 
 .empty-state {
   padding: 170rpx 20rpx;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: 24rpx;
   text-align: center;
 }
@@ -288,10 +288,10 @@
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  border: 1rpx solid #dededb;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: 16rpx;
-  background: #f7f7f5;
-  color: #333;
+  background: var(--ui-color-background-page);
+  color: var(--ui-color-text-default);
   font-size: 23rpx;
   font-variant-numeric: tabular-nums;
 }
@@ -310,9 +310,9 @@
   box-sizing: border-box;
   flex: 0 0 174rpx;
   overflow: hidden;
-  border: 1rpx dashed #d3d3cf;
+  border: 1rpx dashed var(--ui-color-border-strong);
   border-radius: var(--ui-radius-card);
-  background: #f7f7f5;
+  background: var(--ui-color-background-page);
 }
 
 .image-editor--loading {
@@ -329,12 +329,12 @@
   align-items: center;
   justify-content: center;
   gap: 10rpx;
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: 22rpx;
 }
 
 .image-editor__crop-hint {
-  color: #aaa;
+  color: var(--ui-color-text-disabled);
   font-size: 18rpx;
 }
 
@@ -355,9 +355,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(30, 30, 30, .76);
-  box-shadow: 0 3rpx 12rpx rgba(0, 0, 0, .18);
-  color: #fff;
+  background: var(--ui-color-overlay-strong);
+  box-shadow: 0 3rpx 12rpx var(--ui-color-overlay-soft);
+  color: var(--ui-color-text-inverse);
   font-size: 34rpx;
   font-weight: 400;
   line-height: 1;
@@ -382,17 +382,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 22rpx;
-  border: 1rpx solid #dededb;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: var(--ui-radius-card);
-  background: #fff;
-  color: #222;
+  background: var(--ui-color-background-surface);
+  color: var(--ui-color-text-strong);
   font-size: 24rpx;
   line-height: 1.6;
 }
 
 .content-count {
   margin-top: 8rpx;
-  color: #aaa;
+  color: var(--ui-color-text-disabled);
   font-size: 18rpx;
   text-align: right;
 }
@@ -420,13 +420,13 @@
 }
 
 .cancel-button {
-  background: #eeeeec;
-  color: #555;
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-secondary);
 }
 
 .save-button {
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 @media (max-width: 350px) {

@@ -78,19 +78,19 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(styles, /\.image-field[^}]*aspect-ratio:\s*4\s*\/\s*3/);
   assert.match(styles, /\.field--inline[^}]*grid-template-columns:\s*132rpx minmax\(0, 1fr\)/);
   assert.match(styles, /\.field--inline[^}]*padding:\s*22rpx 28rpx/);
-  assert.match(styles, /\.field--inline\.field--section-start[^}]*padding-top:\s*24rpx[^}]*border-top:\s*1rpx solid #e8e8e8/);
+  assert.match(styles, /\.field--inline\.field--section-start[^}]*padding-top:\s*24rpx[^}]*border-top:\s*1rpx solid var\(--ui-color-border\)/);
   assert.match(styles, /\.field--inline\.field--name,[\s\S]*?\.field--inline\.field--introduction[^}]*align-items:\s*center/);
   assert.match(styles, /\.field--name \.field__label,[\s\S]*?\.field--introduction \.field__label[^}]*padding-top:\s*0/);
   assert.match(styles, /\.field__label[^}]*font-size:\s*23rpx/);
   assert.match(styles, /\.meal-period-option[^}]*font-size:\s*23rpx/);
-  assert.match(styles, /\.field__input[^}]*border-bottom:\s*1rpx solid #dedede[^}]*background:\s*transparent/);
-  assert.match(styles, /\.item-entry[^}]*border-bottom:\s*1rpx solid #dedede[^}]*background:\s*transparent/);
+  assert.match(styles, /\.field__input[^}]*border-bottom:\s*1rpx solid var\(--ui-color-border-subtle\)[^}]*background:\s*transparent/);
+  assert.match(styles, /\.item-entry[^}]*border-bottom:\s*1rpx solid var\(--ui-color-border-subtle\)[^}]*background:\s*transparent/);
   assert.match(styles, /\.item-entry__input[^}]*border:\s*0[^}]*background:\s*transparent/);
   assert.match(styles, /\.field__input,[\s\S]*?\.item-entry__input[^}]*font-family:[^}]*HumanDraftUI/);
   assert.match(styles, /\.field__input[^}]*font-size:\s*23rpx/);
   assert.match(styles, /\.item-entry__input[^}]*font-size:\s*23rpx/);
   assert.match(styles, /\.choice-option--selected,[\s\S]*background:\s*var\(--ui-surface\)/);
-  assert.match(styles, /\.choice-option--selected,[\s\S]*color:\s*#111/);
+  assert.match(styles, /\.choice-option--selected,[\s\S]*color:\s*var\(--ui-color-text-primary\)/);
   assert.match(editLogic, /sourceType:\s*\["album", "camera"\]/);
   assert.match(editLogic, /initializeUIFont\(\)\.catch\(\(\) => undefined\)/);
   assert.match(editLogic, /COOKING_TYPE_OPTIONS/);
@@ -161,13 +161,13 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(placeStyles, /\.store-hero__image-frame[^}]*height:\s*0[^}]*padding-top:\s*100%/);
   assert.match(placeStyles, /\.store-hero__image,[\s\S]*?\.store-hero__empty[^}]*width:\s*100%[^}]*height:\s*100%/);
   assert.match(placeStyles, /\.store-action[^}]*width:\s*auto !important[^}]*min-width:\s*0 !important[^}]*height:\s*58rpx/);
-  assert.match(placeStyles, /\.store-action--primary[^}]*background:\s*#111/);
+  assert.match(placeStyles, /\.store-action--primary[^}]*background:\s*var\(--ui-color-action-primary\)/);
   assert.match(placeStyles, /\.store-action--secondary[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(placeEdit, /<app-dialog[\s\S]*title="删除店铺"/);
   assert.match(placeEdit, /shape="square"[\s\S]*aspect-ratio="1"[\s\S]*output-size="1080"/);
   assert.match(placeEdit, /bindtap="handleAddDish">保存并新增菜品/);
   assert.match(placeEditStyles, /\.image-field[^}]*aspect-ratio:\s*1\s*\/\s*1/);
-  assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid #e8e8e8/);
+  assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid var\(--ui-color-border\)/);
   assert.match(menuPage, /class="browse-slide-scroll"[\s\S]*scroll-y/);
   assert.doesNotMatch(menuPage, /handleBrowseScroll/);
   assert.doesNotMatch(menuPage, /scroll-into-view/);
@@ -191,8 +191,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuStyles, /\.browse-card[^}]*margin:\s*0 auto/);
   assert.match(menuStyles, /\.browse-card[^}]*padding:\s*40rpx 24rpx 24rpx/);
   assert.match(menuStyles, /\.browse-card__black-tag[^}]*background:\s*var\(--ui-surface\)/);
-  assert.match(menuStyles, /\.browse-card__black-tag[^}]*color:\s*#111/);
-  assert.match(menuStyles, /\.browse-card__black-tag[^}]*border:\s*2rpx solid #d4d4d4/);
+  assert.match(menuStyles, /\.browse-card__black-tag[^}]*color:\s*var\(--ui-color-text-primary\)/);
+  assert.match(menuStyles, /\.browse-card__black-tag[^}]*border:\s*2rpx solid var\(--ui-color-border-strong\)/);
   assert.match(menuStyles, /\.quick-grid[^}]*grid-template-columns:\s*repeat\(2/);
   assert.match(
     menuStyles,
@@ -204,8 +204,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.doesNotMatch(menuStyles, /\.quick-card__image-frame \.dish-image[^}]*transform:\s*scale/);
   assert.match(menuStyles, /\.quick-card__name[^}]*text-align:\s*left/);
   assert.match(menuStyles, /\.browse-swiper[^}]*background:\s*var\(--ui-page-background\)/);
-  assert.match(menuStyles, /\.record-filter__item--active[^}]*border-color:\s*#111/);
-  assert.match(menuStyles, /\.category-chip--active[^}]*border-color:\s*#111/);
+  assert.match(menuStyles, /\.record-filter__item--active[^}]*border-color:\s*var\(--ui-color-action-primary\)/);
+  assert.match(menuStyles, /\.category-chip--active[^}]*border-color:\s*var\(--ui-color-action-primary\)/);
   assert.match(menuLogic, /resolveCategoryFilter/);
   assert.match(menuLogic, /activeFilter,\s*activeRecordType,/);
   assert.match(menuLogic, /const overview = await getMenuOverview/);

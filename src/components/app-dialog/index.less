@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: 48rpx var(--ui-dialog-gutter);
-  background: rgba(0, 0, 0, 0.48);
+  background: var(--ui-color-overlay);
   transition: padding-bottom 180ms ease-out;
 }
 
@@ -21,7 +21,7 @@
   overflow: hidden;
   border-radius: var(--ui-radius-modal);
   background: var(--ui-surface);
-  box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.16);
+  box-shadow: 0 24rpx 72rpx var(--ui-color-shadow-strong);
 }
 
 .app-dialog__header {
@@ -52,7 +52,7 @@
 }
 
 .app-dialog__title {
-  color: #171a16;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
   line-height: 1.4;
@@ -67,7 +67,7 @@
   max-width: 440rpx;
   box-sizing: border-box;
   margin: 0 auto;
-  color: #777777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   line-height: 1.6;
 }
@@ -106,10 +106,10 @@
 
 .app-dialog__button--cancel {
   background: var(--ui-subtle-background);
-  color: #555555;
+  color: var(--ui-color-text-secondary);
 }
 
 .app-dialog__button--confirm {
-  background: #20241f;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }

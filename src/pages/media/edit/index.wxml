@@ -56,7 +56,7 @@
       <view class="field-label">平台/来源（选填，可多选）</view>
       <checkbox-group class="platform-options" bindchange="handlePlatformsChange">
         <label wx:for="{{platformOptions}}" wx:key="name" class="platform-option">
-          <checkbox value="{{item.name}}" checked="{{item.checked}}" color="#111111" />
+          <checkbox value="{{item.name}}" checked="{{item.checked}}" color="{{themeColors.actionPrimary}}" />
           <text>{{item.name}}</text>
         </label>
       </checkbox-group>

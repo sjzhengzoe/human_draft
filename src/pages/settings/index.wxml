@@ -1,7 +1,7 @@
 <view wx:if="{{showModuleSettings}}" class="module-settings-page">
   <custom-navigation
     title="首页模块显示设置"
-    background="#ffffff"
+    background="{{themeColors.surface}}"
     custom-back="{{true}}"
     bind:back="handleModuleSettingsBack"
   />
@@ -18,7 +18,7 @@
           <switch
             class="module-settings-switch"
             checked="{{item.visible}}"
-            color="#20241f"
+            color="{{themeColors.actionPrimary}}"
             data-key="{{item.key}}"
             bindchange="handleModuleVisibleChange"
           />
@@ -34,7 +34,7 @@
 </view>
 
 <block wx:else>
-  <custom-navigation title="我的" show-back="{{false}}" background="#ffffff" />
+  <custom-navigation title="我的" show-back="{{false}}" background="{{themeColors.surface}}" />
 
   <view class="page">
     <view class="settings-content">

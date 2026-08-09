@@ -13,7 +13,7 @@
 }
 
 .field__label {
-  color: #555550;
+  color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
 }
@@ -24,10 +24,10 @@
   box-sizing: border-box;
   margin-top: 14rpx;
   padding: 0 22rpx;
-  border: 1rpx solid #dedede;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: 14rpx;
   background: var(--ui-page-background);
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
 }
 
@@ -51,12 +51,12 @@
   padding: 0 22rpx;
   border-radius: 999rpx;
   background: var(--ui-subtle-background);
-  color: #333330;
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
 }
 
 .preset-button--muted {
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
 }
 
 .attribute-section {
@@ -71,14 +71,14 @@
 }
 
 .section-title {
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
 }
 
 .section-desc {
   margin-top: 8rpx;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: 1.45;
 }
@@ -92,14 +92,14 @@
   flex: 0 0 auto;
   padding: 0 20rpx;
   border-radius: 999rpx;
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
 }
 
 .attribute-empty {
   padding: 60rpx 0 30rpx;
-  color: #aaa9a4;
+  color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-base);
   text-align: center;
 }
@@ -137,7 +137,7 @@
   justify-content: center;
   border-radius: 10rpx;
   background: var(--ui-subtle-background);
-  color: #444440;
+  color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-base);
 }
 
@@ -147,7 +147,7 @@
 }
 
 .tool--danger {
-  color: #bd3a34;
+  color: var(--ui-color-danger);
 }
 
 .footer-actions {
@@ -174,13 +174,13 @@
 }
 
 .save-button {
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .delete-button {
   background: transparent;
-  color: #c9342f;
+  color: var(--ui-color-danger);
 }
 
 .save-button::after,

@@ -1,0 +1,121 @@
+page {
+  /*
+   * Primitive palette. Business UI must consume the semantic aliases below;
+   * feature palettes may consume primitives only when no semantic role exists.
+   */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-neutral-950: #111111;
+  --color-neutral-900: #222220;
+  --color-neutral-800: #333330;
+  --color-neutral-700: #555550;
+  --color-neutral-600: #666660;
+  --color-neutral-500: #777772;
+  --color-neutral-400: #999994;
+  --color-neutral-300: #b3b3ae;
+  --color-neutral-250: #d8d8d8;
+  --color-neutral-200: #dededb;
+  --color-neutral-150: #e5e5e5;
+  --color-neutral-100: #eeeeee;
+  --color-neutral-75: #f1f1f1;
+  --color-neutral-50: #f5f5f5;
+  --color-neutral-25: #fafafa;
+
+  /* Shared semantic UI colors. */
+  --ui-color-text-primary: var(--color-neutral-950);
+  --ui-color-text-strong: var(--color-neutral-900);
+  --ui-color-text-default: var(--color-neutral-800);
+  --ui-color-text-secondary: var(--color-neutral-700);
+  --ui-color-text-subtle: var(--color-neutral-600);
+  --ui-color-text-muted: var(--color-neutral-500);
+  --ui-color-text-placeholder: var(--color-neutral-400);
+  --ui-color-text-disabled: var(--color-neutral-300);
+  --ui-color-text-inverse: var(--color-white);
+  --ui-color-action-primary: var(--color-neutral-950);
+  --ui-color-action-primary-pressed: var(--color-neutral-900);
+  --ui-color-background-page: var(--color-neutral-50);
+  --ui-color-background-surface: var(--color-white);
+  --ui-color-background-subtle: var(--color-neutral-100);
+  --ui-color-background-hover: var(--color-neutral-75);
+  --ui-color-background-soft: var(--color-neutral-25);
+  --ui-color-background-disabled: var(--color-neutral-200);
+  --ui-color-border: var(--color-neutral-150);
+  --ui-color-border-strong: var(--color-neutral-250);
+  --ui-color-border-subtle: var(--color-neutral-200);
+  --ui-color-border-inverse-solid: var(--color-white);
+  --ui-color-danger: #c9342f;
+  --ui-color-danger-background: #fff3f3;
+  --ui-color-success: #189d4c;
+  --ui-color-success-strong: #087136;
+  --ui-color-warning: #d99116;
+
+  /* Shared translucent colors and shadow colors. */
+  --ui-color-shadow-subtle: rgba(0, 0, 0, 0.022);
+  --ui-color-shadow-soft: rgba(0, 0, 0, 0.045);
+  --ui-color-shadow: rgba(0, 0, 0, 0.08);
+  --ui-color-shadow-strong: rgba(0, 0, 0, 0.16);
+  --ui-color-overlay-soft: rgba(0, 0, 0, 0.18);
+  --ui-color-overlay: rgba(0, 0, 0, 0.48);
+  --ui-color-overlay-strong: rgba(0, 0, 0, 0.68);
+  --ui-color-surface-faint: rgba(255, 255, 255, 0.14);
+  --ui-color-surface-glass: rgba(255, 255, 255, 0.58);
+  --ui-color-surface-translucent: rgba(255, 255, 255, 0.96);
+  --ui-color-border-inverse: rgba(255, 255, 255, 0.92);
+  --ui-color-text-inverse-muted: rgba(255, 255, 255, 0.68);
+  --ui-color-page-transparent: rgba(245, 245, 245, 0);
+
+  /* Footprint map palette. */
+  --footprint-color-background: #f6f5f0;
+  --footprint-color-background-subtle: #efefe9;
+  --footprint-color-text-primary: #29332c;
+  --footprint-color-text-secondary: #70776f;
+  --footprint-color-text-muted: #899087;
+  --footprint-color-border: #e1e1da;
+  --footprint-color-marker: #696e68;
+  --footprint-color-marker-muted: #b5b9b1;
+  --footprint-color-shadow: rgba(50, 61, 53, 0.04);
+  --footprint-color-success-shadow: rgba(24, 157, 76, 0.2);
+  --footprint-color-success-ring: rgba(24, 157, 76, 0.12);
+  --footprint-color-success-glow: rgba(31, 216, 101, 0.28);
+  --footprint-color-success-edge: rgba(8, 113, 54, 0.4);
+
+  /* One-day meal plan palette. */
+  --meal-plan-color-ink: #343027;
+  --meal-plan-color-text: #4f4a43;
+  --meal-plan-color-muted: #928c82;
+  --meal-plan-color-faint: #aaa096;
+  --meal-plan-color-disabled: #b9b0a4;
+  --meal-plan-color-outside: #975c43;
+  --meal-plan-color-breakfast: #9a713b;
+  --meal-plan-color-lunch: #607957;
+  --meal-plan-color-dinner: #7d6473;
+  --meal-plan-color-border: rgba(89, 76, 57, 0.1);
+  --meal-plan-color-border-strong: rgba(96, 82, 63, 0.24);
+  --meal-plan-color-shadow: rgba(64, 54, 40, 0.055);
+  --meal-plan-color-shadow-strong: rgba(64, 54, 40, 0.11);
+
+  /* Media rating and timeline palette. */
+  --media-color-rating: var(--ui-color-warning);
+  --media-color-favorite: #c74646;
+  --media-color-timeline-key: #b45f42;
+  --media-color-timeline-key-dark: #914b34;
+  --media-color-timeline-key-border: #c98268;
+  --media-color-timeline-key-background: #fff8f5;
+  --media-color-timeline-key-badge: #f6e4dc;
+  --media-color-timeline-quote: #75599a;
+  --media-color-timeline-quote-dark: #654785;
+  --media-color-timeline-quote-border: #d8cce5;
+  --media-color-timeline-quote-background: #f8f5fb;
+  --media-color-timeline-quote-badge: #eae3f2;
+
+  /* Small feature accents that should not redefine the shared UI theme. */
+  --exercise-color-rest: #8d856f;
+  --exercise-color-rest-background: #f0eee7;
+
+  /* Existing public aliases kept stable for shared layout styles. */
+  --ui-page-background: var(--ui-color-background-page);
+  --ui-surface: var(--ui-color-background-surface);
+  --ui-border: var(--ui-color-border);
+  --ui-subtle-background: var(--ui-color-background-subtle);
+  --ui-hover-background: var(--ui-color-background-hover);
+}

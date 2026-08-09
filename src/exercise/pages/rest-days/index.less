@@ -20,7 +20,7 @@
 .selection-card {
   border: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.022);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow-subtle);
 }
 
 .stat-card {
@@ -29,13 +29,13 @@
 }
 
 .stat-card__label {
-  color: #777771;
+  color: var(--ui-color-text-muted);
   font-size: 21rpx;
 }
 
 .stat-card__value {
   margin-top: 6rpx;
-  color: #1d1d1a;
+  color: var(--ui-color-text-strong);
   font-size: 38rpx;
   font-weight: 720;
   line-height: 1.2;
@@ -49,7 +49,7 @@
 
 .stat-card__hint {
   margin-top: 7rpx;
-  color: #aaa9a3;
+  color: var(--ui-color-text-disabled);
   font-size: 18rpx;
   line-height: 1.35;
 }
@@ -71,14 +71,14 @@
   min-height: 52rpx;
   align-items: center;
   justify-content: center;
-  color: #22221f;
+  color: var(--ui-color-text-strong);
   font-size: 27rpx;
   font-weight: 680;
 }
 
 .calendar-title__arrow {
   margin-left: 8rpx;
-  color: #94948e;
+  color: var(--ui-color-text-placeholder);
   font-size: 19rpx;
   font-weight: 500;
   transform: translateY(-2rpx);
@@ -90,13 +90,13 @@
   height: 52rpx;
   align-items: center;
   justify-content: center;
-  color: #333330;
+  color: var(--ui-color-text-default);
   font-size: 42rpx;
   line-height: 1;
 }
 
 .calendar-arrow--disabled {
-  color: #d2d2cd;
+  color: var(--ui-color-text-disabled);
 }
 
 .calendar-weekdays,
@@ -107,7 +107,7 @@
 
 .calendar-weekdays {
   margin-top: 15rpx;
-  color: #a1a19b;
+  color: var(--ui-color-text-placeholder);
   font-size: 19rpx;
   line-height: 34rpx;
   text-align: center;
@@ -134,7 +134,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #999993;
+  color: var(--ui-color-text-placeholder);
   font-size: 21rpx;
 }
 
@@ -153,24 +153,24 @@
 
 .calendar-cell--future .calendar-cell__day,
 .calendar-cell--untracked .calendar-cell__day {
-  color: #cecec9;
+  color: var(--ui-color-text-disabled);
 }
 
 .calendar-cell--today .calendar-cell__day,
 .calendar-cell--today .calendar-cell__pet-frame {
-  box-shadow: 0 0 0 2rpx #292925 inset;
+  box-shadow: 0 0 0 2rpx var(--ui-color-action-primary-pressed) inset;
 }
 
 .calendar-cell--selected .calendar-cell__day,
 .calendar-cell--selected .calendar-cell__pet-frame {
-  box-shadow: 0 0 0 4rpx #1b1b19;
+  box-shadow: 0 0 0 4rpx var(--ui-color-action-primary-pressed);
 }
 
 .calendar-cell__mark {
   position: absolute;
   right: 0;
   bottom: -2rpx;
-  color: #aaa48f;
+  color: var(--ui-color-text-placeholder);
   font-size: 14rpx;
   line-height: 1;
 }
@@ -179,8 +179,8 @@
   margin-top: 18rpx;
   padding: 16rpx;
   border-radius: 12rpx;
-  background: #f7f7f4;
-  color: #969690;
+  background: var(--ui-color-background-page);
+  color: var(--ui-color-text-placeholder);
   font-size: 20rpx;
   text-align: center;
 }
@@ -192,14 +192,14 @@
 }
 
 .calendar-footer__quota {
-  color: #666660;
+  color: var(--ui-color-text-subtle);
   font-size: 21rpx;
   text-align: center;
 }
 
 .calendar-footer__quota text {
   margin: 0 3rpx;
-  color: #20201d;
+  color: var(--ui-color-text-strong);
   font-weight: 700;
 }
 
@@ -209,7 +209,7 @@
   justify-content: center;
   gap: 26rpx;
   margin-top: 14rpx;
-  color: #aaa9a3;
+  color: var(--ui-color-text-disabled);
   font-size: 18rpx;
 }
 
@@ -233,8 +233,8 @@
   justify-content: center;
   margin-right: 7rpx;
   border-radius: 50%;
-  background: #f0eee7;
-  color: #8c856f;
+  background: var(--exercise-color-rest-background);
+  color: var(--ui-color-text-muted);
   font-size: 15rpx;
 }
 
@@ -254,14 +254,14 @@
 }
 
 .selection-copy__title {
-  color: #292926;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
 }
 
 .selection-copy__hint {
   margin-top: 5rpx;
-  color: #aaa9a3;
+  color: var(--ui-color-text-disabled);
   font-size: 18rpx;
   line-height: 1.35;
 }
@@ -273,8 +273,8 @@
   margin: 0 !important;
   padding: 0 24rpx !important;
   border-radius: 14rpx;
-  background: #171715;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: 22rpx;
   font-weight: 650;
   line-height: 68rpx;
@@ -285,6 +285,6 @@
 }
 
 .use-button[disabled] {
-  background: #ecece8;
-  color: #b6b6b0;
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-disabled);
 }

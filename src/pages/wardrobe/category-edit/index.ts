@@ -11,6 +11,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { UI_COLORS } from "../../../styles/colors"
 
 type EditableField = { id: string; name: string }
 
@@ -116,7 +117,7 @@ Page({
       title: "清空属性",
       content: "已保存衣物中的旧属性值会保留，但不会继续显示。",
       confirmText: "清空",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: (result) => {
         if (result.confirm && isAsyncPageActive(this)) this.setData({ fields: [] })
       }
@@ -179,7 +180,7 @@ Page({
       title: "删除分类",
       content: "只有分类下没有衣物时才能删除。删除后，属性预设无法恢复。",
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!isAsyncPageActive(this)) return
         if (!result.confirm) {

@@ -14,6 +14,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { UI_COLORS } from "../../../styles/colors"
 
 type FormField = { id: string; name: string; value: string }
 
@@ -280,7 +281,7 @@ Page({
       title: "删除衣物",
       content: "删除后，图片和尺寸信息都无法恢复。",
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!isAsyncPageActive(this)) return
         if (!result.confirm) {

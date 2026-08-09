@@ -1,4 +1,4 @@
-<custom-navigation title="休息日补卡" background="#ffffff" />
+<custom-navigation title="休息日补卡" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

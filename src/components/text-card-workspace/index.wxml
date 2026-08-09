@@ -28,8 +28,8 @@
       class="card-swiper"
       current="{{activeIndex}}"
       indicator-dots="{{renderedImageUrls.length > 1}}"
-      indicator-color="rgba(0, 0, 0, 0.18)"
-      indicator-active-color="#111111"
+      indicator-color="{{themeColors.overlaySoft}}"
+      indicator-active-color="{{themeColors.actionPrimary}}"
       bindchange="handleSwiperChange"
     >
       <swiper-item wx:for="{{renderedImageUrls}}" wx:key="*this" class="card-slide">

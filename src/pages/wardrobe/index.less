@@ -41,14 +41,14 @@
   padding: 0 24rpx;
   border-radius: var(--ui-radius-pill);
   background: var(--ui-subtle-background);
-  color: #666661;
+  color: var(--ui-color-text-subtle);
   font-size: var(--ui-font-size-base);
   white-space: nowrap;
 }
 
 .category-tab--active {
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-weight: 600;
 }
 
@@ -67,12 +67,12 @@
   justify-content: center;
   border-radius: 50%;
   background: var(--ui-subtle-background);
-  color: #444440;
+  color: var(--ui-color-text-secondary);
 }
 
 .category-toolbar__action--primary {
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .category-toolbar__action:active,
@@ -100,7 +100,7 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.035);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
 }
 
 .garment-card__image {
@@ -130,7 +130,7 @@
 
 .garment-card__name {
   overflow: hidden;
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
   line-height: 1.3;
@@ -140,7 +140,7 @@
 
 .garment-card__category {
   margin-top: 8rpx;
-  color: #8b8b86;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: 1.3;
 }
@@ -154,7 +154,7 @@
   justify-content: center;
   border-radius: 50%;
   background: var(--ui-subtle-background);
-  color: #444440;
+  color: var(--ui-color-text-secondary);
 }
 
 .measurement-list {
@@ -180,13 +180,13 @@
 
 .measurement-row__name {
   flex: 1;
-  color: #777772;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
 }
 
 .measurement-row__value {
   flex: 0 1 auto;
-  color: #191917;
+  color: var(--ui-color-text-primary);
   font-size: 25rpx;
   font-weight: 650;
   text-align: right;
@@ -200,13 +200,13 @@
   justify-content: center;
   margin: 0 28rpx;
   border-top: 1rpx solid var(--ui-border);
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
 }
 
 .garment-counter {
   padding: 22rpx 0 4rpx;
-  color: #8b8b86;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: 1.3;
   text-align: center;
@@ -221,7 +221,7 @@
   align-items: center;
   justify-content: center;
   padding: 40rpx var(--ui-page-gutter);
-  color: #777772;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   text-align: center;
 }
@@ -235,8 +235,8 @@
   margin: 24rpx auto 0;
   padding: 0 28rpx;
   border-radius: var(--ui-radius-pill);
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
@@ -246,14 +246,14 @@
 }
 
 .empty-state__title {
-  color: #555550;
+  color: var(--ui-color-text-secondary);
   font-size: 25rpx;
   font-weight: 650;
 }
 
 .empty-state__desc {
   margin-top: 12rpx;
-  color: #999994;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: 1.5;
 }
@@ -265,7 +265,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(245, 245, 245, .76);
+  background: var(--ui-color-surface-glass);
 }
 
 .bottom-space {

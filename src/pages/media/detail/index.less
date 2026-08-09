@@ -14,7 +14,7 @@
 .empty-seasons,
 .empty-episodes {
   padding: 80rpx 24rpx;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: 1.6;
   text-align: center;
@@ -23,7 +23,8 @@
 .detail-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 0 var(--ui-page-gutter);
+  gap: 8rpx;
+  padding: 8rpx var(--ui-page-gutter);
   border-bottom: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
 }
@@ -34,15 +35,16 @@
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  border-bottom: 4rpx solid transparent;
-  color: #888;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .detail-tab--active {
-  border-bottom-color: #111;
-  color: #111;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-weight: 600;
 }
 
@@ -97,7 +99,7 @@
 .detail-cover--empty {
   flex-direction: column;
   gap: 10rpx;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
 }
 
@@ -110,8 +112,8 @@
   gap: 5rpx;
   padding: 8rpx 13rpx;
   border-radius: var(--ui-radius-pill);
-  background: rgba(0, 0, 0, .68);
-  color: #fff;
+  background: var(--ui-color-overlay-strong);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-small);
   line-height: normal;
 }
@@ -166,11 +168,11 @@
 }
 
 .detail-icon-button--save {
-  background: #111;
+  background: var(--ui-color-action-primary);
 }
 
 .episode-row__heart {
-  color: #aaa;
+  color: var(--ui-color-text-disabled);
   font-size: 34rpx;
   line-height: 1;
 }
@@ -180,8 +182,8 @@
 }
 
 .episode-row__heart--active {
-  background: #fff3f3;
-  color: #c74646;
+  background: var(--ui-color-danger-background);
+  color: var(--media-color-favorite);
 }
 
 .detail-status-options {
@@ -191,7 +193,7 @@
   margin-top: 20rpx;
   padding: 6rpx;
   border-radius: var(--ui-radius-pill);
-  background: #ededed;
+  background: var(--ui-color-background-subtle);
 }
 
 .detail-status-options--disabled {
@@ -204,14 +206,14 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ui-radius-pill);
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .detail-status-option--active {
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-weight: 600;
 }
 
@@ -223,7 +225,7 @@
   display: flex;
   min-height: 42rpx;
   align-items: center;
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
   line-height: normal;
 }
@@ -245,13 +247,13 @@
   height: 48rpx;
   align-items: center;
   justify-content: center;
-  color: #c8c8c8;
+  color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-small);
   line-height: 1;
 }
 
 .detail-rating__star--filled {
-  color: #d99116;
+  color: var(--media-color-rating);
 }
 
 .detail-attributes {
@@ -268,14 +270,14 @@
 }
 
 .detail-attribute__label {
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: normal;
 }
 
 .detail-attribute__value {
   margin-top: 8rpx;
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -287,10 +289,10 @@
   box-sizing: border-box;
   margin-top: 8rpx;
   padding: 0 13rpx;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 9rpx;
   background: var(--ui-surface);
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-small);
 }
 
@@ -301,10 +303,10 @@
   justify-content: space-between;
   margin-top: 8rpx;
   padding: 0 13rpx;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 9rpx;
   background: var(--ui-surface);
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-small);
 }
 
@@ -317,18 +319,18 @@
 
 .detail-platform-option {
   padding: 8rpx 13rpx;
-  border: 1rpx solid #dedede;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: var(--ui-radius-pill);
   background: var(--ui-surface);
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
   line-height: normal;
 }
 
 .detail-platform-option--active {
-  border-color: #222;
-  background: #222;
-  color: #fff;
+  border-color: var(--ui-color-action-primary-pressed);
+  background: var(--ui-color-action-primary-pressed);
+  color: var(--ui-color-text-inverse);
   font-weight: 600;
 }
 
@@ -356,22 +358,22 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-pill);
   background: var(--ui-surface);
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .season-tab--active {
-  border-color: #111;
-  background: #111;
-  color: #fff;
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-weight: 600;
 }
 
 .records-toolbar__placeholder {
   min-width: 0;
   flex: 1;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
 }
 
@@ -381,8 +383,8 @@
 }
 
 .records-icon-button--active {
-  border-color: #111;
-  background: #ededed;
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-background-subtle);
 }
 
 .timeline-filter-panel {
@@ -409,7 +411,7 @@
 }
 
 .timeline-filter-panel__title {
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
 }
@@ -418,7 +420,7 @@
   padding: 7rpx 12rpx;
   border-radius: var(--ui-radius-pill);
   background: var(--ui-subtle-background);
-  color: #666;
+  color: var(--ui-color-text-subtle);
   font-size: var(--ui-font-size-base);
 }
 
@@ -431,7 +433,7 @@
 }
 
 .timeline-filter-section__title {
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
 }
@@ -454,17 +456,17 @@
 
 .timeline-filter-option {
   padding: 7rpx 13rpx;
-  border: 1rpx solid #dedede;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: var(--ui-radius-pill);
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .timeline-filter-option--active {
-  border-color: #222;
-  background: #222;
-  color: #fff;
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .active-season-bar {
@@ -494,7 +496,7 @@
 .active-season-bar__cover--empty {
   flex-direction: column;
   gap: 7rpx;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   text-align: center;
 }
@@ -505,7 +507,7 @@
 }
 
 .active-season-bar__title {
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.4;
@@ -514,7 +516,7 @@
 
 .active-season-bar__stats {
   margin-top: 5rpx;
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: normal;
 }
@@ -549,7 +551,7 @@
 }
 
 .episode-row__title {
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: 1.4;
@@ -558,13 +560,13 @@
 
 .episode-row__number {
   margin-right: 12rpx;
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
 }
 
 .episode-row__meta {
   margin-top: 6rpx;
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
   line-height: 1.4;
 }
@@ -579,8 +581,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ui-radius-pill);
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
@@ -618,7 +620,7 @@
   width: 110rpx;
   flex: 0 0 110rpx;
   padding-top: 2rpx;
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: 1.5;
@@ -634,10 +636,10 @@
   height: 58rpx;
   box-sizing: border-box;
   padding: 0 14rpx;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 8rpx;
   background: var(--ui-page-background);
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
 }
 
@@ -646,10 +648,10 @@
   min-height: 108rpx;
   box-sizing: border-box;
   padding: 13rpx 14rpx;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 8rpx;
   background: var(--ui-page-background);
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   line-height: 1.6;
 }
@@ -660,7 +662,7 @@
 
 .episode-editor__count {
   margin-top: 7rpx;
-  color: #aaa;
+  color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-small);
   text-align: right;
 }
@@ -680,14 +682,14 @@
 }
 
 .episode-editor__timeline-title {
-  color: #222;
+  color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
 }
 
 .episode-editor__timeline-help {
   margin-top: 4rpx;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
 }
 
@@ -700,13 +702,13 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-pill);
   background: var(--ui-surface);
-  color: #333;
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
 }
 
 .episode-editor__empty {
   padding: 44rpx 20rpx;
-  color: #999;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   text-align: center;
 }
@@ -733,7 +735,7 @@
 }
 
 .episode-editor__note-title {
-  color: #555;
+  color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-small);
   font-weight: 650;
 }
@@ -754,17 +756,17 @@
 
 .episode-editor__type {
   padding: 7rpx 12rpx;
-  border: 1rpx solid #dedede;
+  border: 1rpx solid var(--ui-color-border-subtle);
   border-radius: var(--ui-radius-pill);
-  color: #888;
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .episode-editor__type--active {
-  border-color: #222;
-  background: #222;
-  color: #fff;
+  border-color: var(--ui-color-action-primary-pressed);
+  background: var(--ui-color-action-primary-pressed);
+  color: var(--ui-color-text-inverse);
 }
 
 .episode-editor__time {
@@ -775,10 +777,10 @@
   padding: 0 14rpx;
   align-items: center;
   justify-content: center;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 8rpx;
   background: var(--ui-page-background);
-  color: #333;
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
 }
 
@@ -795,15 +797,15 @@
   margin-top: 7rpx;
   padding: 5rpx 10rpx;
   border-radius: var(--ui-radius-pill);
-  background: #fff3f3;
-  color: #a4504c;
+  background: var(--ui-color-danger-background);
+  color: var(--ui-color-danger);
   font-size: var(--ui-font-size-small);
 }
 
 .episode-editor__dialogue-add {
   padding: 13rpx 18rpx;
   border-bottom: 1rpx solid var(--ui-border);
-  color: #666;
+  color: var(--ui-color-text-subtle);
   font-size: var(--ui-font-size-base);
   text-align: right;
 }
@@ -813,7 +815,7 @@
 }
 
 .episode-row__label {
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
 }
@@ -824,7 +826,7 @@
 
 .episode-row__summary {
   margin-top: 9rpx;
-  color: #333;
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
   line-height: 1.7;
   white-space: pre-wrap;
@@ -853,10 +855,10 @@
   height: 12rpx;
   box-sizing: border-box;
   margin: 7rpx auto 0;
-  border: 3rpx solid #fff;
+  border: 3rpx solid var(--ui-color-border-inverse-solid);
   border-radius: 50%;
-  background: #333;
-  box-shadow: 0 0 0 1rpx #777;
+  background: var(--ui-color-action-primary-pressed);
+  box-shadow: 0 0 0 1rpx var(--ui-color-text-muted);
 }
 
 .episode-timeline__line {
@@ -865,7 +867,7 @@
   bottom: -3rpx;
   left: 50%;
   width: 1rpx;
-  background: #d5d5d5;
+  background: var(--ui-color-background-disabled);
   transform: translateX(-50%);
 }
 
@@ -874,7 +876,7 @@
   flex: 0 0 100rpx;
   box-sizing: border-box;
   padding: 3rpx 6rpx;
-  color: #777;
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
   line-height: 1.45;
 }
@@ -883,7 +885,7 @@
   min-width: 0;
   flex: 1;
   padding-bottom: 20rpx;
-  color: #333;
+  color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
   line-height: 1.6;
   word-break: break-all;
@@ -894,40 +896,40 @@
 }
 
 .episode-timeline__item--normal .episode-timeline__dot {
-  background: #b8b8b8;
-  box-shadow: 0 0 0 1rpx #c9c9c9;
+  background: var(--ui-color-background-disabled);
+  box-shadow: 0 0 0 1rpx var(--ui-color-border-strong);
 }
 
 .episode-timeline__item--normal .episode-timeline__time,
 .episode-timeline__item--normal .episode-timeline__narrative {
-  color: #888;
+  color: var(--ui-color-text-placeholder);
 }
 
 .episode-timeline__item--key .episode-timeline__dot {
-  background: #b45f42;
-  box-shadow: 0 0 0 1rpx #c98972;
+  background: var(--media-color-timeline-key);
+  box-shadow: 0 0 0 1rpx var(--media-color-timeline-key-border);
 }
 
 .episode-timeline__item--key .episode-timeline__time {
-  color: #8d4d38;
+  color: var(--media-color-timeline-key-dark);
 }
 
 .episode-timeline__item--key .episode-timeline__narrative {
   padding: 12rpx 14rpx;
-  border-left: 4rpx solid #c98268;
+  border-left: 4rpx solid var(--media-color-timeline-key-border);
   border-radius: 0 8rpx 8rpx 0;
-  background: #fff8f5;
-  color: #3e2a24;
+  background: var(--media-color-timeline-key-background);
+  color: var(--media-color-timeline-key-dark);
   font-weight: 550;
 }
 
 .episode-timeline__item--quote .episode-timeline__dot {
-  background: #75599a;
-  box-shadow: 0 0 0 1rpx #9c87b8;
+  background: var(--media-color-timeline-quote);
+  box-shadow: 0 0 0 1rpx var(--media-color-timeline-quote-border);
 }
 
 .episode-timeline__item--quote .episode-timeline__time {
-  color: #71598f;
+  color: var(--media-color-timeline-quote-dark);
 }
 
 .episode-timeline__badge {
@@ -941,13 +943,13 @@
 }
 
 .episode-timeline__badge--key {
-  background: #f6e4dc;
-  color: #914b34;
+  background: var(--media-color-timeline-key-badge);
+  color: var(--media-color-timeline-key-dark);
 }
 
 .episode-timeline__badge--quote {
-  background: #eae3f2;
-  color: #654785;
+  background: var(--media-color-timeline-quote-badge);
+  color: var(--media-color-timeline-quote-dark);
 }
 
 .episode-timeline__narrative {
@@ -960,12 +962,12 @@
   gap: 10rpx;
   padding: 14rpx;
   border-radius: 10rpx;
-  background: #f8f5fb;
+  background: var(--media-color-timeline-quote-background);
 }
 
 .records-load-more {
   padding: 24rpx 0;
-  color: #aaa;
+  color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-small);
   text-align: center;
 }
@@ -981,8 +983,8 @@
   gap: 12rpx;
   padding: 14rpx var(--ui-page-gutter) calc(14rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid var(--ui-border);
-  background: rgba(255, 255, 255, .96);
-  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, .06);
+  background: var(--ui-color-surface-translucent);
+  box-shadow: 0 -8rpx 24rpx var(--ui-color-shadow-soft);
 }
 
 .episode-edit-save-bar__cancel,
@@ -1000,7 +1002,7 @@
 .episode-edit-save-bar__cancel {
   padding: 0 22rpx;
   background: var(--ui-subtle-background);
-  color: #666;
+  color: var(--ui-color-text-subtle);
 }
 
 .episode-edit-save-bar__save {
@@ -1009,8 +1011,8 @@
   gap: 6rpx;
   margin: 0;
   padding: 0 24rpx;
-  background: #111;
-  color: #fff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .episode-edit-save-bar__save::after {
@@ -1027,7 +1029,7 @@
 .episode-timeline__speaker {
   width: 88rpx;
   flex: 0 0 88rpx;
-  color: #71598f;
+  color: var(--media-color-timeline-quote-dark);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
   line-height: 1.6;
@@ -1038,7 +1040,7 @@
   min-width: 0;
   flex: 1;
   padding-left: 12rpx;
-  border-left: 2rpx solid #d8cce5;
-  color: #342c3d;
+  border-left: 2rpx solid var(--media-color-timeline-quote-border);
+  color: var(--media-color-timeline-quote-dark);
   white-space: pre-wrap;
 }

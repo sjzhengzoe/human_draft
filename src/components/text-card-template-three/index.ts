@@ -1,5 +1,6 @@
 import { APP_FONTS } from "../../config/fonts";
 import { loadAppFont } from "../../services/font-loader";
+import { TEXT_CARD_RENDER_COLORS } from "../../styles/colors";
 import {
   copyTextCardContent,
   copyTextCardTemplate,
@@ -579,9 +580,9 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
 
         ctx.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
         ctx.drawImage(backgroundImage, 0, 0, CANVAS_WIDTH, canvasHeight);
-        ctx.fillStyle = "rgba(255, 251, 240, 0.26)";
+        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.texture;
         ctx.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.black;
         ctx.textBaseline = "top";
         ctx.textAlign = "left";
 

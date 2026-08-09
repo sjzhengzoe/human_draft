@@ -22,7 +22,7 @@ page {
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
-  color: #111111;
+  color: var(--ui-color-text-primary);
   font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: var(--ui-font-size-base);
   font-weight: 400;
@@ -35,7 +35,7 @@ page {
   justify-content: flex-end;
   margin-top: 16rpx;
   padding: 0 4rpx;
-  color: #888884;
+  color: var(--ui-color-text-placeholder);
   font-size: 22rpx;
   line-height: 1.55;
 }
@@ -56,7 +56,7 @@ page {
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
-  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.035);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow-subtle);
 }
 
 .btn-primary,
@@ -75,7 +75,7 @@ page {
 
 .btn-primary[disabled],
 .btn-secondary[disabled] {
-  color: #b5b5b1;
+  color: var(--ui-color-text-disabled);
   opacity: 0.72;
 }
 
@@ -87,8 +87,8 @@ page {
 .btn-primary {
   flex: 1;
   border: 0;
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .btn-secondary {
@@ -96,5 +96,5 @@ page {
   width: 148rpx;
   border: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
-  color: #111111;
+  color: var(--ui-color-text-primary);
 }

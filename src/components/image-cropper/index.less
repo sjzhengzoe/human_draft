@@ -5,7 +5,7 @@
   margin: 0 auto;
   overflow: hidden;
   border-radius: 20rpx;
-  background: #111111;
+  background: var(--ui-color-action-primary);
   touch-action: none;
 }
 
@@ -20,8 +20,8 @@
   position: absolute;
   z-index: 2;
   box-sizing: border-box;
-  border: 3rpx solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 0 999rpx rgba(0, 0, 0, 0.52);
+  border: 3rpx solid var(--ui-color-border-inverse);
+  box-shadow: 0 0 0 999rpx var(--ui-color-overlay);
   pointer-events: none;
 }
 
@@ -39,7 +39,7 @@
 
 .crop-modal__hint {
   margin-top: 16rpx;
-  color: #777777;
+  color: var(--ui-color-text-muted);
   font-size: 23rpx;
   line-height: 1.4;
   text-align: center;
@@ -61,10 +61,10 @@
   justify-content: center;
   margin: 0 !important;
   padding: 0 22rpx !important;
-  border: 1rpx solid #d8d8d8;
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #333333;
+  background: var(--ui-color-background-surface);
+  color: var(--ui-color-text-default);
   font-size: 23rpx;
   line-height: normal;
 }
@@ -104,14 +104,14 @@
 
 .crop-modal__button--secondary {
   border: 1rpx solid var(--ui-border);
-  background: #ffffff;
-  color: #111111;
+  background: var(--ui-color-background-surface);
+  color: var(--ui-color-text-primary);
 }
 
 .crop-modal__button--primary {
   border: 0;
-  background: #111111;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .crop-canvas {

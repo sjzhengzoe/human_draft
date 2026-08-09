@@ -1,6 +1,6 @@
 <view class="create-screen">
   <view class="create-navigation">
-    <custom-navigation title="人类草稿" show-back="{{false}}" background="#ffffff" />
+    <custom-navigation title="人类草稿" show-back="{{false}}" />
   </view>
 
   <view class="page">

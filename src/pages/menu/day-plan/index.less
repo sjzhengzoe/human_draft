@@ -7,15 +7,15 @@ page,
 }
 
 page {
-  background: #fff;
+  background: var(--ui-color-background-surface);
 }
 
 .page {
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx var(--ui-page-gutter) calc(38rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  color: #292929;
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-ink);
 }
 
 .plan-header {
@@ -24,7 +24,7 @@ page {
 }
 
 .plan-header__eyebrow {
-  color: #9a8870;
+  color: var(--meal-plan-color-muted);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
   letter-spacing: 2rpx;
@@ -33,7 +33,7 @@ page {
 
 .plan-header__title {
   margin-top: 8rpx;
-  color: #28251f;
+  color: var(--meal-plan-color-ink);
   font-size: var(--ui-font-size-base);
   font-weight: 700;
   letter-spacing: 5rpx;
@@ -42,7 +42,7 @@ page {
 
 .plan-header__description {
   margin-top: 13rpx;
-  color: #928c82;
+  color: var(--meal-plan-color-muted);
   font-size: var(--ui-font-size-base);
   line-height: 1.45;
 }
@@ -64,7 +64,7 @@ page {
   margin: 0 !important;
   padding: 0 !important;
   border-radius: 999rpx;
-  background: #fff;
+  background: var(--ui-color-background-surface);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: normal;
@@ -76,16 +76,16 @@ page {
 }
 
 .plan-action--secondary {
-  border: 1rpx solid rgba(96, 82, 63, .24);
-  background: #fff;
-  color: #6f6253;
+  border: 1rpx solid var(--meal-plan-color-border-strong);
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-text);
 }
 
 .plan-action--primary {
-  border: 1rpx solid #343027;
-  background: #fff;
-  color: #343027;
-  box-shadow: 0 8rpx 20rpx rgba(52, 48, 39, .1);
+  border: 1rpx solid var(--meal-plan-color-ink);
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-ink);
+  box-shadow: 0 8rpx 20rpx var(--meal-plan-color-shadow-strong);
 }
 
 .plan-action:active {
@@ -102,15 +102,15 @@ page {
 .meal-section {
   overflow: hidden;
   padding: 20rpx;
-  border: 1rpx solid rgba(89, 76, 57, .1);
+  border: 1rpx solid var(--meal-plan-color-border);
   border-radius: 24rpx;
-  background: #fff;
-  box-shadow: 0 10rpx 28rpx rgba(76, 62, 41, .055);
+  background: var(--ui-color-background-surface);
+  box-shadow: 0 10rpx 28rpx var(--meal-plan-color-shadow);
 }
 
-.meal-section--breakfast { --meal-accent: #9a713b; }
-.meal-section--lunch { --meal-accent: #607957; }
-.meal-section--dinner { --meal-accent: #7d6473; }
+.meal-section--breakfast { --meal-accent: var(--meal-plan-color-breakfast); }
+.meal-section--lunch { --meal-accent: var(--meal-plan-color-lunch); }
+.meal-section--dinner { --meal-accent: var(--meal-plan-color-dinner); }
 
 .meal-section__header {
   display: flex;
@@ -121,7 +121,7 @@ page {
 }
 
 .meal-section__title {
-  color: #312e28;
+  color: var(--meal-plan-color-ink);
   font-size: var(--ui-font-size-base);
   font-weight: 750;
   line-height: 1.1;
@@ -137,7 +137,7 @@ page {
 }
 
 .meal-section__notice {
-  color: #aaa096;
+  color: var(--meal-plan-color-faint);
   font-size: var(--ui-font-size-small);
   line-height: 1.2;
 }
@@ -153,8 +153,8 @@ page {
   overflow: hidden;
   border: 2rpx solid transparent;
   border-radius: 18rpx;
-  background: #fff;
-  box-shadow: 0 5rpx 16rpx rgba(64, 54, 40, .055);
+  background: var(--ui-color-background-surface);
+  box-shadow: 0 5rpx 16rpx var(--meal-plan-color-shadow);
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -164,7 +164,7 @@ page {
 
 .meal-slot--locked {
   border-color: var(--meal-accent);
-  box-shadow: 0 7rpx 18rpx rgba(64, 54, 40, .11);
+  box-shadow: 0 7rpx 18rpx var(--meal-plan-color-shadow-strong);
 }
 
 .meal-slot__image-wrap {
@@ -172,7 +172,7 @@ page {
   width: 100%;
   height: 188rpx;
   overflow: hidden;
-  background: #fff;
+  background: var(--ui-color-background-surface);
 }
 
 .meal-slot__image {
@@ -187,7 +187,7 @@ page {
   padding: 6rpx 10rpx;
   border: 1rpx solid var(--meal-accent);
   border-radius: 999rpx;
-  background: #fff;
+  background: var(--ui-color-background-surface);
   color: var(--meal-accent);
   font-size: var(--ui-font-size-small);
   font-weight: 700;
@@ -199,19 +199,19 @@ page {
   top: 10rpx;
   left: 10rpx;
   padding: 6rpx 10rpx;
-  border: 1rpx solid #5d584f;
+  border: 1rpx solid var(--meal-plan-color-text);
   border-radius: 999rpx;
-  background: #fff;
-  color: #4f4a43;
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-text);
   font-size: var(--ui-font-size-small);
   font-weight: 700;
   line-height: normal;
 }
 
 .meal-slot__type--outside {
-  border-color: #975c43;
-  background: #fff;
-  color: #975c43;
+  border-color: var(--meal-plan-color-outside);
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-outside);
 }
 
 .meal-slot__name {
@@ -221,7 +221,7 @@ page {
   align-items: center;
   justify-content: center;
   padding: 10rpx 9rpx;
-  color: #39352f;
+  color: var(--meal-plan-color-ink);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.35;
@@ -231,8 +231,8 @@ page {
 
 .meal-slot--empty {
   border-style: dashed;
-  border-color: rgba(119, 105, 86, .17);
-  background: #fff;
+  border-color: var(--meal-plan-color-border-strong);
+  background: var(--ui-color-background-surface);
   box-shadow: none;
 }
 
@@ -242,7 +242,7 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #b9b0a4;
+  color: var(--meal-plan-color-disabled);
   font-size: var(--ui-font-size-small);
 }
 
@@ -255,7 +255,7 @@ page {
 
 .plan-footer {
   padding: 26rpx 0 4rpx;
-  color: #aaa197;
+  color: var(--meal-plan-color-faint);
   font-size: var(--ui-font-size-small);
   letter-spacing: 1rpx;
   line-height: 1.4;
@@ -264,21 +264,21 @@ page {
 
 .state-card {
   padding: 90rpx 40rpx;
-  border: 1rpx solid rgba(89, 76, 57, .1);
+  border: 1rpx solid var(--meal-plan-color-border);
   border-radius: 24rpx;
-  background: #fff;
+  background: var(--ui-color-background-surface);
   text-align: center;
 }
 
 .state-card__title {
-  color: #403b33;
+  color: var(--meal-plan-color-ink);
   font-size: var(--ui-font-size-base);
   font-weight: 700;
 }
 
 .state-card__description {
   margin-top: 14rpx;
-  color: #9b9287;
+  color: var(--meal-plan-color-muted);
   font-size: var(--ui-font-size-base);
   line-height: 1.55;
 }
@@ -290,10 +290,10 @@ page {
   align-items: center;
   justify-content: center;
   margin-top: 26rpx;
-  border: 1rpx solid #343027;
+  border: 1rpx solid var(--meal-plan-color-ink);
   border-radius: 999rpx;
-  background: #fff;
-  color: #343027;
+  background: var(--ui-color-background-surface);
+  color: var(--meal-plan-color-ink);
   font-size: var(--ui-font-size-base);
   line-height: normal;
 }

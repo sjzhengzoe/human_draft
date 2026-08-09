@@ -6,6 +6,7 @@ import {
 import { UI_FONT } from "../config/ui-font"
 import { FOOTPRINT_PROVINCES } from "../data/footprint-regions"
 import type { FootprintCityGeometryData } from "../services/footprint-map"
+import { FOOTPRINT_COLORS } from "../styles/colors"
 
 export type FootprintMapLevel = "province" | "city"
 
@@ -45,17 +46,17 @@ type Projection = (point: FootprintMapPoint) => [number, number]
 
 const MAP_PADDING_X = 8
 const MAP_PADDING_Y = 8
-const MAP_FILL = "#e5e6df"
-const CITY_FILL = "#d7d8d4"
-const VISITED_FILL = "#189d4c"
-const VISITED_GLOW = "rgba(31, 216, 101, 0.58)"
-const BORDER_COLOR = "#ffffff"
-const MUTED_TEXT = "#747474"
-const VISITED_TEXT = "#ffffff"
-const LABEL_HALO = "#ffffff"
-const SELECTED_FILL = "#111111"
-const SELECTED_CITY_OVERLAY = "rgba(17, 17, 17, 0.28)"
-const SELECTED_GLOW = "rgba(17, 17, 17, 0.32)"
+const MAP_FILL = FOOTPRINT_COLORS.mapFill
+const CITY_FILL = FOOTPRINT_COLORS.cityFill
+const VISITED_FILL = FOOTPRINT_COLORS.visitedFill
+const VISITED_GLOW = FOOTPRINT_COLORS.visitedGlow
+const BORDER_COLOR = FOOTPRINT_COLORS.border
+const MUTED_TEXT = FOOTPRINT_COLORS.mutedText
+const VISITED_TEXT = FOOTPRINT_COLORS.visitedText
+const LABEL_HALO = FOOTPRINT_COLORS.labelHalo
+const SELECTED_FILL = FOOTPRINT_COLORS.selectedFill
+const SELECTED_CITY_OVERLAY = FOOTPRINT_COLORS.selectedCityOverlay
+const SELECTED_GLOW = FOOTPRINT_COLORS.selectedGlow
 
 const LABEL_OFFSETS: Record<string, [number, number]> = {
   北京: [-3, -7],

@@ -1,4 +1,5 @@
 import { ensureLogin, getCurrentUser } from "../../../services/auth"
+import { UI_COLORS } from "../../../styles/colors"
 import {
   addNextMediaEpisode,
   createMediaSeason,
@@ -943,7 +944,7 @@ Page({
       title: `删除${season.name}`,
       content: `其中的 ${season.episodes.length} 集及剧情记录都会删除，且无法恢复。`,
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!result.confirm || !isAsyncPageActive(this)) return
         this.setData({ operating: true })

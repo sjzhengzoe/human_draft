@@ -7,6 +7,7 @@
 - Image selection that requires cropping must use the shared `image-cropper` component. Do not implement page-local crop overlays or canvases; `image-cropper` owns the common `app-dialog` presentation and crop workflow.
 - Reuse existing shared modal components before adding new dialog behavior. Native image preview and system pickers are exempt because they are platform controls rather than business dialogs.
 - Short text-only utility buttons, such as undo actions, should size to their label plus balanced horizontal padding. Do not use a fixed width or an oversized minimum width unless the layout explicitly requires equal-width controls.
+- Selected tabs and mutually exclusive top-level filter tabs must use `--ui-color-action-primary` as a black background and `--ui-color-text-inverse` as white text. Do not use a white selected background with dark text, an underline-only selected state, or a feature accent color for the selected tab.
 
 ## UI Typography Rules
 
@@ -16,6 +17,17 @@
 - Use `25rpx` only for page titles, section titles, card titles, dialog titles, and genuinely emphasized values. `25rpx` is the maximum business-text size, including hero and display treatments.
 - Create hierarchy with font weight, color, spacing, and layout instead of additional font sizes. Icons, icon glyphs, and purely decorative symbols are exempt from the `20rpx` / `23rpx` / `25rpx` restriction.
 - When changing typography, adjust related control height, card minimum height, padding, and vertical gaps so the visual density remains balanced.
+
+## UI Color Rules
+
+- Follow `docs/ui-colors.md` for all mini program UI color work.
+- Business UI styles must use the semantic CSS variables from `src/styles/colors.less`. Do not add hexadecimal, RGB, RGBA, HSL, or HSLA literals to page or component `.less` files.
+- Use shared semantic variables such as `--ui-color-text-primary`, `--ui-color-text-muted`, `--ui-color-action-primary`, `--ui-color-border`, and `--ui-color-background-subtle` according to meaning. Do not select a primitive neutral only because its current value looks right.
+- Feature-specific colors must be centrally declared in `src/styles/colors.less`, use a feature prefix such as `--footprint-color-*` or `--media-color-*`, and represent a stable feature meaning rather than a page-local visual tweak.
+- TypeScript APIs and Canvas rendering must use constants from `src/styles/colors.ts`. Do not repeat color strings inside page, component, service, or utility TypeScript files.
+- Native controls that require a concrete color must receive a value exposed from page or component data using `UI_COLORS`; do not hard-code the value in WXML.
+- Mini program JSON configuration cannot consume CSS variables. Keep its unavoidable literals aligned with `src/styles/colors.ts` and covered by `server/tests/ui-colors.test.mjs`.
+- Before completing a color change, run `node --test server/tests/ui-colors.test.mjs` plus the focused feature tests and `pnpm run typecheck`.
 
 ## Mini Program Asset Packaging Rules
 

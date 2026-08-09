@@ -3,6 +3,7 @@ import {
   getHomeModuleSettingGroups,
   setHomeModuleVisible
 } from "../../utils/home-modules"
+import { UI_COLORS } from "../../styles/colors"
 
 type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
@@ -30,7 +31,8 @@ Component({
     avatarInitial: "E",
     isAdmin: false,
     openid: "",
-    openidLabel: ""
+    openidLabel: "",
+    themeColors: UI_COLORS
   },
   pageLifetimes: {
     show() {
@@ -74,7 +76,7 @@ Component({
         title: "退出登录",
         content: "退出后需要重新点击微信账号登录。",
         confirmText: "退出",
-        confirmColor: "#b6463d",
+        confirmColor: UI_COLORS.danger,
         success: async (result) => {
           if (!result.confirm) return
           wx.showLoading({ title: "正在退出" })

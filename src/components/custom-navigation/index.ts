@@ -1,3 +1,5 @@
+import { UI_COLORS } from "../../styles/colors"
+
 const FALLBACK_STATUS_BAR_HEIGHT = 24
 const FALLBACK_NAVIGATION_BAR_HEIGHT = 44
 
@@ -39,7 +41,7 @@ Component({
     },
     background: {
       type: String,
-      value: "#ffffff"
+      value: UI_COLORS.surface
     },
     showBack: {
       type: Boolean,

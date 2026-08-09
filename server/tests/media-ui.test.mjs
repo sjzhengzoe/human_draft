@@ -59,7 +59,7 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(logic, /personalRating: personalRating \|\| undefined/);
   assert.match(logic, /handleRatingTap[\s\S]*?selectedRating[\s\S]*?loadCurrentView\(\{ reset: true \}\)/);
   assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
-  assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*#d99116;/s);
+  assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*var\(--media-color-rating\);/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
   assert.doesNotMatch(page, /包含全部分类|包含全部记录|只展示所选状态|四列卡片/);
   assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));

@@ -13,6 +13,7 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { markMediaDataChanged } from "../../../utils/media-data-revision"
+import { UI_COLORS } from "../../../styles/colors"
 
 const BUILTIN_PLATFORMS = [
   "腾讯视频",
@@ -59,7 +60,8 @@ Page({
     selectedBuiltinPlatforms: [] as string[],
     loading: true,
     saving: false,
-    draftDirty: false
+    draftDirty: false,
+    themeColors: UI_COLORS
   },
 
   onLoad(query: Record<string, string | undefined>) {

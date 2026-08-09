@@ -10,7 +10,7 @@
   border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
-  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.045);
+  box-shadow: 0 10rpx 28rpx var(--ui-color-shadow-soft);
 }
 
 .action-bar__item {
@@ -23,7 +23,7 @@
   border: 0;
   border-radius: 12rpx;
   background: var(--ui-surface);
-  color: #111111;
+  color: var(--ui-color-text-primary);
   text-align: center;
 }
 
@@ -32,22 +32,22 @@
 }
 
 .action-bar__item--primary {
-  background: #20241f;
-  color: #ffffff;
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
 }
 
 .action-bar__item--primary.action-bar__item--hover {
-  background: #30362f;
+  background: var(--ui-color-action-primary-pressed);
 }
 
 .action-bar__item--disabled {
-  color: #b8b8b4;
+  color: var(--ui-color-text-disabled);
   opacity: 0.72;
 }
 
 .action-bar__item--primary.action-bar__item--disabled {
-  background: #dededb;
-  color: #999994;
+  background: var(--ui-color-background-disabled);
+  color: var(--ui-color-text-placeholder);
 }
 
 .action-bar__icon {

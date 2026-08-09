@@ -1,4 +1,4 @@
-<custom-navigation title="运动设置" background="#ffffff" />
+<custom-navigation title="运动设置" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

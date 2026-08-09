@@ -1,6 +1,7 @@
 import { ensureLogin } from "../../services/auth"
 import { deleteDiningPlace, listDiningPlaces, listDiningScenes } from "../../services/dining"
 import type { DiningPlace, DiningScene } from "../../types/dining"
+import { UI_COLORS } from "../../styles/colors"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -113,7 +114,7 @@ Page({
       title: "删除店铺",
       content: `确认删除“${item.name}”？`,
       confirmText: "删除",
-      confirmColor: "#c9342f",
+      confirmColor: UI_COLORS.danger,
       success: async (result) => {
         if (!result.confirm || !isAsyncPageActive(this)) return
         this.setData({ deleting: true })
