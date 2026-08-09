@@ -63,6 +63,7 @@ Component({
       if (keyboardHandlers.has(this)) return
       const handler: KeyboardHeightHandler = ({ height }) => {
         const keyboardHeight = Math.max(0, Number(height || 0))
+        if (!this.properties.visible || keyboardHeight === this.data.keyboardHeight) return
         this.setData({
           keyboardHeight,
           keyboardStyle: keyboardHeight > 0

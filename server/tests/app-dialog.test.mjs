@@ -13,6 +13,7 @@ test("app dialog centers within the keyboard-safe viewport", async () => {
 
   assert.match(componentSource, /wx\.onKeyboardHeightChange/);
   assert.match(componentSource, /wx\.offKeyboardHeightChange/);
+  assert.match(componentSource, /keyboardHeight === this\.data\.keyboardHeight/);
   assert.match(componentSource, /padding-bottom: calc\(\$\{keyboardHeight\}px \+ 48rpx\)/);
   assert.match(template, /style="\{\{keyboardStyle\}\}"/);
   assert.match(styles, /align-items: center/);

@@ -129,7 +129,8 @@
   </app-dialog>
 
   <app-dialog
-    visible="{{showEditor}}"
+    wx:if="{{showEditor}}"
+    visible="{{true}}"
     title="{{editingId ? '编辑活动' : '新增活动'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
@@ -153,6 +154,7 @@
         value="{{editorName}}"
         maxlength="120"
         placeholder="活动名称，例如：红花湖骑行"
+        persistent
         adjust-position="{{false}}"
         bindinput="handleEditorNameInput"
       />
@@ -162,6 +164,7 @@
         maxlength="200"
         placeholder="一句简介（选填）"
         confirm-type="done"
+        persistent
         adjust-position="{{false}}"
         bindinput="handleEditorIntroductionInput"
       />

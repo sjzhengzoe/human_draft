@@ -1,5 +1,5 @@
 <input
-  wx:if="{{editing}}"
+  wx:if="{{persistent || editing}}"
   class="app-input__control custom-class"
   style="font-family: HumanDraftUI, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: {{fontSize}};"
   always-embed="{{true}}"

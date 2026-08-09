@@ -35,6 +35,10 @@ Component({
       type: Boolean,
       value: false
     },
+    persistent: {
+      type: Boolean,
+      value: false
+    },
     adjustPosition: {
       type: Boolean,
       value: true
