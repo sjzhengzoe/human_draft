@@ -206,6 +206,10 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuStyles, /\.browse-swiper[^}]*background:\s*var\(--ui-page-background\)/);
   assert.match(menuStyles, /\.record-filter__item--active[^}]*border-color:\s*var\(--ui-color-action-primary\)/);
   assert.match(menuStyles, /\.category-chip--active[^}]*border-color:\s*var\(--ui-color-action-primary\)/);
+  assert.match(menuStyles, /\.record-filter__item--active\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)[^}]*color:\s*var\(--ui-color-text-inverse\)/);
+  assert.match(menuStyles, /\.category-chip--active\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)[^}]*color:\s*var\(--ui-color-text-inverse\)/);
+  assert.doesNotMatch(menuStyles, /\.record-filter__item--active\s*\{[^}]*font-(?:size|weight):/);
+  assert.doesNotMatch(menuStyles, /\.category-chip--active\s*\{[^}]*font-(?:size|weight):/);
   assert.match(menuLogic, /resolveCategoryFilter/);
   assert.match(menuLogic, /activeFilter,\s*activeRecordType,/);
   assert.match(menuLogic, /const overview = await getMenuOverview/);
