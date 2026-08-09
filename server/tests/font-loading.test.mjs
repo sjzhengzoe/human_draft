@@ -15,8 +15,8 @@ test("fonts use one shared lazy loader and one canonical definition each", async
       readProjectFile("src/services/font-loader.ts"),
       readProjectFile("src/services/ui-font.ts"),
       readProjectFile("src/components/text-card-template-one/index.ts"),
-      readProjectFile("src/pages/douyin2/index.ts"),
-      readProjectFile("src/pages/douyin3/index.ts"),
+      readProjectFile("src/components/text-card-template-two/index.ts"),
+      readProjectFile("src/components/text-card-template-three/index.ts"),
       readProjectFile("src/pages/menu/print/index.ts"),
       readProjectFile("src/pages/menu/day-plan/index.ts"),
       readProjectFile("nginx.conf")

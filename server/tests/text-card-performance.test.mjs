@@ -26,8 +26,8 @@ test("text card previews stay lightweight, cached, and cancellable", async () =>
   const [templateOne, templateTwo, templateThree, previewCache] =
     await Promise.all([
       readProjectFile("src/components/text-card-template-one/index.ts"),
-      readProjectFile("src/pages/douyin2/index.ts"),
-      readProjectFile("src/pages/douyin3/index.ts"),
+      readProjectFile("src/components/text-card-template-two/index.ts"),
+      readProjectFile("src/components/text-card-template-three/index.ts"),
       readProjectFile("src/services/text-card-preview-cache.ts")
     ])
 
@@ -44,15 +44,15 @@ test("text card previews stay lightweight, cached, and cancellable", async () =>
   assert.match(previewCache, /MAX_PREVIEW_CACHE_ENTRIES = 8/)
 
   await assert.rejects(
-    access(new URL("src/pages/douyin2/index.js", projectRoot))
+    access(new URL("src/components/text-card-template-two/index.js", projectRoot))
   )
 })
 
 test("text card pages share presentation and render infrastructure", async () => {
   const templateBases = [
     "components/text-card-template-one",
-    "pages/douyin2",
-    "pages/douyin3"
+    "components/text-card-template-two",
+    "components/text-card-template-three"
   ]
   const [
     pageSources,
@@ -74,7 +74,7 @@ test("text card pages share presentation and render infrastructure", async () =>
     ),
     readProjectFile("src/utils/text-card-render.ts"),
     readProjectFile("src/components/text-card-workspace/index.less"),
-    readProjectFile("src/pages/xiaohongshu/index.less"),
+    readProjectFile("src/pages/text-card/index.less"),
     readProjectFile("src/styles/text-card-export.less")
   ])
 
@@ -104,8 +104,8 @@ test("text card pages share presentation and render infrastructure", async () =>
 test("content security checks new input but not copy or export output", async () => {
   const templateBases = [
     "components/text-card-template-one",
-    "pages/douyin2",
-    "pages/douyin3"
+    "components/text-card-template-two",
+    "components/text-card-template-three"
   ]
   for (const base of templateBases) {
     const source = await readProjectFile(`src/${base}/index.ts`)
@@ -151,8 +151,8 @@ test("text card UI exposes preview and high-resolution export states", async () 
 
   const templateBases = [
     "components/text-card-template-one",
-    "pages/douyin2",
-    "pages/douyin3"
+    "components/text-card-template-two",
+    "components/text-card-template-three"
   ]
   for (const base of templateBases) {
     const template = await readProjectFile(`src/${base}/index.wxml`)

@@ -11,7 +11,7 @@ function readProjectFile(path) {
 }
 
 async function loadHostDefinition() {
-  const source = await readProjectFile("src/pages/xiaohongshu/index.ts")
+  const source = await readProjectFile("src/pages/text-card/index.ts")
   const output = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -19,7 +19,7 @@ async function loadHostDefinition() {
     }
   }).outputText
   let definition
-  globalThis.Component = (value) => {
+  globalThis.Page = (value) => {
     definition = value
   }
   await import(
@@ -31,6 +31,12 @@ async function loadHostDefinition() {
 test("template switching changes host state without navigating", async () => {
   const definition = await loadHostDefinition()
   const updates = []
+  const storageUpdates = []
+  globalThis.wx = {
+    setStorageSync(key, value) {
+      storageUpdates.push([key, value])
+    }
+  }
   const context = {
     data: { activeTemplate: "xiaohongshu" },
     selectComponent() {
@@ -41,7 +47,7 @@ test("template switching changes host state without navigating", async () => {
     }
   }
 
-  definition.methods.handleTemplateTap.call(context, {
+  definition.handleTemplateTap.call(context, {
     currentTarget: { dataset: { template: "douyin3" } }
   })
 
@@ -51,25 +57,35 @@ test("template switching changes host state without navigating", async () => {
       "mountedTemplates.douyin3": true
     }
   ])
+  assert.deepEqual(storageUpdates, [["TEXT_CARD_LAST_TEMPLATE", "douyin3"]])
   assert.doesNotMatch(
-    await readProjectFile("src/pages/xiaohongshu/index.ts"),
+    await readProjectFile("src/pages/text-card/index.ts"),
     /navigateTo|navigateBack|redirectTo/
   )
 })
 
-test("the canonical entry keeps one persistent native switch", async () => {
-  const [app, homeModules, hostTemplate, hostConfig, compatibilityLogic] = await Promise.all([
+test("all entries converge on one persistent native switch", async () => {
+  const [app, homeModules, homePage, hostTemplate, hostConfig, ...legacyEntries] = await Promise.all([
     readProjectFile("src/app.json"),
     readProjectFile("src/utils/home-modules.js"),
-    readProjectFile("src/pages/xiaohongshu/index.wxml"),
-    readProjectFile("src/pages/xiaohongshu/index.json"),
-    readProjectFile("src/pages/text-card/index.ts")
+    readProjectFile("src/pages/create/index.ts"),
+    readProjectFile("src/pages/text-card/index.wxml"),
+    readProjectFile("src/pages/text-card/index.json"),
+    readProjectFile("src/pages/xiaohongshu/index.ts"),
+    readProjectFile("src/pages/douyin2/index.ts"),
+    readProjectFile("src/pages/douyin3/index.ts")
   ])
 
-  assert.ok(JSON.parse(app).pages.includes("pages/xiaohongshu/index"))
-  assert.ok(JSON.parse(app).pages.includes("pages/text-card/index"))
-  assert.match(homeModules, /path: "\/pages\/xiaohongshu\/index"/)
-  assert.match(compatibilityLogic, /wx\.redirectTo\(\{ url: `\/pages\/xiaohongshu\/index/)
+  const pages = JSON.parse(app).pages
+  for (const route of ["xiaohongshu", "douyin2", "douyin3", "text-card"]) {
+    assert.ok(pages.includes(`pages/${route}/index`))
+  }
+  assert.match(homeModules, /path: "\/pages\/text-card\/index"/)
+  assert.match(homePage, /`\$\{String\(path\)\}\?template=\$\{lastTemplate\}`/)
+  assert.doesNotMatch(homePage, /`\/pages\/\$\{lastTemplate\}\/index`/)
+  for (const legacyEntry of legacyEntries) {
+    assert.match(legacyEntry, /wx\.redirectTo\(\{ url: "\/pages\/text-card\/index\?template=/)
+  }
   assert.equal(hostTemplate.match(/wx:if="\{\{mountedTemplates\./g)?.length, 3)
   assert.equal(hostTemplate.match(/hidden="\{\{activeTemplate !==/g)?.length, 3)
   assert.equal(hostTemplate.match(/bindtap="handleTemplateTap"/g)?.length, 1)
@@ -85,8 +101,8 @@ test("the canonical entry keeps one persistent native switch", async () => {
 test("template components expose a guarded switch hook to the host", async () => {
   const templates = [
     "components/text-card-template-one",
-    "pages/douyin2",
-    "pages/douyin3"
+    "components/text-card-template-two",
+    "components/text-card-template-three"
   ]
   for (const template of templates) {
     const [logic, config] = await Promise.all([
@@ -113,7 +129,7 @@ test("the persistent switch respects an active template busy state", async () =>
     }
   }
 
-  definition.methods.handleTemplateTap.call(context, {
+  definition.handleTemplateTap.call(context, {
     currentTarget: { dataset: { template: "douyin2" } }
   })
 

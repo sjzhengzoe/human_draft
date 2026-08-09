@@ -12,8 +12,8 @@ test("template pages distinguish examples and expose safe action states", async 
 
   const templatePaths = [
     "components/text-card-template-one",
-    "pages/douyin2",
-    "pages/douyin3",
+    "components/text-card-template-two",
+    "components/text-card-template-three",
   ];
   for (const templatePath of templatePaths) {
     const source = await readFile(
@@ -74,7 +74,7 @@ test("template pages distinguish examples and expose safe action states", async 
   assert.match(actionBar, /exportReady/);
 
   const imageTemplate = await readFile(
-    new URL("src/pages/douyin3/index.ts", projectRoot),
+    new URL("src/components/text-card-template-three/index.ts", projectRoot),
     "utf8",
   );
   assert.match(imageTemplate, /pageKeys/);

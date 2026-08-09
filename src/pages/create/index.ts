@@ -73,8 +73,10 @@ Component({
       const lastTemplate = wx.getStorageSync(TEXT_CARD_TEMPLATE_STORAGE_KEY)
       const nextPath =
         key === "text-card" &&
-        (lastTemplate === "douyin2" || lastTemplate === "douyin3")
-          ? `/pages/${lastTemplate}/index`
+        (lastTemplate === "xiaohongshu" ||
+          lastTemplate === "douyin2" ||
+          lastTemplate === "douyin3")
+          ? `${String(path)}?template=${lastTemplate}`
           : String(path)
 
       wx.navigateTo({ url: nextPath })

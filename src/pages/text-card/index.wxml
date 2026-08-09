@@ -1,1 +1,49 @@
-<view class="compat-loading">正在打开图文卡片…</view>
+<view class="text-card-page">
+  <view class="text-card-page__navigation">
+    <custom-navigation title="图文卡片" />
+  </view>
+
+  <view class="text-card-page__switch">
+    <view
+      class="template-switch"
+      role="tablist"
+      aria-label="选择图文模板"
+    >
+      <view
+        wx:for="{{templates}}"
+        wx:key="key"
+        class="template-switch__item {{activeTemplate === item.key ? 'template-switch__item--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeTemplate === item.key}}"
+        data-template="{{item.key}}"
+        bindtap="handleTemplateTap"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="text-card-page__content">
+    <view
+      wx:if="{{mountedTemplates.xiaohongshu}}"
+      hidden="{{activeTemplate !== 'xiaohongshu'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-one id="text-card-template-xiaohongshu" />
+    </view>
+
+    <view
+      wx:if="{{mountedTemplates.douyin2}}"
+      hidden="{{activeTemplate !== 'douyin2'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-two id="text-card-template-douyin2" />
+    </view>
+
+    <view
+      wx:if="{{mountedTemplates.douyin3}}"
+      hidden="{{activeTemplate !== 'douyin3'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-three id="text-card-template-douyin3" />
+    </view>
+  </view>
+</view>

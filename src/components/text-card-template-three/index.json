@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "navigationBarTitleText": "图文卡片",
+  "disableScroll": true,
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index",
+    "text-card-workspace": "/components/text-card-workspace/index"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "navigationBarTitleText": "图文卡片",
+  "disableScroll": true,
+  "usingComponents": {
+    "text-card-workspace": "/components/text-card-workspace/index"
+  }
+}

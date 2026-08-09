@@ -9,7 +9,7 @@ const HOME_FEATURE_GROUPS = [
         key: "text-card",
         icon: "notebook-pen",
         title: "图文卡片",
-        path: "/pages/xiaohongshu/index",
+        path: "/pages/text-card/index",
         featured: true,
         available: true,
         requiresLogin: false

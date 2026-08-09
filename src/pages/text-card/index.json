@@ -1,4 +1,10 @@
 {
   "navigationBarTitleText": "图文卡片",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "custom-navigation": "/components/custom-navigation/index",
+    "text-card-template-one": "/components/text-card-template-one/index",
+    "text-card-template-two": "/components/text-card-template-two/index",
+    "text-card-template-three": "/components/text-card-template-three/index"
+  }
 }

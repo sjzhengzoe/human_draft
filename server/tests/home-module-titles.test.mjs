@@ -11,8 +11,8 @@ function readProjectFile(path) {
 const homeModules = [
   {
     title: "图文卡片",
-    configPaths: ["src/pages/xiaohongshu/index.json"],
-    headerPath: "src/components/text-card-workspace/index.wxml"
+    configPaths: ["src/pages/text-card/index.json"],
+    headerPath: "src/pages/text-card/index.wxml"
   },
   {
     title: "我的菜单",
