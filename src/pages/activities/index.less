@@ -81,7 +81,7 @@
   flex: 1;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 26rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  padding: 16rpx 0 calc(24rpx + env(safe-area-inset-bottom));
   background: var(--ui-page-background);
 }
 
@@ -107,23 +107,21 @@
 }
 
 .activity-card {
-  width: 560rpx;
+  width: calc(100% - 32rpx);
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 40rpx 24rpx 28rpx;
   border: 1rpx solid var(--ui-border);
-  border-radius: 18rpx;
+  border-radius: 22rpx;
   background: var(--ui-surface);
+  box-shadow: 0 10rpx 32rpx var(--ui-color-shadow-soft);
 }
 
 .activity-card__image-frame {
-  width: 480rpx;
-  height: 360rpx;
-  margin: 0 auto;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
-  border-radius: 16rpx;
   background: var(--ui-color-background-subtle);
 }
 
@@ -144,7 +142,7 @@
 }
 
 .activity-card__body {
-  padding: 28rpx 16rpx 6rpx;
+  padding: 24rpx 28rpx 30rpx;
 }
 
 .activity-card__name {

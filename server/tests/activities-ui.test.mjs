@@ -5,8 +5,9 @@ import test from "node:test";
 const projectRoot = new URL("../../", import.meta.url);
 
 test("activity list uses top scene tabs and a button-free single-card swiper", async () => {
-  const [template, page, service] = await Promise.all([
+  const [template, styles, page, service] = await Promise.all([
     readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/index.less", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.ts", projectRoot), "utf8"),
     readFile(new URL("src/services/activities.ts", projectRoot), "utf8"),
   ]);
@@ -21,6 +22,9 @@ test("activity list uses top scene tabs and a button-free single-card swiper", a
   assert.doesNotMatch(template, /class="(?:counter|pagination|swipe-button)/);
   assert.doesNotMatch(template, /bindtap="handle(?:Previous|Next|Prev)/);
   assert.doesNotMatch(template, /contentLoading|正在加载活动…[\s\S]*content-loading/);
+  assert.match(styles, /\.activity-card\s*{[^}]*width:\s*calc\(100% - 32rpx\)/);
+  assert.match(styles, /\.activity-card__image-frame\s*{[^}]*width:\s*100%[^}]*aspect-ratio:\s*4\s*\/\s*3/);
+  assert.doesNotMatch(styles, /\.activity-card__image-frame\s*{[^}]*width:\s*480rpx/);
   assert.match(page, /itemsByType: emptyActivityItemsByType\(\)/);
   assert.match(page, /const items = this\.data\.itemsByType\[type\]/);
   const typeHandler = page.match(/handleTypeTap[\s\S]*?\n  },/)?.[0] || "";
