@@ -45,7 +45,8 @@ test("luggage overview stays light and reset only appears for active packing pro
 
   assert.doesNotMatch(page, /packing-overview__scene/);
   assert.match(page, /wx:if="\{\{activePackedCount > 0 && !sortEditing\}\}"[\s\S]*?class="packing-reset"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw"/);
-  assert.match(styles, /\.packing-overview\s*\{[^}]*border:\s*1rpx solid var\(--ui-color-border\)[^}]*background:\s*var\(--ui-color-background-surface\)/s);
+  assert.match(styles, /\.packing-overview\s*\{[^}]*border:\s*1rpx solid var\(--ui-color-border-strong\)[^}]*background:\s*var\(--ui-color-background-subtle\)/s);
+  assert.match(styles, /\.packing-overview__count\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)[^}]*color:\s*var\(--ui-color-text-inverse\)/s);
   assert.match(styles, /\.packing-progress__value\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)/s);
   assert.doesNotMatch(styles, /\.packing-overview\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)/s);
   assert.match(icon, /stroke="#62625d"/);

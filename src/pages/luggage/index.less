@@ -81,9 +81,9 @@ page,
 .packing-overview {
   flex: 0 0 auto;
   padding: 20rpx 22rpx;
-  border: 1rpx solid var(--ui-color-border);
+  border: 1rpx solid var(--ui-color-border-strong);
   border-radius: var(--ui-radius-card);
-  background: var(--ui-color-background-surface);
+  background: var(--ui-color-background-subtle);
   box-shadow: 0 4rpx 16rpx var(--ui-color-shadow-subtle);
 }
 
@@ -95,8 +95,9 @@ page,
 }
 
 .packing-reset {
+  border: 1rpx solid var(--ui-color-border);
   border-radius: 50%;
-  background: var(--ui-color-background-subtle);
+  background: var(--ui-color-background-surface);
 }
 
 .packing-overview__title {
@@ -116,9 +117,13 @@ page,
 
 .packing-overview__count {
   flex: 0 0 auto;
-  color: var(--ui-color-text-muted);
+  padding: 7rpx 14rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .packing-progress {
@@ -126,7 +131,7 @@ page,
   margin-top: 20rpx;
   overflow: hidden;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-color-background-subtle);
+  background: var(--ui-color-border-strong);
 }
 
 .packing-progress__value {
