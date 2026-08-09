@@ -1,8 +1,10 @@
 {
-  "component": true,
   "navigationBarTitleText": "图文卡片",
   "disableScroll": true,
   "usingComponents": {
-    "text-card-workspace": "/components/text-card-workspace/index"
+    "custom-navigation": "/components/custom-navigation/index",
+    "text-card-template-one": "/components/text-card-template-one/index",
+    "text-card-template-two": "/pages/douyin2/index",
+    "text-card-template-three": "/pages/douyin3/index"
   }
 }

@@ -11,7 +11,7 @@ function readProjectFile(path) {
 }
 
 async function loadHostDefinition() {
-  const source = await readProjectFile("src/pages/text-card/index.ts")
+  const source = await readProjectFile("src/pages/xiaohongshu/index.ts")
   const output = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -52,21 +52,24 @@ test("template switching changes host state without navigating", async () => {
     }
   ])
   assert.doesNotMatch(
-    await readProjectFile("src/pages/text-card/index.ts"),
+    await readProjectFile("src/pages/xiaohongshu/index.ts"),
     /navigateTo|navigateBack|redirectTo/
   )
 })
 
-test("the host keeps one persistent native switch and preserves all three templates", async () => {
-  const [app, homeModules, hostTemplate, hostConfig] = await Promise.all([
+test("the canonical entry keeps one persistent native switch", async () => {
+  const [app, homeModules, hostTemplate, hostConfig, compatibilityLogic] = await Promise.all([
     readProjectFile("src/app.json"),
     readProjectFile("src/utils/home-modules.js"),
-    readProjectFile("src/pages/text-card/index.wxml"),
-    readProjectFile("src/pages/text-card/index.json")
+    readProjectFile("src/pages/xiaohongshu/index.wxml"),
+    readProjectFile("src/pages/xiaohongshu/index.json"),
+    readProjectFile("src/pages/text-card/index.ts")
   ])
 
+  assert.ok(JSON.parse(app).pages.includes("pages/xiaohongshu/index"))
   assert.ok(JSON.parse(app).pages.includes("pages/text-card/index"))
-  assert.match(homeModules, /path: "\/pages\/text-card\/index"/)
+  assert.match(homeModules, /path: "\/pages\/xiaohongshu\/index"/)
+  assert.match(compatibilityLogic, /wx\.redirectTo\(\{ url: `\/pages\/xiaohongshu\/index/)
   assert.equal(hostTemplate.match(/wx:if="\{\{mountedTemplates\./g)?.length, 3)
   assert.equal(hostTemplate.match(/hidden="\{\{activeTemplate !==/g)?.length, 3)
   assert.equal(hostTemplate.match(/bindtap="handleTemplateTap"/g)?.length, 1)
@@ -80,10 +83,15 @@ test("the host keeps one persistent native switch and preserves all three templa
 })
 
 test("template components expose a guarded switch hook to the host", async () => {
-  for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
+  const templates = [
+    "components/text-card-template-one",
+    "pages/douyin2",
+    "pages/douyin3"
+  ]
+  for (const template of templates) {
     const [logic, config] = await Promise.all([
-      readProjectFile(`src/pages/${page}/index.ts`),
-      readProjectFile(`src/pages/${page}/index.json`)
+      readProjectFile(`src/${template}/index.ts`),
+      readProjectFile(`src/${template}/index.json`)
     ])
     assert.match(logic, /prepareTemplateSwitch\(\)/)
     assert.match(logic, /return false/)

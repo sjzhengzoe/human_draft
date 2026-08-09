@@ -10,13 +10,18 @@ test("template pages distinguish examples and expose safe action states", async 
     "utf8",
   );
 
-  for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
+  const templatePaths = [
+    "components/text-card-template-one",
+    "pages/douyin2",
+    "pages/douyin3",
+  ];
+  for (const templatePath of templatePaths) {
     const source = await readFile(
-      new URL(`src/pages/${page}/index.ts`, projectRoot),
+      new URL(`src/${templatePath}/index.ts`, projectRoot),
       "utf8",
     );
     const template = await readFile(
-      new URL(`src/pages/${page}/index.wxml`, projectRoot),
+      new URL(`src/${templatePath}/index.wxml`, projectRoot),
       "utf8",
     );
 

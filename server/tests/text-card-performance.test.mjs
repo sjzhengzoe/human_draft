@@ -25,7 +25,7 @@ function getMethodSource(source, methodName, nextMethodName) {
 test("text card previews stay lightweight, cached, and cancellable", async () => {
   const [templateOne, templateTwo, templateThree, previewCache] =
     await Promise.all([
-      readProjectFile("src/pages/xiaohongshu/index.ts"),
+      readProjectFile("src/components/text-card-template-one/index.ts"),
       readProjectFile("src/pages/douyin2/index.ts"),
       readProjectFile("src/pages/douyin3/index.ts"),
       readProjectFile("src/services/text-card-preview-cache.ts")
@@ -49,7 +49,11 @@ test("text card previews stay lightweight, cached, and cancellable", async () =>
 })
 
 test("text card pages share presentation and render infrastructure", async () => {
-  const pageNames = ["xiaohongshu", "douyin2", "douyin3"]
+  const templateBases = [
+    "components/text-card-template-one",
+    "pages/douyin2",
+    "pages/douyin3"
+  ]
   const [
     pageSources,
     pageStyles,
@@ -60,17 +64,17 @@ test("text card pages share presentation and render infrastructure", async () =>
     exportStyle
   ] = await Promise.all([
     Promise.all(
-      pageNames.map((page) => readProjectFile(`src/pages/${page}/index.ts`))
+      templateBases.map((base) => readProjectFile(`src/${base}/index.ts`))
     ),
     Promise.all(
-      pageNames.map((page) => readProjectFile(`src/pages/${page}/index.less`))
+      templateBases.map((base) => readProjectFile(`src/${base}/index.less`))
     ),
     Promise.all(
-      pageNames.map((page) => readProjectFile(`src/pages/${page}/index.wxml`))
+      templateBases.map((base) => readProjectFile(`src/${base}/index.wxml`))
     ),
     readProjectFile("src/utils/text-card-render.ts"),
     readProjectFile("src/components/text-card-workspace/index.less"),
-    readProjectFile("src/pages/text-card/index.less"),
+    readProjectFile("src/pages/xiaohongshu/index.less"),
     readProjectFile("src/styles/text-card-export.less")
   ])
 
@@ -98,8 +102,13 @@ test("text card pages share presentation and render infrastructure", async () =>
 })
 
 test("content security checks new input but not copy or export output", async () => {
-  for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
-    const source = await readProjectFile(`src/pages/${page}/index.ts`)
+  const templateBases = [
+    "components/text-card-template-one",
+    "pages/douyin2",
+    "pages/douyin3"
+  ]
+  for (const base of templateBases) {
+    const source = await readProjectFile(`src/${base}/index.ts`)
     const copySource = getMethodSource(
       source,
       "handleCopyContent",
@@ -140,8 +149,13 @@ test("text card UI exposes preview and high-resolution export states", async () 
   assert.match(workspaceTemplate, /正在更新预览/)
   assert.match(workspaceTemplate, /预览 ·/)
 
-  for (const page of ["xiaohongshu", "douyin2", "douyin3"]) {
-    const template = await readProjectFile(`src/pages/${page}/index.wxml`)
+  const templateBases = [
+    "components/text-card-template-one",
+    "pages/douyin2",
+    "pages/douyin3"
+  ]
+  for (const base of templateBases) {
+    const template = await readProjectFile(`src/${base}/index.wxml`)
     assert.match(template, /text-card-workspace/)
     assert.doesNotMatch(template, /show-menu-by-longpress/)
   }
