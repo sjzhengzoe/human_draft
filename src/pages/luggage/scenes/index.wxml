@@ -49,6 +49,7 @@
         role="{{sortEditing ? '' : 'button'}}"
         aria-label="{{sortEditing ? item.name : '编辑' + item.name + '场景'}}"
         data-id="{{item.id}}"
+        data-name="{{item.name}}"
         bindtap="handleEdit"
       >
         <view class="scene-card__main">
@@ -81,12 +82,31 @@
   </scroll-view>
 
   <luggage-scene-dialog
-    wx:if="{{sceneCreateVisible}}"
+    wx:if="{{sceneDialogVisible}}"
     visible="{{true}}"
-    saving="{{sceneCreating}}"
-    bindcancel="closeSceneCreateDialog"
-    bindconfirm="createScene"
+    saving="{{sceneSaving}}"
+    title="{{sceneEditingId ? '编辑行李场景' : '新增行李场景'}}"
+    confirm-text="{{sceneEditingId ? '保存' : '创建'}}"
+    initial-name="{{sceneDialogName}}"
+    deletable="{{!!sceneEditingId}}"
+    bindcancel="closeSceneDialog"
+    bindconfirm="saveScene"
+    binddelete="openSceneDeleteConfirm"
   />
 
-  <operation-loading visible="{{savingOrder}}" text="正在保存排序…" />
+  <app-dialog
+    wx:if="{{deleteConfirmVisible}}"
+    visible="{{true}}"
+    title="删除场景"
+    content="“{{sceneDialogName}}”内的全部层级和物品也会删除。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="closeSceneDeleteConfirm"
+    bindconfirm="confirmSceneDelete"
+  />
+
+  <operation-loading
+    visible="{{savingOrder || deleting}}"
+    text="{{deleting ? '正在删除场景…' : '正在保存排序…'}}"
+  />
 </view>

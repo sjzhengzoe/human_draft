@@ -6,7 +6,6 @@ const nativeScrollPageConfigs = [
   "../../src/exercise/pages/index.json",
   "../../src/exercise/pages/rest-days/index.json",
   "../../src/exercise/pages/settings/index.json",
-  "../../src/pages/luggage/scene-edit/index.json",
   "../../src/pages/media/categories/index.json",
   "../../src/pages/media/category-edit/index.json",
   "../../src/pages/media/edit/index.json",

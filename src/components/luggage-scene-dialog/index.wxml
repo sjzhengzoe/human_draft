@@ -1,7 +1,7 @@
 <app-dialog
   wx:if="{{visible}}"
   visible="{{true}}"
-  title="新增行李场景"
+  title="{{title}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"
 >
@@ -19,12 +19,24 @@
     />
   </view>
   <view slot="actions" class="scene-dialog__actions">
-    <button class="scene-dialog__button" disabled="{{saving}}" bindtap="handleCancel">取消</button>
-    <button
-      class="scene-dialog__button scene-dialog__button--primary"
-      loading="{{saving}}"
-      disabled="{{saving || !canSave}}"
-      bindtap="handleConfirm"
-    >创建</button>
+    <view
+      wx:if="{{deletable}}"
+      class="scene-dialog__delete"
+      role="button"
+      aria-label="删除当前行李场景"
+      bindtap="handleDelete"
+    >
+      <app-icon name="trash-2-danger" size="22" />
+      <text>删除场景</text>
+    </view>
+    <view class="scene-dialog__main-actions">
+      <button class="scene-dialog__button" disabled="{{saving}}" bindtap="handleCancel">取消</button>
+      <button
+        class="scene-dialog__button scene-dialog__button--primary"
+        loading="{{saving}}"
+        disabled="{{saving || !canSave}}"
+        bindtap="handleConfirm"
+      >{{confirmText}}</button>
+    </view>
   </view>
 </app-dialog>

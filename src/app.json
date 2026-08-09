@@ -21,7 +21,6 @@
     "pages/activities/index",
     "pages/luggage/index",
     "pages/luggage/scenes/index",
-    "pages/luggage/scene-edit/index",
     "pages/wardrobe/index",
     "pages/wardrobe/categories/index",
     "pages/wardrobe/category-edit/index",

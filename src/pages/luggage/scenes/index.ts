@@ -1,7 +1,9 @@
 import {
   createLuggageScene,
+  deleteLuggageScene,
   listLuggageScenes,
-  reorderLuggageScenes
+  reorderLuggageScenes,
+  updateLuggageScene
 } from "../../../services/luggage"
 import {
   activateAsyncPage,
@@ -20,8 +22,12 @@ Page({
     scenes: [] as Array<{ id: string; name: string; group_count: number; item_count: number }>,
     loading: true,
     hasLoaded: false,
-    sceneCreating: false,
-    sceneCreateVisible: false,
+    sceneSaving: false,
+    sceneDialogVisible: false,
+    sceneEditingId: "",
+    sceneDialogName: "",
+    deleting: false,
+    deleteConfirmVisible: false,
     savingOrder: false,
     sortEditing: false,
     luggageRevision: -1,
@@ -65,53 +71,113 @@ Page({
   },
 
   handleAdd() {
-    if (this.data.savingOrder || this.data.sceneCreating) return
+    if (this.data.savingOrder || this.data.sceneSaving || this.data.deleting) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    this.setData({ sceneCreateVisible: true })
+    this.setData({
+      sceneDialogVisible: true,
+      sceneEditingId: "",
+      sceneDialogName: ""
+    })
   },
 
-  closeSceneCreateDialog() {
-    if (!this.data.sceneCreating) this.setData({ sceneCreateVisible: false })
+  closeSceneDialog() {
+    if (!this.data.sceneSaving) this.setData({ sceneDialogVisible: false })
   },
 
-  async createScene(event: WechatMiniprogram.CustomEvent<{ name?: string }>) {
+  async saveScene(event: WechatMiniprogram.CustomEvent<{ name?: string }>) {
     const name = String(event.detail.name || "").trim()
-    if (!name || this.data.sceneCreating) return
-    this.setData({ sceneCreating: true })
+    if (!name || this.data.sceneSaving) return
+    const editingId = this.data.sceneEditingId
+    const currentScene = this.data.scenes.find((scene) => scene.id === editingId)
+    if (editingId && currentScene?.name === name) {
+      this.setData({ sceneDialogVisible: false })
+      return
+    }
+    this.setData({ sceneSaving: true })
     try {
-      const scene = await createLuggageScene(name)
-      if (!isAsyncPageActive(this)) return
-      this.setData({
-        scenes: [...this.data.scenes, {
+      let scenes = this.data.scenes
+      if (editingId) {
+        await updateLuggageScene(editingId, name)
+        scenes = scenes.map((scene) => scene.id === editingId ? { ...scene, name } : scene)
+      } else {
+        const scene = await createLuggageScene(name)
+        scenes = [...scenes, {
           id: scene.id,
           name: scene.name,
           group_count: scene.groups.length,
           item_count: scene.groups.reduce((total, group) => total + group.items.length, 0)
-        }],
-        sceneCreateVisible: false,
+        }]
+      }
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        scenes,
+        sceneDialogVisible: false,
+        sceneEditingId: "",
+        sceneDialogName: "",
         luggageRevision: getLuggageDataRevision()
       })
-      wx.showToast({ title: "场景已创建", icon: "success" })
+      wx.showToast({ title: editingId ? "场景已保存" : "场景已创建", icon: "success" })
     } catch (error) {
       if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "创建失败", icon: "none" })
+        wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
       }
     } finally {
-      if (isAsyncPageActive(this)) this.setData({ sceneCreating: false })
+      if (isAsyncPageActive(this)) this.setData({ sceneSaving: false })
     }
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.savingOrder || this.data.sceneCreating || this.data.sortEditing) return
+    if (this.data.savingOrder || this.data.sceneSaving || this.data.deleting || this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
-    if (id) wx.navigateTo({ url: `/pages/luggage/scene-edit/index?id=${id}` })
+    const name = String(event.currentTarget.dataset.name || "")
+    if (id) {
+      this.setData({
+        sceneDialogVisible: true,
+        sceneEditingId: id,
+        sceneDialogName: name
+      })
+    }
+  },
+
+  openSceneDeleteConfirm() {
+    if (!this.data.sceneEditingId || this.data.sceneSaving || this.data.deleting) return
+    this.setData({ sceneDialogVisible: false, deleteConfirmVisible: true })
+  },
+
+  closeSceneDeleteConfirm() {
+    if (!this.data.deleting) this.setData({ deleteConfirmVisible: false })
+  },
+
+  async confirmSceneDelete() {
+    const id = this.data.sceneEditingId
+    if (!id || this.data.sceneSaving || this.data.deleting) return
+    this.setData({ deleting: true })
+    try {
+      await deleteLuggageScene(id)
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        scenes: this.data.scenes.filter((scene) => scene.id !== id),
+        deleting: false,
+        deleteConfirmVisible: false,
+        sceneEditingId: "",
+        sceneDialogName: "",
+        luggageRevision: getLuggageDataRevision()
+      })
+      wx.showToast({ title: "场景已删除", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
   },
 
   handleSceneMove(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.sortEditing || this.data.savingOrder) return
+    if (!this.data.sortEditing || this.data.savingOrder || this.data.deleting) return
     const index = Number(event.currentTarget.dataset.index)
     const targetIndex = index + Number(event.currentTarget.dataset.direction)
     const source = this.data.scenes[index]
@@ -125,7 +191,7 @@ Page({
 
   async handleSortEditingToggle() {
     if (
-      this.data.savingOrder || this.data.sceneCreating ||
+      this.data.savingOrder || this.data.sceneSaving || this.data.deleting ||
       this.data.loading || this.data.scenes.length < 2
     ) return
     if (!this.data.sortEditing) {

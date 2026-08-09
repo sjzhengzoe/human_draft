@@ -7,12 +7,37 @@ Component({
     saving: {
       type: Boolean,
       value: false
+    },
+    title: {
+      type: String,
+      value: "新增行李场景"
+    },
+    confirmText: {
+      type: String,
+      value: "创建"
+    },
+    initialName: {
+      type: String,
+      value: ""
+    },
+    deletable: {
+      type: Boolean,
+      value: false
     }
   },
 
   data: {
     name: "",
     canSave: false
+  },
+
+  observers: {
+    initialName(initialName: string) {
+      this.setData({
+        name: initialName,
+        canSave: Boolean(initialName.trim())
+      })
+    }
   },
 
   methods: {
@@ -23,6 +48,10 @@ Component({
 
     handleCancel() {
       if (!this.properties.saving) this.triggerEvent("cancel")
+    },
+
+    handleDelete() {
+      if (!this.properties.saving && this.properties.deletable) this.triggerEvent("delete")
     },
 
     handleConfirm() {
