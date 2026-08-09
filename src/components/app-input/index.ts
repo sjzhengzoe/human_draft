@@ -39,6 +39,10 @@ Component({
       type: Boolean,
       value: false
     },
+    dialogMode: {
+      type: Boolean,
+      value: false
+    },
     adjustPosition: {
       type: Boolean,
       value: true
@@ -54,6 +58,7 @@ Component({
   },
   data: {
     fontSize: UI_FONT_SIZES.base,
+    dialogCursorSpacing: 160,
     localValue: "",
     editing: false,
     nativeFocus: false
@@ -87,7 +92,7 @@ Component({
       this.triggerEvent("input", event.detail)
     },
     handleFocus(event: WechatMiniprogram.InputFocus) {
-      if (!this.properties.persistent) {
+      if (!this.properties.persistent && !this.properties.dialogMode) {
         this.setData({ editing: true, nativeFocus: true })
       }
       this.triggerEvent("focus", event.detail)

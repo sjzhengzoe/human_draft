@@ -142,7 +142,8 @@
             value="{{editorContent}}"
             maxlength="50"
             placeholder="写下这个关键节点…"
-            adjust-position="{{false}}"
+            adjust-position="{{true}}"
+            cursor-spacing="160"
             bindinput="handleContentInput"
           />
           <view class="content-count">{{editorContent.length}} / 50</view>

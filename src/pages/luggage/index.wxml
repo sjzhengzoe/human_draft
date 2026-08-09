@@ -270,7 +270,7 @@
         maxlength="{{editorMaxlength}}"
         placeholder="{{editorPlaceholder}}"
         focus
-        adjust-position="{{false}}"
+        dialog-mode
         bindinput="handleEditorNameInput"
         bindconfirm="saveEditor"
       />

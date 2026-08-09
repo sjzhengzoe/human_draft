@@ -12,7 +12,7 @@
       maxlength="80"
       placeholder="例如：成都三日游"
       focus
-      adjust-position="{{false}}"
+      dialog-mode
       disabled="{{saving}}"
       bindinput="handleNameInput"
       bindconfirm="handleConfirm"

@@ -97,6 +97,8 @@ test("luggage business dialogs use the shared app dialog", async () => {
   assert.match(managerPage, /<luggage-scene-dialog/);
   assert.match(managerPage, /title="删除场景"/);
   assert.match(sceneDialog, /<app-dialog/);
+  assert.match(sceneDialog, /dialog-mode/);
+  assert.match(page, /dialog-mode/);
   assert.doesNotMatch(`${logic}\n${managerLogic}`, /wx\.showModal/);
 });
 

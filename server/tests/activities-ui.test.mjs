@@ -47,15 +47,13 @@ test("activity editor reuses shared dialogs and the 4:3 image cropper", async ()
   assert.match(template, /aria-label="新增活动"/);
   assert.match(template, /aria-label="管理\{\{activeType\}\}活动"/);
   assert.match(template, /wx:if="\{\{showEditor\}\}"\s+visible="\{\{true\}\}"/);
-  assert.match(template, /track-keyboard="\{\{false\}\}"/);
-  assert.equal(template.match(/adjust-position="\{\{true\}\}"/g)?.length, 2);
-  assert.equal(template.match(/cursor-spacing="24"/g)?.length, 2);
-  assert.equal(template.match(/^\s+persistent\s*$/gm)?.length, 2);
+  assert.equal(template.match(/^\s+dialog-mode\s*$/gm)?.length, 2);
   assert.match(template, /aria-label="\{\{selectedImagePath \|\| currentImageUrl \? '更换活动封面' : '添加活动封面'\}\}"/);
   assert.match(template, /<text>添加封面<\/text>/);
   assert.match(template, /class="activity-editor__main"/);
   assert.match(styles, /\.activity-editor__image\s*{[^}]*width:\s*200rpx/);
   assert.doesNotMatch(template, /bindfocus=|bindblur=|scroll-into-view=/);
+  assert.doesNotMatch(template, /track-keyboard=|adjust-position=|cursor-spacing=|^\s+persistent\s*$/m);
   assert.doesNotMatch(page, /handleEditorInputFocus|editorKeyboardSpacerHeight|editorFocusAnchor/);
   assert.doesNotMatch(template, /选择活动封面（选填）|例如：红花湖骑行|一句简介（选填）/);
   assert.doesNotMatch(template, /^\s+focus\s*$/m);

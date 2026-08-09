@@ -136,7 +136,7 @@
           maxlength="5"
           placeholder="{{minutesDialogPlaceholder}}"
           focus
-          adjust-position="{{false}}"
+          dialog-mode
           bindinput="handleMinutesInput"
         />
         <text>分钟</text>
