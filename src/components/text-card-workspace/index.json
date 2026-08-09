@@ -4,7 +4,6 @@
     "app-icon": "/components/app-icon/index",
     "custom-navigation": "/components/custom-navigation/index",
     "text-card-action-bar": "/components/text-card-action-bar/index",
-    "text-card-template-switch": "/components/text-card-template-switch/index",
     "text-card-undo-bar": "/components/text-card-undo-bar/index"
   }
 }

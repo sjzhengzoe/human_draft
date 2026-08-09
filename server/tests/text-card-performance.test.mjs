@@ -56,7 +56,7 @@ test("text card pages share presentation and render infrastructure", async () =>
     pageTemplates,
     sharedRender,
     workspaceStyle,
-    templateSwitchStyle,
+    hostStyle,
     exportStyle
   ] = await Promise.all([
     Promise.all(
@@ -70,7 +70,7 @@ test("text card pages share presentation and render infrastructure", async () =>
     ),
     readProjectFile("src/utils/text-card-render.ts"),
     readProjectFile("src/components/text-card-workspace/index.less"),
-    readProjectFile("src/components/text-card-template-switch/index.less"),
+    readProjectFile("src/pages/text-card/index.less"),
     readProjectFile("src/styles/text-card-export.less")
   ])
 
@@ -91,7 +91,7 @@ test("text card pages share presentation and render infrastructure", async () =>
   assert.match(sharedRender, /export function createRenderQueue/)
   assert.match(sharedRender, /export function canvasToTempFilePath/)
   assert.doesNotMatch(workspaceStyle, /\.template-switch__item/)
-  assert.match(templateSwitchStyle, /\.template-switch/)
+  assert.match(hostStyle, /\.template-switch/)
   assert.match(workspaceStyle, /\.card-preview-overlay/)
   assert.match(workspaceStyle, /\.circle-image-picker/)
   assert.match(exportStyle, /\.export-canvas/)

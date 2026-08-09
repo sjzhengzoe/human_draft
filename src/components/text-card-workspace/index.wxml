@@ -4,13 +4,6 @@
   </view>
 
   <view class="page page--{{variant}} {{embedded ? 'page--embedded' : ''}}">
-    <text-card-template-switch
-      wx:if="{{!embedded}}"
-      active-template="{{activeTemplate}}"
-      disabled="{{disabled}}"
-      bind:change="handleTemplateChange"
-    />
-
     <view wx:if="{{isExampleContent}}" class="example-notice">
       <text class="example-notice__title">当前是默认文案</text>
       <text class="example-notice__desc">请编辑文案后再导出</text>

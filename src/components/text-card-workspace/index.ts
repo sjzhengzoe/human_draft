@@ -26,12 +26,6 @@ Component({
   },
 
   methods: {
-    handleTemplateChange(
-      event: WechatMiniprogram.CustomEvent<{ template?: string }>,
-    ) {
-      this.triggerEvent("templatechange", event.detail);
-    },
-
     handleCopyTemplate() {
       this.triggerEvent("copytemplate");
     },

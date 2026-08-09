@@ -41,8 +41,8 @@ test("template switching changes host state without navigating", async () => {
     }
   }
 
-  definition.methods.handleTemplateChange.call(context, {
-    detail: { template: "douyin3" }
+  definition.methods.handleTemplateTap.call(context, {
+    currentTarget: { dataset: { template: "douyin3" } }
   })
 
   assert.deepEqual(updates, [
@@ -57,24 +57,22 @@ test("template switching changes host state without navigating", async () => {
   )
 })
 
-test("the host keeps one persistent switch and preserves all three templates", async () => {
-  const [app, homeModules, hostTemplate, hostConfig, switchTemplate] = await Promise.all([
+test("the host keeps one persistent native switch and preserves all three templates", async () => {
+  const [app, homeModules, hostTemplate, hostConfig] = await Promise.all([
     readProjectFile("src/app.json"),
     readProjectFile("src/utils/home-modules.js"),
     readProjectFile("src/pages/text-card/index.wxml"),
-    readProjectFile("src/pages/text-card/index.json"),
-    readProjectFile("src/components/text-card-template-switch/index.wxml")
+    readProjectFile("src/pages/text-card/index.json")
   ])
 
   assert.ok(JSON.parse(app).pages.includes("pages/text-card/index"))
   assert.match(homeModules, /path: "\/pages\/text-card\/index"/)
   assert.equal(hostTemplate.match(/wx:if="\{\{mountedTemplates\./g)?.length, 3)
   assert.equal(hostTemplate.match(/hidden="\{\{activeTemplate !==/g)?.length, 3)
-  assert.equal(hostTemplate.match(/bind:change="handleTemplateChange"/g)?.length, 1)
-  assert.ok(hostTemplate.indexOf("text-card-template-switch") < hostTemplate.indexOf("text-card-page__content"))
-  assert.equal(switchTemplate.match(/bindtap="handleTap"/g)?.length, 1)
+  assert.equal(hostTemplate.match(/bindtap="handleTemplateTap"/g)?.length, 1)
+  assert.ok(hostTemplate.indexOf("class=\"template-switch\"") < hostTemplate.indexOf("text-card-page__content"))
   assert.deepEqual(Object.keys(JSON.parse(hostConfig).usingComponents), [
-    "text-card-template-switch",
+    "custom-navigation",
     "text-card-template-one",
     "text-card-template-two",
     "text-card-template-three"
@@ -107,8 +105,8 @@ test("the persistent switch respects an active template busy state", async () =>
     }
   }
 
-  definition.methods.handleTemplateChange.call(context, {
-    detail: { template: "douyin2" }
+  definition.methods.handleTemplateTap.call(context, {
+    currentTarget: { dataset: { template: "douyin2" } }
   })
 
   assert.deepEqual(updates, [])

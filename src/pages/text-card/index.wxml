@@ -4,10 +4,21 @@
   </view>
 
   <view class="text-card-page__switch">
-    <text-card-template-switch
-      active-template="{{activeTemplate}}"
-      bind:change="handleTemplateChange"
-    />
+    <view
+      class="template-switch"
+      role="tablist"
+      aria-label="选择图文模板"
+    >
+      <view
+        wx:for="{{templates}}"
+        wx:key="key"
+        class="template-switch__item {{activeTemplate === item.key ? 'template-switch__item--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeTemplate === item.key}}"
+        data-template="{{item.key}}"
+        bindtap="handleTemplateTap"
+      >{{item.label}}</view>
+    </view>
   </view>
 
   <view class="text-card-page__content">

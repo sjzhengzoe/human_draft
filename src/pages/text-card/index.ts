@@ -2,6 +2,11 @@ type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
 
 Component({
   data: {
+    templates: [
+      { key: "xiaohongshu", label: "模板一" },
+      { key: "douyin2", label: "模板二" },
+      { key: "douyin3", label: "模板三" },
+    ],
     activeTemplate: "xiaohongshu" as TextCardTemplate,
     mountedTemplates: {
       xiaohongshu: true,
@@ -11,10 +16,8 @@ Component({
   },
 
   methods: {
-    handleTemplateChange(
-      event: WechatMiniprogram.CustomEvent<{ template?: string }>,
-    ) {
-      const template = normalizeTemplate(event.detail.template);
+    handleTemplateTap(event: WechatMiniprogram.TouchEvent) {
+      const template = normalizeTemplate(event.currentTarget.dataset.template);
       if (!template || template === this.data.activeTemplate) return;
 
       const currentTemplate = this.selectComponent(
