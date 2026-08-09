@@ -60,6 +60,9 @@ Page({
     editorName: "",
     editorIntroduction: "",
     editorType: "室内" as ActivityType,
+    editorFocusAnchor: "",
+    editorFocusedField: "",
+    editorKeyboardSpacerHeight: 0,
     currentImageUrl: "",
     selectedImagePath: "",
     selectingImage: false,
@@ -161,6 +164,9 @@ Page({
       editorName: "",
       editorIntroduction: "",
       editorType: this.data.activeType,
+      editorFocusAnchor: "",
+      editorFocusedField: "",
+      editorKeyboardSpacerHeight: 0,
       currentImageUrl: "",
       selectedImagePath: ""
     })
@@ -174,6 +180,9 @@ Page({
       editorName: item.name,
       editorIntroduction: item.introduction || "",
       editorType: item.activity_type,
+      editorFocusAnchor: "",
+      editorFocusedField: "",
+      editorKeyboardSpacerHeight: 0,
       currentImageUrl: item.image_url || item.thumbnail_url || "",
       selectedImagePath: ""
     })
@@ -192,6 +201,31 @@ Page({
 
   handleEditorIntroductionInput(event: WechatMiniprogram.Input) {
     this.setData({ editorIntroduction: event.detail.value })
+  },
+
+  handleEditorInputFocus(event: WechatMiniprogram.InputFocus) {
+    const field = String(event.currentTarget.dataset.scrollTarget || "")
+    if (!field) return
+    const keyboardHeight = Math.max(0, Number(event.detail.height || 0))
+    this.setData({
+      editorFocusAnchor: "",
+      editorFocusedField: field,
+      editorKeyboardSpacerHeight: keyboardHeight
+    }, () => {
+      if (this.data.showEditor && this.data.editorFocusedField === field) {
+        this.setData({ editorFocusAnchor: field })
+      }
+    })
+  },
+
+  handleEditorInputBlur(event: WechatMiniprogram.InputBlur) {
+    const field = String(event.currentTarget.dataset.scrollTarget || "")
+    if (field !== this.data.editorFocusedField) return
+    this.setData({
+      editorFocusAnchor: "",
+      editorFocusedField: "",
+      editorKeyboardSpacerHeight: 0
+    })
   },
 
   handleEditorTypeTap(event: WechatMiniprogram.TouchEvent) {
@@ -239,7 +273,14 @@ Page({
 
   closeEditor() {
     if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
-    this.setData({ showEditor: false, selectedImagePath: "", currentImageUrl: "" })
+    this.setData({
+      showEditor: false,
+      editorFocusAnchor: "",
+      editorFocusedField: "",
+      editorKeyboardSpacerHeight: 0,
+      selectedImagePath: "",
+      currentImageUrl: ""
+    })
   },
 
   handleChooseImage() {
@@ -329,6 +370,9 @@ Page({
       this.applyActivityItemToCache(item)
       this.setData({
         showEditor: false,
+        editorFocusAnchor: "",
+        editorFocusedField: "",
+        editorKeyboardSpacerHeight: 0,
         selectedImagePath: "",
         currentImageUrl: ""
       })

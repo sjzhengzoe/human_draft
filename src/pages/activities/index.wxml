@@ -136,7 +136,16 @@
     custom-actions="{{true}}"
     track-keyboard="{{false}}"
   >
-    <view slot="body" class="activity-editor">
+    <scroll-view
+      slot="body"
+      class="activity-editor"
+      scroll-y
+      enhanced
+      bounces="{{false}}"
+      show-scrollbar="{{false}}"
+      scroll-into-view="{{editorFocusAnchor}}"
+      scroll-with-animation="{{true}}"
+    >
       <view
         class="activity-editor__image"
         role="button"
@@ -156,23 +165,31 @@
         <view wx:if="{{selectedImagePath || currentImageUrl}}" class="activity-editor__image-action">更换封面</view>
       </view>
       <app-input
+        id="activity-editor-name"
         custom-class="editor-input"
+        data-scroll-target="activity-editor-name"
         value="{{editorName}}"
         maxlength="120"
         placeholder="活动名称"
         persistent
-        adjust-position="{{true}}"
+        adjust-position="{{false}}"
         bindinput="handleEditorNameInput"
+        bindfocus="handleEditorInputFocus"
+        bindblur="handleEditorInputBlur"
       />
       <app-input
+        id="activity-editor-introduction"
         custom-class="editor-input editor-input--introduction"
+        data-scroll-target="activity-editor-introduction"
         value="{{editorIntroduction}}"
         maxlength="200"
         placeholder="一句简介"
         confirm-type="done"
         persistent
-        adjust-position="{{true}}"
+        adjust-position="{{false}}"
         bindinput="handleEditorIntroductionInput"
+        bindfocus="handleEditorInputFocus"
+        bindblur="handleEditorInputBlur"
       />
       <view class="type-options" role="radiogroup" aria-label="活动场景">
         <view
@@ -185,7 +202,8 @@
           aria-checked="{{editorType === item}}"
         >{{item}}</view>
       </view>
-    </view>
+      <view class="activity-editor__keyboard-spacer" style="height: {{editorKeyboardSpacerHeight}}px;" />
+    </scroll-view>
     <view slot="actions" class="modal-actions">
       <button class="cancel-button" disabled="{{saving || selectingImage}}" bindtap="closeEditor">取消</button>
       <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>

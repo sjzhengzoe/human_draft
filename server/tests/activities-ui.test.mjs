@@ -33,9 +33,10 @@ test("activity list uses top scene tabs and a button-free single-card swiper", a
 });
 
 test("activity editor reuses shared dialogs and the 4:3 image cropper", async () => {
-  const [template, styles, config] = await Promise.all([
+  const [template, styles, page, config] = await Promise.all([
     readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.less", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/index.ts", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.json", projectRoot), "utf8"),
   ]);
 
@@ -47,11 +48,17 @@ test("activity editor reuses shared dialogs and the 4:3 image cropper", async ()
   assert.match(template, /aria-label="管理\{\{activeType\}\}活动"/);
   assert.match(template, /wx:if="\{\{showEditor\}\}"\s+visible="\{\{true\}\}"/);
   assert.match(template, /track-keyboard="\{\{false\}\}"/);
-  assert.equal(template.match(/adjust-position="\{\{true\}\}"/g)?.length, 2);
+  assert.equal(template.match(/adjust-position="\{\{false\}\}"/g)?.length, 2);
   assert.equal(template.match(/^\s+persistent\s*$/gm)?.length, 2);
   assert.match(template, /aria-label="\{\{selectedImagePath \|\| currentImageUrl \? '更换活动封面' : '添加活动封面'\}\}"/);
   assert.match(template, /<text>添加封面<\/text>/);
+  assert.match(template, /scroll-into-view="\{\{editorFocusAnchor\}\}"/);
+  assert.equal(template.match(/bindfocus="handleEditorInputFocus"/g)?.length, 2);
+  assert.equal(template.match(/bindblur="handleEditorInputBlur"/g)?.length, 2);
   assert.match(styles, /\.activity-editor__image\s*{[^}]*width:\s*320rpx/);
+  assert.match(styles, /\.activity-editor\s*{[^}]*height:\s*520rpx/);
+  assert.match(page, /editorKeyboardSpacerHeight:\s*keyboardHeight/);
+  assert.match(page, /this\.setData\(\{ editorFocusAnchor: field \}\)/);
   assert.doesNotMatch(template, /选择活动封面（选填）|例如：红花湖骑行|一句简介（选填）/);
   assert.doesNotMatch(template, /^\s+focus\s*$/m);
   assert.doesNotMatch(template, /wx\.showModal/);
