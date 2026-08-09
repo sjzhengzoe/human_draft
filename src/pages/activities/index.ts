@@ -3,6 +3,7 @@ import {
   createActivityItem,
   deleteActivityItem,
   listActivityItems,
+  replaceActivityItemImage,
   swapActivityItemSortOrders,
   updateActivityItem
 } from "../../services/activities"
@@ -14,17 +15,20 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { hasSameOrder } from "../../utils/drag-sort"
-import { UI_COLORS } from "../../styles/colors"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
-let activitySortOriginalIds: string[] = []
+const browseIndices: Record<ActivityType, number> = {
+  室内: 0,
+  户外: 0,
+  居家: 0
+}
 
 Page({
   data: {
     activityTypes: ACTIVITY_TYPES,
     activeType: "室内" as ActivityType,
     items: [] as ActivityItem[],
+    browseCurrentIndex: 0,
     canWrite: false,
     loading: true,
     contentLoading: false,
@@ -32,26 +36,33 @@ Page({
     showEditor: false,
     editingId: "",
     editorName: "",
+    editorIntroduction: "",
     editorType: "室内" as ActivityType,
+    currentImageUrl: "",
+    selectedImagePath: "",
+    selectingImage: false,
+    showImageCropper: false,
+    cropSourcePath: "",
+    showManager: false,
+    showDeleteDialog: false,
+    pendingDeleteId: "",
+    pendingDeleteName: "",
     saving: false,
     deleting: false,
-    ordering: false,
-    sortEditing: false
+    ordering: false
   },
 
   onShow() {
     activateAsyncPage(this)
-    activitySortOriginalIds = []
-    if (this.data.sortEditing) this.setData({ sortEditing: false })
     this.loadItems()
   },
 
   onUnload() {
     deactivateAsyncPage(this)
-    activitySortOriginalIds = []
+    for (const type of ACTIVITY_TYPES) browseIndices[type] = 0
   },
 
-  async loadItems() {
+  async loadItems(focusId = "") {
     const generation = beginAsyncPageRequest(this)
     const activeType = this.data.activeType
     const showInitialLoading = !this.data.hasLoaded
@@ -63,7 +74,16 @@ Page({
       const session = await ensureLogin()
       const items = await listActivityItems(activeType)
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      this.setData({ items, canWrite: session.user.can_write })
+      const focusedIndex = focusId ? items.findIndex((item) => item.id === focusId) : -1
+      const browseCurrentIndex = focusedIndex >= 0
+        ? focusedIndex
+        : Math.min(browseIndices[activeType], Math.max(0, items.length - 1))
+      browseIndices[activeType] = browseCurrentIndex
+      this.setData({
+        items,
+        browseCurrentIndex,
+        canWrite: session.user.can_write
+      })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       wx.showToast({ title: error instanceof Error ? error.message : "加载失败", icon: "none" })
@@ -75,96 +95,61 @@ Page({
   },
 
   handleTypeTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.saving || this.data.deleting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
+    if (this.data.saving || this.data.deleting || this.data.ordering) return
     const type = event.currentTarget.dataset.type as ActivityType
     if (!type || type === this.data.activeType) return
-    this.setData({ activeType: type, sortEditing: false }, () => this.loadItems())
+    this.setData({
+      activeType: type,
+      browseCurrentIndex: browseIndices[type]
+    }, () => this.loadItems())
   },
 
-  async handleSortEditingToggle() {
-    if (!this.data.canWrite || this.data.contentLoading || this.data.ordering) return
-    if (!this.data.sortEditing) {
-      activitySortOriginalIds = this.data.items.map((item) => item.id)
-      this.setData({ sortEditing: true })
-      return
-    }
-
-    const desiredIds = this.data.items.map((item) => item.id)
-    if (hasSameOrder(activitySortOriginalIds, desiredIds)) {
-      activitySortOriginalIds = []
-      this.setData({ sortEditing: false })
-      return
-    }
-
-    const workingIds = [...activitySortOriginalIds]
-    this.setData({ ordering: true })
-    try {
-      for (let index = 0; index < desiredIds.length; index += 1) {
-        if (workingIds[index] === desiredIds[index]) continue
-        const targetIndex = workingIds.indexOf(desiredIds[index])
-        if (targetIndex < 0) throw new Error("活动排序数据已变化，请重新加载")
-        await swapActivityItemSortOrders(workingIds[index], workingIds[targetIndex])
-        const currentId = workingIds[index]
-        workingIds[index] = workingIds[targetIndex]
-        workingIds[targetIndex] = currentId
-        activitySortOriginalIds = [...workingIds]
-      }
-      if (!isAsyncPageActive(this)) return
-      activitySortOriginalIds = []
-      this.setData({ sortEditing: false })
-      wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.loadItems()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "排序保存失败",
-          icon: "none"
-        })
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ ordering: false })
-    }
+  handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
+    const current = Number(event.detail.current)
+    if (!Number.isInteger(current) || current < 0 || current >= this.data.items.length) return
+    browseIndices[this.data.activeType] = current
+    if (current !== this.data.browseCurrentIndex) this.setData({ browseCurrentIndex: current })
   },
-
-  noop() {},
 
   handleAdd() {
-    if (!this.data.canWrite || this.data.loading || this.data.contentLoading || this.data.deleting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
+    if (!this.data.canWrite || this.data.loading || this.data.deleting) return
     this.setData({
       showEditor: true,
       editingId: "",
       editorName: "",
-      editorType: this.data.activeType
+      editorIntroduction: "",
+      editorType: this.data.activeType,
+      currentImageUrl: "",
+      selectedImagePath: ""
     })
   },
 
-  handleEdit(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.loading || this.data.contentLoading || this.data.deleting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    const id = String(event.currentTarget.dataset.id || "")
-    const item = this.data.items.find((entry) => entry.id === id)
-    if (!item) return
+  openEditor(item: ActivityItem) {
     this.setData({
+      showManager: false,
       showEditor: true,
       editingId: item.id,
       editorName: item.name,
-      editorType: item.activity_type
+      editorIntroduction: item.introduction || "",
+      editorType: item.activity_type,
+      currentImageUrl: item.image_url || item.thumbnail_url || "",
+      selectedImagePath: ""
     })
+  },
+
+  handleManagerEdit(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.ordering || this.data.deleting) return
+    const id = String(event.currentTarget.dataset.id || "")
+    const item = this.data.items.find((entry) => entry.id === id)
+    if (item) this.openEditor(item)
   },
 
   handleEditorNameInput(event: WechatMiniprogram.Input) {
     this.setData({ editorName: event.detail.value })
+  },
+
+  handleEditorIntroductionInput(event: WechatMiniprogram.Input) {
+    this.setData({ editorIntroduction: event.detail.value })
   },
 
   handleEditorTypeTap(event: WechatMiniprogram.TouchEvent) {
@@ -172,86 +157,200 @@ Page({
   },
 
   closeEditor() {
-    if (!this.data.saving) this.setData({ showEditor: false })
+    if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    this.setData({ showEditor: false, selectedImagePath: "", currentImageUrl: "" })
+  },
+
+  handleChooseImage() {
+    if (
+      !this.data.canWrite ||
+      this.data.saving ||
+      this.data.selectingImage ||
+      this.data.showImageCropper
+    ) return
+    this.setData({ selectingImage: true })
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ["image"],
+      sourceType: ["album", "camera"],
+      success: (result) => {
+        if (!isAsyncPageActive(this)) return
+        const path = result.tempFiles[0]?.tempFilePath
+        if (!path) {
+          this.setData({ selectingImage: false })
+          return
+        }
+        this.setData({
+          selectingImage: false,
+          showImageCropper: true,
+          cropSourcePath: path
+        })
+      },
+      fail: () => {
+        if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
+      }
+    })
+  },
+
+  handleImageCropCancel() {
+    this.setData({ showImageCropper: false, cropSourcePath: "" })
+  },
+
+  handleImageCropConfirm(
+    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+  ) {
+    const tempFilePath = event.detail.tempFilePath
+    if (!tempFilePath) return
+    this.setData({
+      selectedImagePath: tempFilePath,
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
+  },
+
+  handleImageCropError(
+    event: WechatMiniprogram.CustomEvent<{ message?: string }>
+  ) {
+    wx.showToast({
+      title: event.detail.message || "图片裁剪失败，请重试",
+      icon: "none"
+    })
   },
 
   async saveEditor() {
     const name = this.data.editorName.trim()
-    if (!name || this.data.saving) return
+    const introduction = this.data.editorIntroduction.trim()
+    if (!name || this.data.saving) {
+      if (!name) wx.showToast({ title: "请填写活动名称", icon: "none" })
+      return
+    }
     this.setData({ saving: true })
     try {
+      let item: ActivityItem
       if (this.data.editingId) {
-        await updateActivityItem(this.data.editingId, name, this.data.editorType)
+        item = await updateActivityItem(this.data.editingId, {
+          name,
+          introduction,
+          activityType: this.data.editorType
+        })
+        if (this.data.selectedImagePath) {
+          item = await replaceActivityItemImage(item.id, this.data.selectedImagePath)
+        }
       } else {
-        await createActivityItem(name, this.data.editorType)
+        item = await createActivityItem({
+          name,
+          introduction,
+          activityType: this.data.editorType,
+          imagePath: this.data.selectedImagePath || undefined
+        })
       }
       if (!isAsyncPageActive(this)) return
-      this.setData({ showEditor: false, activeType: this.data.editorType })
-      await this.loadItems()
+      this.setData({
+        showEditor: false,
+        activeType: this.data.editorType,
+        selectedImagePath: "",
+        currentImageUrl: ""
+      })
+      await this.loadItems(item.id)
     } catch (error) {
       if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
+        wx.showToast({
+          title: error instanceof Error ? error.message : "保存失败",
+          icon: "none",
+          duration: 2600
+        })
       }
     } finally {
       if (isAsyncPageActive(this)) this.setData({ saving: false })
     }
   },
 
-  handleDelete(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.saving || this.data.deleting) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    const id = String(event.currentTarget.dataset.id || "")
-    if (!id) return
-    this.setData({ deleting: true })
-    wx.showModal({
-      title: "删除活动",
-      content: "删除后无法恢复。",
-      confirmText: "删除",
-      confirmColor: UI_COLORS.danger,
-      success: async (result) => {
-        if (!isAsyncPageActive(this)) return
-        if (!result.confirm) {
-          this.setData({ deleting: false })
-          return
-        }
-        try {
-          await deleteActivityItem(id)
-          if (isAsyncPageActive(this)) await this.loadItems()
-        } catch (error) {
-          if (isAsyncPageActive(this)) {
-            wx.showToast({
-              title: error instanceof Error ? error.message : "删除失败",
-              icon: "none"
-            })
-          }
-        } finally {
-          if (isAsyncPageActive(this)) this.setData({ deleting: false })
-        }
-      },
-      fail: () => {
-        if (isAsyncPageActive(this)) this.setData({ deleting: false })
-      }
-    })
+  handleManagerOpen() {
+    if (!this.data.canWrite || this.data.loading || this.data.deleting) return
+    this.setData({ showManager: true })
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
-    if (
-      !this.data.canWrite ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      this.data.contentLoading
-    ) return
+  handleManagerClose() {
+    if (!this.data.ordering) this.setData({ showManager: false })
+  },
+
+  async handleManagerMove(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canWrite || this.data.ordering || this.data.contentLoading) return
     const index = Number(event.currentTarget.dataset.index)
-    const targetIndex = index + Number(event.currentTarget.dataset.direction)
+    const direction = Number(event.currentTarget.dataset.direction)
+    const targetIndex = index + direction
     const source = this.data.items[index]
     const target = this.data.items[targetIndex]
     if (!source || !target) return
-    const items = [...this.data.items]
-    items[index] = target
-    items[targetIndex] = source
-    this.setData({ items })
+    const visibleId = this.data.items[this.data.browseCurrentIndex]?.id || ""
+    this.setData({ ordering: true })
+    try {
+      await swapActivityItemSortOrders(source.id, target.id)
+      if (!isAsyncPageActive(this)) return
+      const items = [...this.data.items]
+      items[index] = target
+      items[targetIndex] = source
+      const browseCurrentIndex = Math.max(0, items.findIndex((item) => item.id === visibleId))
+      browseIndices[this.data.activeType] = browseCurrentIndex
+      this.setData({ items, browseCurrentIndex })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "排序保存失败",
+          icon: "none"
+        })
+        await this.loadItems(visibleId)
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ ordering: false })
+    }
+  },
+
+  handleDeleteRequest(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canWrite || this.data.deleting || this.data.ordering) return
+    const id = String(event.currentTarget.dataset.id || "")
+    const item = this.data.items.find((entry) => entry.id === id)
+    if (!item) return
+    this.setData({
+      showManager: false,
+      showDeleteDialog: true,
+      pendingDeleteId: item.id,
+      pendingDeleteName: item.name
+    })
+  },
+
+  handleDeleteCancel() {
+    if (!this.data.deleting) {
+      this.setData({
+        showDeleteDialog: false,
+        pendingDeleteId: "",
+        pendingDeleteName: ""
+      })
+    }
+  },
+
+  async handleDeleteConfirm() {
+    const id = this.data.pendingDeleteId
+    if (!id || this.data.deleting) return
+    this.setData({ deleting: true })
+    try {
+      await deleteActivityItem(id)
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        showDeleteDialog: false,
+        pendingDeleteId: "",
+        pendingDeleteName: ""
+      })
+      await this.loadItems()
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "删除失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
   }
 })

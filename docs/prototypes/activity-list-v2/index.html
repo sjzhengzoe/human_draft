@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>活动清单 · 交互原型 V1</title>
+  <style>
+    :root {
+      --ink: #111111;
+      --text: #333330;
+      --muted: #777772;
+      --placeholder: #999994;
+      --line: #e5e5e5;
+      --line-strong: #d8d8d8;
+      --paper: #ffffff;
+      --page: #f5f5f5;
+      --subtle: #eeeeee;
+      --soft: #fafafa;
+      --shadow: rgba(0, 0, 0, 0.08);
+      --shadow-strong: rgba(0, 0, 0, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      min-width: 1220px;
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 13% 18%, rgba(255, 255, 255, 0.96) 0 110px, transparent 300px),
+        linear-gradient(135deg, #f5f5f5, #ededeb);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .board {
+      position: relative;
+      width: 1600px;
+      height: 1080px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .board::before {
+      position: absolute;
+      inset: 26px;
+      border: 1px solid rgba(17, 17, 17, 0.06);
+      border-radius: 36px;
+      content: "";
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+
+    .intro {
+      position: absolute;
+      top: 86px;
+      left: 92px;
+      width: 330px;
+    }
+
+    .intro h1 {
+      margin: 14px 0 18px;
+      color: var(--ink);
+      font-size: 36px;
+      line-height: 1.18;
+      letter-spacing: -0.04em;
+    }
+
+    .intro p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .principle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      padding: 9px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .principle::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ink);
+      content: "";
+    }
+
+    .device-wrap {
+      position: absolute;
+      top: 48px;
+      left: 580px;
+      width: 440px;
+      text-align: center;
+    }
+
+    .device-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 13px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .device-label::before,
+    .device-label::after {
+      width: 35px;
+      height: 1px;
+      background: var(--line-strong);
+      content: "";
+    }
+
+    .device {
+      position: relative;
+      width: 404px;
+      height: 884px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 8px solid #181818;
+      border-radius: 44px;
+      background: var(--page);
+      box-shadow: 0 28px 70px var(--shadow-strong);
+      text-align: left;
+    }
+
+    .statusbar {
+      position: relative;
+      display: flex;
+      height: 31px;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 23px 6px;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .signal {
+      display: flex;
+      height: 10px;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .signal i {
+      width: 2px;
+      border-radius: 2px;
+      background: var(--ink);
+    }
+
+    .signal i:nth-child(1) { height: 4px; }
+    .signal i:nth-child(2) { height: 6px; }
+    .signal i:nth-child(3) { height: 8px; }
+    .signal i:nth-child(4) { height: 10px; }
+
+    .battery {
+      position: relative;
+      width: 18px;
+      height: 9px;
+      border: 1px solid var(--ink);
+      border-radius: 2px;
+    }
+
+    .battery::before {
+      position: absolute;
+      top: 2px;
+      right: -3px;
+      width: 2px;
+      height: 4px;
+      border-radius: 0 1px 1px 0;
+      background: var(--ink);
+      content: "";
+    }
+
+    .battery::after {
+      position: absolute;
+      inset: 1px;
+      border-radius: 1px;
+      background: var(--ink);
+      content: "";
+    }
+
+    .nav {
+      display: grid;
+      height: 58px;
+      grid-template-columns: 56px 1fr 88px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .nav-title {
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .nav-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 37px;
+      height: 37px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--paper);
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .icon-button.primary {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .icon-button svg { width: 18px; height: 18px; }
+
+    .filter-panel {
+      padding: 19px 18px 17px;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .filter-label {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .type-filter {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      padding: 5px;
+      border-radius: 18px;
+      background: var(--subtle);
+    }
+
+    .type-button {
+      height: 50px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .type-button.active {
+      background: var(--ink);
+      color: var(--paper);
+      box-shadow: 0 3px 9px var(--shadow);
+    }
+
+    .content {
+      height: calc(100% - 183px);
+      overflow: hidden;
+      padding: 18px 18px 15px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .counter {
+      color: var(--placeholder);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-stage {
+      position: relative;
+    }
+
+    .activity-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--paper);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.035);
+      transform: translateZ(0);
+    }
+
+    .activity-card.switching-left { animation: card-left 180ms ease both; }
+    .activity-card.switching-right { animation: card-right 180ms ease both; }
+
+    @keyframes card-left {
+      0% { opacity: 0.25; transform: translateX(22px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes card-right {
+      0% { opacity: 0.25; transform: translateX(-22px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    .activity-image {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: var(--soft);
+    }
+
+    .card-body { padding: 18px 19px 17px; }
+
+    .card-title {
+      color: var(--ink);
+      font-size: 19px;
+      font-weight: 750;
+      line-height: 1.3;
+    }
+
+    .card-desc {
+      min-height: 44px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 15px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      min-height: 29px;
+      align-items: center;
+      padding: 5px 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: #555550;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .swipe-button {
+      position: absolute;
+      top: 120px;
+      z-index: 2;
+      display: grid;
+      width: 36px;
+      height: 54px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      box-shadow: 0 6px 16px var(--shadow);
+      cursor: pointer;
+    }
+
+    .swipe-button.prev { left: -8px; }
+    .swipe-button.next { right: -8px; }
+    .swipe-button svg { width: 18px; height: 18px; }
+
+    .pagination {
+      display: flex;
+      height: 46px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--line-strong);
+      transition: 160ms ease;
+    }
+
+    .dot.active {
+      width: 19px;
+      background: var(--ink);
+    }
+
+    .swipe-hint {
+      margin-top: -2px;
+      color: var(--placeholder);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .callouts {
+      position: absolute;
+      top: 90px;
+      right: 88px;
+      width: 345px;
+    }
+
+    .callouts h2,
+    .fields h2 {
+      margin: 0 0 17px;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .callout-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .callout {
+      display: grid;
+      grid-template-columns: 35px 1fr;
+      gap: 12px;
+      padding: 14px 15px;
+      border: 1px solid rgba(17, 17, 17, 0.09);
+      border-radius: 17px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+    }
+
+    .callout-no {
+      display: grid;
+      width: 35px;
+      height: 35px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .callout-title {
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .callout-copy {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .fields {
+      position: absolute;
+      right: 88px;
+      bottom: 72px;
+      width: 345px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .field {
+      min-height: 70px;
+      padding: 12px 13px;
+      border: 1px solid rgba(17, 17, 17, 0.08);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.63);
+    }
+
+    .field strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .field span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .note {
+      position: absolute;
+      bottom: 74px;
+      left: 92px;
+      width: 340px;
+      padding-top: 15px;
+      border-top: 1px solid var(--line-strong);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .note b { color: var(--ink); }
+
+    .version {
+      position: absolute;
+      right: 55px;
+      bottom: 42px;
+      color: var(--placeholder);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="intro">
+      <div class="eyebrow">ACTIVITY LIST · PROTOTYPE</div>
+      <h1>把“管理清单”<br />变成“翻活动卡”</h1>
+      <p>去掉左右分栏，改用顶部三分类筛选。当前分类下每屏只出现一张完整卡片，左右滑动即可继续翻阅。</p>
+      <div class="principle">选择更快，信息更轻</div>
+    </section>
+
+    <section class="device-wrap">
+      <div class="device-label">可点击筛选 · 可左右切换</div>
+      <div class="device" aria-label="活动清单交互原型">
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="status-icons">
+            <span class="signal"><i></i><i></i><i></i><i></i></span>
+            <span>5G</span>
+            <span class="battery"></span>
+          </span>
+        </div>
+
+        <header class="nav">
+          <span></span>
+          <div class="nav-title">活动清单</div>
+          <div class="nav-actions">
+            <button class="icon-button" aria-label="管理活动">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+            </button>
+            <button class="icon-button primary" aria-label="新增活动">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <section class="filter-panel">
+          <div class="filter-label">选择活动场景</div>
+          <div class="type-filter" role="tablist" aria-label="活动类型">
+            <button class="type-button active" data-type="室内" role="tab">室内</button>
+            <button class="type-button" data-type="户外" role="tab">户外</button>
+            <button class="type-button" data-type="居家" role="tab">居家</button>
+          </div>
+        </section>
+
+        <section class="content">
+          <div class="section-head">
+            <div class="section-title" id="sectionTitle">室内活动</div>
+            <div class="counter" id="counter">1 / 3</div>
+          </div>
+
+          <div class="card-stage" id="cardStage">
+            <button class="swipe-button prev" id="prevButton" aria-label="上一个活动">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <article class="activity-card" id="activityCard">
+              <img class="activity-image" id="activityImage" src="assets/indoor-pottery.png" alt="陶艺体验水彩插画" />
+              <div class="card-body">
+                <div class="card-title" id="cardTitle">陶艺体验</div>
+                <p class="card-desc" id="cardDesc">慢下来，把一团泥变成独一无二的器皿。</p>
+                <div class="meta-row">
+                  <span class="meta-tag" id="durationTag">60–90 分钟</span>
+                  <span class="meta-tag" id="companyTag">独处 / 朋友</span>
+                  <span class="meta-tag" id="timeTag">周末下午</span>
+                </div>
+              </div>
+            </article>
+            <button class="swipe-button next" id="nextButton" aria-label="下一个活动">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+
+          <div class="pagination" id="pagination" aria-label="活动翻页进度"></div>
+          <div class="swipe-hint">左右滑动，翻阅当前分类</div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="callouts">
+      <h2>核心交互</h2>
+      <div class="callout-list">
+        <div class="callout">
+          <div class="callout-no">01</div>
+          <div><div class="callout-title">三分类固定在顶部</div><div class="callout-copy">室内、户外、居家等宽呈现；黑底白字表示当前 type。</div></div>
+        </div>
+        <div class="callout">
+          <div class="callout-no">02</div>
+          <div><div class="callout-title">一屏只看一张完整卡片</div><div class="callout-copy">图片、名称、简介与关键标签一次看完，不与下一张争抢注意力。</div></div>
+        </div>
+        <div class="callout">
+          <div class="callout-no">03</div>
+          <div><div class="callout-title">左右滑动翻阅</div><div class="callout-copy">页码与圆点共同提示位置；切换 type 后回到该分类上次浏览位置。</div></div>
+        </div>
+        <div class="callout">
+          <div class="callout-no">04</div>
+          <div><div class="callout-title">新增与管理收进右上角</div><div class="callout-copy">新增使用加号；排序、编辑、删除进入管理页，不挤占活动卡片。</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="fields">
+      <h2>建议首版补充字段</h2>
+      <div class="field-grid">
+        <div class="field"><strong>封面图</strong><span>卡片的主要识别入口</span></div>
+        <div class="field"><strong>一句简介</strong><span>说明活动吸引力</span></div>
+        <div class="field"><strong>大致时长</strong><span>帮助快速判断空闲是否够用</span></div>
+        <div class="field"><strong>适合同行</strong><span>独处、伴侣、朋友、亲子</span></div>
+        <div class="field"><strong>建议时段</strong><span>上午、下午、夜间或周末</span></div>
+        <div class="field"><strong>地点 / 备注</strong><span>先放详情页，卡片保持轻量</span></div>
+      </div>
+    </aside>
+
+    <div class="note"><b>首版建议：</b>不要一开始加入价格、天气、难度、完成状态等全部维度。先用 4 个稳定字段跑通浏览体验，再按真实使用频率补充。</div>
+    <div class="version">V1 · 2026.08.09</div>
+  </main>
+
+  <script>
+    const activityGroups = {
+      室内: [
+        { title: "陶艺体验", desc: "慢下来，把一团泥变成独一无二的器皿。", duration: "60–90 分钟", company: "独处 / 朋友", time: "周末下午", image: "assets/indoor-pottery.png" },
+        { title: "手作银饰", desc: "在敲打与打磨里，做一件只属于自己的小物。", duration: "约 2 小时", company: "伴侣 / 朋友", time: "周末", image: "assets/indoor-pottery.png" },
+        { title: "室内攀岩", desc: "从一条简单线路开始，专注完成每一次移动。", duration: "60 分钟", company: "朋友", time: "下班后", image: "assets/indoor-pottery.png" }
+      ],
+      户外: [
+        { title: "环湖骑行", desc: "沿着湖岸慢慢骑，把风景留在途中。", duration: "半天", company: "朋友 / 伴侣", time: "晴天上午", image: "assets/outdoor-cycling.png" },
+        { title: "城市散步", desc: "选一条陌生街区，边走边发现日常细节。", duration: "1–2 小时", company: "独处 / 朋友", time: "傍晚", image: "assets/outdoor-cycling.png" },
+        { title: "山野徒步", desc: "把周末交给山路、树影和慢下来的呼吸。", duration: "一天", company: "朋友", time: "晴天清晨", image: "assets/outdoor-cycling.png" }
+      ],
+      居家: [
+        { title: "周末烘焙", desc: "揉一团面，等香气慢慢填满整个房间。", duration: "约 2 小时", company: "独处 / 亲子", time: "周末下午", image: "assets/home-baking.png" },
+        { title: "整理旧照片", desc: "挑出喜欢的瞬间，做一本小小的家庭相册。", duration: "60 分钟", company: "独处 / 家人", time: "雨天", image: "assets/home-baking.png" },
+        { title: "家庭电影夜", desc: "关掉主灯，选一部大家都想看的电影。", duration: "2–3 小时", company: "家人 / 伴侣", time: "晚上", image: "assets/home-baking.png" }
+      ]
+    };
+
+    const state = { type: "室内", indices: { 室内: 0, 户外: 0, 居家: 0 } };
+    const elements = {
+      card: document.querySelector("#activityCard"),
+      sectionTitle: document.querySelector("#sectionTitle"),
+      counter: document.querySelector("#counter"),
+      image: document.querySelector("#activityImage"),
+      title: document.querySelector("#cardTitle"),
+      desc: document.querySelector("#cardDesc"),
+      duration: document.querySelector("#durationTag"),
+      company: document.querySelector("#companyTag"),
+      time: document.querySelector("#timeTag"),
+      pagination: document.querySelector("#pagination")
+    };
+
+    function render(direction = "left") {
+      const items = activityGroups[state.type];
+      const index = state.indices[state.type];
+      const item = items[index];
+      elements.sectionTitle.textContent = `${state.type}活动`;
+      elements.counter.textContent = `${index + 1} / ${items.length}`;
+      elements.image.src = item.image;
+      elements.image.alt = `${item.title}水彩插画`;
+      elements.title.textContent = item.title;
+      elements.desc.textContent = item.desc;
+      elements.duration.textContent = item.duration;
+      elements.company.textContent = item.company;
+      elements.time.textContent = item.time;
+      elements.pagination.innerHTML = items.map((_, position) => `<span class="dot ${position === index ? "active" : ""}"></span>`).join("");
+      elements.card.classList.remove("switching-left", "switching-right");
+      void elements.card.offsetWidth;
+      elements.card.classList.add(direction === "right" ? "switching-right" : "switching-left");
+    }
+
+    function step(delta) {
+      const items = activityGroups[state.type];
+      state.indices[state.type] = (state.indices[state.type] + delta + items.length) % items.length;
+      render(delta > 0 ? "left" : "right");
+    }
+
+    document.querySelectorAll(".type-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.type = button.dataset.type;
+        document.querySelectorAll(".type-button").forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+        render("left");
+      });
+    });
+
+    document.querySelector("#prevButton").addEventListener("click", () => step(-1));
+    document.querySelector("#nextButton").addEventListener("click", () => step(1));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") step(-1);
+      if (event.key === "ArrowRight") step(1);
+    });
+
+    let touchStartX = null;
+    document.querySelector("#cardStage").addEventListener("touchstart", (event) => { touchStartX = event.touches[0].clientX; }, { passive: true });
+    document.querySelector("#cardStage").addEventListener("touchend", (event) => {
+      if (touchStartX === null) return;
+      const delta = event.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(delta) > 35) step(delta < 0 ? 1 : -1);
+      touchStartX = null;
+    }, { passive: true });
+
+    render();
+  </script>
+</body>
+</html>

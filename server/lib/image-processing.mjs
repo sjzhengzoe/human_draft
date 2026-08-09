@@ -8,6 +8,10 @@ export const IMAGE_PROFILES = Object.freeze({
     original: Object.freeze({}),
     thumbnail: Object.freeze({ width: 720, height: 540 }),
   }),
+  activity: Object.freeze({
+    original: Object.freeze({}),
+    thumbnail: Object.freeze({ width: 720, height: 540 }),
+  }),
   wardrobe: Object.freeze({
     original: Object.freeze({}),
     thumbnail: Object.freeze({ width: 480, height: 480 }),

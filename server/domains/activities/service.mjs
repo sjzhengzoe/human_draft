@@ -1,5 +1,16 @@
+import { randomUUID } from "node:crypto";
+import { config } from "../../config.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
+import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
+import {
+  readMultipartImage,
+  STANDARD_IMAGE_TYPES,
+} from "../../http/multipart-image.mjs";
+import {
+  removeStorageImages,
+  uploadOptimizedImagePair,
+} from "../shared/image-storage.mjs";
 import {
   enumValue,
   nextSortOrder,
@@ -9,6 +20,67 @@ import {
 } from "../shared/records.mjs";
 
 export const ACTIVITY_TYPES = ["室内", "户外", "居家"];
+
+function introductionValue(value) {
+  assertCondition(typeof value === "string", 400, "INVALID_TEXT", "一句简介格式无效。");
+  const introduction = value.trim();
+  assertCondition(
+    introduction.length <= 200,
+    400,
+    "TEXT_TOO_LONG",
+    "一句简介不能超过 200 个字符。",
+  );
+  return introduction;
+}
+
+function activityImagePublicUrl(supabase, path) {
+  if (!path) return "";
+  return supabase.storage.from(config.activityBucket).getPublicUrl(path).data.publicUrl || "";
+}
+
+function toActivityResponse(supabase, item) {
+  return {
+    ...item,
+    introduction: typeof item.introduction === "string" ? item.introduction : "",
+    image_url: activityImagePublicUrl(supabase, item.image_path),
+    thumbnail_url: activityImagePublicUrl(
+      supabase,
+      item.thumbnail_path || item.image_path,
+    ),
+  };
+}
+
+function assertActivityImage(image) {
+  assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择活动封面。");
+  assertCondition(
+    STANDARD_IMAGE_TYPES.has(image.mimetype),
+    415,
+    "UNSUPPORTED_IMAGE_TYPE",
+    "仅支持 PNG、JPEG 或 WebP 图片。",
+  );
+}
+
+async function uploadActivityImage(supabase, userId, itemId, image) {
+  assertActivityImage(image);
+  return uploadOptimizedImagePair(supabase, {
+    bucketName: config.activityBucket,
+    basePath: `users/${userId}/activities/${itemId}/${randomUUID()}`,
+    buffer: image.buffer,
+    profile: IMAGE_PROFILES.activity,
+    uploadErrorMessage: "上传活动封面失败。",
+    thumbnailErrorMessage: "生成活动封面缩略图失败。",
+  });
+}
+
+async function removeActivityImages(supabase, paths) {
+  return removeStorageImages(supabase, {
+    bucketName: config.activityBucket,
+    paths,
+    errorMessage: "删除活动封面失败:",
+  });
+}
+
+export const readActivityMultipart = readMultipartImage;
 
 export async function listActivityItems(supabase, userId, query) {
   const activityType = query.activity_type
@@ -26,25 +98,39 @@ export async function listActivityItems(supabase, userId, query) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(error, "读取活动清单失败。");
-  return data;
+  return (data || []).map((item) => toActivityResponse(supabase, item));
 }
 
-export async function createActivityItem(supabase, userId, body) {
+export async function createActivityItem(supabase, userId, body, image) {
   const activityType = enumValue(body.activity_type, ACTIVITY_TYPES, "活动分类");
+  const name = requiredText(body.name, "活动名称");
+  const introduction = introductionValue(body.introduction ?? "");
+  const sortOrder = await nextSortOrder(supabase, userId, "activity_items", {
+    activity_type: activityType,
+  });
+  const id = randomUUID();
+  const paths = image
+    ? await uploadActivityImage(supabase, userId, id, image)
+    : { imagePath: null, thumbnailPath: null };
   const { data, error } = await supabase
     .from("activity_items")
     .insert({
+      id,
       user_id: userId,
-      name: requiredText(body.name, "活动名称"),
+      name,
+      introduction,
       activity_type: activityType,
-      sort_order: await nextSortOrder(supabase, userId, "activity_items", {
-        activity_type: activityType,
-      }),
+      image_path: paths.imagePath,
+      thumbnail_path: paths.thumbnailPath,
+      sort_order: sortOrder,
     })
     .select("*")
     .single();
-  throwSupabaseError(error, "新增活动失败。");
-  return data;
+  if (error) {
+    await removeActivityImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    throwSupabaseError(error, "新增活动失败。");
+  }
+  return toActivityResponse(supabase, data);
 }
 
 export async function updateActivityItem(supabase, userId, id, body) {
@@ -57,6 +143,9 @@ export async function updateActivityItem(supabase, userId, id, body) {
   );
   const changes = {};
   if (body.name !== undefined) changes.name = requiredText(body.name, "活动名称");
+  if (body.introduction !== undefined) {
+    changes.introduction = introductionValue(body.introduction);
+  }
   if (body.activity_type !== undefined) {
     changes.activity_type = enumValue(body.activity_type, ACTIVITY_TYPES, "活动分类");
     if (changes.activity_type !== existing.activity_type) {
@@ -79,17 +168,49 @@ export async function updateActivityItem(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "更新活动失败。");
-  return data;
+  return toActivityResponse(supabase, data);
+}
+
+export async function replaceActivityItemImage(supabase, userId, id, image) {
+  const current = await requireRecord(
+    supabase,
+    userId,
+    "activity_items",
+    id,
+    "id, image_path, thumbnail_path",
+  );
+  const previousPaths = [current.image_path, current.thumbnail_path];
+  const paths = await uploadActivityImage(supabase, userId, current.id, image);
+  const { data, error } = await supabase
+    .from("activity_items")
+    .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
+    .eq("id", current.id)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+  if (error) {
+    await removeActivityImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    throwSupabaseError(error, "更新活动封面失败。");
+  }
+  await removeActivityImages(supabase, previousPaths);
+  return toActivityResponse(supabase, data);
 }
 
 export async function deleteActivityItem(supabase, userId, id) {
-  await requireRecord(supabase, userId, "activity_items", id, "id");
+  const current = await requireRecord(
+    supabase,
+    userId,
+    "activity_items",
+    id,
+    "id, image_path, thumbnail_path",
+  );
   const { error } = await supabase
     .from("activity_items")
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除活动失败。");
+  await removeActivityImages(supabase, [current.image_path, current.thumbnail_path]);
 }
 
 export async function swapActivityItemSortOrders(supabase, userId, body) {

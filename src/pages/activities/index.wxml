@@ -6,68 +6,211 @@
 </view>
 
 <view wx:else class="page page--fixed">
-  <view class="side-tabs">
-    <view wx:for="{{activityTypes}}" wx:key="*this" class="side-tab {{activeType === item ? 'side-tab--active' : ''}}" data-type="{{item}}" bindtap="handleTypeTap">{{item}}</view>
+  <view class="activity-header">
+    <view class="activity-type-switch" role="tablist" aria-label="活动场景">
+      <view
+        wx:for="{{activityTypes}}"
+        wx:key="*this"
+        class="activity-type-switch__item {{activeType === item ? 'activity-type-switch__item--active' : ''}}"
+        data-type="{{item}}"
+        bindtap="handleTypeTap"
+        role="tab"
+        aria-selected="{{activeType === item}}"
+      >{{item}}</view>
+    </view>
+
+    <view wx:if="{{canWrite}}" class="activity-toolbar">
+      <view
+        class="icon-button"
+        role="button"
+        aria-label="管理{{activeType}}活动"
+        bindtap="handleManagerOpen"
+      ><app-icon name="settings-2" size="24" /></view>
+      <view
+        class="icon-button icon-button--primary"
+        role="button"
+        aria-label="新增活动"
+        bindtap="handleAdd"
+      ><app-icon name="plus-white" size="24" /></view>
+    </view>
   </view>
-  <view class="content">
-    <view class="app-overview activity-overview">
-      <view class="app-overview__topline">
-        <view class="app-overview__title">{{activeType}}项目</view>
-        <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAdd"><app-icon name="plus-white" size="22" /><text>新增</text></button>
-      </view>
-      <view class="app-overview__stats">
-        <view class="app-overview__stat">
-          <view class="app-overview__value">{{items.length}}</view>
-          <view class="app-overview__label">当前项目</view>
-        </view>
-        <view class="app-overview__stat">
-          <view class="app-overview__value">{{activityTypes.length}}</view>
-          <view class="app-overview__label">活动分类</view>
-        </view>
-      </view>
-    </view>
-    <view wx:if="{{canWrite}}" class="sort-toolbar">
-      <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
-        <app-icon name="settings-2" size="22" />
-        <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
-      </view>
-    </view>
-    <scroll-view class="list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view wx:if="{{items.length === 0}}" class="state">还没有记录</view>
-    <view wx:else class="item-list">
-      <view wx:for="{{items}}" wx:key="id" class="item-card">
-        <view class="item-name">{{item.name}}</view>
-        <view wx:if="{{canWrite}}" class="item-actions">
-          <block wx:if="{{sortEditing}}">
-            <view class="item-icon-button {{index === 0 ? 'item-icon-button--disabled' : ''}}" aria-label="向上移动" data-index="{{index}}" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
-            <view class="item-icon-button {{index === items.length - 1 ? 'item-icon-button--disabled' : ''}}" aria-label="向下移动" data-index="{{index}}" data-direction="1" bindtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
-          </block>
-          <view class="item-icon-button" role="button" aria-label="编辑活动" data-id="{{item.id}}" bindtap="handleEdit"><app-icon name="pencil" size="26" /></view>
-          <view class="item-icon-button item-icon-button--danger" role="button" aria-label="删除活动" data-id="{{item.id}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="26" /></view>
-        </view>
-      </view>
-    </view>
-    </scroll-view>
+
+  <view wx:if="{{contentLoading}}" class="content-state content-loading">
+    <view class="content-loading__spinner" />
+    <view class="content-loading__text">正在加载活动…</view>
+  </view>
+
+  <view wx:elif="{{items.length === 0}}" class="content-state empty-state">
+    <view>当前场景还没有活动</view>
+    <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增活动</view>
+  </view>
+
+  <view wx:else class="browse-carousel">
+    <swiper
+      class="browse-swiper"
+      current="{{browseCurrentIndex}}"
+      circular="{{false}}"
+      display-multiple-items="1"
+      acceleration="{{false}}"
+      duration="160"
+      skip-hidden-item-layout
+      bindchange="handleBrowseChange"
+    >
+      <swiper-item wx:for="{{items}}" wx:key="id" item-id="{{item.id}}" class="browse-slide">
+        <scroll-view class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
+          <view class="activity-card">
+            <view class="activity-card__image-frame">
+              <image
+                wx:if="{{item.thumbnail_url || item.image_url}}"
+                class="activity-card__image"
+                src="{{item.thumbnail_url || item.image_url}}"
+                mode="aspectFill"
+                lazy-load
+              />
+              <view wx:else class="activity-card__image-empty">
+                <app-icon name="image-plus" size="38" />
+                <text>暂无封面</text>
+              </view>
+            </view>
+            <view class="activity-card__body">
+              <view class="activity-card__name">{{item.name}}</view>
+              <view wx:if="{{item.introduction}}" class="activity-card__introduction">{{item.introduction}}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </swiper-item>
+    </swiper>
   </view>
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 
   <app-dialog
-    wx:if="{{showEditor}}"
-    visible="{{true}}"
+    visible="{{showManager}}"
+    title="管理{{activeType}}活动"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="manager-list">
+      <view wx:if="{{items.length === 0}}" class="manager-empty">还没有活动</view>
+      <view wx:for="{{items}}" wx:key="id" class="manager-item">
+        <view class="manager-item__name">{{item.name}}</view>
+        <view class="manager-item__actions">
+          <view
+            class="manager-icon-button {{index === 0 ? 'manager-icon-button--disabled' : ''}}"
+            role="button"
+            aria-label="向上移动{{item.name}}"
+            data-index="{{index}}"
+            data-direction="-1"
+            bindtap="handleManagerMove"
+          ><app-icon name="arrow-up" size="23" /></view>
+          <view
+            class="manager-icon-button {{index === items.length - 1 ? 'manager-icon-button--disabled' : ''}}"
+            role="button"
+            aria-label="向下移动{{item.name}}"
+            data-index="{{index}}"
+            data-direction="1"
+            bindtap="handleManagerMove"
+          ><app-icon name="arrow-down" size="23" /></view>
+          <view
+            class="manager-icon-button"
+            role="button"
+            aria-label="编辑{{item.name}}"
+            data-id="{{item.id}}"
+            bindtap="handleManagerEdit"
+          ><app-icon name="pencil" size="23" /></view>
+          <view
+            class="manager-icon-button"
+            role="button"
+            aria-label="删除{{item.name}}"
+            data-id="{{item.id}}"
+            bindtap="handleDeleteRequest"
+          ><app-icon name="trash-2-danger" size="23" /></view>
+        </view>
+      </view>
+    </view>
+    <view slot="actions" class="manager-actions">
+      <button class="manager-done-button" disabled="{{ordering}}" bindtap="handleManagerClose">完成</button>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    visible="{{showEditor}}"
     title="{{editingId ? '编辑活动' : '新增活动'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
   >
     <view slot="body" class="activity-editor">
-      <app-input custom-class="modal-input" value="{{editorName}}" maxlength="120" placeholder="例如：红花湖骑行" focus adjust-position="{{false}}" bindinput="handleEditorNameInput" />
-      <view class="type-options">
-        <view wx:for="{{activityTypes}}" wx:key="*this" class="type-option {{editorType === item ? 'type-option--active' : ''}}" data-type="{{item}}" bindtap="handleEditorTypeTap">{{item}}</view>
+      <view class="activity-editor__image" bindtap="handleChooseImage">
+        <image
+          wx:if="{{selectedImagePath || currentImageUrl}}"
+          class="activity-editor__image-preview"
+          src="{{selectedImagePath || currentImageUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="activity-editor__image-empty">
+          <app-icon name="image-plus" size="38" />
+          <text>选择活动封面（选填）</text>
+        </view>
+        <view wx:if="{{selectedImagePath || currentImageUrl}}" class="activity-editor__image-action">更换封面</view>
+      </view>
+      <app-input
+        custom-class="editor-input"
+        value="{{editorName}}"
+        maxlength="120"
+        placeholder="活动名称，例如：红花湖骑行"
+        focus
+        adjust-position="{{false}}"
+        bindinput="handleEditorNameInput"
+      />
+      <app-input
+        custom-class="editor-input editor-input--introduction"
+        value="{{editorIntroduction}}"
+        maxlength="200"
+        placeholder="一句简介（选填）"
+        confirm-type="done"
+        adjust-position="{{false}}"
+        bindinput="handleEditorIntroductionInput"
+      />
+      <view class="type-options" role="radiogroup" aria-label="活动场景">
+        <view
+          wx:for="{{activityTypes}}"
+          wx:key="*this"
+          class="type-option {{editorType === item ? 'type-option--active' : ''}}"
+          data-type="{{item}}"
+          bindtap="handleEditorTypeTap"
+          role="radio"
+          aria-checked="{{editorType === item}}"
+        >{{item}}</view>
       </view>
     </view>
     <view slot="actions" class="modal-actions">
-      <button class="cancel-button" bindtap="closeEditor">取消</button>
-      <button class="save-button" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+      <button class="cancel-button" disabled="{{saving || selectingImage}}" bindtap="closeEditor">取消</button>
+      <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>
     </view>
   </app-dialog>
+
+  <app-dialog
+    visible="{{showDeleteDialog}}"
+    title="删除活动"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="delete-content">确定删除“{{pendingDeleteName}}”吗？封面也会从云端移除，删除后无法恢复。</view>
+    <view slot="actions" class="modal-actions">
+      <button class="cancel-button" disabled="{{deleting}}" bindtap="handleDeleteCancel">取消</button>
+      <button class="delete-button" loading="{{deleting}}" disabled="{{deleting}}" bindtap="handleDeleteConfirm">删除</button>
+    </view>
+  </app-dialog>
+
+  <image-cropper
+    wx:if="{{showImageCropper}}"
+    src="{{cropSourcePath}}"
+    shape="rectangle"
+    aspect-ratio="1.333333"
+    output-size="1536"
+    title="裁剪为 4:3 活动封面"
+    bind:cancel="handleImageCropCancel"
+    bind:confirm="handleImageCropConfirm"
+    bind:error="handleImageCropError"
+  />
 </view>

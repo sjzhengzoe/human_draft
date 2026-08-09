@@ -1,6 +1,6 @@
 import type { ActivityItem, ActivityType } from "../types/activities"
 import { queryString } from "./query-string"
-import { request } from "./request"
+import { request, upload } from "./request"
 
 export async function listActivityItems(activityType: ActivityType): Promise<ActivityItem[]> {
   const data = await request<{ items: ActivityItem[] }>({
@@ -10,26 +10,59 @@ export async function listActivityItems(activityType: ActivityType): Promise<Act
 }
 
 export async function createActivityItem(
-  name: string,
-  activityType: ActivityType
+  input: {
+    name: string
+    introduction: string
+    activityType: ActivityType
+    imagePath?: string
+  }
 ): Promise<ActivityItem> {
-  const data = await request<{ item: ActivityItem }>({
-    path: "/api/activities",
-    method: "POST",
-    data: { name, activity_type: activityType }
-  })
+  const payload = {
+    name: input.name,
+    introduction: input.introduction,
+    activity_type: input.activityType
+  }
+  const data = input.imagePath
+    ? await upload<{ item: ActivityItem }>({
+      path: "/api/activities",
+      filePath: input.imagePath,
+      formData: payload
+    })
+    : await request<{ item: ActivityItem }>({
+      path: "/api/activities",
+      method: "POST",
+      data: payload
+    })
   return data.item
 }
 
 export async function updateActivityItem(
   id: string,
-  name: string,
-  activityType: ActivityType
+  input: {
+    name: string
+    introduction: string
+    activityType: ActivityType
+  }
 ): Promise<ActivityItem> {
   const data = await request<{ item: ActivityItem }>({
     path: `/api/activities/${id}`,
     method: "PUT",
-    data: { name, activity_type: activityType }
+    data: {
+      name: input.name,
+      introduction: input.introduction,
+      activity_type: input.activityType
+    }
+  })
+  return data.item
+}
+
+export async function replaceActivityItemImage(
+  id: string,
+  imagePath: string
+): Promise<ActivityItem> {
+  const data = await upload<{ item: ActivityItem }>({
+    path: `/api/activities/${id}/image`,
+    filePath: imagePath
   })
   return data.item
 }

@@ -9,6 +9,7 @@
 | `SUPABASE_URL` | Project URL | 待填写 |
 | `SUPABASE_SECRET_KEY` | 服务端 `sb_secret_...` Secret key | 待填写 |
 | `SUPABASE_DISH_BUCKET` | 默认 `dish-images` | 已默认 |
+| `SUPABASE_ACTIVITY_BUCKET` | 默认 `activity-images` | 已默认 |
 | `SUPABASE_AVATAR_BUCKET` | 默认 `user-avatars` | 已默认 |
 
 在 Supabase SQL Editor 执行：

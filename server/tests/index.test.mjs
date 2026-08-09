@@ -1355,6 +1355,125 @@ test("media cover upload stores a WebP image and updates the existing entry", as
   assert.equal(response.json().data.item.cover_url.includes(upload.path), true);
 });
 
+test("activity cards expose introductions and replace optimized 4:3 covers", async (t) => {
+  const activity = {
+    id: SOURCE_ID,
+    user_id: USER_ID,
+    name: "环湖骑行",
+    introduction: "沿着湖岸慢慢骑。",
+    activity_type: "户外",
+    image_path: "users/old/activity.webp",
+    thumbnail_path: "users/old/activity-thumbnail.webp",
+    sort_order: 1000,
+  };
+  const checkedImages = [];
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({ activity_items: [activity] }),
+  });
+  const app = buildServer({
+    logger: false,
+    supabase,
+    contentSecurity: {
+      async checkText() {},
+      async checkImage(image) {
+        checkedImages.push(image);
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/activities?activity_type=%E6%88%B7%E5%A4%96",
+    headers: authHeaders,
+  });
+  assert.equal(listResponse.statusCode, 200);
+  assert.equal(listResponse.json().data.items[0].introduction, "沿着湖岸慢慢骑。");
+  assert.equal(
+    listResponse.json().data.items[0].thumbnail_url,
+    "https://example.test/activity-images/users/old/activity-thumbnail.webp",
+  );
+
+  const updateResponse = await app.inject({
+    method: "PUT",
+    url: `/api/activities/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: {
+      name: "环湖骑行",
+      introduction: "迎着风出发，沿湖完成一段畅快骑行。",
+      activity_type: "户外",
+    },
+  });
+  assert.equal(updateResponse.statusCode, 200);
+  assert.equal(
+    updateResponse.json().data.item.introduction,
+    "迎着风出发，沿湖完成一段畅快骑行。",
+  );
+
+  const sourceImage = await sharp({
+    create: {
+      width: 1200,
+      height: 900,
+      channels: 3,
+      background: { r: 80, g: 130, b: 170 },
+    },
+  }).png().toBuffer();
+  const boundary = "activity-cover-test-boundary";
+  const payload = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="activity.png"\r\nContent-Type: image/png\r\n\r\n`,
+    ),
+    sourceImage,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  const imageResponse = await app.inject({
+    method: "POST",
+    url: `/api/activities/${SOURCE_ID}/image`,
+    headers: {
+      ...authHeaders,
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+    },
+    payload,
+  });
+
+  assert.equal(imageResponse.statusCode, 200);
+  assert.equal(checkedImages.length, 1);
+  assert.equal(supabase.storageUploads.length, 2);
+  const upload = supabase.storageUploads.find(({ path }) => !path.includes("-thumbnail.webp"));
+  const thumbnailUpload = supabase.storageUploads.find(({ path }) => path.includes("-thumbnail.webp"));
+  assert.ok(upload);
+  assert.ok(thumbnailUpload);
+  assert.equal(upload.bucket, "activity-images");
+  assert.match(upload.path, new RegExp(`^users/${USER_ID}/activities/${SOURCE_ID}/.+\\.webp$`));
+  assert.deepEqual(
+    await sharp(thumbnailUpload.buffer).metadata().then(({ format, width, height }) => ({
+      format,
+      width,
+      height,
+    })),
+    { format: "webp", width: 720, height: 540 },
+  );
+  assert.deepEqual(supabase.storageRemovals[0], {
+    bucket: "activity-images",
+    paths: ["users/old/activity.webp", "users/old/activity-thumbnail.webp"],
+  });
+  assert.equal(imageResponse.json().data.item.image_url.includes(upload.path), true);
+});
+
+test("activity card migration preserves existing rows and adds optional covers", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608090002_activity_cards.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists introduction text/i);
+  assert.match(migration, /set introduction = ''[\s\S]*where introduction is null/i);
+  assert.match(migration, /add column if not exists image_path text/i);
+  assert.match(migration, /add column if not exists thumbnail_path text/i);
+  assert.match(migration, /'activity-images',[\s\S]*?true,/i);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.activity_items/i);
+  assert.doesNotMatch(migration, /drop\s+table\s+public\.activity_items/i);
+});
+
 test("delete routes return a JSON success envelope", async (t) => {
   const media = {
     id: MEDIA_ID,

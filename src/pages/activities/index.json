@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "活动清单",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index"
+  }
 }
