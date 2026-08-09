@@ -1,17 +1,6 @@
 import { checkTextContent } from "../../services/content-security";
 import { saveImageToPhotosAlbum } from "../../utils/text-card-render";
-
-export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
-
-export function redirectToTextCardTemplate(
-  target: unknown,
-  current: TextCardTemplate,
-  beforeRedirect: () => void,
-) {
-  if (!isTextCardTemplate(target) || target === current) return;
-  beforeRedirect();
-  wx.redirectTo({ url: `/pages/${target}/index` });
-}
+import type { TextCardTemplate } from "./template-navigation";
 
 export function copyTextCardTemplate(content: string) {
   wx.setClipboardData({
@@ -111,8 +100,4 @@ export async function ensureTextCardContentSafe(content: string) {
   } finally {
     wx.hideLoading();
   }
-}
-
-function isTextCardTemplate(value: unknown): value is TextCardTemplate {
-  return value === "xiaohongshu" || value === "douyin2" || value === "douyin3";
 }

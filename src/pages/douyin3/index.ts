@@ -7,9 +7,12 @@ import {
   ensureTextCardContentSafe,
   openTextCardEditor,
   readTextCardClipboard,
-  redirectToTextCardTemplate,
   saveTextCardImages,
 } from "../../features/text-card/page-actions";
+import {
+  navigateBackFromTextCardTemplates,
+  switchTextCardTemplate,
+} from "../../features/text-card/template-navigation";
 import { createLocalImageBindingsStore } from "../../features/text-card/local-image-bindings";
 import {
   cacheTextCardPreview,
@@ -214,9 +217,13 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         event: WechatMiniprogram.CustomEvent<{ template?: string }>,
       ) {
         if (this.data.isGenerating || this.data.selectingImage) return;
-        redirectToTextCardTemplate(event.detail.template, "douyin3", () =>
+        switchTextCardTemplate(event.detail.template, "douyin3", () =>
           this.finalizeClearUndo(),
         );
+      },
+
+      handleNavigationBack() {
+        navigateBackFromTextCardTemplates();
       },
 
       handleCopyTemplate() {

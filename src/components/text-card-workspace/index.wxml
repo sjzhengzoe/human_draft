@@ -1,6 +1,10 @@
 <view class="creation-screen">
   <view class="creation-navigation">
-    <custom-navigation title="图文卡片" />
+    <custom-navigation
+      title="图文卡片"
+      custom-back="{{true}}"
+      bind:back="handleNavigationBack"
+    />
   </view>
 
   <view class="page page--{{variant}}">

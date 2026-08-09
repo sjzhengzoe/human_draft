@@ -7,9 +7,12 @@ import {
   ensureTextCardContentSafe,
   openTextCardEditor,
   readTextCardClipboard,
-  redirectToTextCardTemplate,
   saveTextCardImages,
 } from "../../features/text-card/page-actions";
+import {
+  navigateBackFromTextCardTemplates,
+  switchTextCardTemplate,
+} from "../../features/text-card/template-navigation";
 import {
   cacheTextCardPreview,
   getCachedTextCardPreview,
@@ -236,9 +239,13 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         event: WechatMiniprogram.CustomEvent<{ template?: string }>,
       ) {
         if (this.data.isGenerating) return;
-        redirectToTextCardTemplate(event.detail.template, "xiaohongshu", () =>
+        switchTextCardTemplate(event.detail.template, "xiaohongshu", () =>
           this.finalizeClearUndo(),
         );
+      },
+
+      handleNavigationBack() {
+        navigateBackFromTextCardTemplates();
       },
 
       handleCopyTemplate() {
