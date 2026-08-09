@@ -35,13 +35,17 @@ test("luggage exposes wrapped scene tabs and a reusable local packing flow", asy
   assert.match(logic, /handleSceneTabsToggle/);
 });
 
-test("luggage reset is icon-only and clears only local packing progress", async () => {
-  const [page, logic] = await Promise.all([
+test("luggage reset stays white, is icon-only, and clears only local packing progress", async () => {
+  const [page, styles, logic, icon] = await Promise.all([
     readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.less", "utf8"),
     readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/assets/icons/lucide/rotate-ccw-white.svg", "utf8"),
   ]);
 
   assert.match(page, /class="packing-reset[^>]*"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw-white"/);
+  assert.match(icon, /stroke="#ffffff"/);
+  assert.doesNotMatch(styles, /\.packing-reset--disabled\s*\{[^}]*opacity/s);
   assert.match(page, /title="重新开始收拾"/);
   assert.match(page, /清单内容不会改变/);
   assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);
