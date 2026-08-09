@@ -43,7 +43,7 @@ test("activity editor reuses shared dialogs and the 4:3 image cropper", async ()
   ]);
 
   assert.match(template, /<app-dialog/);
-  assert.match(template, /maxlength="200"/);
+  assert.match(template, /maxlength="12"/);
   assert.match(template, /aspect-ratio="1\.333333"/);
   assert.match(template, /title="裁剪为 4:3 活动封面"/);
   assert.match(template, /aria-label="新增活动"/);

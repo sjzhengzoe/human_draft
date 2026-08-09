@@ -1411,6 +1411,23 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
     allTypesResponse.json().data.items.map((item) => item.activity_type).sort(),
     ["居家", "户外"],
   );
+  assert.equal(
+    allTypesResponse.json().data.items.find((item) => item.id === TARGET_ID).introduction,
+    "选一部喜欢的电影放松一下",
+  );
+
+  const longIntroductionResponse = await app.inject({
+    method: "PUT",
+    url: `/api/activities/${SOURCE_ID}`,
+    headers: authHeaders,
+    payload: {
+      name: "环湖骑行",
+      introduction: "迎着风出发，沿湖完成骑行。",
+      activity_type: "户外",
+    },
+  });
+  assert.equal(longIntroductionResponse.statusCode, 400);
+  assert.equal(longIntroductionResponse.json().error.code, "TEXT_TOO_LONG");
 
   const updateResponse = await app.inject({
     method: "PUT",
@@ -1418,14 +1435,14 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
     headers: authHeaders,
     payload: {
       name: "环湖骑行",
-      introduction: "迎着风出发，沿湖完成一段畅快骑行。",
+      introduction: "迎着风出发，去环湖骑行。",
       activity_type: "户外",
     },
   });
   assert.equal(updateResponse.statusCode, 200);
   assert.equal(
     updateResponse.json().data.item.introduction,
-    "迎着风出发，沿湖完成一段畅快骑行。",
+    "迎着风出发，去环湖骑行。",
   );
 
   const sourceImage = await sharp({
@@ -1502,6 +1519,21 @@ test("activity introduction backfill only fills blank matching activities", asyn
   assert.match(migration, /红花湖骑行一圈/);
   assert.match(migration, /拳击/);
   assert.match(migration, /btrim\(coalesce\(item\.introduction, ''\)\) = ''/i);
+  assert.doesNotMatch(migration, /delete\s+from|drop\s+table|drop\s+column/i);
+});
+
+test("activity introduction shortening preserves custom copy and stays within 12 characters", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608090004_shorten_activity_introductions.sql", import.meta.url),
+    "utf8",
+  );
+  const mappings = [...migration.matchAll(/\('([^']+)',\s*'([^']+)',\s*'([a-f0-9]{32})',\s*'([^']+)'\)/g)];
+  assert.equal(mappings.length, 20);
+  for (const [, , name, , introduction] of mappings) {
+    assert.ok(Array.from(introduction).length <= 12, `${name} introduction must be at most 12 characters`);
+  }
+  assert.match(migration, /md5\(btrim\(coalesce\(item\.introduction, ''\)\)\)\s*=\s*shortened\.previous_introduction_md5/i);
+  assert.match(migration, /char_length\(shortened\.introduction\)\s*<=\s*12/i);
   assert.doesNotMatch(migration, /delete\s+from|drop\s+table|drop\s+column/i);
 });
 

@@ -20,15 +20,21 @@ import {
 } from "../shared/records.mjs";
 
 export const ACTIVITY_TYPES = ["室内", "户外", "居家"];
+const ACTIVITY_INTRODUCTION_MAX_LENGTH = 12;
+
+function activityIntroductionText(value) {
+  if (typeof value !== "string") return "";
+  return Array.from(value.trim()).slice(0, ACTIVITY_INTRODUCTION_MAX_LENGTH).join("");
+}
 
 function introductionValue(value) {
   assertCondition(typeof value === "string", 400, "INVALID_TEXT", "一句简介格式无效。");
   const introduction = value.trim();
   assertCondition(
-    introduction.length <= 200,
+    Array.from(introduction).length <= ACTIVITY_INTRODUCTION_MAX_LENGTH,
     400,
     "TEXT_TOO_LONG",
-    "一句简介不能超过 200 个字符。",
+    `一句简介不能超过 ${ACTIVITY_INTRODUCTION_MAX_LENGTH} 个字。`,
   );
   return introduction;
 }
@@ -41,7 +47,7 @@ function activityImagePublicUrl(supabase, path) {
 function toActivityResponse(supabase, item) {
   return {
     ...item,
-    introduction: typeof item.introduction === "string" ? item.introduction : "",
+    introduction: activityIntroductionText(item.introduction),
     image_url: activityImagePublicUrl(supabase, item.image_path),
     thumbnail_url: activityImagePublicUrl(
       supabase,

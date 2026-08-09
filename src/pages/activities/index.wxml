@@ -136,7 +136,7 @@
           <app-input
             custom-class="editor-input editor-input--introduction"
             value="{{editorIntroduction}}"
-            maxlength="200"
+            maxlength="12"
             placeholder="一句简介"
             confirm-type="done"
             dialog-mode
