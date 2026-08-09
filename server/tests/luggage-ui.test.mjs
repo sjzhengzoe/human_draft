@@ -8,16 +8,40 @@ const luggagePageFiles = [
   "src/pages/luggage/scene-edit/index.less",
 ];
 
-test("luggage starts with scene cards and exposes each scene's layers", async () => {
-  const page = await readFile("src/pages/luggage/index.wxml", "utf8");
+test("luggage exposes wrapped scene tabs and a reusable local packing flow", async () => {
+  const [page, styles, logic, storage] = await Promise.all([
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.less", "utf8"),
+    readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/utils/luggage-packing.ts", "utf8"),
+  ]);
 
-  assert.doesNotMatch(page, /scene-tabs|side-tabs/);
-  assert.match(page, /class="scene-card"/);
-  assert.match(page, /class="scene-card__layers"/);
-  assert.match(page, /class="scene-layer-chip"/);
-  assert.match(page, /\{\{group\.name\}\}/);
-  assert.match(page, /\{\{group\.items\.length\}\}/);
+  assert.match(page, /class="scene-tabs"/);
+  assert.match(page, /scene-tab--active/);
+  assert.match(styles, /\.scene-tabs\s*\{[^}]*flex-wrap:\s*wrap/s);
+  assert.match(styles, /\.scene-tab--active\s*\{[^}]*var\(--ui-color-action-primary\)[^}]*var\(--ui-color-text-inverse\)/s);
+  assert.match(page, /packing-filter__tab/);
+  assert.match(page, /group\.visible_items/);
+  assert.match(page, /class="packing-checkbox/);
+  assert.match(styles, /\.packing-checkbox\s*\{[^}]*border-radius:\s*8rpx/s);
+  assert.match(logic, /handlePackingItemToggle/);
+  assert.match(logic, /packingView === "packed"/);
+  assert.match(storage, /LUGGAGE_PACKED_ITEM_IDS_V1/);
+  assert.match(storage, /STORAGE_KEY_PREFIX\}:\$\{userId\}:\$\{sceneId\}/);
+  assert.doesNotMatch(page, /可复用清单模板|选择场景后开始收拾|装箱状态只在本机保存/);
   assert.doesNotMatch(page, /type="search"|placeholder="搜索场景"/);
+});
+
+test("luggage reset is icon-only and clears only local packing progress", async () => {
+  const [page, logic] = await Promise.all([
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.ts", "utf8"),
+  ]);
+
+  assert.match(page, /class="packing-reset[^>]*"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw"/);
+  assert.match(page, /title="重新开始收拾"/);
+  assert.match(page, /清单内容不会改变/);
+  assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);
 });
 
 test("luggage business dialogs use the shared app dialog", async () => {

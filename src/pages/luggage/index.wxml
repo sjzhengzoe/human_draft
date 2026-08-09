@@ -1,8 +1,4 @@
-<custom-navigation
-  title="{{viewMode === 'overview' ? '行李清单' : activeScene.name}}"
-  custom-back="{{viewMode === 'detail'}}"
-  bindback="handleDetailBack"
-/>
+<custom-navigation title="行李清单" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -10,158 +6,204 @@
 </view>
 
 <view wx:else class="page page--fixed">
-  <block wx:if="{{viewMode === 'overview'}}">
-    <view class="scene-directory__header">
-      <view>
-        <view class="scene-directory__title">选择一个场景</view>
-        <view class="scene-directory__count">{{scenes.length}} 个场景</view>
+  <view class="scene-tabs">
+    <view
+      wx:for="{{scenes}}"
+      wx:key="id"
+      class="scene-tab {{item.id === activeSceneId ? 'scene-tab--active' : ''}}"
+      role="button"
+      aria-label="切换到{{item.name}}场景"
+      data-id="{{item.id}}"
+      bindtap="handleSceneTap"
+    >{{item.name}}</view>
+    <view
+      wx:if="{{canWrite}}"
+      class="scene-tool"
+      role="button"
+      aria-label="新增行李场景"
+      bindtap="handleAddScene"
+    ><app-icon name="plus" size="23" inverse="{{false}}" /></view>
+    <view
+      wx:if="{{canWrite}}"
+      class="scene-tool"
+      role="button"
+      aria-label="管理行李场景"
+      bindtap="handleManageScenes"
+    ><app-icon name="pencil" size="23" /></view>
+  </view>
+
+  <view wx:if="{{errorMessage && !activeScene}}" class="state">{{errorMessage}}</view>
+  <view wx:elif="{{scenes.length === 0}}" class="state">
+    <view>还没有行李场景</view>
+    <view wx:if="{{canWrite}}" class="state__action" bindtap="handleAddScene">新增第一个场景</view>
+  </view>
+
+  <view wx:elif="{{activeScene}}" class="packing-content">
+    <view class="packing-overview">
+      <view class="packing-overview__topline">
+        <view class="packing-overview__scene">{{activeScene.name}}</view>
+        <view
+          class="packing-reset {{activePackedCount === 0 || sortEditing ? 'packing-reset--disabled' : ''}}"
+          role="button"
+          aria-label="重新开始当前场景"
+          bindtap="openPackingResetConfirm"
+        ><app-icon name="rotate-ccw" size="25" inverse="{{true}}" /></view>
       </view>
-      <view wx:if="{{canWrite}}" class="scene-directory__actions">
-        <view class="scene-directory__manage" bindtap="handleManageScenes">
-          <app-icon name="pencil" size="22" />
-          <text>管理</text>
-        </view>
-        <view class="scene-directory__add" bindtap="handleAddScene">
-          <app-icon name="plus-white" size="21" />
-          <text>新增场景</text>
-        </view>
+      <view class="packing-overview__summary">
+        <view class="packing-overview__title">{{activeUnpackedCount ? '还剩 ' + activeUnpackedCount + ' 件未装' : '已经全部装好'}}</view>
+        <view class="packing-overview__count">{{activePackedCount}} / {{activeItemCount}}</view>
+      </view>
+      <view class="packing-progress">
+        <view class="packing-progress__value" style="width: {{activePackingPercent}}%;" />
       </view>
     </view>
 
-    <scroll-view class="scene-directory__scroll" scroll-y enhanced show-scrollbar="{{false}}">
-      <view wx:if="{{contentLoading}}" class="content-loading">
-        <view class="content-loading__spinner" />
-        <view class="content-loading__text">正在加载场景…</view>
-      </view>
-      <view wx:elif="{{errorMessage}}" class="state">
-        <view>{{errorMessage}}</view>
-      </view>
-      <view wx:elif="{{scenes.length === 0}}" class="state">
-        <view>还没有行李场景</view>
-        <view wx:if="{{canWrite}}" class="state__action" bindtap="handleAddScene">新增第一个场景</view>
-      </view>
-      <view wx:else class="scene-directory__list">
+    <view class="packing-toolbar">
+      <view wx:if="{{!sortEditing}}" class="packing-filter">
         <view
-          wx:for="{{scenes}}"
+          class="packing-filter__tab {{packingView === 'unpacked' ? 'packing-filter__tab--active' : ''}}"
+          data-view="unpacked"
+          bindtap="handlePackingViewChange"
+        >未装 {{activeUnpackedCount}}</view>
+        <view
+          class="packing-filter__tab {{packingView === 'packed' ? 'packing-filter__tab--active' : ''}}"
+          data-view="packed"
+          bindtap="handlePackingViewChange"
+        >已装 {{activePackedCount}}</view>
+      </view>
+      <view wx:else class="packing-sort-label">调整顺序</view>
+
+      <view wx:if="{{canWrite}}" class="packing-tools">
+        <view
+          class="packing-tool"
+          role="button"
+          aria-label="新增携带层级"
+          bindtap="handleAddGroup"
+        ><app-icon name="plus" size="23" /></view>
+        <view
+          wx:if="{{activeScene.groups.length}}"
+          class="packing-tool {{sortEditing ? 'packing-tool--active' : ''}}"
+          role="button"
+          aria-label="{{sortEditing ? '完成行李清单排序' : '调整行李清单顺序'}}"
+          bindtap="handleSortEditingToggle"
+        ><app-icon name="settings-2" size="23" inverse="{{sortEditing}}" /></view>
+      </view>
+    </view>
+
+    <scroll-view class="group-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{contentLoading}}" class="content-loading content-loading--compact">
+        <view class="content-loading__spinner" />
+        <view class="content-loading__text">正在加载清单…</view>
+      </view>
+      <view wx:elif="{{packingGroups.length === 0}}" class="state">还没有携带层级</view>
+      <view wx:else class="group-list">
+        <view
+          wx:for="{{packingGroups}}"
+          wx:for-item="group"
+          wx:for-index="groupIndex"
           wx:key="id"
-          class="scene-card"
-          data-id="{{item.id}}"
-          bindtap="handleSceneTap"
+          class="group-card"
         >
-          <view class="scene-card__topline">
-            <view class="scene-card__name">{{item.name}}</view>
-            <view class="scene-card__meta">{{item.groups.length}} 层 · {{item.item_count}} 件</view>
-            <view class="scene-card__arrow"><app-icon name="chevron-right" size="25" /></view>
-          </view>
-          <view wx:if="{{item.groups.length}}" class="scene-card__layers">
-            <view wx:for="{{item.groups}}" wx:for-item="group" wx:key="id" class="scene-layer-chip">
-              <text>{{group.name}}</text>
-              <text class="scene-layer-chip__count">{{group.items.length}}</text>
+          <view class="group-header">
+            <view class="group-index">{{groupIndex < 9 ? '0' : ''}}{{groupIndex + 1}}</view>
+            <view class="group-header__main">
+              <view class="group-header__title-row">
+                <view class="group-title">{{group.name}}</view>
+                <view wx:if="{{group.is_required}}" class="required-badge">固定</view>
+              </view>
+              <view class="group-count">{{group.packing_count_label}}</view>
             </view>
-          </view>
-          <view wx:else class="scene-card__empty">暂无携带层级</view>
-        </view>
-      </view>
-    </scroll-view>
-  </block>
-
-  <block wx:elif="{{activeScene}}">
-    <view class="detail-content">
-      <view class="app-overview luggage-overview">
-        <view class="app-overview__topline">
-          <view class="app-overview__title-group">
-            <view class="app-overview__title">{{activeScene.name}}</view>
-          </view>
-          <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAddGroup">
-            <app-icon name="plus-white" size="21" />
-            <text>新增层级</text>
-          </button>
-        </view>
-        <view class="app-overview__stats">
-          <view class="app-overview__stat">
-            <view class="app-overview__value">{{activeGroupCount}}</view>
-            <view class="app-overview__label">携带层级</view>
-          </view>
-          <view class="app-overview__stat">
-            <view class="app-overview__value">{{activeItemCount}}</view>
-            <view class="app-overview__label">物品</view>
-          </view>
-        </view>
-      </view>
-
-      <view wx:if="{{canWrite && activeScene.groups.length}}" class="sort-toolbar">
-        <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
-          <app-icon name="settings-2" size="22" />
-          <text>{{sortEditing ? '完成排序' : '调整顺序'}}</text>
-        </view>
-      </view>
-
-      <scroll-view class="group-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-        <view wx:if="{{contentLoading}}" class="content-loading">
-          <view class="content-loading__spinner" />
-          <view class="content-loading__text">正在加载清单…</view>
-        </view>
-        <view wx:elif="{{activeScene.groups.length === 0}}" class="state">还没有携带层级</view>
-        <view wx:else class="group-list">
-          <view wx:for="{{activeScene.groups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="id" class="group-card">
+            <view wx:if="{{sortEditing}}" class="sort-actions">
+              <view
+                class="sort-icon {{groupIndex === 0 ? 'sort-icon--disabled' : ''}}"
+                role="button"
+                aria-label="上移{{group.name}}"
+                data-index="{{groupIndex}}"
+                data-direction="-1"
+                catchtap="handleGroupMove"
+              ><app-icon name="arrow-up" size="23" /></view>
+              <view
+                class="sort-icon {{groupIndex === packingGroups.length - 1 ? 'sort-icon--disabled' : ''}}"
+                role="button"
+                aria-label="下移{{group.name}}"
+                data-index="{{groupIndex}}"
+                data-direction="1"
+                catchtap="handleGroupMove"
+              ><app-icon name="arrow-down" size="23" /></view>
+            </view>
             <view
-              class="group-header"
+              wx:elif="{{canWrite}}"
+              class="row-edit"
+              role="button"
+              aria-label="编辑{{group.name}}层级"
               data-id="{{group.id}}"
               data-name="{{group.name}}"
               data-required="{{group.is_required}}"
-              bindtap="openGroupEditor"
-            >
-              <view class="group-header__main">
-                <view class="group-header__title-row">
-                  <view class="group-index">{{groupIndex < 9 ? '0' : ''}}{{groupIndex + 1}}</view>
-                  <view class="group-title">{{group.name}}</view>
-                  <view wx:if="{{group.is_required}}" class="required-badge">固定</view>
-                </view>
-                <view class="group-count">{{group.items.length}} 件物品</view>
-              </view>
-              <view wx:if="{{sortEditing}}" class="sort-actions">
-                <view class="sort-icon {{groupIndex === 0 ? 'sort-icon--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="-1" catchtap="handleGroupMove"><app-icon name="arrow-up" size="23" /></view>
-                <view class="sort-icon {{groupIndex === activeScene.groups.length - 1 ? 'sort-icon--disabled' : ''}}" data-index="{{groupIndex}}" data-direction="1" catchtap="handleGroupMove"><app-icon name="arrow-down" size="23" /></view>
-              </view>
-              <view wx:else class="group-header__arrow"><app-icon name="chevron-right" size="25" /></view>
-            </view>
+              catchtap="openGroupEditor"
+            ><app-icon name="pencil" size="22" /></view>
+          </view>
 
-            <view class="luggage-items">
+          <view class="luggage-items">
+            <view
+              wx:for="{{group.visible_items}}"
+              wx:for-item="luggageItem"
+              wx:for-index="itemIndex"
+              wx:key="id"
+              class="luggage-item"
+              data-id="{{luggageItem.id}}"
+              bindtap="handlePackingItemToggle"
+            >
+              <view wx:if="{{!sortEditing}}" class="packing-checkbox {{luggageItem.is_packed ? 'packing-checkbox--checked' : ''}}">
+                <app-icon wx:if="{{luggageItem.is_packed}}" name="check" size="22" inverse="{{true}}" />
+              </view>
+              <view class="luggage-item__name {{luggageItem.is_packed ? 'luggage-item__name--packed' : ''}}">{{luggageItem.name}}</view>
+              <view wx:if="{{sortEditing}}" class="sort-actions">
+                <view
+                  class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}"
+                  role="button"
+                  aria-label="上移{{luggageItem.name}}"
+                  data-group-id="{{group.id}}"
+                  data-index="{{itemIndex}}"
+                  data-direction="-1"
+                  catchtap="handleItemMove"
+                ><app-icon name="arrow-up" size="22" /></view>
+                <view
+                  class="sort-icon {{itemIndex === group.visible_items.length - 1 ? 'sort-icon--disabled' : ''}}"
+                  role="button"
+                  aria-label="下移{{luggageItem.name}}"
+                  data-group-id="{{group.id}}"
+                  data-index="{{itemIndex}}"
+                  data-direction="1"
+                  catchtap="handleItemMove"
+                ><app-icon name="arrow-down" size="22" /></view>
+              </view>
               <view
-                wx:for="{{group.items}}"
-                wx:for-item="luggageItem"
-                wx:for-index="itemIndex"
-                wx:key="id"
-                class="luggage-item"
+                wx:elif="{{canWrite}}"
+                class="row-edit"
+                role="button"
+                aria-label="编辑{{luggageItem.name}}"
                 data-id="{{luggageItem.id}}"
                 data-group-id="{{group.id}}"
                 data-name="{{luggageItem.name}}"
-                bindtap="openItemEditor"
-              >
-                <view class="luggage-item__name">{{luggageItem.name}}</view>
-                <view wx:if="{{sortEditing}}" class="sort-actions">
-                  <view class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="-1" catchtap="handleItemMove"><app-icon name="arrow-up" size="22" /></view>
-                  <view class="sort-icon {{itemIndex === group.items.length - 1 ? 'sort-icon--disabled' : ''}}" data-group-id="{{group.id}}" data-index="{{itemIndex}}" data-direction="1" catchtap="handleItemMove"><app-icon name="arrow-down" size="22" /></view>
-                </view>
-                <view wx:else class="luggage-item__arrow"><app-icon name="chevron-right" size="23" /></view>
-              </view>
-              <view
-                wx:if="{{canWrite && !sortEditing}}"
-                class="item-add-row"
-                data-group-id="{{group.id}}"
-                data-group-name="{{group.name}}"
-                bindtap="handleAddItem"
-              >
-                <app-icon name="plus" size="21" />
-                <text>{{group.items.length ? '添加物品' : '这个层级还没有物品，点击添加'}}</text>
-              </view>
-              <view wx:elif="{{group.items.length === 0}}" class="items-empty">这个层级还没有物品</view>
+                catchtap="openItemEditor"
+              ><app-icon name="pencil" size="21" /></view>
+            </view>
+            <view wx:if="{{group.visible_items.length === 0}}" class="items-empty">{{group.packing_empty_text}}</view>
+            <view
+              wx:if="{{canWrite && !sortEditing && packingView === 'unpacked'}}"
+              class="item-add-row"
+              data-group-id="{{group.id}}"
+              data-group-name="{{group.name}}"
+              bindtap="handleAddItem"
+            >
+              <app-icon name="plus" size="21" />
+              <text>{{group.items.length ? '添加物品' : '这个层级还没有物品，点击添加'}}</text>
             </view>
           </view>
         </view>
-      </scroll-view>
-    </view>
-  </block>
+      </view>
+    </scroll-view>
+  </view>
 
   <app-dialog
     wx:if="{{editorVisible}}"
@@ -204,6 +246,17 @@
     confirm-text="删除"
     bindcancel="closeDeleteConfirm"
     bindconfirm="confirmDelete"
+  />
+
+  <app-dialog
+    wx:if="{{resetConfirmVisible}}"
+    visible="{{true}}"
+    title="重新开始收拾"
+    content="只会清空“{{activeScene.name}}”保存在本机的装箱进度，清单内容不会改变。"
+    cancel-text="取消"
+    confirm-text="清空进度"
+    bindcancel="closePackingResetConfirm"
+    bindconfirm="confirmPackingReset"
   />
 
   <operation-loading

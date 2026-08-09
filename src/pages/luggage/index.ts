@@ -18,6 +18,11 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import {
+  clearLuggagePackedItemIds,
+  readLuggagePackedItemIds,
+  saveLuggagePackedItemIds
+} from "../../utils/luggage-packing"
 
 type LuggageOrderSnapshot = {
   groupIds: string[]
@@ -26,9 +31,20 @@ type LuggageOrderSnapshot = {
 
 type EditorKind = "group" | "item"
 type DeleteKind = "group" | "item"
+type PackingView = "unpacked" | "packed"
 type LuggageSceneView = LuggageScene & { item_count: number }
+type LuggagePackingItemView = LuggageScene["groups"][number]["items"][number] & {
+  is_packed: boolean
+}
+type LuggagePackingGroupView = LuggageScene["groups"][number] & {
+  visible_items: LuggagePackingItemView[]
+  packing_count_label: string
+  packing_empty_text: string
+}
 
 let luggageSortOriginalOrder: LuggageOrderSnapshot | null = null
+let luggagePackingUserId = ""
+let luggagePackedItemIds = new Set<string>()
 
 function getSceneCounts(scene: LuggageScene | null): {
   groupCount: number
@@ -87,14 +103,76 @@ function hasSameLuggageOrder(left: LuggageOrderSnapshot, right: LuggageOrderSnap
   })
 }
 
+function validPackedItemIds(scene: LuggageScene | null, packedItemIds: Set<string>): Set<string> {
+  if (!scene) return new Set()
+  const validItemIds = new Set(scene.groups.flatMap((group) => group.items.map((item) => item.id)))
+  return new Set([...packedItemIds].filter((id) => validItemIds.has(id)))
+}
+
+function buildPackingPresentation(
+  scene: LuggageScene | null,
+  packedItemIds: Set<string>,
+  packingView: PackingView,
+  sortEditing: boolean
+): {
+  groups: LuggagePackingGroupView[]
+  packedCount: number
+  unpackedCount: number
+  packingPercent: number
+} {
+  if (!scene) {
+    return { groups: [], packedCount: 0, unpackedCount: 0, packingPercent: 0 }
+  }
+
+  const totalCount = scene.groups.reduce((total, group) => total + group.items.length, 0)
+  const packedCount = scene.groups.reduce(
+    (total, group) => total + group.items.filter((item) => packedItemIds.has(item.id)).length,
+    0
+  )
+  const unpackedCount = totalCount - packedCount
+  const groups = scene.groups.map((group) => {
+    const items = group.items.map((item) => ({
+      ...item,
+      is_packed: packedItemIds.has(item.id)
+    }))
+    const groupPackedCount = items.filter((item) => item.is_packed).length
+    const groupUnpackedCount = items.length - groupPackedCount
+    const visibleItems = sortEditing
+      ? items
+      : items.filter((item) => packingView === "packed" ? item.is_packed : !item.is_packed)
+
+    return {
+      ...group,
+      visible_items: visibleItems,
+      packing_count_label: sortEditing
+        ? `${items.length} 件物品`
+        : packingView === "packed"
+          ? `已装 ${groupPackedCount} 件`
+          : `未装 ${groupUnpackedCount} 件`,
+      packing_empty_text: packingView === "packed" ? "这个层级还没有已装物品" : "这个层级已经全部装好"
+    }
+  })
+
+  return {
+    groups,
+    packedCount,
+    unpackedCount,
+    packingPercent: totalCount ? Math.round((packedCount / totalCount) * 100) : 0
+  }
+}
+
 Page({
   data: {
     scenes: [] as LuggageSceneView[],
-    viewMode: "overview" as "overview" | "detail",
     activeSceneId: "",
     activeScene: null as LuggageSceneView | null,
+    packingGroups: [] as LuggagePackingGroupView[],
+    packingView: "unpacked" as PackingView,
     activeGroupCount: 0,
     activeItemCount: 0,
+    activePackedCount: 0,
+    activeUnpackedCount: 0,
+    activePackingPercent: 0,
     canWrite: false,
     loading: true,
     contentLoading: false,
@@ -117,7 +195,8 @@ Page({
     confirmKind: "group" as DeleteKind,
     confirmId: "",
     confirmTitle: "",
-    confirmContent: ""
+    confirmContent: "",
+    resetConfirmVisible: false
   },
 
   onShow() {
@@ -130,6 +209,8 @@ Page({
   onUnload() {
     deactivateAsyncPage(this)
     luggageSortOriginalOrder = null
+    luggagePackingUserId = ""
+    luggagePackedItemIds = new Set()
   },
 
   async loadScenes() {
@@ -150,15 +231,35 @@ Page({
       }))
       if (!isAsyncPageRequestCurrent(this, generation)) return
 
-      const activeScene = scenes.find((scene) => scene.id === this.data.activeSceneId) || null
+      luggagePackingUserId = session.user.id
+      const activeScene = scenes.find((scene) => scene.id === this.data.activeSceneId) || scenes[0] || null
+      luggagePackedItemIds = activeScene
+        ? validPackedItemIds(
+          activeScene,
+          readLuggagePackedItemIds(luggagePackingUserId, activeScene.id)
+        )
+        : new Set()
+      if (activeScene) {
+        saveLuggagePackedItemIds(luggagePackingUserId, activeScene.id, luggagePackedItemIds)
+      }
       const counts = getSceneCounts(activeScene)
+      const packing = buildPackingPresentation(
+        activeScene,
+        luggagePackedItemIds,
+        this.data.packingView,
+        false
+      )
       this.setData({
         scenes,
         activeSceneId: activeScene?.id || "",
         activeScene,
+        packingGroups: packing.groups,
         activeGroupCount: counts.groupCount,
         activeItemCount: counts.itemCount,
-        viewMode: this.data.viewMode === "detail" && activeScene ? "detail" : "overview",
+        activePackedCount: packing.packedCount,
+        activeUnpackedCount: packing.unpackedCount,
+        activePackingPercent: packing.packingPercent,
+        sortEditing: false,
         canWrite: session.user.can_write
       })
     } catch (error) {
@@ -175,26 +276,35 @@ Page({
 
   handleSceneTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.contentLoading) return
-    const id = String(event.currentTarget.dataset.id || "")
-    const activeScene = this.data.scenes.find((scene) => scene.id === id) || null
-    if (!activeScene) return
-    const counts = getSceneCounts(activeScene)
-    this.setData({
-      viewMode: "detail",
-      activeSceneId: activeScene.id,
-      activeScene,
-      activeGroupCount: counts.groupCount,
-      activeItemCount: counts.itemCount,
-      sortEditing: false
-    })
-  },
-
-  handleDetailBack() {
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    this.setData({ viewMode: "overview" })
+    const id = String(event.currentTarget.dataset.id || "")
+    const activeScene = this.data.scenes.find((scene) => scene.id === id) || null
+    if (!activeScene) return
+    luggagePackedItemIds = validPackedItemIds(
+      activeScene,
+      readLuggagePackedItemIds(luggagePackingUserId, activeScene.id)
+    )
+    const counts = getSceneCounts(activeScene)
+    const packing = buildPackingPresentation(
+      activeScene,
+      luggagePackedItemIds,
+      "unpacked",
+      false
+    )
+    this.setData({
+      activeSceneId: activeScene.id,
+      activeScene,
+      packingGroups: packing.groups,
+      packingView: "unpacked",
+      activeGroupCount: counts.groupCount,
+      activeItemCount: counts.itemCount,
+      activePackedCount: packing.packedCount,
+      activeUnpackedCount: packing.unpackedCount,
+      activePackingPercent: packing.packingPercent
+    })
   },
 
   handleAddScene() {
@@ -205,6 +315,75 @@ Page({
   handleManageScenes() {
     if (!this.data.canWrite || this.data.contentLoading) return
     wx.navigateTo({ url: "/pages/luggage/scenes/index" })
+  },
+
+  applyPackingPresentation(
+    scene: LuggageSceneView | null,
+    packingView: PackingView,
+    sortEditing: boolean
+  ) {
+    const packing = buildPackingPresentation(
+      scene,
+      luggagePackedItemIds,
+      packingView,
+      sortEditing
+    )
+    this.setData({
+      packingGroups: packing.groups,
+      packingView,
+      activePackedCount: packing.packedCount,
+      activeUnpackedCount: packing.unpackedCount,
+      activePackingPercent: packing.packingPercent,
+      sortEditing
+    })
+  },
+
+  handlePackingViewChange(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.sortEditing) return
+    const packingView = String(event.currentTarget.dataset.view || "") as PackingView
+    if (packingView !== "unpacked" && packingView !== "packed") return
+    this.applyPackingPresentation(this.data.activeScene, packingView, false)
+  },
+
+  handlePackingItemToggle(event: WechatMiniprogram.TouchEvent) {
+    const scene = this.data.activeScene
+    const itemId = String(event.currentTarget.dataset.id || "")
+    if (!scene || !itemId || this.data.sortEditing) return
+    const itemExists = scene.groups.some((group) => group.items.some((item) => item.id === itemId))
+    if (!itemExists) return
+
+    const nextPackedItemIds = new Set(luggagePackedItemIds)
+    if (nextPackedItemIds.has(itemId)) nextPackedItemIds.delete(itemId)
+    else nextPackedItemIds.add(itemId)
+    if (!saveLuggagePackedItemIds(luggagePackingUserId, scene.id, nextPackedItemIds)) {
+      wx.showToast({ title: "本机装箱进度保存失败", icon: "none" })
+      return
+    }
+
+    luggagePackedItemIds = nextPackedItemIds
+    this.applyPackingPresentation(scene, this.data.packingView, false)
+  },
+
+  openPackingResetConfirm() {
+    if (!this.data.activeScene || this.data.activePackedCount === 0 || this.data.sortEditing) return
+    this.setData({ resetConfirmVisible: true })
+  },
+
+  closePackingResetConfirm() {
+    this.setData({ resetConfirmVisible: false })
+  },
+
+  confirmPackingReset() {
+    const scene = this.data.activeScene
+    if (!scene) return
+    if (!clearLuggagePackedItemIds(luggagePackingUserId, scene.id)) {
+      wx.showToast({ title: "本机装箱进度清空失败", icon: "none" })
+      return
+    }
+    luggagePackedItemIds = new Set()
+    this.setData({ resetConfirmVisible: false })
+    this.applyPackingPresentation(scene, "unpacked", false)
+    wx.showToast({ title: "已重新开始", icon: "success" })
   },
 
   openGroupEditor(event: WechatMiniprogram.TouchEvent) {
@@ -359,9 +538,16 @@ Page({
     const [group] = nextGroups.splice(index, 1)
     nextGroups.splice(targetIndex, 0, group)
     const nextScene = { ...scene, groups: nextGroups }
+    const packing = buildPackingPresentation(
+      nextScene,
+      luggagePackedItemIds,
+      this.data.packingView,
+      true
+    )
     this.setData({
       activeScene: nextScene,
-      scenes: replaceScene(this.data.scenes, nextScene)
+      scenes: replaceScene(this.data.scenes, nextScene),
+      packingGroups: packing.groups
     })
   },
 
@@ -382,9 +568,16 @@ Page({
     if (!nextItems) return
     const [item] = nextItems.splice(index, 1)
     nextItems.splice(targetIndex, 0, item)
+    const packing = buildPackingPresentation(
+      nextScene,
+      luggagePackedItemIds,
+      this.data.packingView,
+      true
+    )
     this.setData({
       activeScene: nextScene,
-      scenes: replaceScene(this.data.scenes, nextScene)
+      scenes: replaceScene(this.data.scenes, nextScene),
+      packingGroups: packing.groups
     })
   },
 
@@ -392,14 +585,14 @@ Page({
     if (!this.data.canWrite || this.data.ordering || !this.data.activeScene) return
     if (!this.data.sortEditing) {
       luggageSortOriginalOrder = captureLuggageOrder(this.data.activeScene)
-      this.setData({ sortEditing: true })
+      this.applyPackingPresentation(this.data.activeScene, this.data.packingView, true)
       return
     }
 
     const desiredOrder = captureLuggageOrder(this.data.activeScene)
     if (!luggageSortOriginalOrder || hasSameLuggageOrder(luggageSortOriginalOrder, desiredOrder)) {
       luggageSortOriginalOrder = null
-      this.setData({ sortEditing: false })
+      this.applyPackingPresentation(this.data.activeScene, this.data.packingView, false)
       return
     }
 
