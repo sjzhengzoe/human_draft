@@ -35,6 +35,10 @@ Component({
     customActions: {
       type: Boolean,
       value: false
+    },
+    trackKeyboard: {
+      type: Boolean,
+      value: true
     }
   },
   data: {
@@ -42,8 +46,8 @@ Component({
     keyboardStyle: ""
   },
   observers: {
-    visible(visible: boolean) {
-      if (visible) {
+    "visible, trackKeyboard"(visible: boolean, trackKeyboard: boolean) {
+      if (visible && trackKeyboard) {
         this.startKeyboardTracking()
       } else {
         this.stopKeyboardTracking()
@@ -52,7 +56,9 @@ Component({
   },
   lifetimes: {
     attached() {
-      if (this.properties.visible) this.startKeyboardTracking()
+      if (this.properties.visible && this.properties.trackKeyboard) {
+        this.startKeyboardTracking()
+      }
     },
     detached() {
       this.stopKeyboardTracking()
@@ -63,7 +69,11 @@ Component({
       if (keyboardHandlers.has(this)) return
       const handler: KeyboardHeightHandler = ({ height }) => {
         const keyboardHeight = Math.max(0, Number(height || 0))
-        if (!this.properties.visible || keyboardHeight === this.data.keyboardHeight) return
+        if (
+          !this.properties.visible ||
+          !this.properties.trackKeyboard ||
+          keyboardHeight === this.data.keyboardHeight
+        ) return
         this.setData({
           keyboardHeight,
           keyboardStyle: keyboardHeight > 0

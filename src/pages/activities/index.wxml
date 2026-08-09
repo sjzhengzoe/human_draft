@@ -134,6 +134,7 @@
     title="{{editingId ? '编辑活动' : '新增活动'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    track-keyboard="{{false}}"
   >
     <view slot="body" class="activity-editor">
       <view class="activity-editor__image" bindtap="handleChooseImage">
@@ -155,7 +156,7 @@
         maxlength="120"
         placeholder="活动名称，例如：红花湖骑行"
         persistent
-        adjust-position="{{false}}"
+        adjust-position="{{true}}"
         bindinput="handleEditorNameInput"
       />
       <app-input
@@ -165,7 +166,7 @@
         placeholder="一句简介（选填）"
         confirm-type="done"
         persistent
-        adjust-position="{{false}}"
+        adjust-position="{{true}}"
         bindinput="handleEditorIntroductionInput"
       />
       <view class="type-options" role="radiogroup" aria-label="活动场景">

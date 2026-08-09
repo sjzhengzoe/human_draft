@@ -13,6 +13,8 @@ test("app dialog centers within the keyboard-safe viewport", async () => {
 
   assert.match(componentSource, /wx\.onKeyboardHeightChange/);
   assert.match(componentSource, /wx\.offKeyboardHeightChange/);
+  assert.match(componentSource, /trackKeyboard:[\s\S]*?value:\s*true/);
+  assert.match(componentSource, /visible && trackKeyboard/);
   assert.match(componentSource, /keyboardHeight === this\.data\.keyboardHeight/);
   assert.match(componentSource, /padding-bottom: calc\(\$\{keyboardHeight\}px \+ 48rpx\)/);
   assert.match(template, /style="\{\{keyboardStyle\}\}"/);
@@ -21,17 +23,21 @@ test("app dialog centers within the keyboard-safe viewport", async () => {
   assert.match(styles, /overflow-y: auto/);
 });
 
-test("dialog inputs rely on global keyboard avoidance instead of page pushing", async () => {
-  const templates = await Promise.all([
-    "src/exercise/pages/index.wxml",
-    "src/pages/chat-topics/index.wxml",
-    "src/pages/key-moments/index.wxml",
-    "src/pages/activities/index.wxml",
-  ].map((path) => readFile(new URL(path, projectRoot), "utf8")));
+test("dialog inputs use one keyboard avoidance strategy at a time", async () => {
+  const [globalAvoidanceTemplates, activityTemplate] = await Promise.all([
+    Promise.all([
+      "src/exercise/pages/index.wxml",
+      "src/pages/chat-topics/index.wxml",
+      "src/pages/key-moments/index.wxml",
+    ].map((path) => readFile(new URL(path, projectRoot), "utf8"))),
+    readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
+  ]);
 
-  for (const template of templates) {
+  for (const template of globalAvoidanceTemplates) {
     assert.match(template, /adjust-position="\{\{false\}\}"/);
   }
-  assert.match(templates.at(-1), /<app-dialog/);
-  assert.doesNotMatch(templates.at(-1), /class="modal"/);
+  assert.match(activityTemplate, /track-keyboard="\{\{false\}\}"/);
+  assert.match(activityTemplate, /adjust-position="\{\{true\}\}"/);
+  assert.match(activityTemplate, /<app-dialog/);
+  assert.doesNotMatch(activityTemplate, /class="modal"/);
 });
