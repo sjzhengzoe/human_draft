@@ -4,6 +4,7 @@ import {
   type FootprintMapPolygon
 } from "../data/footprint-province-geometry"
 import { UI_FONT } from "../config/ui-font"
+import { UI_CANVAS_FONT_SIZES } from "../styles/typography"
 import { FOOTPRINT_PROVINCES } from "../data/footprint-regions"
 import type { FootprintCityGeometryData } from "../services/footprint-map"
 import { FOOTPRINT_COLORS } from "../styles/colors"
@@ -298,7 +299,7 @@ export function drawFootprintMap(
     }
   }
 
-  context.font = `normal 10px "${UI_FONT.family}", "PingFang SC", sans-serif`
+  context.font = `normal ${UI_CANVAS_FONT_SIZES.small}px "${UI_FONT.family}", "PingFang SC", sans-serif`
   context.textAlign = "center"
   context.textBaseline = "middle"
   context.lineWidth = 2.5

@@ -1,3 +1,5 @@
+import { UI_FONT_SIZES } from "../../styles/typography"
+
 Component({
   externalClasses: ["custom-class"],
   properties: {
@@ -12,10 +14,6 @@ Component({
     placeholder: {
       type: String,
       value: ""
-    },
-    fontSize: {
-      type: String,
-      value: "23rpx"
     },
     maxlength: {
       type: Number,
@@ -51,6 +49,7 @@ Component({
     }
   },
   data: {
+    fontSize: UI_FONT_SIZES.base,
     localValue: "",
     editing: false,
     nativeFocus: false

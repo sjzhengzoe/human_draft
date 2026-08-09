@@ -50,10 +50,6 @@ Component({
     customBack: {
       type: Boolean,
       value: false
-    },
-    compactTitle: {
-      type: Boolean,
-      value: false
     }
   },
   methods: {

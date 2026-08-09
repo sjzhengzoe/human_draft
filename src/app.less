@@ -16,6 +16,7 @@ page {
   --ui-font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ui-font-size-small: 20rpx;
   --ui-font-size-base: 23rpx;
+  --ui-font-size-large: 25rpx;
   --ui-page-gutter: 32rpx;
   --ui-page-gutter-compact: 24rpx;
   --ui-dialog-gutter: 56rpx;
@@ -28,6 +29,11 @@ page {
   min-height: 100vh;
   background: var(--ui-page-background);
   color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.ui-input-placeholder {
+  font-family: var(--ui-font-family);
   font-size: var(--ui-font-size-base);
 }
 
@@ -113,7 +119,7 @@ page {
 
 .record-overview__title {
   color: var(--ui-color-text-primary);
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 700;
   letter-spacing: 1rpx;
   line-height: 1.25;
@@ -146,7 +152,7 @@ page {
 .record-overview__value {
   overflow: hidden;
   color: var(--ui-color-text-strong);
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 650;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -156,7 +162,7 @@ page {
 .record-overview__label {
   margin-top: 7rpx;
   color: var(--ui-color-text-placeholder);
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.2;
 }
 
@@ -188,7 +194,7 @@ page {
 .app-overview__title {
   overflow: hidden;
   color: var(--ui-color-text-primary);
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 700;
   letter-spacing: 1rpx;
   line-height: 1.25;
@@ -248,7 +254,7 @@ page {
 .app-overview__value {
   overflow: hidden;
   color: var(--ui-color-text-primary);
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 700;
   line-height: 1.15;
   text-overflow: ellipsis;
@@ -258,6 +264,6 @@ page {
 .app-overview__label {
   margin-top: 7rpx;
   color: var(--ui-color-text-placeholder);
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.2;
 }

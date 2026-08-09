@@ -33,7 +33,6 @@
         <view class="field__label">菜品名称<text class="field__required">*</text></view>
         <app-input
           custom-class="field__input"
-          font-size="23rpx"
           value="{{name}}"
           maxlength="120"
           placeholder="例如：番茄炒鸡蛋"
@@ -45,7 +44,6 @@
         <view class="field__label">菜品介绍</view>
         <app-input
           custom-class="field__input"
-          font-size="23rpx"
           value="{{introduction}}"
           maxlength="1000"
           confirm-type="done"
@@ -116,7 +114,6 @@
           <view class="item-entry">
             <app-input
               custom-class="item-entry__input"
-              font-size="23rpx"
               value="{{mainIngredientInput}}"
               maxlength="80"
               confirm-type="done"
@@ -173,7 +170,6 @@
           <view class="item-entry">
             <app-input
               custom-class="item-entry__input"
-              font-size="23rpx"
               value="{{flavorOptionInput}}"
               maxlength="80"
               confirm-type="done"

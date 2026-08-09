@@ -94,7 +94,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: var\(--ui-color-success\);/)
   assert.match(styles, /\.province-card__name\s*\{[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.match(styles, /\.city-grid\s*\{[\s\S]*?padding: 14rpx 16rpx 16rpx;[\s\S]*?border-top:/)
-  assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 50rpx;[\s\S]*?font-size: var\(--ui-font-size-small\);/)
+  assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 54rpx;[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.doesNotMatch(logic, /const provinceStillVisited/)
   assert.doesNotMatch(logic, /const activeTab = provinceStillVisited/)
   assert.doesNotMatch(page, /省名直接标在区域内|绿色\s*=|app-dialog|picker/)
@@ -124,10 +124,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.doesNotMatch(styles, /#8fbea0|#83b293|#e2f0e6|#62aa79|#3e8a5d/)
   assert.match(logic, /initializeUIFont\(\)[\s\S]*?\.then\(\(\) => \{[\s\S]*?this\.drawMap\(\)/)
 
-  const fontSizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)].map(
-    (match) => Number(match[1])
-  )
-  assert.ok(fontSizes.every((size) => [20, 23, 25].includes(size)))
+  assert.doesNotMatch(styles, /font-size:\s*\d+rpx/)
 })
 
 test("footprint map projects longitude and latitude with matching units", async () => {

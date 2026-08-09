@@ -124,7 +124,7 @@
             class="image-editor__remove-button"
             aria-label="移除图片"
             catchtap="handleRemoveEditorImage"
-          >×</view>
+          ><app-icon name="x-muted" size="20" inverse="{{true}}" /></view>
         </view>
 
         <view class="editor-text">

@@ -1,5 +1,3 @@
-@import "./compact-typography.less";
-
 .page {
   display: flex;
   height: 100%;
@@ -233,16 +231,16 @@
 .section-heading__title,
 .record-heading__title {
   color: var(--ui-color-text-primary);
-  font-size: var(--ui-font-size-small);
+  font-size: var(--ui-font-size-large);
   font-weight: 650;
   line-height: 1.3;
 }
 
 .record-card__title {
   display: -webkit-box;
-  min-height: 54rpx;
+  min-height: 64rpx;
   color: var(--ui-color-text-primary);
-  font-size: var(--ui-font-size-small);
+  font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -349,14 +347,14 @@
 
 .empty-action {
   display: flex;
-  height: 48rpx;
+  height: 52rpx;
   align-items: center;
   justify-content: center;
   padding: 0 18rpx;
   border-radius: var(--ui-radius-pill);
   background: var(--ui-color-action-primary);
   color: var(--ui-color-text-inverse);
-  font-size: var(--ui-font-size-small);
+  font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
@@ -368,7 +366,7 @@
 .load-more {
   padding: 24rpx var(--ui-page-gutter) calc(24rpx + env(safe-area-inset-bottom));
   color: var(--ui-color-text-disabled);
-  font-size: var(--ui-font-size-small);
+  font-size: var(--ui-font-size-base);
   text-align: center;
 }
 

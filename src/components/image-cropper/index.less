@@ -40,7 +40,7 @@
 .crop-modal__hint {
   margin-top: 16rpx;
   color: var(--ui-color-text-muted);
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   line-height: 1.4;
   text-align: center;
 }
@@ -65,18 +65,12 @@
   border-radius: 999rpx;
   background: var(--ui-color-background-surface);
   color: var(--ui-color-text-default);
-  font-size: 23rpx;
+  font-size: var(--ui-font-size-base);
   line-height: normal;
 }
 
 .crop-modal__rotate::after {
   border: 0;
-}
-
-.crop-modal--compact .crop-modal__hint,
-.crop-modal--compact .crop-modal__rotate,
-.crop-modal__actions--compact .crop-modal__button {
-  font-size: var(--ui-font-size-small);
 }
 
 .crop-modal__actions {

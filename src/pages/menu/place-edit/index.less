@@ -3,16 +3,16 @@
 .form-card { overflow: hidden; border: 1rpx solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-color-background-surface); }
 .image-field { position: relative; display: flex; width: 100%; aspect-ratio: 1 / 1; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1rpx solid var(--ui-border); background: var(--ui-subtle-background); }
 .image-field__preview { width: 100%; height: 100%; }
-.image-field__empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; color: var(--ui-color-text-placeholder); font-size: 23rpx; }
+.image-field__empty { display: flex; flex-direction: column; align-items: center; gap: 12rpx; color: var(--ui-color-text-placeholder); font-size: var(--ui-font-size-base); }
 .field { padding: 25rpx 28rpx; }
 .field--section-start { border-top: 1rpx solid var(--ui-color-border); }
 .field--inline { display: grid; grid-template-columns: 132rpx minmax(0, 1fr); align-items: center; gap: 24rpx; }
-.field__label { margin-bottom: 12rpx; color: var(--ui-color-text-muted); font-size: 23rpx; }
+.field__label { margin-bottom: 12rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-base); }
 .field--inline .field__label { margin-bottom: 0; }
-.field__input { height: 54rpx; color: var(--ui-color-text-primary); font-size: 23rpx; }
-.field__picker, .value-tag { display: inline-flex; min-height: 46rpx; box-sizing: border-box; align-items: center; gap: 5rpx; padding: 6rpx 12rpx 6rpx 14rpx; border: 2rpx solid var(--ui-color-border-strong); border-radius: 999rpx; background: var(--ui-color-background-surface); color: var(--ui-color-text-primary); font-size: 23rpx; font-weight: 600; }
+.field__input { height: 54rpx; color: var(--ui-color-text-primary); font-size: var(--ui-font-size-base); }
+.field__picker, .value-tag { display: inline-flex; min-height: 46rpx; box-sizing: border-box; align-items: center; gap: 5rpx; padding: 6rpx 12rpx 6rpx 14rpx; border: 2rpx solid var(--ui-color-border-strong); border-radius: 999rpx; background: var(--ui-color-background-surface); color: var(--ui-color-text-primary); font-size: var(--ui-font-size-base); font-weight: 600; }
 .footer-actions { margin-top: 28rpx; }
-.save-button, .add-dish-button, .delete-button { display: flex; height: 88rpx; align-items: center; justify-content: center; gap: 9rpx; border-radius: 44rpx; font-size: 23rpx; }
+.save-button, .add-dish-button, .delete-button { display: flex; height: 88rpx; align-items: center; justify-content: center; gap: 9rpx; border-radius: 44rpx; font-size: var(--ui-font-size-base); }
 .save-button { background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); }
 .add-dish-button { margin-top: 16rpx; border: 2rpx solid var(--ui-color-action-primary); background: var(--ui-color-background-surface); color: var(--ui-color-text-primary); }
 .delete-button { margin-top: 16rpx; background: var(--ui-color-background-surface); color: var(--ui-color-danger); }

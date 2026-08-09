@@ -67,7 +67,7 @@
   align-items: center;
   justify-content: center;
   color: var(--ui-color-text-strong);
-  font-size: 27rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 680;
   line-height: 1.3;
 }
@@ -75,7 +75,7 @@
 .mini-calendar__title-arrow {
   margin-left: 8rpx;
   color: var(--ui-color-text-placeholder);
-  font-size: 20rpx;
+  font-size: var(--ui-font-size-small);
   font-weight: 500;
   transform: translateY(-2rpx);
 }
@@ -87,8 +87,6 @@
   align-items: center;
   justify-content: center;
   color: var(--ui-color-text-default);
-  font-size: 42rpx;
-  font-weight: 350;
   line-height: 1;
 }
 
@@ -105,7 +103,7 @@
 .mini-calendar__weekdays {
   margin-top: 16rpx;
   color: var(--ui-color-text-placeholder);
-  font-size: 19rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 32rpx;
   text-align: center;
 }
@@ -144,7 +142,7 @@
   justify-content: center;
   border-radius: 50%;
   color: var(--ui-color-text-placeholder);
-  font-size: 19rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 36rpx;
   text-align: center;
 }
@@ -203,7 +201,7 @@
   border-radius: 999rpx;
   background: var(--ui-subtle-background);
   color: var(--ui-color-text-muted);
-  font-size: 19rpx;
+  font-size: var(--ui-font-size-small);
   text-align: center;
 }
 
@@ -223,7 +221,7 @@
 
 .balance-heading {
   color: var(--ui-color-text-strong);
-  font-size: 27rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 680;
   line-height: 1.3;
 }
@@ -236,7 +234,7 @@
 
 .task-row__value {
   color: var(--ui-color-text-primary);
-  font-size: 30rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 700;
   line-height: 1.2;
 }
@@ -244,13 +242,13 @@
 .task-row__unit {
   margin-left: 6rpx;
   color: var(--ui-color-text-muted);
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-small);
 }
 
 .task-row__hint {
   margin-right: 8rpx;
   color: var(--ui-color-text-placeholder);
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-small);
 }
 
 .task-row__status {
@@ -265,7 +263,7 @@
   align-items: center;
   justify-content: flex-end;
   color: var(--ui-color-text-muted);
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-small);
   line-height: 1.35;
   white-space: nowrap;
 }
@@ -273,14 +271,14 @@
 .task-completion-summary__value {
   margin: 0 5rpx;
   color: var(--ui-color-text-primary);
-  font-size: 29rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 700;
 }
 
 .task-completion-summary__extra {
   margin-left: 8rpx;
   color: var(--exercise-color-rest);
-  font-size: 19rpx;
+  font-size: var(--ui-font-size-small);
 }
 
 .minutes-dialog-body {
@@ -307,7 +305,7 @@
 .minutes-dialog-input text {
   margin-left: 12rpx;
   color: var(--ui-color-text-muted);
-  font-size: 21rpx;
+  font-size: var(--ui-font-size-base);
 }
 
 .minutes-dialog-actions {
@@ -345,10 +343,13 @@
 }
 
 .rest-day-entry {
-  min-height: 42rpx;
+  display: flex;
+  min-height: 48rpx;
+  align-items: center;
+  justify-content: center;
   color: var(--ui-color-text-placeholder);
-  font-size: 20rpx;
-  line-height: 42rpx;
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
   text-align: center;
 }
 

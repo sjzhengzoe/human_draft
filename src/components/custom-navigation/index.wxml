@@ -14,9 +14,9 @@
         aria-label="返回"
         bindtap="handleBack"
       >
-        <view class="custom-navigation__back-glyph">‹</view>
+        <view class="custom-navigation__back-glyph"><app-icon name="arrow-left" size="30" /></view>
       </view>
-      <view wx:if="{{title}}" class="custom-navigation__title {{compactTitle ? 'custom-navigation__title--compact' : ''}}">{{title}}</view>
+      <view wx:if="{{title}}" class="custom-navigation__title">{{title}}</view>
     </view>
   </view>
 </view>

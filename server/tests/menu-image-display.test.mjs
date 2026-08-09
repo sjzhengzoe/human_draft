@@ -39,7 +39,7 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(page, /<app-input[\s\S]*?custom-class="field__input"[\s\S]*?value="\{\{name\}\}"[\s\S]*?placeholder="例如：番茄炒鸡蛋"/);
   assert.match(page, /field--introduction[\s\S]*?<app-input[\s\S]*?value="\{\{introduction\}\}"[\s\S]*?placeholder="简单介绍这道菜"/);
   assert.equal(page.match(/<app-input\b/g)?.length, 4);
-  assert.equal(page.match(/font-size="23rpx"/g)?.length, 4);
+  assert.doesNotMatch(page, /font-size="23rpx"/);
   assert.doesNotMatch(page, /<input\b|always-embed/);
   assert.match(page, /用餐场景<text class="field__required">\*<\/text>/);
   assert.match(page, /适用餐次<text class="field__required">\*<\/text>/);
@@ -81,14 +81,14 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(styles, /\.field--inline\.field--section-start[^}]*padding-top:\s*24rpx[^}]*border-top:\s*1rpx solid var\(--ui-color-border\)/);
   assert.match(styles, /\.field--inline\.field--name,[\s\S]*?\.field--inline\.field--introduction[^}]*align-items:\s*center/);
   assert.match(styles, /\.field--name \.field__label,[\s\S]*?\.field--introduction \.field__label[^}]*padding-top:\s*0/);
-  assert.match(styles, /\.field__label[^}]*font-size:\s*23rpx/);
-  assert.match(styles, /\.meal-period-option[^}]*font-size:\s*23rpx/);
+  assert.match(styles, /\.field__label[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.match(styles, /\.meal-period-option[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles, /\.field__input[^}]*border-bottom:\s*1rpx solid var\(--ui-color-border-subtle\)[^}]*background:\s*transparent/);
   assert.match(styles, /\.item-entry[^}]*border-bottom:\s*1rpx solid var\(--ui-color-border-subtle\)[^}]*background:\s*transparent/);
   assert.match(styles, /\.item-entry__input[^}]*border:\s*0[^}]*background:\s*transparent/);
   assert.match(styles, /\.field__input,[\s\S]*?\.item-entry__input[^}]*font-family:[^}]*HumanDraftUI/);
-  assert.match(styles, /\.field__input[^}]*font-size:\s*23rpx/);
-  assert.match(styles, /\.item-entry__input[^}]*font-size:\s*23rpx/);
+  assert.match(styles, /\.field__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.match(styles, /\.item-entry__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles, /\.choice-option--selected,[\s\S]*background:\s*var\(--ui-surface\)/);
   assert.match(styles, /\.choice-option--selected,[\s\S]*color:\s*var\(--ui-color-text-primary\)/);
   assert.match(editLogic, /sourceType:\s*\["album", "camera"\]/);
@@ -293,23 +293,21 @@ test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes"
     const businessStyle = style
       .replace(/\.meal-slot__placeholder-mark\s*\{[^}]*\}/g, "")
       .replace(/\.image-field__plus\s*\{[^}]*\}/g, "");
-    const explicitSizes = [...businessStyle.matchAll(/font-size:\s*(\d+)rpx/g)].map(
-      (match) => Number(match[1]),
-    );
-    assert.ok(
-      explicitSizes.every((size) => size === 20 || size === 23 || size === 25),
-      `${styleUrls[index]} contains a business font size outside 20rpx/23rpx/25rpx`,
+    assert.doesNotMatch(
+      businessStyle,
+      /font-size:\s*\d+rpx/,
+      `${styleUrls[index]} must use shared typography variables`,
     );
   }
   assert.match(styles[0], /\.quick-card__meta[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[0], /\.quick-card__detail-label[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[0], /\.quick-card__detail-value[^}]*font-size:\s*var\(--ui-font-size-small\)/);
-  assert.match(styles[1], /\.field__input[^}]*font-size:\s*23rpx/);
-  assert.match(styles[1], /\.item-entry__input[^}]*font-size:\s*23rpx/);
-  assert.equal(editPage.match(/font-size="23rpx"/g)?.length, 4);
+  assert.match(styles[1], /\.field__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.match(styles[1], /\.item-entry__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
+  assert.doesNotMatch(editPage, /font-size="23rpx"/);
   assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles[4], /\.meal-section__english[^}]*font-size:\s*var\(--ui-font-size-small\)/);
-  assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*25rpx/);
+  assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*var\(--ui-font-size-large\)/);
   assert.match(styles[5], /\.dish-card__category[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[5], /\.print-status-filter__item[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles[5], /\.generate-button[^}]*font-size:\s*var\(--ui-font-size-base\)/);
@@ -328,7 +326,8 @@ test("shared UI typography defines 20rpx metadata, 23rpx body text, and 25rpx ti
   assert.match(guidance, /Do not introduce `24rpx`/);
   assert.match(appStyles, /--ui-font-size-small:\s*20rpx/);
   assert.match(appStyles, /--ui-font-size-base:\s*23rpx/);
-  assert.match(navigationStyles, /\.custom-navigation__title[^}]*font-size:\s*25rpx/);
-  assert.match(dialogStyles, /\.app-dialog__title[^}]*font-size:\s*25rpx/);
-  assert.match(appInput, /value:\s*"23rpx"/);
+  assert.match(appStyles, /--ui-font-size-large:\s*25rpx/);
+  assert.match(navigationStyles, /\.custom-navigation__title[^}]*font-size:\s*var\(--ui-font-size-large\)/);
+  assert.match(dialogStyles, /\.app-dialog__title[^}]*font-size:\s*var\(--ui-font-size-large\)/);
+  assert.match(appInput, /fontSize:\s*UI_FONT_SIZES\.base/);
 });

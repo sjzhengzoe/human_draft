@@ -1,4 +1,4 @@
-<custom-navigation title="影视片单" compact-title="{{true}}" />
+<custom-navigation title="影视片单" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -45,7 +45,7 @@
         <view wx:for="{{ratingOptions}}" wx:key="*this" class="category-chip {{selectedRating === item ? 'category-chip--active' : ''}}" data-rating="{{item}}" bindtap="handleRatingTap">{{item}}★</view>
       </view>
       <view class="search-row">
-        <app-input custom-class="search-row__input" font-size="20rpx" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
       </view>
     </block>

@@ -1,4 +1,4 @@
-<custom-navigation title="新增影视" compact-title="{{true}}" />
+<custom-navigation title="新增影视" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -9,7 +9,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field-label">名称</view>
-      <app-input custom-class="field-input" font-size="20rpx" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
+      <app-input custom-class="field-input" value="{{title}}" maxlength="120" placeholder="输入影视剧、动漫或小说名称" bindinput="handleTitleInput" />
     </view>
     <view class="field">
       <view class="field-label">分类</view>
@@ -69,7 +69,6 @@
 
 <image-cropper
   wx:if="{{showImageCropper}}"
-  compact-typography="{{true}}"
   src="{{cropSourcePath}}"
   shape="rectangle"
   aspect-ratio="0.75"

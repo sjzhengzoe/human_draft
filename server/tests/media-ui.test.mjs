@@ -11,8 +11,6 @@ const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.
 const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
 const detailStylesUrl = new URL("../../src/pages/media/detail/index.less", import.meta.url);
 const detailConfigUrl = new URL("../../src/pages/media/detail/index.json", import.meta.url);
-const compactTypographyUrl = new URL("../../src/pages/media/compact-typography.less", import.meta.url);
-const navigationStylesUrl = new URL("../../src/components/custom-navigation/index.less", import.meta.url);
 
 const mediaPageBases = [
   "../../src/pages/media/index",
@@ -79,11 +77,11 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /var\(--ui-font-size-base\)/);
   assert.match(
     styles,
-    /\.record-card__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s,
+    /\.record-card__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s,
   );
-  assert.match(styles, /@import "\.\/compact-typography\.less";/);
-  assert.match(styles, /\.section-heading__title,[\s\S]*?font-size:\s*var\(--ui-font-size-small\);/);
-  assert.match(page, /<custom-navigation title="影视片单" compact-title="\{\{true\}\}"/);
+  assert.doesNotMatch(styles, /compact-typography/);
+  assert.match(styles, /\.section-heading__title,[\s\S]*?font-size:\s*var\(--ui-font-size-large\);/);
+  assert.match(page, /<custom-navigation title="影视片单"\s*\/>/);
   assert.match(styles, /\.record-grid\s*\{[^}]*align-items:\s*start;/s);
   assert.match(styles, /\.record-card__rating\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
   assert.doesNotMatch(styles, /\.record-card__body\s*\{[^}]*min-height:/s);
@@ -92,30 +90,26 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /\.search-row__button,[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/);
 });
 
-test("the whole media module opts into the smallest typography", async () => {
-  const [compactTypography, navigationStyles, ...pageFiles] = await Promise.all([
-    readFile(compactTypographyUrl, "utf8"),
-    readFile(navigationStylesUrl, "utf8"),
+test("the whole media module follows the shared three-tier typography", async () => {
+  const pageFiles = await Promise.all([
     ...mediaPageBases.flatMap((base) => [
       readFile(new URL(`${base}.less`, import.meta.url), "utf8"),
       readFile(new URL(`${base}.wxml`, import.meta.url), "utf8"),
     ]),
   ]);
 
-  assert.match(compactTypography, /--ui-font-size-base:\s*var\(--ui-font-size-small\)/);
-  assert.match(navigationStyles, /\.custom-navigation__title--compact\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
   for (let index = 0; index < pageFiles.length; index += 2) {
     const styles = pageFiles[index];
     const page = pageFiles[index + 1];
-    assert.match(styles, /compact-typography\.less/);
-    assert.match(page, /<custom-navigation[^>]*compact-title="\{\{true\}\}"/);
-    assert.doesNotMatch(styles, /font-size:\s*(?:21|23|25|26|27|32)rpx/);
+    assert.doesNotMatch(styles, /compact-typography/);
+    assert.doesNotMatch(page, /compact-title|compact-typography/);
+    assert.doesNotMatch(styles, /font-size:\s*\d+rpx/);
     const appInputs = page.match(/<app-input\b[\s\S]*?\/>/g) || [];
     const textareas = page.match(/<textarea\b[\s\S]*?\/>/g) || [];
-    for (const input of appInputs) assert.match(input, /font-size="20rpx"/);
+    for (const input of appInputs) assert.doesNotMatch(input, /font-size="/);
     for (const textarea of textareas) {
       if (textarea.includes("placeholder=")) {
-        assert.match(textarea, /placeholder-style="font-size: 20rpx;"/);
+        assert.match(textarea, /placeholder-class="ui-input-placeholder"/);
       }
     }
   }
@@ -149,7 +143,7 @@ test("media detail inline editing supports a shared 3:4 cover crop and deferred 
   assert.match(config, /"image-cropper":\s*"\/components\/image-cropper\/index"/);
   assert.match(page, /aspect-ratio="0\.75"/);
   assert.match(page, /output-size="1080"/);
-  assert.match(page, /compact-typography="\{\{true\}\}"/);
+  assert.doesNotMatch(page, /compact-typography/);
   assert.match(page, /selectedEntryImagePath/);
   assert.match(logic, /wx\.chooseMedia\(/);
   assert.match(logic, /async handleCompleteEntryEdit\(\)/);

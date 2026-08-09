@@ -1,4 +1,4 @@
-<custom-navigation title="编辑影视分类" compact-title="{{true}}" />
+<custom-navigation title="编辑影视分类" />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -18,7 +18,7 @@
   <view class="form-card">
     <view class="field">
       <view class="field__label">分类名称</view>
-      <app-input custom-class="field__input" font-size="20rpx" value="{{name}}" maxlength="40" placeholder="例如：纪录片、播客" bindinput="handleNameInput" />
+      <app-input custom-class="field__input" value="{{name}}" maxlength="40" placeholder="例如：纪录片、播客" bindinput="handleNameInput" />
     </view>
   </view>
   <view class="footer-actions">

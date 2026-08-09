@@ -28,7 +28,7 @@
         >
           <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
           <view class="feature-item__title">{{item.title}}</view>
-          <view class="feature-item__arrow">›</view>
+          <view class="feature-item__arrow"><app-icon name="chevron-right" size="24" /></view>
         </view>
       </view>
     </view>

@@ -26,7 +26,7 @@
         role="button"
         aria-label="上个月"
         bindtap="handlePreviousMonth"
-      >‹</view>
+      ><app-icon name="arrow-left" size="28" /></view>
       <picker
         mode="date"
         fields="month"
@@ -45,7 +45,7 @@
         role="button"
         aria-label="下个月"
         bindtap="handleNextMonth"
-      >›</view>
+      ><app-icon name="arrow-right" size="28" /></view>
     </view>
 
     <view class="calendar-weekdays">

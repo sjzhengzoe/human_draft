@@ -36,9 +36,9 @@
 }
 
 .custom-navigation__back-glyph {
-  margin-top: -5rpx;
-  font-size: 58rpx;
-  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
@@ -47,15 +47,11 @@
   overflow: hidden;
   color: var(--ui-color-text-primary);
   font-family: var(--ui-font-family, "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif);
-  font-size: 25rpx;
+  font-size: var(--ui-font-size-large);
   font-weight: 600;
   letter-spacing: 0.8rpx;
   line-height: 1.2;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.custom-navigation__title--compact {
-  font-size: var(--ui-font-size-small);
 }

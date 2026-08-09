@@ -1,4 +1,4 @@
-<custom-navigation title="作品详情" compact-title="{{true}}" />
+<custom-navigation title="作品详情" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -124,7 +124,6 @@
             <app-input
               wx:if="{{editingEntry}}"
               custom-class="detail-attribute__input"
-              font-size="20rpx"
               value="{{entryDraftTitle}}"
               maxlength="120"
               placeholder="输入作品名称"
@@ -288,7 +287,6 @@
                 <app-input
                   class="episode-editor__control"
                   custom-class="episode-editor__input"
-                  font-size="20rpx"
                   name="title"
                   value="{{episodeDraftTitle}}"
                   maxlength="120"
@@ -304,7 +302,7 @@
                     name="plot_summary"
                     value="{{episodeDraftPlotSummary}}"
                     maxlength="2000"
-                    placeholder-style="font-size: 20rpx;"
+                    placeholder-class="ui-input-placeholder"
                     auto-height
                     cursor-spacing="32"
                     adjust-position="{{true}}"
@@ -385,7 +383,6 @@
                         <app-input
                           class="episode-editor__control"
                           custom-class="episode-editor__input"
-                          font-size="20rpx"
                           name="dialogue_speaker_{{noteIndex}}_{{dialogueIndex}}"
                           value="{{dialogue.speaker}}"
                           maxlength="40"
@@ -405,7 +402,7 @@
                             name="dialogue_content_{{noteIndex}}_{{dialogueIndex}}"
                             value="{{dialogue.content}}"
                             maxlength="500"
-                            placeholder-style="font-size: 20rpx;"
+                            placeholder-class="ui-input-placeholder"
                             auto-height
                             cursor-spacing="32"
                             adjust-position="{{true}}"
@@ -435,7 +432,7 @@
                       name="timeline_content_{{noteIndex}}"
                       value="{{draftNote.content}}"
                       maxlength="500"
-                      placeholder-style="font-size: 20rpx;"
+                      placeholder-class="ui-input-placeholder"
                       auto-height
                       cursor-spacing="32"
                       adjust-position="{{true}}"
@@ -497,7 +494,6 @@
 
 <image-cropper
   wx:if="{{showEntryImageCropper}}"
-  compact-typography="{{true}}"
   src="{{entryCropSourcePath}}"
   shape="rectangle"
   aspect-ratio="0.75"

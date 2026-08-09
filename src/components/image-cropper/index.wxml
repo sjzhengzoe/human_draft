@@ -3,9 +3,8 @@
   title="{{title}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"
-  compact-typography="{{compactTypography}}"
 >
-  <view slot="body" class="{{compactTypography ? 'crop-modal--compact' : ''}}">
+  <view slot="body">
     <view
       class="crop-stage"
       catchtouchstart="handleTouchStart"
@@ -34,7 +33,7 @@
     </view>
     <view class="crop-modal__hint">单指拖动，双指缩放，白框内为保留范围</view>
   </view>
-  <view slot="actions" class="crop-modal__actions {{compactTypography ? 'crop-modal__actions--compact' : ''}}">
+  <view slot="actions" class="crop-modal__actions">
     <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing || rotating}}" bindtap="handleCancel">取消</button>
     <button class="crop-modal__button crop-modal__button--primary" loading="{{processing}}" disabled="{{processing || rotating || !ready}}" bindtap="handleConfirm">使用图片</button>
   </view>

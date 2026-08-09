@@ -36,12 +36,10 @@ test("luggage business dialogs use the shared app dialog", async () => {
 test("luggage pages use only shared business typography sizes", async () => {
   const styles = (await Promise.all(luggagePageFiles.map((file) => readFile(file, "utf8"))))
     .join("\n");
-  const sizes = [...styles.matchAll(/font-size:\s*(\d+)rpx/g)].map((match) => Number(match[1]));
-
-  assert.ok(sizes.length > 0);
-  assert.deepEqual([...new Set(sizes)].sort((left, right) => left - right), [25]);
+  assert.doesNotMatch(styles, /font-size:\s*\d+rpx/);
   assert.match(styles, /var\(--ui-font-size-small\)/);
   assert.match(styles, /var\(--ui-font-size-base\)/);
+  assert.match(styles, /var\(--ui-font-size-large\)/);
 });
 
 test("required luggage groups are protected from deletion", async () => {
