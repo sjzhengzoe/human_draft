@@ -176,3 +176,34 @@ test("luggage submits final sorting once and assembles list data without nested 
   assert.match(domain, /groupsBySceneId = new Map/);
   assert.doesNotMatch(domain, /\.select\("\*"\)[\s\S]*?读取行李物品失败/);
 });
+
+test("luggage scene manager reorders locally and saves one final snapshot on completion", async () => {
+  const [page, styles, logic, client, routes, domain] = await Promise.all([
+    readFile("src/pages/luggage/scenes/index.wxml", "utf8"),
+    readFile("src/pages/luggage/scenes/index.less", "utf8"),
+    readFile("src/pages/luggage/scenes/index.ts", "utf8"),
+    readFile("src/services/luggage.ts", "utf8"),
+    readFile("server/routes/luggage.mjs", "utf8"),
+    readFile("server/domains/luggage/service.mjs", "utf8"),
+  ]);
+
+  assert.match(page, /aria-label="\{\{sortEditing \? '完成行李场景排序' : '调整行李场景顺序'\}\}"/);
+  assert.match(page, /name="\{\{sortEditing \? 'check-white' : 'settings-2'\}\}"/);
+  assert.match(page, /class="scene-card__sort"[\s\S]*?catchtap="handleSceneMove"/);
+  assert.match(page, /operation-loading visible="\{\{savingOrder\}\}"/);
+  assert.match(styles, /\.sort-control\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx/s);
+
+  const localMove = logic.match(/handleSceneMove\([\s\S]*?\n  },\n\n  async handleSortEditingToggle/)?.[0] || "";
+  assert.match(localMove, /this\.setData\(\{ scenes \}\)/);
+  assert.doesNotMatch(localMove, /reorderLuggageScenes|listLuggageScenes/);
+
+  const saveOrder = logic.match(/async handleSortEditingToggle\([\s\S]*?\n  },\n\n  handleRetry/)?.[0] || "";
+  assert.match(saveOrder, /hasSameOrder\(luggageSceneSortOriginalIds, desiredIds\)/);
+  assert.match(saveOrder, /await reorderLuggageScenes\(desiredIds\)/);
+  assert.doesNotMatch(saveOrder, /await this\.loadScenes/);
+  assert.match(client, /path: "\/api\/luggage\/scenes\/order"/);
+  assert.match(client, /data: \{ scene_ids: sceneIds \}/);
+  assert.match(routes, /app\.put\("\/api\/luggage\/scenes\/order"/);
+  assert.match(domain, /export async function reorderLuggageScenes/);
+  assert.match(domain, /hasSameIds\(sceneIds, scenes\.map\(\(scene\) => scene\.id\)\)/);
+});

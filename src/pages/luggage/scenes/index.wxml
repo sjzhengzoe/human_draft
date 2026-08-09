@@ -11,13 +11,27 @@
       <view class="manager-header__title">场景列表</view>
       <view class="manager-header__count">{{scenes.length}} 个场景</view>
     </view>
-    <view
-      class="manager-header__add"
-      role="button"
-      aria-label="新增行李场景"
-      bindtap="handleAdd"
-    >
-      <app-icon name="plus-white" size="21" />
+    <view class="manager-header__actions">
+      <view
+        wx:if="{{scenes.length > 1}}"
+        class="manager-header__tool {{sortEditing ? 'manager-header__tool--active' : ''}}"
+        role="button"
+        aria-label="{{sortEditing ? '完成行李场景排序' : '调整行李场景顺序'}}"
+        aria-pressed="{{sortEditing}}"
+        aria-disabled="{{savingOrder}}"
+        bindtap="handleSortEditingToggle"
+      >
+        <app-icon name="{{sortEditing ? 'check-white' : 'settings-2'}}" size="23" />
+      </view>
+      <view
+        wx:if="{{!sortEditing}}"
+        class="manager-header__add"
+        role="button"
+        aria-label="新增行李场景"
+        bindtap="handleAdd"
+      >
+        <app-icon name="plus-white" size="21" />
+      </view>
     </view>
   </view>
 
@@ -31,9 +45,9 @@
       <view
         wx:for="{{scenes}}"
         wx:key="id"
-        class="scene-card"
-        role="button"
-        aria-label="编辑{{item.name}}场景"
+        class="scene-card {{sortEditing ? 'scene-card--sorting' : 'scene-card--editable'}}"
+        role="{{sortEditing ? '' : 'button'}}"
+        aria-label="{{sortEditing ? item.name : '编辑' + item.name + '场景'}}"
         data-id="{{item.id}}"
         bindtap="handleEdit"
       >
@@ -41,8 +55,30 @@
           <view class="scene-card__name">{{item.name}}</view>
           <view class="scene-card__fields">{{item.group_count}} 个层级 · {{item.item_count}} 件物品</view>
         </view>
-        <view class="scene-card__arrow"><app-icon name="chevron-right" size="26" /></view>
+        <view wx:if="{{sortEditing}}" class="scene-card__sort">
+          <view
+            class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}"
+            role="button"
+            aria-label="上移{{item.name}}"
+            aria-disabled="{{index === 0}}"
+            data-index="{{index}}"
+            data-direction="-1"
+            catchtap="handleSceneMove"
+          ><app-icon name="arrow-up" size="23" /></view>
+          <view
+            class="sort-control {{index === scenes.length - 1 ? 'sort-control--disabled' : ''}}"
+            role="button"
+            aria-label="下移{{item.name}}"
+            aria-disabled="{{index === scenes.length - 1}}"
+            data-index="{{index}}"
+            data-direction="1"
+            catchtap="handleSceneMove"
+          ><app-icon name="arrow-down" size="23" /></view>
+        </view>
+        <view wx:else class="scene-card__arrow"><app-icon name="chevron-right" size="26" /></view>
       </view>
     </view>
   </scroll-view>
+
+  <operation-loading visible="{{savingOrder}}" text="正在保存排序…" />
 </view>

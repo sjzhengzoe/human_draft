@@ -1598,6 +1598,42 @@ test("luggage reorder accepts one final snapshot and applies only the required m
   ]);
 });
 
+test("luggage scene order is saved from one final ordered id list", async (t) => {
+  const firstSceneId = DINING_ID;
+  const secondSceneId = SOURCE_ID;
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      luggage_scenes: [
+        { id: firstSceneId, name: "周末出行", sort_order: 1000 },
+        { id: secondSceneId, name: "长期旅行", sort_order: 2000 },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: "/api/luggage/scenes/order",
+    headers: authHeaders,
+    payload: { scene_ids: [secondSceneId, firstSceneId] },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), { ok: true, data: { updated: 2 } });
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/luggage",
+    headers: authHeaders,
+  });
+  const savedOrderById = new Map(
+    listResponse.json().data.items.map((scene) => [scene.id, scene.sort_order]),
+  );
+  assert.equal(savedOrderById.get(secondSceneId), 1000);
+  assert.equal(savedOrderById.get(firstSceneId), 2000);
+});
+
 test("media writes accept an omitted platform and validate selected platforms before the create RPC", async (t) => {
   const supabase = createFakeSupabase({
     tables: authenticatedTables({

@@ -55,6 +55,54 @@ function hasSameIds(left, right) {
   return left.every((id) => rightIds.has(id));
 }
 
+export async function reorderLuggageScenes(supabase, userId, body) {
+  const sceneIds = Array.isArray(body.scene_ids) ? body.scene_ids : [];
+  assertCondition(
+    sceneIds.length > 0
+      && sceneIds.length <= 100
+      && sceneIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id)),
+    400,
+    "INVALID_LUGGAGE_SCENE_ORDER",
+    "行李场景排序列表无效。",
+  );
+  assertCondition(
+    new Set(sceneIds).size === sceneIds.length,
+    400,
+    "DUPLICATE_LUGGAGE_SCENES",
+    "行李场景排序列表包含重复内容。",
+  );
+
+  const { data: scenes, error } = await supabase
+    .from("luggage_scenes")
+    .select("id,sort_order")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true });
+  throwSupabaseError(error, "读取行李场景排序失败。");
+  assertCondition(
+    hasSameIds(sceneIds, scenes.map((scene) => scene.id)),
+    400,
+    "INVALID_LUGGAGE_SCENE_ORDER",
+    "行李场景排序数据已经变化，请重新加载。",
+  );
+
+  const scenesById = new Map(scenes.map((scene) => [scene.id, scene]));
+  let updated = 0;
+  for (let index = 0; index < sceneIds.length; index += 1) {
+    const id = sceneIds[index];
+    const sortOrder = (index + 1) * 1000;
+    if (scenesById.get(id)?.sort_order === sortOrder) continue;
+    const { error: updateError } = await supabase
+      .from("luggage_scenes")
+      .update({ sort_order: sortOrder })
+      .eq("id", id)
+      .eq("user_id", userId);
+    throwSupabaseError(updateError, "保存行李场景排序失败。");
+    updated += 1;
+  }
+
+  return { updated };
+}
+
 export async function reorderLuggageScene(supabase, userId, body) {
   const sceneId = requiredText(body.scene_id, "行李场景");
   const groupIds = Array.isArray(body.group_ids) ? body.group_ids : [];

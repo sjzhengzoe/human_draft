@@ -9,6 +9,7 @@ import {
   moveLuggageGroup,
   moveLuggageItem,
   reorderLuggageScene,
+  reorderLuggageScenes,
   swapLuggageGroupSortOrders,
   updateLuggageGroup,
   updateLuggageItem,
@@ -31,6 +32,15 @@ export function registerLuggageRoutes(app, context) {
     );
     return reply.code(201).send({ ok: true, data: { item } });
   });
+
+  app.put("/api/luggage/scenes/order", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await reorderLuggageScenes(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
 
   app.put("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,

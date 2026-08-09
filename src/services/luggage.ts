@@ -84,6 +84,22 @@ export async function deleteLuggageScene(id: string): Promise<void> {
   patchCachedScenes((scenes) => scenes.filter((scene) => scene.id !== id))
 }
 
+export async function reorderLuggageScenes(sceneIds: string[]): Promise<void> {
+  await request<{ updated: number }>({
+    path: "/api/luggage/scenes/order",
+    method: "PUT",
+    data: { scene_ids: sceneIds }
+  })
+  patchCachedScenes((scenes) => {
+    const scenesById = new Map(scenes.map((scene) => [scene.id, scene]))
+    const reordered = sceneIds.map((id, index) => {
+      const scene = scenesById.get(id)
+      return scene ? { ...scene, sort_order: (index + 1) * 1000 } : null
+    }).filter((scene): scene is LuggageScene => Boolean(scene))
+    return reordered.length === scenes.length ? reordered : scenes
+  })
+}
+
 export async function createLuggageGroup(sceneId: string, name: string): Promise<LuggageGroup> {
   const data = await request<{ item: LuggageGroup }>({
     path: "/api/luggage/groups",

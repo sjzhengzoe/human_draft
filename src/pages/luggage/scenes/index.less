@@ -33,7 +33,15 @@ page,
   font-size: var(--ui-font-size-small);
 }
 
-.manager-header__add {
+.manager-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.manager-header__add,
+.manager-header__tool {
   display: flex;
   width: 58rpx;
   height: 58rpx;
@@ -41,10 +49,24 @@ page,
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+}
+
+.manager-header__add {
+  background: var(--ui-color-action-primary);
+}
+
+.manager-header__tool {
+  border: 1rpx solid var(--ui-color-border);
+  background: var(--ui-color-background-surface);
+}
+
+.manager-header__tool--active {
+  border-color: var(--ui-color-action-primary);
   background: var(--ui-color-action-primary);
 }
 
 .manager-header__add:active,
+.manager-header__tool:active,
 .retry-button:active {
   opacity: .55;
 }
@@ -88,8 +110,12 @@ page,
   background: var(--ui-surface);
 }
 
-.scene-card:active {
+.scene-card--editable:active {
   opacity: .6;
+}
+
+.scene-card--sorting {
+  border-color: var(--ui-color-border-strong);
 }
 
 .scene-card__main {
@@ -117,6 +143,33 @@ page,
 .scene-card__arrow {
   display: flex;
   color: var(--ui-color-text-disabled);
+}
+
+.scene-card__sort {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.sort-control {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--ui-color-background-subtle);
+}
+
+.sort-control:active {
+  opacity: .52;
+}
+
+.sort-control--disabled {
+  opacity: .28;
+  pointer-events: none;
 }
 
 .state {
