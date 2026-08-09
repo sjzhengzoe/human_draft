@@ -100,7 +100,7 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.doesNotMatch(page, /省名直接标在区域内|绿色\s*=|app-dialog|picker/)
   assert.doesNotMatch(logic, /日期|date|showModal/)
   assert.match(styles, /grid-template-columns: repeat\(4/)
-  assert.match(styles, /\.city-chip--visited\s*\{[\s\S]*?background: var\(--ui-color-action-primary\);[\s\S]*?color: var\(--ui-color-text-inverse\);/)
+  assert.match(styles, /\.city-chip--visited\s*\{[\s\S]*?border-color: var\(--ui-color-success-strong\);[\s\S]*?background: var\(--ui-color-success\);[\s\S]*?color: var\(--ui-color-text-inverse\);[\s\S]*?box-shadow: 0 6rpx 14rpx var\(--footprint-color-success-shadow\);/)
   assert.match(styles, /\.city-chip\s*\{[\s\S]*?background: var\(--ui-color-background-surface\);[\s\S]*?color: var\(--footprint-color-text-primary\);/)
   assert.match(styles, /\.map-level-switch__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
   assert.match(styles, /\.province-tabs__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)

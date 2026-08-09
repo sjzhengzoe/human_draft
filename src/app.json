@@ -15,6 +15,7 @@
     "pages/media/categories/index",
     "pages/media/category-edit/index",
     "pages/key-moments/index",
+    "pages/key-moments/settings/index",
     "pages/footprint/index",
     "pages/chat-topics/index",
     "pages/activities/index",

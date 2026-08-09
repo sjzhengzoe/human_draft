@@ -6,7 +6,7 @@ import {
   replaceKeyMomentImage,
   updateKeyMoment
 } from "../../services/key-moments"
-import { ensureLogin } from "../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../services/auth"
 import type {
   KeyMoment,
   KeyMomentGranularity,
@@ -19,6 +19,11 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import {
+  DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT,
+  getKeyMomentDisplayLayout
+} from "../../utils/key-moment-settings"
+import type { KeyMomentDisplayLayout } from "../../utils/key-moment-settings"
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -114,6 +119,8 @@ Page({
     activeGranularity: "day" as KeyMomentGranularity,
     anchorDate: INITIAL_DATE_TIME.date,
     periodLabel: periodLabel("day", INITIAL_DATE_TIME.date),
+    imageCropAspectRatio: 4 / 3,
+    displayLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT as KeyMomentDisplayLayout,
     items: [] as KeyMomentTimelineItem[],
     canWrite: false,
     loading: true,
@@ -141,6 +148,10 @@ Page({
   },
 
   onShow() {
+    const user = getCurrentUser()
+    if (user) {
+      this.setData({ displayLayout: getKeyMomentDisplayLayout(user.id) })
+    }
     this.loadItems()
   },
 
@@ -162,7 +173,11 @@ Page({
         date: this.data.anchorDate
       })
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      this.setData({ items: toTimelineItems(items), canWrite: session.user.can_write })
+      this.setData({
+        displayLayout: getKeyMomentDisplayLayout(session.user.id),
+        items: toTimelineItems(items),
+        canWrite: session.user.can_write
+      })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       wx.showToast({
@@ -214,6 +229,11 @@ Page({
       showImageCropper: false,
       cropSourcePath: ""
     })
+  },
+
+  handleSettings() {
+    if (this.data.loading) return
+    wx.navigateTo({ url: "/pages/key-moments/settings/index" })
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {

@@ -69,6 +69,41 @@ test("key moment items own the edit hit area and isolate the corner delete contr
   );
 });
 
+test("key moments offer user-scoped horizontal and vertical display settings", async () => {
+  const [page, styles, logic, settingsPage, settingsLogic, storage, appConfig] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/settings/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/settings/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/utils/key-moment-settings.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(
+    page,
+    /class="settings-button"[\s\S]*?aria-label="人生节点设置"[\s\S]*?<app-icon name="settings-2"/,
+  );
+  assert.doesNotMatch(page, /<text>设置<\/text>/);
+  assert.match(
+    page,
+    /class="add-button"[\s\S]*?aria-label="新增人生节点"[\s\S]*?<app-icon name="plus-white"/,
+  );
+  assert.match(page, /moment-card--\{\{displayLayout\}\}/);
+  assert.match(page, /shape="rectangle"[\s\S]*?aspect-ratio="\{\{imageCropAspectRatio\}\}"/);
+  assert.match(styles, /\.moment-image\s*\{[\s\S]*?width: 236rpx;[\s\S]*?aspect-ratio: 4 \/ 3;/);
+  assert.match(styles, /\.moment-card--vertical\s*\{[\s\S]*?display: block;/);
+  assert.match(styles, /\.moment-card--vertical \.moment-image\s*\{[\s\S]*?width: 100%;/);
+  assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.id\)/);
+  assert.match(logic, /wx\.navigateTo\(\{ url: "\/pages\/key-moments\/settings\/index" \}\)/);
+  assert.match(settingsPage, /默认图文布局/);
+  assert.match(settingsPage, /layout-preview--\{\{item\.value\}\}/);
+  assert.match(settingsLogic, /setKeyMomentDisplayLayout\(this\.data\.userId, layout\)/);
+  assert.match(storage, /KEY_MOMENT_DISPLAY_LAYOUT_V1/);
+  assert.match(storage, /storageKey\(userId\)/);
+  assert.match(appConfig, /"pages\/key-moments\/settings\/index"/);
+});
+
 test("key moments migration creates user-owned records and a private image bucket", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608020001_key_moments.sql", import.meta.url),

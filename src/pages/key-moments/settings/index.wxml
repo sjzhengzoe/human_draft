@@ -1,0 +1,45 @@
+<custom-navigation title="人生节点设置" />
+
+<view wx:if="{{!ready}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在加载设置…</view>
+</view>
+
+<view wx:else class="settings-page page--with-navigation">
+  <view class="settings-content">
+    <view class="settings-section__title">展示设置</view>
+    <view class="settings-list">
+      <view class="settings-heading">
+        <view class="settings-heading__title">默认图文布局</view>
+        <view class="settings-heading__description">选择每次进入人生节点时的展示方式</view>
+      </view>
+
+      <view class="layout-options">
+        <view
+          wx:for="{{layoutOptions}}"
+          wx:key="value"
+          class="layout-option {{activeLayout === item.value ? 'layout-option--active' : ''}}"
+          role="button"
+          aria-label="{{item.title}}{{activeLayout === item.value ? '，已选中' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="handleLayoutTap"
+        >
+          <view class="layout-preview layout-preview--{{item.value}}" aria-hidden="true">
+            <view class="layout-preview__image" />
+            <view class="layout-preview__copy">
+              <view class="layout-preview__line" />
+              <view class="layout-preview__line layout-preview__line--short" />
+            </view>
+          </view>
+          <view class="layout-option__copy">
+            <view class="layout-option__title">{{item.title}}</view>
+            <view class="layout-option__description">{{item.description}}</view>
+          </view>
+          <view class="layout-option__check">
+            <app-icon wx:if="{{activeLayout === item.value}}" name="check" size="24" inverse="{{true}}" />
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

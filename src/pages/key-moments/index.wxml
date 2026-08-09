@@ -22,9 +22,18 @@
         <app-icon name="chevron-down" size="26" />
       </view>
     </picker>
-    <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAdd">
-      <text>新增</text>
-    </button>
+    <view
+      class="settings-button"
+      role="button"
+      aria-label="人生节点设置"
+      bindtap="handleSettings"
+    ><app-icon name="settings-2" size="28" /></view>
+    <button
+      wx:if="{{canWrite}}"
+      class="add-button"
+      aria-label="新增人生节点"
+      bindtap="handleAdd"
+    ><app-icon name="plus-white" size="26" /></button>
   </view>
 
   <scroll-view class="timeline-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -66,7 +75,7 @@
                 <app-icon name="trash-2-danger" size="24" />
               </view>
             </view>
-            <view class="moment-card">
+            <view class="moment-card moment-card--{{displayLayout}}">
               <image
                 wx:if="{{item.thumbnail_url || item.image_url}}"
                 class="moment-image"
@@ -161,9 +170,10 @@
 <image-cropper
   wx:if="{{showImageCropper}}"
   src="{{cropSourcePath}}"
-  shape="square"
+  shape="rectangle"
   title="裁剪节点图片"
   output-size="1080"
+  aspect-ratio="{{imageCropAspectRatio}}"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"
