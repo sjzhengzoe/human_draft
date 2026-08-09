@@ -65,16 +65,17 @@ test("ordinary tabs, filters, and mutually exclusive options use the base size",
   }
 })
 
-test("bottom navigation labels use the shared small font size", async () => {
-  const styles = await readFile(
-    new URL("../../src/custom-tab-bar/index.wxss", import.meta.url),
-    "utf8"
-  )
+test("bottom navigation labels receive the concrete shared small font size", async () => {
+  const [styles, logic, page] = await Promise.all([
+    readFile(new URL("../../src/custom-tab-bar/index.wxss", import.meta.url), "utf8"),
+    readFile(new URL("../../src/custom-tab-bar/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/custom-tab-bar/index.wxml", import.meta.url), "utf8")
+  ])
 
-  assert.match(
-    styles,
-    /\.tabbar__text\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\)/s
-  )
+  assert.doesNotMatch(styles, /\.tabbar__text\s*\{[^}]*font-size:/s)
+  assert.match(logic, /import \{ UI_FONT_SIZES \} from "\.\.\/styles\/typography"/)
+  assert.match(logic, /fontSize: UI_FONT_SIZES\.small/)
+  assert.match(page, /class="tabbar__text" style="font-size: \{\{fontSize\}\};"/)
 })
 
 test("native controls and Canvas obtain concrete sizes from the shared typography constants", async () => {

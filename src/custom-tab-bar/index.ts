@@ -1,8 +1,11 @@
+import { UI_FONT_SIZES } from "../styles/typography"
+
 Component({
   data: {
     selected: 0,
     hidden: false,
     masked: false,
+    fontSize: UI_FONT_SIZES.small,
     tabs: [
       {
         pagePath: "/pages/create/index",
@@ -18,7 +21,7 @@ Component({
   },
   methods: {
     noop() {},
-    handleSwitch(event) {
+    handleSwitch(event: WechatMiniprogram.TouchEvent) {
       const index = Number(event.currentTarget.dataset.index)
       const tab = this.data.tabs[index]
 
