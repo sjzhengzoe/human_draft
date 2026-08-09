@@ -1,4 +1,4 @@
-<custom-navigation title="关键节点" />
+<custom-navigation title="人生节点" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

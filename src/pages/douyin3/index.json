@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "图文创作",
+  "navigationBarTitleText": "图文卡片",
   "disableScroll": true,
   "usingComponents": {
     "image-cropper": "/components/image-cropper/index",

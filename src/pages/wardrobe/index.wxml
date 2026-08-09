@@ -1,4 +1,4 @@
-<custom-navigation title="衣橱尺寸" />
+<custom-navigation title="衣物尺寸" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

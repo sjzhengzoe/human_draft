@@ -83,7 +83,7 @@ test("media controls are vertically centered and use shared typography sizes", a
   );
   assert.match(styles, /@import "\.\/compact-typography\.less";/);
   assert.match(styles, /\.section-heading__title,[\s\S]*?font-size:\s*var\(--ui-font-size-small\);/);
-  assert.match(page, /<custom-navigation title="影视记录" compact-title="\{\{true\}\}"/);
+  assert.match(page, /<custom-navigation title="影视片单" compact-title="\{\{true\}\}"/);
   assert.match(styles, /\.record-grid\s*\{[^}]*align-items:\s*start;/s);
   assert.match(styles, /\.record-card__rating\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
   assert.doesNotMatch(styles, /\.record-card__body\s*\{[^}]*min-height:/s);

@@ -36,7 +36,7 @@ test("template pages distinguish examples and expose safe action states", async 
   assert.match(workspaceTemplate, /text-card-undo-bar/);
   assert.match(workspaceTemplate, /has-content=/);
   assert.match(workspaceTemplate, /重新生成/);
-  assert.match(workspaceTemplate, /图文创作/);
+  assert.match(workspaceTemplate, /图文卡片/);
 
   const sharedActions = await readFile(
     new URL("src/features/text-card/page-actions.ts", projectRoot),

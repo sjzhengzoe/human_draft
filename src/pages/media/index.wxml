@@ -1,4 +1,4 @@
-<custom-navigation title="影视记录" compact-title="{{true}}" />
+<custom-navigation title="影视片单" compact-title="{{true}}" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

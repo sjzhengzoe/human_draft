@@ -1,4 +1,4 @@
-<custom-navigation title="饮食记录" />
+<custom-navigation title="我的菜单" />
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />

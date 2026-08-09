@@ -1,5 +1,5 @@
 <custom-navigation
-  title="{{viewMode === 'overview' ? '行李场景' : activeScene.name}}"
+  title="{{viewMode === 'overview' ? '行李清单' : activeScene.name}}"
   custom-back="{{viewMode === 'detail'}}"
   bindback="handleDetailBack"
 />

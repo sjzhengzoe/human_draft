@@ -1,6 +1,6 @@
 <view class="creation-screen">
   <view class="creation-navigation">
-    <custom-navigation title="图文创作" />
+    <custom-navigation title="图文卡片" />
   </view>
 
   <view class="page page--{{variant}}">
