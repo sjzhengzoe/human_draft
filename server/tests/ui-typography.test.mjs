@@ -65,7 +65,7 @@ test("ordinary tabs, filters, and mutually exclusive options use the base size",
   }
 })
 
-test("bottom navigation labels receive the concrete shared small font size", async () => {
+test("bottom navigation labels receive the concrete shared base font size", async () => {
   const [styles, logic, page] = await Promise.all([
     readFile(new URL("../../src/custom-tab-bar/index.wxss", import.meta.url), "utf8"),
     readFile(new URL("../../src/custom-tab-bar/index.ts", import.meta.url), "utf8"),
@@ -74,7 +74,7 @@ test("bottom navigation labels receive the concrete shared small font size", asy
 
   assert.doesNotMatch(styles, /\.tabbar__text\s*\{[^}]*font-size:/s)
   assert.match(logic, /import \{ UI_FONT_SIZES \} from "\.\.\/styles\/typography"/)
-  assert.match(logic, /fontSize: UI_FONT_SIZES\.small/)
+  assert.match(logic, /fontSize: UI_FONT_SIZES\.base/)
   assert.match(page, /class="tabbar__text" style="font-size: \{\{fontSize\}\};"/)
 })
 

@@ -5,7 +5,7 @@ Component({
     selected: 0,
     hidden: false,
     masked: false,
-    fontSize: UI_FONT_SIZES.small,
+    fontSize: UI_FONT_SIZES.base,
     tabs: [
       {
         pagePath: "/pages/create/index",
