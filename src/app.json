@@ -25,9 +25,7 @@
     "pages/wardrobe/categories/index",
     "pages/wardrobe/category-edit/index",
     "pages/wardrobe/item-edit/index",
-    "pages/xiaohongshu/index",
-    "pages/douyin2/index",
-    "pages/douyin3/index",
+    "pages/text-card/index",
     "pages/editor/index",
     "pages/settings/index"
   ],

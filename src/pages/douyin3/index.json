@@ -1,4 +1,5 @@
 {
+  "component": true,
   "navigationBarTitleText": "图文卡片",
   "disableScroll": true,
   "usingComponents": {

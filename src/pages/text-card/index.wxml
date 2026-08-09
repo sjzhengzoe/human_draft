@@ -1,0 +1,25 @@
+<view class="text-card-page">
+  <view
+    wx:if="{{mountedTemplates.xiaohongshu}}"
+    hidden="{{activeTemplate !== 'xiaohongshu'}}"
+    class="text-card-page__template"
+  >
+    <text-card-template-one bind:templatechange="handleTemplateChange" />
+  </view>
+
+  <view
+    wx:if="{{mountedTemplates.douyin2}}"
+    hidden="{{activeTemplate !== 'douyin2'}}"
+    class="text-card-page__template"
+  >
+    <text-card-template-two bind:templatechange="handleTemplateChange" />
+  </view>
+
+  <view
+    wx:if="{{mountedTemplates.douyin3}}"
+    hidden="{{activeTemplate !== 'douyin3'}}"
+    class="text-card-page__template"
+  >
+    <text-card-template-three bind:templatechange="handleTemplateChange" />
+  </view>
+</view>

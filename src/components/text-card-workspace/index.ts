@@ -60,10 +60,6 @@ Component({
       this.triggerEvent("undoclear");
     },
 
-    handleNavigationBack() {
-      this.triggerEvent("navigationback");
-    },
-
     handleChooseCircleImage(event: WechatMiniprogram.TouchEvent) {
       const index = Number(event.currentTarget.dataset.index);
       if (!Number.isInteger(index) || index < 0) return;

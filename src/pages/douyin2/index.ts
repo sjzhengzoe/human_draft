@@ -10,10 +10,6 @@ import {
   saveTextCardImages,
 } from "../../features/text-card/page-actions";
 import {
-  navigateBackFromTextCardTemplates,
-  switchTextCardTemplate,
-} from "../../features/text-card/template-navigation";
-import {
   cacheTextCardPreview,
   getCachedTextCardPreview,
 } from "../../services/text-card-preview-cache";
@@ -185,13 +181,8 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         event: WechatMiniprogram.CustomEvent<{ template?: string }>,
       ) {
         if (this.data.isGenerating) return;
-        switchTextCardTemplate(event.detail.template, "douyin2", () =>
-          this.finalizeClearUndo(),
-        );
-      },
-
-      handleNavigationBack() {
-        navigateBackFromTextCardTemplates();
+        this.finalizeClearUndo();
+        this.triggerEvent("templatechange", event.detail);
       },
 
       handleCopyTemplate() {

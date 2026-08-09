@@ -11,11 +11,7 @@ function readProjectFile(path) {
 const homeModules = [
   {
     title: "图文卡片",
-    configPaths: [
-      "src/pages/xiaohongshu/index.json",
-      "src/pages/douyin2/index.json",
-      "src/pages/douyin3/index.json"
-    ],
+    configPaths: ["src/pages/text-card/index.json"],
     headerPath: "src/components/text-card-workspace/index.wxml"
   },
   {

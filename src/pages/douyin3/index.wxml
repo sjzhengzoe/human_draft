@@ -26,7 +26,6 @@
   bind:action="handleAction"
   bind:undoclear="handleUndoClear"
   bind:choosecircleimage="handleChooseCircleImage"
-  bind:navigationback="handleNavigationBack"
 />
 
 <canvas

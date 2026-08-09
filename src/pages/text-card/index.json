@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "图文卡片",
+  "disableScroll": true,
+  "usingComponents": {
+    "text-card-template-one": "/pages/xiaohongshu/index",
+    "text-card-template-two": "/pages/douyin2/index",
+    "text-card-template-three": "/pages/douyin3/index"
+  }
+}

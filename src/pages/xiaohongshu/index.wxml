@@ -22,7 +22,6 @@
   bind:retrypreview="retryPreview"
   bind:action="handleAction"
   bind:undoclear="handleUndoClear"
-  bind:navigationback="handleNavigationBack"
 />
 
 <canvas

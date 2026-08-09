@@ -1,6 +1,7 @@
 import { checkTextContent } from "../../services/content-security";
 import { saveImageToPhotosAlbum } from "../../utils/text-card-render";
-import type { TextCardTemplate } from "./template-navigation";
+
+export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
 
 export function copyTextCardTemplate(content: string) {
   wx.setClipboardData({
