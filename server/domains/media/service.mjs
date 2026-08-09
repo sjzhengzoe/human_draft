@@ -251,8 +251,18 @@ export async function createMediaEntry(supabase, userId, body) {
   if (body.personal_rating !== undefined) {
     personalRatingValue = personalRating(body.personal_rating);
   } else if (body.is_revisitable !== undefined) {
-    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记") ? 5 : null;
+    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记")
+      ? 5
+      : watchStatusValue === "completed" ? 3 : null;
+  } else if (watchStatusValue === "completed") {
+    personalRatingValue = 3;
   }
+  assertCondition(
+    watchStatusValue !== "completed" || personalRatingValue !== null,
+    400,
+    "RATING_REQUIRED",
+    "看过或听过的作品必须选择 1 到 5 星评分。",
+  );
   if (personalRatingValue !== undefined && personalRatingValue !== null) {
     assertCondition(
       watchStatusValue === "completed",
@@ -305,8 +315,23 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     changes.is_revisitable = changes.personal_rating !== null && changes.personal_rating >= 4;
   } else if (body.is_revisitable !== undefined) {
     changes.is_revisitable = booleanValue(body.is_revisitable, "值得重温标记");
-    changes.personal_rating = changes.is_revisitable ? 5 : null;
+    changes.personal_rating = changes.is_revisitable
+      ? 5
+      : (changes.watch_status ?? current.watch_status) === "completed" ? 3 : null;
+  } else if (
+    changes.watch_status === "completed"
+    && !Number.isInteger(current.personal_rating)
+  ) {
+    changes.personal_rating = 3;
+    changes.is_revisitable = false;
   }
+  assertCondition(
+    (changes.watch_status ?? current.watch_status) !== "completed"
+      || changes.personal_rating !== null,
+    400,
+    "RATING_REQUIRED",
+    "看过或听过的作品必须选择 1 到 5 星评分。",
+  );
   if (changes.personal_rating !== undefined && changes.personal_rating !== null) {
     assertCondition(
       (changes.watch_status ?? current.watch_status) === "completed",

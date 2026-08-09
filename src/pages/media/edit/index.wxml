@@ -25,6 +25,21 @@
         <view class="status-option {{watchStatus === 'completed' ? 'status-option--active' : ''}}" data-status="completed" bindtap="handleStatusTap">{{isAudio ? '听过' : '看过'}}</view>
       </view>
     </view>
+    <view wx:if="{{watchStatus === 'completed'}}" class="field">
+      <view class="field-label">我的评分（必填）</view>
+      <view class="rating-stars" role="group" aria-label="当前评分 {{personalRating}} 星">
+        <view
+          wx:for="{{ratingOptions}}"
+          wx:key="*this"
+          class="rating-star {{item <= personalRating ? 'rating-star--filled' : ''}}"
+          data-rating="{{item}}"
+          role="button"
+          aria-label="评为 {{item}} 星"
+          bindtap="handlePersonalRatingTap"
+        >{{item <= personalRating ? '★' : '☆'}}</view>
+      </view>
+      <view class="field-help rating-help">新增时默认为 3 星</view>
+    </view>
     <view class="field">
       <view class="field-label">封面（选填）</view>
       <view class="cover-editor" bindtap="handleChooseImage">

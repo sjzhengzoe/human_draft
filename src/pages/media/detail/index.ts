@@ -802,11 +802,7 @@ Page({
     void this.setPersonalRating(personalRating)
   },
 
-  handlePersonalRatingClear() {
-    void this.setPersonalRating(null)
-  },
-
-  async setPersonalRating(personalRating: number | null) {
+  async setPersonalRating(personalRating: number) {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
     if (this.data.editingEntry) {
@@ -819,7 +815,7 @@ Page({
       entry: {
         ...entry,
         personal_rating: personalRating,
-        is_revisitable: personalRating !== null && personalRating >= 4
+        is_revisitable: personalRating >= 4
       },
       operating: true
     })
@@ -849,14 +845,17 @@ Page({
       return
     }
     if (entry.watch_status === watchStatus) return
+    const personalRating = watchStatus === "completed"
+      ? Number(entry.personal_rating) || 3
+      : entry.personal_rating
     this.setData({
-      entry: { ...entry, watch_status: watchStatus },
+      entry: { ...entry, watch_status: watchStatus, personal_rating: personalRating },
       operating: true
     })
     try {
-      await updateMediaEntry(entry.id, { watch_status: watchStatus })
+      const persistedEntry = await updateMediaEntry(entry.id, { watch_status: watchStatus })
       const mediaRevision = markMediaDataChanged()
-      if (isAsyncPageActive(this)) this.setData({ mediaRevision })
+      if (isAsyncPageActive(this)) this.setData({ entry: persistedEntry, mediaRevision })
     } catch (error) {
       if (isAsyncPageActive(this)) {
         this.setData({ entry })

@@ -33,6 +33,7 @@ type MediaCreateDraft = {
   title: string
   mediaType: string
   watchStatus: MediaStatus
+  personalRating: number
   platforms: string[]
 }
 
@@ -50,6 +51,8 @@ Page({
     mediaTypes: [] as MediaType[],
     mediaTypeIndex: 0,
     watchStatus: "completed" as MediaStatus,
+    personalRating: 3,
+    ratingOptions: [1, 2, 3, 4, 5],
     isEpisodic: false,
     isAudio: false,
     platformOptions: BUILTIN_PLATFORMS.map((name) => ({ name, checked: false })),
@@ -106,6 +109,7 @@ Page({
         mediaTypes,
         mediaTypeIndex,
         watchStatus: savedDraft?.watchStatus || "completed",
+        personalRating: savedDraft?.personalRating || 3,
         selectedBuiltinPlatforms,
         platformOptions: BUILTIN_PLATFORMS.map((name) => ({
           name,
@@ -145,6 +149,9 @@ Page({
         watchStatus: (["planned", "in_progress", "completed"] as unknown[]).includes(value.watchStatus)
           ? value.watchStatus as MediaStatus
           : "completed",
+        personalRating: Number.isInteger(value.personalRating)
+          ? Math.min(5, Math.max(1, Number(value.personalRating)))
+          : 3,
         platforms: Array.isArray(value.platforms) ? value.platforms.map(String) : []
       }
     } catch (_error) {
@@ -158,6 +165,7 @@ Page({
       title: this.data.title,
       mediaType,
       watchStatus: this.data.watchStatus,
+      personalRating: this.data.personalRating,
       platforms: [...this.data.selectedBuiltinPlatforms]
     }
     try {
@@ -258,6 +266,13 @@ Page({
     this.setData({ watchStatus: event.currentTarget.dataset.status as MediaStatus }, () => this.markDraftDirty())
   },
 
+  handlePersonalRatingTap(event: WechatMiniprogram.TouchEvent) {
+    const personalRating = Number(event.currentTarget.dataset.rating)
+    if (!Number.isInteger(personalRating) || personalRating < 1 || personalRating > 5) return
+    if (personalRating === this.data.personalRating) return
+    this.setData({ personalRating }, () => this.markDraftDirty())
+  },
+
   handlePlatformsChange(event: WechatMiniprogram.CheckboxGroupChange) {
     const selectedBuiltinPlatforms = event.detail.value
       .filter((name) => BUILTIN_PLATFORMS.includes(name))
@@ -283,6 +298,15 @@ Page({
       showErrorToast("请填写名称和分类")
       return
     }
+    if (
+      this.data.watchStatus === "completed"
+      && (!Number.isInteger(this.data.personalRating)
+        || this.data.personalRating < 1
+        || this.data.personalRating > 5)
+    ) {
+      showErrorToast("请选择 1 到 5 星评分")
+      return
+    }
     const selectedPlatforms = [...new Set(this.data.selectedBuiltinPlatforms)]
       .filter((name) => BUILTIN_PLATFORMS.includes(name))
     this.setData({ saving: true })
@@ -291,6 +315,9 @@ Page({
       title,
       media_type: mediaType,
       watch_status: this.data.watchStatus,
+      personal_rating: this.data.watchStatus === "completed"
+        ? this.data.personalRating
+        : undefined,
       platforms: selectedPlatforms
     }
     let entryCreated = false

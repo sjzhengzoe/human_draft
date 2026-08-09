@@ -1571,7 +1571,70 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
   });
 });
 
-test("personal media ratings stay optional, validate one to five, and sync legacy revisit state", async (t) => {
+test("new completed media defaults its required rating to three", async (t) => {
+  const placeholder = {
+    id: MEDIA_ID,
+    title: "待创建占位",
+    media_type: "占位分类",
+    watch_status: "planned",
+    platforms: [],
+    personal_rating: null,
+    is_revisitable: false,
+    sort_order: 1000,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: [placeholder] }),
+      rpc: {
+        create_media_entry_at_end: (params) => ({
+          data: { id: MEDIA_ID, ...params },
+          error: null,
+        }),
+      },
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: { title: "默认三星作品", media_type: "电影" },
+  });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.json().data.item.personal_rating, 3);
+  assert.equal(response.json().data.item.is_revisitable, false);
+
+  const missingResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: "显式清空评分",
+      media_type: "电影",
+      personal_rating: null,
+    },
+  });
+  assert.equal(missingResponse.statusCode, 400);
+  assert.equal(missingResponse.json().error.code, "RATING_REQUIRED");
+
+  const legacyResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: "旧版未标记作品",
+      media_type: "电影",
+      is_revisitable: false,
+    },
+  });
+  assert.equal(legacyResponse.statusCode, 201);
+  assert.equal(legacyResponse.json().data.item.personal_rating, 3);
+});
+
+test("completed media ratings are required, validate one to five, and sync legacy revisit state", async (t) => {
   const existing = {
     id: MEDIA_ID,
     title: "评分测试",
@@ -1606,9 +1669,8 @@ test("personal media ratings stay optional, validate one to five, and sync legac
     headers: authHeaders,
     payload: { personal_rating: null },
   });
-  assert.equal(clearResponse.statusCode, 200);
-  assert.equal(clearResponse.json().data.item.personal_rating, null);
-  assert.equal(clearResponse.json().data.item.is_revisitable, false);
+  assert.equal(clearResponse.statusCode, 400);
+  assert.equal(clearResponse.json().error.code, "RATING_REQUIRED");
 
   const legacyResponse = await app.inject({
     method: "PUT",
@@ -1629,6 +1691,24 @@ test("personal media ratings stay optional, validate one to five, and sync legac
   assert.equal(invalidResponse.statusCode, 400);
   assert.equal(invalidResponse.json().error.code, "INVALID_INTEGER");
 
+  const twoStarResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: 2 },
+  });
+  assert.equal(twoStarResponse.statusCode, 200);
+  assert.equal(twoStarResponse.json().data.item.personal_rating, 2);
+
+  const belowMinimumResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { personal_rating: 0 },
+  });
+  assert.equal(belowMinimumResponse.statusCode, 400);
+  assert.equal(belowMinimumResponse.json().error.code, "INVALID_INTEGER");
+
   const inProgressResponse = await app.inject({
     method: "PUT",
     url: `/api/media/${MEDIA_ID}`,
@@ -1637,7 +1717,7 @@ test("personal media ratings stay optional, validate one to five, and sync legac
   });
   assert.equal(inProgressResponse.statusCode, 200);
   assert.equal(inProgressResponse.json().data.item.watch_status, "in_progress");
-  assert.equal(inProgressResponse.json().data.item.personal_rating, 5);
+  assert.equal(inProgressResponse.json().data.item.personal_rating, 2);
 
   const inProgressRatingResponse = await app.inject({
     method: "PUT",
@@ -1647,6 +1727,38 @@ test("personal media ratings stay optional, validate one to five, and sync legac
   });
   assert.equal(inProgressRatingResponse.statusCode, 400);
   assert.equal(inProgressRatingResponse.json().error.code, "RATING_REQUIRES_COMPLETED");
+});
+
+test("changing an unscored work to completed defaults its required rating to three", async (t) => {
+  const existing = {
+    id: MEDIA_ID,
+    title: "待完成作品",
+    media_type: "电影",
+    watch_status: "in_progress",
+    platforms: [],
+    personal_rating: null,
+    is_revisitable: false,
+    sort_order: 1000,
+  };
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ media_entries: [existing] }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+    payload: { watch_status: "completed" },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.item.watch_status, "completed");
+  assert.equal(response.json().data.item.personal_rating, 3);
+  assert.equal(response.json().data.item.is_revisitable, false);
 });
 
 test("media edits reject a duplicate title in the same category", async (t) => {
@@ -2247,6 +2359,21 @@ test("completed-rating sort migration hides non-completed scores without deletin
   assert.match(migration, /completed_personal_rating desc nulls last[\s\S]*updated_at desc/i);
   assert.doesNotMatch(migration, /update public\.media_entries[\s\S]*set personal_rating = null/i);
   assert.doesNotMatch(migration, /delete from public\.media_entries/i);
+});
+
+test("required-rating migration preserves scores and defaults only missing completed ratings", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608090001_required_media_ratings.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /set personal_rating = 3[\s\S]*watch_status = 'completed'[\s\S]*personal_rating is null/i);
+  assert.doesNotMatch(migration, /personal_rating < 3/i);
+  assert.match(migration, /personal_rating is null or personal_rating between 1 and 5/i);
+  assert.match(migration, /watch_status <> 'completed' or personal_rating is not null/i);
+  assert.match(migration, /new\.watch_status = 'completed'[\s\S]*new\.personal_rating := 3/i);
+  assert.match(migration, /update of personal_rating, is_revisitable, watch_status/i);
+  assert.doesNotMatch(migration, /delete from|drop table|drop column/i);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {

@@ -92,23 +92,17 @@
         <view wx:if="{{(editingEntry ? entryDraftWatchStatus : entry.watch_status) === 'completed'}}" class="detail-rating">
           <view class="detail-rating__heading">
             <text>我的评分</text>
-            <view
-              wx:if="{{canWrite && entry.personal_rating && !editingEntry}}"
-              class="detail-rating__clear"
-              role="button"
-              bindtap="handlePersonalRatingClear"
-            >清除</view>
           </view>
-          <view class="detail-rating__stars {{!canWrite || editingEntry || operating || savingEntry ? 'detail-rating__stars--disabled' : ''}}" aria-label="{{entry.personal_rating ? entry.personal_rating + ' 星' : '未评分'}}">
+          <view class="detail-rating__stars {{!canWrite || editingEntry || operating || savingEntry ? 'detail-rating__stars--disabled' : ''}}" aria-label="{{(entry.personal_rating || 3) + ' 星'}}">
             <view
               wx:for="{{ratingOptions}}"
               wx:key="*this"
-              class="detail-rating__star {{item <= (entry.personal_rating || 0) ? 'detail-rating__star--filled' : ''}}"
+              class="detail-rating__star {{item <= (entry.personal_rating || 3) ? 'detail-rating__star--filled' : ''}}"
               data-rating="{{item}}"
               role="button"
               aria-label="评为 {{item}} 星"
               bindtap="handlePersonalRatingTap"
-            >{{item <= (entry.personal_rating || 0) ? '★' : '☆'}}</view>
+            >{{item <= (entry.personal_rating || 3) ? '★' : '☆'}}</view>
           </view>
         </view>
       </view>
