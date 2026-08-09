@@ -17,6 +17,28 @@ import {
 } from "../../utils/async-page"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
+type ActivityItemsByType = Record<ActivityType, ActivityItem[]>
+
+function emptyActivityItemsByType(): ActivityItemsByType {
+  return {
+    室内: [],
+    户外: [],
+    居家: []
+  }
+}
+
+function groupActivityItems(items: ActivityItem[]): ActivityItemsByType {
+  const grouped = emptyActivityItemsByType()
+  for (const item of items) grouped[item.activity_type].push(item)
+  return grouped
+}
+
+function sortActivityItems(items: ActivityItem[]): ActivityItem[] {
+  return [...items].sort((left, right) =>
+    left.sort_order - right.sort_order || right.created_at.localeCompare(left.created_at)
+  )
+}
+
 const browseIndices: Record<ActivityType, number> = {
   室内: 0,
   户外: 0,
@@ -27,11 +49,11 @@ Page({
   data: {
     activityTypes: ACTIVITY_TYPES,
     activeType: "室内" as ActivityType,
+    itemsByType: emptyActivityItemsByType(),
     items: [] as ActivityItem[],
     browseCurrentIndex: 0,
     canWrite: false,
     loading: true,
-    contentLoading: false,
     hasLoaded: false,
     showEditor: false,
     editingId: "",
@@ -54,7 +76,7 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
-    this.loadItems()
+    if (!this.data.hasLoaded) this.loadItems()
   },
 
   onUnload() {
@@ -62,34 +84,47 @@ Page({
     for (const type of ACTIVITY_TYPES) browseIndices[type] = 0
   },
 
-  async loadItems(focusId = "") {
+  async loadItems(
+    focusId = "",
+    focusType?: ActivityType,
+    silent = false
+  ) {
     const generation = beginAsyncPageRequest(this)
-    const activeType = this.data.activeType
-    const showInitialLoading = !this.data.hasLoaded
-    this.setData({
-      loading: showInitialLoading,
-      contentLoading: !showInitialLoading
-    })
+    const requestedFocusType = focusType || this.data.activeType
+    const showInitialLoading = !silent && !this.data.hasLoaded
+    if (showInitialLoading) this.setData({ loading: true })
     try {
-      const session = await ensureLogin()
-      const items = await listActivityItems(activeType)
+      const [session, items] = await Promise.all([
+        ensureLogin(),
+        listActivityItems()
+      ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const focusedIndex = focusId ? items.findIndex((item) => item.id === focusId) : -1
-      const browseCurrentIndex = focusedIndex >= 0
-        ? focusedIndex
-        : Math.min(browseIndices[activeType], Math.max(0, items.length - 1))
-      browseIndices[activeType] = browseCurrentIndex
+      const itemsByType = groupActivityItems(items)
+      for (const type of ACTIVITY_TYPES) {
+        const typedItems = itemsByType[type]
+        const focusedIndex = focusId && type === requestedFocusType
+          ? typedItems.findIndex((item) => item.id === focusId)
+          : -1
+        browseIndices[type] = focusedIndex >= 0
+          ? focusedIndex
+          : Math.min(browseIndices[type], Math.max(0, typedItems.length - 1))
+      }
+      const activeType = this.data.activeType
       this.setData({
-        items,
-        browseCurrentIndex,
-        canWrite: session.user.can_write
+        itemsByType,
+        items: itemsByType[activeType],
+        browseCurrentIndex: browseIndices[activeType],
+        canWrite: session.user.can_write,
+        hasLoaded: true
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      wx.showToast({ title: error instanceof Error ? error.message : "加载失败", icon: "none" })
+      if (!silent) {
+        wx.showToast({ title: error instanceof Error ? error.message : "加载失败", icon: "none" })
+      }
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
-        this.setData({ loading: false, contentLoading: false, hasLoaded: true })
+        this.setData({ loading: false })
       }
     }
   },
@@ -98,10 +133,17 @@ Page({
     if (this.data.saving || this.data.deleting || this.data.ordering) return
     const type = event.currentTarget.dataset.type as ActivityType
     if (!type || type === this.data.activeType) return
+    const items = this.data.itemsByType[type]
+    const browseCurrentIndex = Math.min(
+      browseIndices[type],
+      Math.max(0, items.length - 1)
+    )
+    browseIndices[type] = browseCurrentIndex
     this.setData({
       activeType: type,
-      browseCurrentIndex: browseIndices[type]
-    }, () => this.loadItems())
+      items,
+      browseCurrentIndex
+    })
   },
 
   handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
@@ -154,6 +196,45 @@ Page({
 
   handleEditorTypeTap(event: WechatMiniprogram.TouchEvent) {
     this.setData({ editorType: event.currentTarget.dataset.type as ActivityType })
+  },
+
+  applyActivityItemToCache(item: ActivityItem) {
+    const itemsByType = emptyActivityItemsByType()
+    for (const type of ACTIVITY_TYPES) {
+      itemsByType[type] = this.data.itemsByType[type].filter((entry) => entry.id !== item.id)
+    }
+    itemsByType[item.activity_type] = sortActivityItems([
+      ...itemsByType[item.activity_type],
+      item
+    ])
+    const browseCurrentIndex = Math.max(
+      0,
+      itemsByType[item.activity_type].findIndex((entry) => entry.id === item.id)
+    )
+    browseIndices[item.activity_type] = browseCurrentIndex
+    this.setData({
+      activeType: item.activity_type,
+      itemsByType,
+      items: itemsByType[item.activity_type],
+      browseCurrentIndex
+    })
+  },
+
+  removeActivityItemFromCache(id: string) {
+    const itemsByType = emptyActivityItemsByType()
+    for (const type of ACTIVITY_TYPES) {
+      itemsByType[type] = this.data.itemsByType[type].filter((item) => item.id !== id)
+      browseIndices[type] = Math.min(
+        browseIndices[type],
+        Math.max(0, itemsByType[type].length - 1)
+      )
+    }
+    const activeType = this.data.activeType
+    this.setData({
+      itemsByType,
+      items: itemsByType[activeType],
+      browseCurrentIndex: browseIndices[activeType]
+    })
   },
 
   closeEditor() {
@@ -245,13 +326,13 @@ Page({
         })
       }
       if (!isAsyncPageActive(this)) return
+      this.applyActivityItemToCache(item)
       this.setData({
         showEditor: false,
-        activeType: this.data.editorType,
         selectedImagePath: "",
         currentImageUrl: ""
       })
-      await this.loadItems(item.id)
+      void this.loadItems(item.id, item.activity_type, true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -275,7 +356,7 @@ Page({
   },
 
   async handleManagerMove(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.ordering || this.data.contentLoading) return
+    if (!this.data.canWrite || this.data.ordering) return
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
     const targetIndex = index + direction
@@ -292,14 +373,18 @@ Page({
       items[targetIndex] = source
       const browseCurrentIndex = Math.max(0, items.findIndex((item) => item.id === visibleId))
       browseIndices[this.data.activeType] = browseCurrentIndex
-      this.setData({ items, browseCurrentIndex })
+      const itemsByType = {
+        ...this.data.itemsByType,
+        [this.data.activeType]: items
+      }
+      this.setData({ itemsByType, items, browseCurrentIndex })
+      void this.loadItems(visibleId, this.data.activeType, true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
           title: error instanceof Error ? error.message : "排序保存失败",
           icon: "none"
         })
-        await this.loadItems(visibleId)
       }
     } finally {
       if (isAsyncPageActive(this)) this.setData({ ordering: false })
@@ -341,7 +426,8 @@ Page({
         pendingDeleteId: "",
         pendingDeleteName: ""
       })
-      await this.loadItems()
+      this.removeActivityItemFromCache(id)
+      void this.loadItems("", this.data.activeType, true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

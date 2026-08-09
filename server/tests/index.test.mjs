@@ -1366,9 +1366,16 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
     thumbnail_path: "users/old/activity-thumbnail.webp",
     sort_order: 1000,
   };
+  const homeActivity = {
+    ...activity,
+    id: TARGET_ID,
+    name: "看电影",
+    introduction: "选一部喜欢的电影放松一下。",
+    activity_type: "居家",
+  };
   const checkedImages = [];
   const supabase = createFakeSupabase({
-    tables: authenticatedTables({ activity_items: [activity] }),
+    tables: authenticatedTables({ activity_items: [activity, homeActivity] }),
   });
   const app = buildServer({
     logger: false,
@@ -1392,6 +1399,17 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
   assert.equal(
     listResponse.json().data.items[0].thumbnail_url,
     "https://example.test/activity-images/users/old/activity-thumbnail.webp",
+  );
+
+  const allTypesResponse = await app.inject({
+    method: "GET",
+    url: "/api/activities?all_types=true",
+    headers: authHeaders,
+  });
+  assert.equal(allTypesResponse.statusCode, 200);
+  assert.deepEqual(
+    allTypesResponse.json().data.items.map((item) => item.activity_type).sort(),
+    ["居家", "户外"],
   );
 
   const updateResponse = await app.inject({

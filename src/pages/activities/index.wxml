@@ -35,12 +35,7 @@
     </view>
   </view>
 
-  <view wx:if="{{contentLoading}}" class="content-state content-loading">
-    <view class="content-loading__spinner" />
-    <view class="content-loading__text">正在加载活动…</view>
-  </view>
-
-  <view wx:elif="{{items.length === 0}}" class="content-state empty-state">
+  <view wx:if="{{items.length === 0}}" class="content-state empty-state">
     <view>当前场景还没有活动</view>
     <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增活动</view>
   </view>

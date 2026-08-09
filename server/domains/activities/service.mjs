@@ -83,14 +83,17 @@ async function removeActivityImages(supabase, paths) {
 export const readActivityMultipart = readMultipartImage;
 
 export async function listActivityItems(supabase, userId, query) {
-  const activityType = query.activity_type
-    ? enumValue(query.activity_type, ACTIVITY_TYPES, "活动分类")
-    : ACTIVITY_TYPES[0];
+  const includeAllTypes = query.all_types === "true";
+  const activityType = includeAllTypes
+    ? ""
+    : query.activity_type
+      ? enumValue(query.activity_type, ACTIVITY_TYPES, "活动分类")
+      : ACTIVITY_TYPES[0];
   let request = supabase
     .from("activity_items")
     .select("*")
-    .eq("user_id", userId)
-    .eq("activity_type", activityType);
+    .eq("user_id", userId);
+  if (activityType) request = request.eq("activity_type", activityType);
   if (typeof query.keyword === "string" && query.keyword.trim()) {
     request = request.ilike("name", `%${query.keyword.trim().slice(0, 80)}%`);
   }

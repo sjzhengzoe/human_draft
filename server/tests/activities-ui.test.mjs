@@ -5,10 +5,11 @@ import test from "node:test";
 const projectRoot = new URL("../../", import.meta.url);
 
 test("activity list uses top scene tabs and a button-free single-card swiper", async () => {
-  const template = await readFile(
-    new URL("src/pages/activities/index.wxml", projectRoot),
-    "utf8",
-  );
+  const [template, page, service] = await Promise.all([
+    readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/index.ts", projectRoot), "utf8"),
+    readFile(new URL("src/services/activities.ts", projectRoot), "utf8"),
+  ]);
 
   assert.match(template, /class="activity-type-switch"/);
   assert.match(template, /display-multiple-items="1"/);
@@ -19,6 +20,12 @@ test("activity list uses top scene tabs and a button-free single-card swiper", a
   assert.doesNotMatch(template, /室内活动/);
   assert.doesNotMatch(template, /class="(?:counter|pagination|swipe-button)/);
   assert.doesNotMatch(template, /bindtap="handle(?:Previous|Next|Prev)/);
+  assert.doesNotMatch(template, /contentLoading|正在加载活动…[\s\S]*content-loading/);
+  assert.match(page, /itemsByType: emptyActivityItemsByType\(\)/);
+  assert.match(page, /const items = this\.data\.itemsByType\[type\]/);
+  const typeHandler = page.match(/handleTypeTap[\s\S]*?\n  },/)?.[0] || "";
+  assert.doesNotMatch(typeHandler, /loadItems|listActivityItems/);
+  assert.match(service, /all_types: activityType \? undefined : "true"/);
 });
 
 test("activity editor reuses shared dialogs and the 4:3 image cropper", async () => {

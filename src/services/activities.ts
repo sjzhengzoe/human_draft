@@ -2,9 +2,12 @@ import type { ActivityItem, ActivityType } from "../types/activities"
 import { queryString } from "./query-string"
 import { request, upload } from "./request"
 
-export async function listActivityItems(activityType: ActivityType): Promise<ActivityItem[]> {
+export async function listActivityItems(activityType?: ActivityType): Promise<ActivityItem[]> {
   const data = await request<{ items: ActivityItem[] }>({
-    path: `/api/activities${queryString({ activity_type: activityType })}`
+    path: `/api/activities${queryString({
+      activity_type: activityType,
+      all_types: activityType ? undefined : "true"
+    })}`
   })
   return data.items
 }
