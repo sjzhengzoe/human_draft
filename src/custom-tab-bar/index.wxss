@@ -42,7 +42,7 @@
 }
 
 .tabbar__text {
-  font-size: var(--ui-font-size-base);
+  font-size: var(--ui-font-size-small);
   font-weight: 500;
   line-height: 1.25;
 }
