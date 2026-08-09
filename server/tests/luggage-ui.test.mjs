@@ -30,6 +30,9 @@ test("luggage exposes wrapped scene tabs and a reusable local packing flow", asy
   assert.match(storage, /STORAGE_KEY_PREFIX\}:\$\{userId\}:\$\{sceneId\}/);
   assert.doesNotMatch(page, /可复用清单模板|选择场景后开始收拾|装箱状态只在本机保存/);
   assert.doesNotMatch(page, /type="search"|placeholder="搜索场景"/);
+  assert.match(page, /wx:for="\{\{visibleScenes\}\}"/);
+  assert.match(logic, /COLLAPSED_SCENE_TAB_LIMIT = 6/);
+  assert.match(logic, /handleSceneTabsToggle/);
 });
 
 test("luggage reset is icon-only and clears only local packing progress", async () => {
@@ -38,10 +41,42 @@ test("luggage reset is icon-only and clears only local packing progress", async 
     readFile("src/pages/luggage/index.ts", "utf8"),
   ]);
 
-  assert.match(page, /class="packing-reset[^>]*"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw"/);
+  assert.match(page, /class="packing-reset[^>]*"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw-white"/);
   assert.match(page, /title="重新开始收拾"/);
   assert.match(page, /清单内容不会改变/);
   assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);
+});
+
+test("luggage item rows edit while only the square checkbox changes packing state", async () => {
+  const [page, styles] = await Promise.all([
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.less", "utf8"),
+  ]);
+
+  const itemRow = page.match(/class="luggage-item"[\s\S]*?<\/view>\n            <view wx:if="\{\{group\.visible_items\.length/)?.[0] || "";
+  assert.match(itemRow, /bindtap="openItemEditor"/);
+  assert.match(itemRow, /class="packing-checkbox-hit"[\s\S]*?catchtap="handlePackingItemToggle"/);
+  assert.match(itemRow, /aria-checked="\{\{luggageItem\.is_packed\}\}"/);
+  assert.match(itemRow, /name="check-white"/);
+  assert.match(itemRow, /class="luggage-item__edit-area/);
+  assert.doesNotMatch(itemRow, /class="row-edit"/);
+  assert.match(styles, /\.packing-checkbox-hit\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx/s);
+  assert.doesNotMatch(styles, /\.luggage-item:active/);
+  assert.match(page, /settings-2-white/);
+});
+
+test("luggage empty states stay compact without blocking future item creation", async () => {
+  const [page, logic] = await Promise.all([
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.ts", "utf8"),
+  ]);
+
+  assert.match(page, /class="packing-view-empty"/);
+  assert.match(page, /bindtap="handleEmptyViewSwitch"/);
+  assert.match(page, /bindtap="openGroupPicker"/);
+  assert.match(page, /title="选择携带层级"/);
+  assert.match(logic, /openItemCreator/);
+  assert.match(logic, /handleGroupPickerSelect/);
 });
 
 test("luggage business dialogs use the shared app dialog", async () => {
@@ -66,10 +101,74 @@ test("luggage pages use only shared business typography sizes", async () => {
   assert.match(styles, /var\(--ui-font-size-large\)/);
 });
 
+test("luggage metadata uses readable semantic colors and valid save states", async () => {
+  const [indexStyles, sceneStyles, page, editPage, logic, editLogic] = await Promise.all([
+    readFile("src/pages/luggage/index.less", "utf8"),
+    readFile("src/pages/luggage/scenes/index.less", "utf8"),
+    readFile("src/pages/luggage/index.wxml", "utf8"),
+    readFile("src/pages/luggage/scene-edit/index.wxml", "utf8"),
+    readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/pages/luggage/scene-edit/index.ts", "utf8"),
+  ]);
+
+  assert.match(indexStyles, /\.group-count\s*\{[^}]*var\(--ui-color-text-muted\)/s);
+  assert.match(sceneStyles, /\.scene-card__fields\s*\{[^}]*var\(--ui-color-text-muted\)/s);
+  assert.match(page, /disabled="\{\{saving \|\| !editorCanSave\}\}"/);
+  assert.match(editPage, /disabled="\{\{saving \|\| deleting \|\| !canSave\}\}"/);
+  assert.match(logic, /title: "请输入名称"/);
+  assert.match(editLogic, /title: "请输入场景名称"/);
+});
+
 test("required luggage groups are protected from deletion", async () => {
   const service = await readFile("server/domains/luggage/service.mjs", "utf8");
 
   assert.match(service, /REQUIRED_LUGGAGE_GROUP/);
   assert.match(service, /!group\.is_required/);
   assert.match(service, /必备物品层级不能删除/);
+});
+
+test("luggage reads are deduplicated and successful mutations update shared cache", async () => {
+  const [index, scenes, service, cache, auth] = await Promise.all([
+    readFile("src/pages/luggage/index.ts", "utf8"),
+    readFile("src/pages/luggage/scenes/index.ts", "utf8"),
+    readFile("src/services/luggage.ts", "utf8"),
+    readFile("src/utils/luggage-data-cache.ts", "utf8"),
+    readFile("src/services/auth.ts", "utf8"),
+  ]);
+
+  assert.match(index, /this\.data\.luggageRevision !== getLuggageDataRevision\(\)/);
+  assert.match(scenes, /this\.data\.luggageRevision !== getLuggageDataRevision\(\)/);
+  assert.match(service, /const cachedScenes = forceRefresh \? null : getCachedLuggageScenes\(\)/);
+  assert.match(service, /if \(cachedScenes\) return cachedScenes/);
+  assert.match(service, /pendingLuggageScenesRequest/);
+  assert.match(service, /patchCachedScenes/);
+  assert.match(service, /replaceLuggageDataCache\(scenes\)/);
+  assert.match(cache, /updateLuggageDataCache/);
+  assert.match(cache, /replaceLuggageDataCache/);
+  assert.match(cache, /luggageDataRevision \+= 1/);
+  assert.match(auth, /clearLuggageDataCache\(\)/);
+
+  const sceneSwitch = index.match(/handleSceneTap\([\s\S]*?\n  },\n\n  handleAddScene/)?.[0] || "";
+  assert.doesNotMatch(sceneSwitch, /listLuggageScenes|loadScenes/);
+
+  const sortSave = index.match(/async handleSortEditingToggle\([\s\S]*?\n  }\n}\)/)?.[0] || "";
+  assert.match(sortSave, /await reorderLuggageScene\(/);
+  assert.match(sortSave, /applyPackingPresentation\(this\.data\.activeScene, this\.data\.packingView, false\)/);
+  assert.doesNotMatch(sortSave, /moveLuggageGroup|moveLuggageItem/);
+  assert.doesNotMatch(sortSave, /排序已保存[\s\S]*?await this\.loadScenes/);
+});
+
+test("luggage submits final sorting once and assembles list data without nested filters", async () => {
+  const [client, routes, domain] = await Promise.all([
+    readFile("src/services/luggage.ts", "utf8"),
+    readFile("server/routes/luggage.mjs", "utf8"),
+    readFile("server/domains/luggage/service.mjs", "utf8"),
+  ]);
+
+  assert.match(client, /path: "\/api\/luggage\/order"/);
+  assert.match(routes, /app\.put\("\/api\/luggage\/order"/);
+  assert.match(domain, /export async function reorderLuggageScene/);
+  assert.match(domain, /itemsByGroupId = new Map/);
+  assert.match(domain, /groupsBySceneId = new Map/);
+  assert.doesNotMatch(domain, /\.select\("\*"\)[\s\S]*?读取行李物品失败/);
 });

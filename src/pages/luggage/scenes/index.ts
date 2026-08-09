@@ -5,37 +5,44 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { getLuggageDataRevision } from "../../../utils/luggage-data-cache"
 
 Page({
   data: {
     scenes: [] as Array<{ id: string; name: string; group_count: number; item_count: number }>,
     loading: true,
     hasLoaded: false,
+    luggageRevision: -1,
     errorMessage: ""
   },
 
   onShow() {
     activateAsyncPage(this)
-    this.loadScenes()
+    if (!this.data.hasLoaded || this.data.luggageRevision !== getLuggageDataRevision()) {
+      void this.loadScenes()
+    }
   },
 
   onUnload() {
     deactivateAsyncPage(this)
   },
 
-  async loadScenes() {
+  async loadScenes(forceRefresh = false) {
     const generation = beginAsyncPageRequest(this)
     const initial = !this.data.hasLoaded
     this.setData({ loading: initial, errorMessage: "" })
     try {
-      const scenes = await listLuggageScenes()
+      const scenes = await listLuggageScenes(forceRefresh)
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      this.setData({ scenes: scenes.map((scene) => ({
-        id: scene.id,
-        name: scene.name,
-        group_count: scene.groups.length,
-        item_count: scene.groups.reduce((total, group) => total + group.items.length, 0)
-      })) })
+      this.setData({
+        scenes: scenes.map((scene) => ({
+          id: scene.id,
+          name: scene.name,
+          group_count: scene.groups.length,
+          item_count: scene.groups.reduce((total, group) => total + group.items.length, 0)
+        })),
+        luggageRevision: getLuggageDataRevision()
+      })
     } catch (error) {
       if (isAsyncPageRequestCurrent(this, generation)) this.setData({ errorMessage: error instanceof Error ? error.message : "场景加载失败" })
     } finally {
@@ -53,6 +60,6 @@ Page({
   },
 
   handleRetry() {
-    this.loadScenes()
+    void this.loadScenes(true)
   }
 })

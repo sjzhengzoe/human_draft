@@ -98,11 +98,10 @@ page,
 .packing-overview__scene {
   min-width: 0;
   overflow: hidden;
-  color: var(--ui-color-text-inverse);
+  color: var(--ui-color-text-inverse-muted);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
   line-height: 1.35;
-  opacity: .7;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -287,7 +286,7 @@ page,
 
 .group-count {
   margin-top: 6rpx;
-  color: var(--ui-color-text-placeholder);
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
 }
 
@@ -303,12 +302,7 @@ page,
   display: flex;
   min-height: 82rpx;
   align-items: center;
-  gap: 14rpx;
   border-bottom: 1rpx solid var(--ui-color-border);
-}
-
-.luggage-item:active {
-  opacity: .55;
 }
 
 .packing-checkbox {
@@ -324,6 +318,19 @@ page,
   background: var(--ui-color-background-surface);
 }
 
+.packing-checkbox-hit {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.packing-checkbox-hit:active .packing-checkbox {
+  opacity: .55;
+}
+
 .packing-checkbox--checked {
   border-color: var(--ui-color-action-primary);
   background: var(--ui-color-action-primary);
@@ -335,6 +342,21 @@ page,
   color: var(--ui-color-text-default);
   font-size: var(--ui-font-size-base);
   line-height: 1.45;
+}
+
+.luggage-item__edit-area {
+  display: flex;
+  min-width: 0;
+  min-height: 82rpx;
+  flex: 1;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 14rpx;
+  padding-left: 14rpx;
+}
+
+.luggage-item__edit-area--editable:active {
+  opacity: .55;
 }
 
 .luggage-item__name--packed {
@@ -378,9 +400,70 @@ page,
 
 .items-empty {
   padding: 30rpx 0;
-  color: var(--ui-color-text-disabled);
+  color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-base);
   text-align: center;
+}
+
+.packing-view-empty {
+  display: flex;
+  min-height: 300rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 28rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-color-background-surface);
+  text-align: center;
+}
+
+.packing-view-empty__title {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-large);
+  font-weight: 700;
+}
+
+.packing-view-empty__text {
+  max-width: 520rpx;
+  margin-top: 12rpx;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.5;
+}
+
+.packing-view-empty__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.packing-empty-action {
+  display: inline-flex;
+  min-height: 58rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-surface);
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+}
+
+.packing-empty-action--primary {
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+}
+
+.packing-empty-action:active {
+  opacity: .55;
 }
 
 .content-loading--compact {
@@ -450,6 +533,37 @@ page,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16rpx;
+}
+
+.group-picker {
+  max-height: 480rpx;
+  overflow: hidden;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+}
+
+.group-picker__item {
+  display: flex;
+  min-height: 72rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 0 18rpx;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.group-picker__item + .group-picker__item {
+  border-top: 1rpx solid var(--ui-color-border);
+}
+
+.group-picker__item:active {
+  background: var(--ui-color-background-hover);
+}
+
+.group-picker__actions {
+  width: 100%;
 }
 
 .dialog-button {

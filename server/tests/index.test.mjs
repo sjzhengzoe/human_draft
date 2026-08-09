@@ -1537,6 +1537,67 @@ test("delete routes return a JSON success envelope", async (t) => {
   }
 });
 
+test("luggage reorder accepts one final snapshot and applies only the required moves", async (t) => {
+  const sceneId = DINING_ID;
+  const firstGroupId = SOURCE_ID;
+  const secondGroupId = TARGET_ID;
+  const firstItemId = SEASON_ID;
+  const secondItemId = EPISODE_ID;
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      luggage_scenes: [{ id: sceneId, name: "周末出行", sort_order: 1000 }],
+      luggage_groups: [
+        { id: firstGroupId, scene_id: sceneId, name: "必备物品", is_required: true, sort_order: 1000 },
+        { id: secondGroupId, scene_id: sceneId, name: "更加舒适", is_required: false, sort_order: 2000 },
+      ],
+      luggage_items: [
+        { id: firstItemId, group_id: firstGroupId, name: "身份证", sort_order: 1000 },
+        { id: secondItemId, group_id: firstGroupId, name: "充电器", sort_order: 2000 },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: "/api/luggage/order",
+    headers: authHeaders,
+    payload: {
+      scene_id: sceneId,
+      group_ids: [secondGroupId, firstGroupId],
+      item_ids_by_group: {
+        [firstGroupId]: [secondItemId, firstItemId],
+        [secondGroupId]: [],
+      },
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), { ok: true, data: { updated: 2 } });
+  assert.deepEqual(supabase.rpcCalls, [
+    {
+      name: "move_luggage_group",
+      params: {
+        p_user_id: USER_ID,
+        p_source_id: secondGroupId,
+        p_target_id: firstGroupId,
+        p_insert_after: false,
+      },
+    },
+    {
+      name: "move_luggage_item",
+      params: {
+        p_user_id: USER_ID,
+        p_source_id: secondItemId,
+        p_target_group_id: firstGroupId,
+        p_target_item_id: firstItemId,
+        p_insert_after: false,
+      },
+    },
+  ]);
+});
+
 test("media writes accept an omitted platform and validate selected platforms before the create RPC", async (t) => {
   const supabase = createFakeSupabase({
     tables: authenticatedTables({

@@ -5,8 +5,7 @@ import {
   deleteLuggageGroup,
   deleteLuggageItem,
   listLuggageScenes,
-  moveLuggageGroup,
-  moveLuggageItem,
+  reorderLuggageScene,
   updateLuggageGroup,
   updateLuggageItem
 } from "../../services/luggage"
@@ -23,6 +22,10 @@ import {
   readLuggagePackedItemIds,
   saveLuggagePackedItemIds
 } from "../../utils/luggage-packing"
+import {
+  getLuggageDataRevision,
+  hasCachedLuggageScenes
+} from "../../utils/luggage-data-cache"
 
 type LuggageOrderSnapshot = {
   groupIds: string[]
@@ -33,6 +36,7 @@ type EditorKind = "group" | "item"
 type DeleteKind = "group" | "item"
 type PackingView = "unpacked" | "packed"
 type LuggageSceneView = LuggageScene & { item_count: number }
+type LuggageSceneTab = Pick<LuggageSceneView, "id" | "name">
 type LuggagePackingItemView = LuggageScene["groups"][number]["items"][number] & {
   is_packed: boolean
 }
@@ -41,6 +45,8 @@ type LuggagePackingGroupView = LuggageScene["groups"][number] & {
   packing_count_label: string
   packing_empty_text: string
 }
+
+const COLLAPSED_SCENE_TAB_LIMIT = 6
 
 let luggageSortOriginalOrder: LuggageOrderSnapshot | null = null
 let luggagePackingUserId = ""
@@ -71,20 +77,32 @@ function replaceScene(scenes: LuggageSceneView[], nextScene: LuggageSceneView): 
   return scenes.map((scene) => scene.id === nextScene.id ? nextScene : scene)
 }
 
+function visibleSceneTabs(
+  scenes: LuggageSceneView[],
+  expanded: boolean,
+  activeSceneId: string
+): LuggageSceneTab[] {
+  let visibleScenes: LuggageSceneView[]
+  if (expanded || scenes.length <= COLLAPSED_SCENE_TAB_LIMIT) visibleScenes = scenes
+  else {
+    const firstScenes = scenes.slice(0, COLLAPSED_SCENE_TAB_LIMIT)
+    if (!activeSceneId || firstScenes.some((scene) => scene.id === activeSceneId)) {
+      visibleScenes = firstScenes
+    } else {
+      const activeScene = scenes.find((scene) => scene.id === activeSceneId)
+      visibleScenes = activeScene
+        ? [...firstScenes.slice(0, COLLAPSED_SCENE_TAB_LIMIT - 1), activeScene]
+        : firstScenes
+    }
+  }
+  return visibleScenes.map(({ id, name }) => ({ id, name }))
+}
+
 function captureLuggageOrder(scene: LuggageScene): LuggageOrderSnapshot {
   return {
     groupIds: scene.groups.map((group) => group.id),
     itemIdsByGroup: Object.fromEntries(
       scene.groups.map((group) => [group.id, group.items.map((item) => item.id)])
-    )
-  }
-}
-
-function cloneLuggageOrder(order: LuggageOrderSnapshot): LuggageOrderSnapshot {
-  return {
-    groupIds: [...order.groupIds],
-    itemIdsByGroup: Object.fromEntries(
-      Object.entries(order.itemIdsByGroup).map(([groupId, itemIds]) => [groupId, [...itemIds]])
     )
   }
 }
@@ -164,6 +182,9 @@ function buildPackingPresentation(
 Page({
   data: {
     scenes: [] as LuggageSceneView[],
+    visibleScenes: [] as LuggageSceneTab[],
+    sceneTabsExpanded: false,
+    sceneTabsCollapsible: false,
     activeSceneId: "",
     activeScene: null as LuggageSceneView | null,
     packingGroups: [] as LuggagePackingGroupView[],
@@ -177,6 +198,7 @@ Page({
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    luggageRevision: -1,
     errorMessage: "",
     ordering: false,
     saving: false,
@@ -187,6 +209,7 @@ Page({
     editorId: "",
     editorParentId: "",
     editorName: "",
+    editorCanSave: false,
     editorTitle: "",
     editorPlaceholder: "",
     editorMaxlength: 80,
@@ -196,14 +219,15 @@ Page({
     confirmId: "",
     confirmTitle: "",
     confirmContent: "",
-    resetConfirmVisible: false
+    resetConfirmVisible: false,
+    groupPickerVisible: false
   },
 
   onShow() {
     activateAsyncPage(this)
-    luggageSortOriginalOrder = null
-    if (this.data.sortEditing) this.setData({ sortEditing: false })
-    this.loadScenes()
+    if (!this.data.hasLoaded || this.data.luggageRevision !== getLuggageDataRevision()) {
+      void this.loadScenes()
+    }
   },
 
   onUnload() {
@@ -217,9 +241,10 @@ Page({
     if (!isAsyncPageActive(this)) return
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
+    const hasCachedScenes = hasCachedLuggageScenes()
     this.setData({
       loading: showInitialLoading,
-      contentLoading: !showInitialLoading,
+      contentLoading: !showInitialLoading && !hasCachedScenes,
       errorMessage: ""
     })
 
@@ -251,6 +276,12 @@ Page({
       )
       this.setData({
         scenes,
+        visibleScenes: visibleSceneTabs(
+          scenes,
+          this.data.sceneTabsExpanded,
+          activeScene?.id || ""
+        ),
+        sceneTabsCollapsible: scenes.length > COLLAPSED_SCENE_TAB_LIMIT,
         activeSceneId: activeScene?.id || "",
         activeScene,
         packingGroups: packing.groups,
@@ -260,7 +291,8 @@ Page({
         activeUnpackedCount: packing.unpackedCount,
         activePackingPercent: packing.packingPercent,
         sortEditing: false,
-        canWrite: session.user.can_write
+        canWrite: session.user.can_write,
+        luggageRevision: getLuggageDataRevision()
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -307,13 +339,33 @@ Page({
     })
   },
 
+  handleSceneTabsToggle() {
+    const sceneTabsExpanded = !this.data.sceneTabsExpanded
+    this.setData({
+      sceneTabsExpanded,
+      visibleScenes: visibleSceneTabs(
+        this.data.scenes,
+        sceneTabsExpanded,
+        this.data.activeSceneId
+      )
+    })
+  },
+
   handleAddScene() {
     if (!this.data.canWrite || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/luggage/scene-edit/index" })
   },
 
   handleManageScenes() {
     if (!this.data.canWrite || this.data.contentLoading) return
+    if (this.data.sortEditing) {
+      wx.showToast({ title: "请先完成排序", icon: "none" })
+      return
+    }
     wx.navigateTo({ url: "/pages/luggage/scenes/index" })
   },
 
@@ -398,6 +450,7 @@ Page({
       editorId: id,
       editorParentId: this.data.activeSceneId,
       editorName: name,
+      editorCanSave: Boolean(name.trim()),
       editorTitle: "编辑携带层级",
       editorPlaceholder: "输入层级名称",
       editorMaxlength: 80,
@@ -413,6 +466,7 @@ Page({
       editorId: "",
       editorParentId: this.data.activeScene.id,
       editorName: "",
+      editorCanSave: false,
       editorTitle: "新增携带层级",
       editorPlaceholder: "例如：更加舒适",
       editorMaxlength: 80,
@@ -428,6 +482,7 @@ Page({
       editorId: String(event.currentTarget.dataset.id || ""),
       editorParentId: String(event.currentTarget.dataset.groupId || ""),
       editorName: String(event.currentTarget.dataset.name || ""),
+      editorCanSave: Boolean(String(event.currentTarget.dataset.name || "").trim()),
       editorTitle: "编辑物品",
       editorPlaceholder: "输入物品名称",
       editorMaxlength: 120,
@@ -437,15 +492,22 @@ Page({
 
   handleAddItem(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canWrite || this.data.sortEditing || this.data.saving) return
-    const groupId = String(event.currentTarget.dataset.groupId || "")
-    const groupName = String(event.currentTarget.dataset.groupName || "")
+    this.openItemCreator(
+      String(event.currentTarget.dataset.groupId || ""),
+      String(event.currentTarget.dataset.groupName || "")
+    )
+  },
+
+  openItemCreator(groupId: string, groupName: string) {
     if (!groupId) return
     this.setData({
+      groupPickerVisible: false,
       editorVisible: true,
       editorKind: "item",
       editorId: "",
       editorParentId: groupId,
       editorName: "",
+      editorCanSave: false,
       editorTitle: groupName ? `向“${groupName}”添加物品` : "新增物品",
       editorPlaceholder: "例如：身份证",
       editorMaxlength: 120,
@@ -453,8 +515,35 @@ Page({
     })
   },
 
+  openGroupPicker() {
+    const groups = this.data.activeScene?.groups || []
+    if (!this.data.canWrite || this.data.sortEditing || groups.length === 0) return
+    if (groups.length === 1) {
+      this.openItemCreator(groups[0].id, groups[0].name)
+      return
+    }
+    this.setData({ groupPickerVisible: true })
+  },
+
+  closeGroupPicker() {
+    this.setData({ groupPickerVisible: false })
+  },
+
+  handleGroupPickerSelect(event: WechatMiniprogram.TouchEvent) {
+    this.openItemCreator(
+      String(event.currentTarget.dataset.groupId || ""),
+      String(event.currentTarget.dataset.groupName || "")
+    )
+  },
+
+  handleEmptyViewSwitch() {
+    const packingView: PackingView = this.data.packingView === "unpacked" ? "packed" : "unpacked"
+    this.applyPackingPresentation(this.data.activeScene, packingView, false)
+  },
+
   handleEditorNameInput(event: WechatMiniprogram.Input) {
-    this.setData({ editorName: event.detail.value })
+    const editorName = event.detail.value
+    this.setData({ editorName, editorCanSave: Boolean(editorName.trim()) })
   },
 
   closeEditor() {
@@ -463,7 +552,11 @@ Page({
 
   async saveEditor() {
     const name = this.data.editorName.trim()
-    if (!name || this.data.saving || !this.data.editorParentId) return
+    if (!name) {
+      wx.showToast({ title: "请输入名称", icon: "none" })
+      return
+    }
+    if (this.data.saving || !this.data.editorParentId) return
     this.setData({ saving: true })
     try {
       if (this.data.editorKind === "group") {
@@ -596,46 +689,19 @@ Page({
       return
     }
 
-    const workingOrder = cloneLuggageOrder(luggageSortOriginalOrder)
     this.setData({ ordering: true })
     try {
-      for (let index = 0; index < desiredOrder.groupIds.length; index += 1) {
-        const desiredGroupId = desiredOrder.groupIds[index]
-        if (workingOrder.groupIds[index] === desiredGroupId) continue
-        const currentIndex = workingOrder.groupIds.indexOf(desiredGroupId)
-        const targetGroupId = workingOrder.groupIds[index]
-        if (currentIndex < 0 || !targetGroupId) throw new Error("行李层级排序数据已变化，请重新加载")
-        await moveLuggageGroup(desiredGroupId, targetGroupId, false)
-        workingOrder.groupIds.splice(currentIndex, 1)
-        workingOrder.groupIds.splice(index, 0, desiredGroupId)
-        luggageSortOriginalOrder = cloneLuggageOrder(workingOrder)
-      }
-
-      for (const groupId of desiredOrder.groupIds) {
-        const desiredItemIds = desiredOrder.itemIdsByGroup[groupId] || []
-        for (let index = 0; index < desiredItemIds.length; index += 1) {
-          const desiredItemId = desiredItemIds[index]
-          const targetItems = workingOrder.itemIdsByGroup[groupId] || []
-          if (targetItems[index] === desiredItemId) continue
-          const sourceGroupId = Object.keys(workingOrder.itemIdsByGroup)
-            .find((id) => workingOrder.itemIdsByGroup[id].includes(desiredItemId))
-          if (!sourceGroupId) throw new Error("行李物品排序数据已变化，请重新加载")
-          const targetItemId = targetItems[index] || ""
-          await moveLuggageItem(desiredItemId, groupId, targetItemId, false)
-          const sourceItems = workingOrder.itemIdsByGroup[sourceGroupId]
-          sourceItems.splice(sourceItems.indexOf(desiredItemId), 1)
-          const nextTargetItems = workingOrder.itemIdsByGroup[groupId] || []
-          nextTargetItems.splice(index, 0, desiredItemId)
-          workingOrder.itemIdsByGroup[groupId] = nextTargetItems
-          luggageSortOriginalOrder = cloneLuggageOrder(workingOrder)
-        }
-      }
+      await reorderLuggageScene(
+        this.data.activeScene.id,
+        desiredOrder.groupIds,
+        desiredOrder.itemIdsByGroup
+      )
 
       if (!isAsyncPageActive(this)) return
       luggageSortOriginalOrder = null
-      this.setData({ sortEditing: false })
+      this.applyPackingPresentation(this.data.activeScene, this.data.packingView, false)
+      this.setData({ luggageRevision: getLuggageDataRevision() })
       wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.loadScenes()
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

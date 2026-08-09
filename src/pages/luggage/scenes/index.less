@@ -29,18 +29,32 @@ page,
 
 .manager-header__count {
   margin-top: 7rpx;
-  color: var(--ui-color-text-placeholder);
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
 }
 
-.manager-header__add,
+.manager-header__add {
+  display: flex;
+  width: 58rpx;
+  height: 58rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--ui-color-action-primary);
+}
+
+.manager-header__add:active,
+.retry-button:active {
+  opacity: .55;
+}
+
 .retry-button {
   display: inline-flex;
   min-height: 58rpx;
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  gap: 7rpx;
   padding: 0 20rpx;
   border-radius: var(--ui-radius-pill);
   background: var(--ui-color-action-primary);
@@ -95,7 +109,7 @@ page,
 
 .scene-card__fields {
   margin-top: 8rpx;
-  color: var(--ui-color-text-placeholder);
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
   line-height: 1.4;
 }

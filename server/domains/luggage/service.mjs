@@ -1,22 +1,27 @@
 import { assertCondition } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
-import { nextSortOrder, requiredText, requireRecord } from "../shared/records.mjs";
+import {
+  nextSortOrder,
+  requiredText,
+  requireRecord,
+  UUID_PATTERN,
+} from "../shared/records.mjs";
 
 export async function listLuggageScenes(supabase, userId) {
   const [sceneResult, groupResult, itemResult] = await Promise.all([
     supabase
       .from("luggage_scenes")
-      .select("*")
+      .select("id,name,sort_order")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true }),
     supabase
       .from("luggage_groups")
-      .select("*")
+      .select("id,scene_id,name,is_required,sort_order")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true }),
     supabase
       .from("luggage_items")
-      .select("*")
+      .select("id,group_id,name,sort_order")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true }),
   ]);
@@ -24,15 +29,132 @@ export async function listLuggageScenes(supabase, userId) {
   throwSupabaseError(groupResult.error, "读取行李层级失败。");
   throwSupabaseError(itemResult.error, "读取行李物品失败。");
 
+  const itemsByGroupId = new Map();
+  for (const item of itemResult.data) {
+    const items = itemsByGroupId.get(item.group_id) || [];
+    items.push(item);
+    itemsByGroupId.set(item.group_id, items);
+  }
+
+  const groupsBySceneId = new Map();
+  for (const group of groupResult.data) {
+    const groups = groupsBySceneId.get(group.scene_id) || [];
+    groups.push({ ...group, items: itemsByGroupId.get(group.id) || [] });
+    groupsBySceneId.set(group.scene_id, groups);
+  }
+
   return sceneResult.data.map((scene) => ({
     ...scene,
-    groups: groupResult.data
-      .filter((group) => group.scene_id === scene.id)
-      .map((group) => ({
-        ...group,
-        items: itemResult.data.filter((item) => item.group_id === group.id),
-      })),
+    groups: groupsBySceneId.get(scene.id) || [],
   }));
+}
+
+function hasSameIds(left, right) {
+  if (left.length !== right.length) return false;
+  const rightIds = new Set(right);
+  return left.every((id) => rightIds.has(id));
+}
+
+export async function reorderLuggageScene(supabase, userId, body) {
+  const sceneId = requiredText(body.scene_id, "行李场景");
+  const groupIds = Array.isArray(body.group_ids) ? body.group_ids : [];
+  const itemIdsByGroup = body.item_ids_by_group;
+  assertCondition(UUID_PATTERN.test(sceneId), 400, "INVALID_LUGGAGE_SCENE", "行李场景无效。");
+  assertCondition(
+    groupIds.length > 0
+      && groupIds.length <= 100
+      && groupIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id)),
+    400,
+    "INVALID_LUGGAGE_GROUP_ORDER",
+    "行李层级排序列表无效。",
+  );
+  assertCondition(
+    new Set(groupIds).size === groupIds.length,
+    400,
+    "DUPLICATE_LUGGAGE_GROUPS",
+    "行李层级排序列表包含重复内容。",
+  );
+  assertCondition(
+    itemIdsByGroup
+      && typeof itemIdsByGroup === "object"
+      && !Array.isArray(itemIdsByGroup),
+    400,
+    "INVALID_LUGGAGE_ITEM_ORDER",
+    "行李物品排序列表无效。",
+  );
+
+  const scenes = await listLuggageScenes(supabase, userId);
+  const scene = scenes.find((item) => item.id === sceneId);
+  assertCondition(scene, 404, "LUGGAGE_SCENE_NOT_FOUND", "行李场景不存在。");
+  const currentGroupIds = scene.groups.map((group) => group.id);
+  assertCondition(
+    hasSameIds(groupIds, currentGroupIds),
+    400,
+    "INVALID_LUGGAGE_GROUP_ORDER",
+    "行李层级排序数据已经变化，请重新加载。",
+  );
+  assertCondition(
+    hasSameIds(Object.keys(itemIdsByGroup), currentGroupIds),
+    400,
+    "INVALID_LUGGAGE_ITEM_GROUPS",
+    "行李物品层级数据已经变化，请重新加载。",
+  );
+
+  let totalItems = 0;
+  for (const group of scene.groups) {
+    const desiredItemIds = itemIdsByGroup[group.id];
+    const currentItemIds = group.items.map((item) => item.id);
+    assertCondition(
+      Array.isArray(desiredItemIds)
+        && desiredItemIds.length <= 500
+        && desiredItemIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id))
+        && new Set(desiredItemIds).size === desiredItemIds.length
+        && hasSameIds(desiredItemIds, currentItemIds),
+      400,
+      "INVALID_LUGGAGE_ITEM_ORDER",
+      "行李物品排序数据已经变化，请重新加载。",
+    );
+    totalItems += desiredItemIds.length;
+  }
+  assertCondition(totalItems <= 2000, 400, "TOO_MANY_LUGGAGE_ITEMS", "行李物品数量过多。");
+
+  const workingGroupIds = [...currentGroupIds];
+  let updated = 0;
+  for (let index = 0; index < groupIds.length; index += 1) {
+    const desiredGroupId = groupIds[index];
+    if (workingGroupIds[index] === desiredGroupId) continue;
+    const currentIndex = workingGroupIds.indexOf(desiredGroupId);
+    const targetGroupId = workingGroupIds[index];
+    await moveLuggageGroup(supabase, userId, {
+      source_id: desiredGroupId,
+      target_id: targetGroupId,
+      insert_after: false,
+    });
+    workingGroupIds.splice(currentIndex, 1);
+    workingGroupIds.splice(index, 0, desiredGroupId);
+    updated += 1;
+  }
+
+  for (const group of scene.groups) {
+    const desiredItemIds = itemIdsByGroup[group.id];
+    const workingItemIds = group.items.map((item) => item.id);
+    for (let index = 0; index < desiredItemIds.length; index += 1) {
+      const desiredItemId = desiredItemIds[index];
+      if (workingItemIds[index] === desiredItemId) continue;
+      const currentIndex = workingItemIds.indexOf(desiredItemId);
+      const targetItemId = workingItemIds[index] || null;
+      await moveLuggageItem(supabase, userId, desiredItemId, {
+        target_group_id: group.id,
+        target_item_id: targetItemId,
+        insert_after: false,
+      });
+      workingItemIds.splice(currentIndex, 1);
+      workingItemIds.splice(index, 0, desiredItemId);
+      updated += 1;
+    }
+  }
+
+  return { updated };
 }
 
 export async function createLuggageScene(supabase, userId, body) {

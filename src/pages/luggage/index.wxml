@@ -8,14 +8,23 @@
 <view wx:else class="page page--fixed">
   <view class="scene-tabs">
     <view
-      wx:for="{{scenes}}"
+      wx:for="{{visibleScenes}}"
       wx:key="id"
       class="scene-tab {{item.id === activeSceneId ? 'scene-tab--active' : ''}}"
       role="button"
       aria-label="切换到{{item.name}}场景"
+      aria-selected="{{item.id === activeSceneId}}"
       data-id="{{item.id}}"
       bindtap="handleSceneTap"
     >{{item.name}}</view>
+    <view
+      wx:if="{{sceneTabsCollapsible}}"
+      class="scene-tool"
+      role="button"
+      aria-label="{{sceneTabsExpanded ? '收起部分行李场景' : '展开全部行李场景'}}"
+      aria-expanded="{{sceneTabsExpanded}}"
+      bindtap="handleSceneTabsToggle"
+    ><app-icon name="{{sceneTabsExpanded ? 'arrow-up' : 'chevron-down'}}" size="23" /></view>
     <view
       wx:if="{{canWrite}}"
       class="scene-tool"
@@ -35,7 +44,7 @@
   <view wx:if="{{errorMessage && !activeScene}}" class="state">{{errorMessage}}</view>
   <view wx:elif="{{scenes.length === 0}}" class="state">
     <view>还没有行李场景</view>
-    <view wx:if="{{canWrite}}" class="state__action" bindtap="handleAddScene">新增第一个场景</view>
+    <view wx:if="{{canWrite}}" class="state__action" role="button" bindtap="handleAddScene">新增第一个场景</view>
   </view>
 
   <view wx:elif="{{activeScene}}" class="packing-content">
@@ -46,11 +55,12 @@
           class="packing-reset {{activePackedCount === 0 || sortEditing ? 'packing-reset--disabled' : ''}}"
           role="button"
           aria-label="重新开始当前场景"
+          aria-disabled="{{activePackedCount === 0 || sortEditing}}"
           bindtap="openPackingResetConfirm"
-        ><app-icon name="rotate-ccw" size="25" inverse="{{true}}" /></view>
+        ><app-icon name="rotate-ccw-white" size="25" /></view>
       </view>
       <view class="packing-overview__summary">
-        <view class="packing-overview__title">{{activeUnpackedCount ? '还剩 ' + activeUnpackedCount + ' 件未装' : '已经全部装好'}}</view>
+        <view class="packing-overview__title">{{activeItemCount === 0 ? '清单还没有物品' : activeUnpackedCount ? '还剩 ' + activeUnpackedCount + ' 件未装' : '已经全部装好'}}</view>
         <view class="packing-overview__count">{{activePackedCount}} / {{activeItemCount}}</view>
       </view>
       <view class="packing-progress">
@@ -62,11 +72,17 @@
       <view wx:if="{{!sortEditing}}" class="packing-filter">
         <view
           class="packing-filter__tab {{packingView === 'unpacked' ? 'packing-filter__tab--active' : ''}}"
+          role="button"
+          aria-label="查看未装物品"
+          aria-selected="{{packingView === 'unpacked'}}"
           data-view="unpacked"
           bindtap="handlePackingViewChange"
         >未装 {{activeUnpackedCount}}</view>
         <view
           class="packing-filter__tab {{packingView === 'packed' ? 'packing-filter__tab--active' : ''}}"
+          role="button"
+          aria-label="查看已装物品"
+          aria-selected="{{packingView === 'packed'}}"
           data-view="packed"
           bindtap="handlePackingViewChange"
         >已装 {{activePackedCount}}</view>
@@ -86,7 +102,7 @@
           role="button"
           aria-label="{{sortEditing ? '完成行李清单排序' : '调整行李清单顺序'}}"
           bindtap="handleSortEditingToggle"
-        ><app-icon name="settings-2" size="23" inverse="{{sortEditing}}" /></view>
+        ><app-icon name="{{sortEditing ? 'settings-2-white' : 'settings-2'}}" size="23" /></view>
       </view>
     </view>
 
@@ -96,6 +112,27 @@
         <view class="content-loading__text">正在加载清单…</view>
       </view>
       <view wx:elif="{{packingGroups.length === 0}}" class="state">还没有携带层级</view>
+      <view
+        wx:elif="{{!sortEditing && (packingView === 'unpacked' ? activeUnpackedCount === 0 : activePackedCount === 0)}}"
+        class="packing-view-empty"
+      >
+        <view class="packing-view-empty__title">{{activeItemCount === 0 ? '清单还没有物品' : packingView === 'unpacked' ? '已经全部装好' : '还没有已装物品'}}</view>
+        <view class="packing-view-empty__text">{{activeItemCount === 0 ? '先添加需要携带的物品，之后就可以重复使用这份清单。' : packingView === 'unpacked' ? '这次收拾已经完成，可以前往已装清单核对。' : '勾选未装物品前的方框后，会自动移到这里。'}}</view>
+        <view class="packing-view-empty__actions">
+          <view
+            class="packing-empty-action packing-empty-action--primary"
+            wx:if="{{activeItemCount > 0}}"
+            role="button"
+            bindtap="handleEmptyViewSwitch"
+          >{{packingView === 'unpacked' ? '查看已装' : '返回未装'}}</view>
+          <view
+            wx:if="{{canWrite && packingView === 'unpacked'}}"
+            class="packing-empty-action"
+            role="button"
+            bindtap="openGroupPicker"
+          >添加物品</view>
+        </view>
+      </view>
       <view wx:else class="group-list">
         <view
           wx:for="{{packingGroups}}"
@@ -118,6 +155,7 @@
                 class="sort-icon {{groupIndex === 0 ? 'sort-icon--disabled' : ''}}"
                 role="button"
                 aria-label="上移{{group.name}}"
+                aria-disabled="{{groupIndex === 0}}"
                 data-index="{{groupIndex}}"
                 data-direction="-1"
                 catchtap="handleGroupMove"
@@ -126,6 +164,7 @@
                 class="sort-icon {{groupIndex === packingGroups.length - 1 ? 'sort-icon--disabled' : ''}}"
                 role="button"
                 aria-label="下移{{group.name}}"
+                aria-disabled="{{groupIndex === packingGroups.length - 1}}"
                 data-index="{{groupIndex}}"
                 data-direction="1"
                 catchtap="handleGroupMove"
@@ -150,48 +189,60 @@
               wx:for-index="itemIndex"
               wx:key="id"
               class="luggage-item"
-              data-id="{{luggageItem.id}}"
-              bindtap="handlePackingItemToggle"
             >
-              <view wx:if="{{!sortEditing}}" class="packing-checkbox {{luggageItem.is_packed ? 'packing-checkbox--checked' : ''}}">
-                <app-icon wx:if="{{luggageItem.is_packed}}" name="check" size="22" inverse="{{true}}" />
-              </view>
-              <view class="luggage-item__name {{luggageItem.is_packed ? 'luggage-item__name--packed' : ''}}">{{luggageItem.name}}</view>
-              <view wx:if="{{sortEditing}}" class="sort-actions">
-                <view
-                  class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}"
-                  role="button"
-                  aria-label="上移{{luggageItem.name}}"
-                  data-group-id="{{group.id}}"
-                  data-index="{{itemIndex}}"
-                  data-direction="-1"
-                  catchtap="handleItemMove"
-                ><app-icon name="arrow-up" size="22" /></view>
-                <view
-                  class="sort-icon {{itemIndex === group.visible_items.length - 1 ? 'sort-icon--disabled' : ''}}"
-                  role="button"
-                  aria-label="下移{{luggageItem.name}}"
-                  data-group-id="{{group.id}}"
-                  data-index="{{itemIndex}}"
-                  data-direction="1"
-                  catchtap="handleItemMove"
-                ><app-icon name="arrow-down" size="22" /></view>
+              <view
+                wx:if="{{!sortEditing}}"
+                class="packing-checkbox-hit"
+                role="checkbox"
+                aria-label="{{luggageItem.is_packed ? '将' + luggageItem.name + '移回未装' : '将' + luggageItem.name + '标记为已装'}}"
+                aria-checked="{{luggageItem.is_packed}}"
+                data-id="{{luggageItem.id}}"
+                catchtap="handlePackingItemToggle"
+              >
+                <view class="packing-checkbox {{luggageItem.is_packed ? 'packing-checkbox--checked' : ''}}">
+                  <app-icon wx:if="{{luggageItem.is_packed}}" name="check-white" size="22" />
+                </view>
               </view>
               <view
-                wx:elif="{{canWrite}}"
-                class="row-edit"
-                role="button"
-                aria-label="编辑{{luggageItem.name}}"
+                class="luggage-item__edit-area {{canWrite && !sortEditing ? 'luggage-item__edit-area--editable' : ''}}"
                 data-id="{{luggageItem.id}}"
                 data-group-id="{{group.id}}"
                 data-name="{{luggageItem.name}}"
-                catchtap="openItemEditor"
-              ><app-icon name="pencil" size="21" /></view>
+                role="{{canWrite && !sortEditing ? 'button' : ''}}"
+                aria-label="{{canWrite && !sortEditing ? '编辑' + luggageItem.name : ''}}"
+                bindtap="openItemEditor"
+              >
+                <view class="luggage-item__name {{luggageItem.is_packed ? 'luggage-item__name--packed' : ''}}">{{luggageItem.name}}</view>
+                <view wx:if="{{sortEditing}}" class="sort-actions">
+                  <view
+                    class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}"
+                    role="button"
+                    aria-label="上移{{luggageItem.name}}"
+                    aria-disabled="{{itemIndex === 0}}"
+                    data-group-id="{{group.id}}"
+                    data-index="{{itemIndex}}"
+                    data-direction="-1"
+                    catchtap="handleItemMove"
+                  ><app-icon name="arrow-up" size="22" /></view>
+                  <view
+                    class="sort-icon {{itemIndex === group.visible_items.length - 1 ? 'sort-icon--disabled' : ''}}"
+                    role="button"
+                    aria-label="下移{{luggageItem.name}}"
+                    aria-disabled="{{itemIndex === group.visible_items.length - 1}}"
+                    data-group-id="{{group.id}}"
+                    data-index="{{itemIndex}}"
+                    data-direction="1"
+                    catchtap="handleItemMove"
+                  ><app-icon name="arrow-down" size="22" /></view>
+                </view>
+              </view>
             </view>
             <view wx:if="{{group.visible_items.length === 0}}" class="items-empty">{{group.packing_empty_text}}</view>
             <view
               wx:if="{{canWrite && !sortEditing && packingView === 'unpacked'}}"
               class="item-add-row"
+              role="button"
+              aria-label="向{{group.name}}添加物品"
               data-group-id="{{group.id}}"
               data-group-name="{{group.name}}"
               bindtap="handleAddItem"
@@ -226,14 +277,41 @@
       <view wx:if="{{editorRequired}}" class="editor-hint">必备层级会固定保留，不能删除。</view>
     </view>
     <view slot="actions" class="editor-actions">
-      <view wx:if="{{editorId && !editorRequired}}" class="editor-delete" bindtap="handleEditorDelete">
+      <view wx:if="{{editorId && !editorRequired}}" class="editor-delete" role="button" bindtap="handleEditorDelete">
         <app-icon name="trash-2-danger" size="22" />
         <text>{{editorKind === 'group' ? '删除层级' : '删除物品'}}</text>
       </view>
       <view class="editor-main-actions">
         <button class="dialog-button" disabled="{{saving}}" bindtap="closeEditor">取消</button>
-        <button class="dialog-button dialog-button--primary" loading="{{saving}}" disabled="{{saving}}" bindtap="saveEditor">保存</button>
+        <button class="dialog-button dialog-button--primary" loading="{{saving}}" disabled="{{saving || !editorCanSave}}" bindtap="saveEditor">保存</button>
       </view>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{groupPickerVisible}}"
+    visible="{{true}}"
+    title="选择携带层级"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <scroll-view slot="body" class="group-picker" scroll-y enhanced show-scrollbar="{{false}}">
+      <view
+        wx:for="{{activeScene.groups}}"
+        wx:key="id"
+        class="group-picker__item"
+        role="button"
+        aria-label="添加物品到{{item.name}}"
+        data-group-id="{{item.id}}"
+        data-group-name="{{item.name}}"
+        bindtap="handleGroupPickerSelect"
+      >
+        <text>{{item.name}}</text>
+        <app-icon name="chevron-right" size="23" />
+      </view>
+    </scroll-view>
+    <view slot="actions" class="group-picker__actions">
+      <button class="dialog-button" bindtap="closeGroupPicker">取消</button>
     </view>
   </app-dialog>
 

@@ -16,6 +16,7 @@ Page({
   data: {
     id: "",
     name: "",
+    canSave: false,
     groupCount: 0,
     itemCount: 0,
     loading: true,
@@ -47,6 +48,7 @@ Page({
       if (!scene) throw new Error("场景不存在")
       this.setData({
         name: scene.name,
+        canSave: Boolean(scene.name.trim()),
         groupCount: scene.groups.length,
         itemCount: scene.groups.reduce((total, group) => total + group.items.length, 0)
       })
@@ -62,12 +64,17 @@ Page({
   },
 
   handleNameInput(event: WechatMiniprogram.Input) {
-    this.setData({ name: event.detail.value })
+    const name = event.detail.value
+    this.setData({ name, canSave: Boolean(name.trim()) })
   },
 
   async handleSave() {
     const name = this.data.name.trim()
-    if (!name || this.data.saving || this.data.deleting) return
+    if (!name) {
+      wx.showToast({ title: "请输入场景名称", icon: "none" })
+      return
+    }
+    if (this.data.saving || this.data.deleting) return
     this.setData({ saving: true })
     try {
       if (this.data.id) await updateLuggageScene(this.data.id, name)

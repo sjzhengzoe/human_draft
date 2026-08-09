@@ -8,6 +8,7 @@ import {
   listLuggageScenes,
   moveLuggageGroup,
   moveLuggageItem,
+  reorderLuggageScene,
   swapLuggageGroupSortOrders,
   updateLuggageGroup,
   updateLuggageItem,
@@ -118,6 +119,15 @@ export function registerLuggageRoutes(app, context) {
     );
     return { ok: true, data: { moved: true } };
   });
+
+  app.put("/api/luggage/order", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await reorderLuggageScene(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.body || {},
+    ),
+  }));
 
   app.delete("/api/luggage/items/:id", { preHandler: authenticated }, async (request) => {
     await deleteLuggageItem(getSupabaseAdmin(), request.auth.user.id, request.params.id);
