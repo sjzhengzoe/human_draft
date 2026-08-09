@@ -35,17 +35,20 @@ test("luggage exposes wrapped scene tabs and a reusable local packing flow", asy
   assert.match(logic, /handleSceneTabsToggle/);
 });
 
-test("luggage reset stays white, is icon-only, and clears only local packing progress", async () => {
+test("luggage overview stays light and reset only appears for active packing progress", async () => {
   const [page, styles, logic, icon] = await Promise.all([
     readFile("src/pages/luggage/index.wxml", "utf8"),
     readFile("src/pages/luggage/index.less", "utf8"),
     readFile("src/pages/luggage/index.ts", "utf8"),
-    readFile("src/assets/icons/lucide/rotate-ccw-white.svg", "utf8"),
+    readFile("src/assets/icons/lucide/rotate-ccw.svg", "utf8"),
   ]);
 
-  assert.match(page, /class="packing-reset[^>]*"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw-white"/);
-  assert.match(icon, /stroke="#ffffff"/);
-  assert.doesNotMatch(styles, /\.packing-reset--disabled\s*\{[^}]*opacity/s);
+  assert.doesNotMatch(page, /packing-overview__scene/);
+  assert.match(page, /wx:if="\{\{activePackedCount > 0 && !sortEditing\}\}"[\s\S]*?class="packing-reset"[\s\S]*?aria-label="重新开始当前场景"[\s\S]*?<app-icon name="rotate-ccw"/);
+  assert.match(styles, /\.packing-overview\s*\{[^}]*border:\s*1rpx solid var\(--ui-color-border\)[^}]*background:\s*var\(--ui-color-background-surface\)/s);
+  assert.match(styles, /\.packing-progress__value\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)/s);
+  assert.doesNotMatch(styles, /\.packing-overview\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)/s);
+  assert.match(icon, /stroke="#62625d"/);
   assert.match(page, /title="重新开始收拾"/);
   assert.match(page, /清单内容不会改变/);
   assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);
