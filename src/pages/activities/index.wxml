@@ -158,7 +158,6 @@
         value="{{editorName}}"
         maxlength="120"
         placeholder="活动名称，例如：红花湖骑行"
-        focus
         adjust-position="{{false}}"
         bindinput="handleEditorNameInput"
       />

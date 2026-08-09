@@ -1474,6 +1474,19 @@ test("activity card migration preserves existing rows and adds optional covers",
   assert.doesNotMatch(migration, /drop\s+table\s+public\.activity_items/i);
 });
 
+test("activity introduction backfill only fills blank matching activities", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608090003_activity_introductions.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /with generated_introductions\(activity_type, name, introduction\)/i);
+  assert.match(migration, /红花湖骑行一圈/);
+  assert.match(migration, /拳击/);
+  assert.match(migration, /btrim\(coalesce\(item\.introduction, ''\)\) = ''/i);
+  assert.doesNotMatch(migration, /delete\s+from|drop\s+table|drop\s+column/i);
+});
+
 test("delete routes return a JSON success envelope", async (t) => {
   const media = {
     id: MEDIA_ID,

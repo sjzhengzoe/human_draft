@@ -31,6 +31,10 @@
 
 `supabase/migrations/202608090002_activity_cards.sql`
 
+为现有活动补齐首批一句简介还需要继续执行：
+
+`supabase/migrations/202608090003_activity_introductions.sql`
+
 分季与单集功能还需要继续执行：
 
 `supabase/migrations/202607120005_media_seasons_and_episodes.sql`

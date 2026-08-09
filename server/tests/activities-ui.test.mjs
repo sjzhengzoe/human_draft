@@ -33,6 +33,7 @@ test("activity editor reuses shared dialogs and the 4:3 image cropper", async ()
   assert.match(template, /title="裁剪为 4:3 活动封面"/);
   assert.match(template, /aria-label="新增活动"/);
   assert.match(template, /aria-label="管理\{\{activeType\}\}活动"/);
+  assert.doesNotMatch(template, /^\s+focus\s*$/m);
   assert.doesNotMatch(template, /wx\.showModal/);
   assert.match(config, /"image-cropper": "\/components\/image-cropper\/index"/);
 });
