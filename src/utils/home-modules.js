@@ -9,7 +9,7 @@ const HOME_FEATURE_GROUPS = [
         key: "text-card",
         icon: "notebook-pen",
         title: "图文卡片",
-        image: "/assets/home-modules/text-card-bold.webp",
+        image: "/assets/home-modules/text-card-bold.png",
         path: "/pages/text-card/index",
         available: true,
         requiresLogin: false
@@ -18,7 +18,7 @@ const HOME_FEATURE_GROUPS = [
         key: "menu",
         icon: "cooking-pot",
         title: "我的菜单",
-        image: "/assets/home-modules/menu-bold.webp",
+        image: "/assets/home-modules/menu-bold.png",
         path: "/pages/menu/index",
         available: true,
         requiresLogin: true
@@ -27,7 +27,7 @@ const HOME_FEATURE_GROUPS = [
         key: "media",
         icon: "clapperboard",
         title: "影视片单",
-        image: "/assets/home-modules/media-bold.webp",
+        image: "/assets/home-modules/media-bold.png",
         path: "/pages/media/index",
         available: true,
         requiresLogin: true
@@ -36,7 +36,7 @@ const HOME_FEATURE_GROUPS = [
         key: "activities",
         icon: "sparkles",
         title: "活动清单",
-        image: "/assets/home-modules/activities-bold.webp",
+        image: "/assets/home-modules/activities-bold.png",
         path: "/pages/activities/index",
         available: true,
         requiresLogin: true
@@ -45,7 +45,7 @@ const HOME_FEATURE_GROUPS = [
         key: "chat-topics",
         icon: "messages-square",
         title: "聊天话题",
-        image: "/assets/home-modules/chat-topics-bold.webp",
+        image: "/assets/home-modules/chat-topics-bold.png",
         path: "/pages/chat-topics/index",
         available: true,
         requiresLogin: true
@@ -60,7 +60,7 @@ const HOME_FEATURE_GROUPS = [
         key: "exercise",
         icon: "dumbbell",
         title: "运动养宠",
-        image: "/assets/home-modules/exercise-bold.webp",
+        image: "/assets/home-modules/exercise-bold.png",
         path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
@@ -69,7 +69,7 @@ const HOME_FEATURE_GROUPS = [
         key: "luggage",
         icon: "luggage",
         title: "行李清单",
-        image: "/assets/home-modules/luggage-bold.webp",
+        image: "/assets/home-modules/luggage-bold.png",
         path: "/pages/luggage/index",
         available: true,
         requiresLogin: true
@@ -78,7 +78,7 @@ const HOME_FEATURE_GROUPS = [
         key: "wardrobe",
         icon: "shirt",
         title: "衣物尺寸",
-        image: "/assets/home-modules/wardrobe-bold.webp",
+        image: "/assets/home-modules/wardrobe-bold.png",
         path: "/pages/wardrobe/index",
         available: true,
         requiresLogin: true
@@ -93,7 +93,7 @@ const HOME_FEATURE_GROUPS = [
         key: "key-moments",
         icon: "flag",
         title: "人生节点",
-        image: "/assets/home-modules/key-moments-bold.webp",
+        image: "/assets/home-modules/key-moments-bold.png",
         path: "/pages/key-moments/index",
         available: true,
         requiresLogin: true
@@ -102,7 +102,7 @@ const HOME_FEATURE_GROUPS = [
         key: "footprint",
         icon: "map-pinned",
         title: "全国足迹",
-        image: "/assets/home-modules/footprint-bold.webp",
+        image: "/assets/home-modules/footprint-bold.png",
         path: "/pages/footprint/index",
         available: true,
         requiresLogin: false

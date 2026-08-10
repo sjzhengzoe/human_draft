@@ -45,7 +45,12 @@
   "libVersion": "2.32.3",
   "packOptions": {
     "ignore": [],
-    "include": []
+    "include": [
+      {
+        "type": "folder",
+        "value": "assets/home-modules"
+      }
+    ]
   },
   "appid": "wxf9409ef0e40bd802"
 }

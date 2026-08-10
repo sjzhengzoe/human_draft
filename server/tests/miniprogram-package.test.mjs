@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdir, stat } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -43,5 +43,29 @@ test("bundled image and audio stay within the 200 KB quality limit", async () =>
     totalMediaAssetSize <= maxMediaAssetSize,
     true,
     `bundled media totals ${totalMediaAssetSize} bytes`,
+  );
+});
+
+test("dynamic home module images are PNG files explicitly included in uploads", async () => {
+  const projectConfig = JSON.parse(
+    await readFile(path.join(projectRoot, "project.config.json"), "utf8"),
+  );
+  const moduleSource = await readFile(
+    path.join(sourceRoot, "utils/home-modules.js"),
+    "utf8",
+  );
+  const imagePaths = [...moduleSource.matchAll(/image: "(\/assets\/home-modules\/[^"]+)"/g)]
+    .map((match) => match[1]);
+
+  assert.equal(imagePaths.length, 10);
+  assert.equal(imagePaths.every((imagePath) => imagePath.endsWith(".png")), true);
+  assert.equal(
+    projectConfig.packOptions.include.some(
+      (item) => item.type === "folder" && item.value === "assets/home-modules",
+    ),
+    true,
+  );
+  await Promise.all(
+    imagePaths.map((imagePath) => access(path.join(sourceRoot, imagePath.slice(1)))),
   );
 });
