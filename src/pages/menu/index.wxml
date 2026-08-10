@@ -49,9 +49,12 @@
       </view>
       <scroll-view wx:if="{{favorites.length}}" class="favorite-strip__scroll" scroll-x enhanced show-scrollbar="{{false}}">
         <view class="favorite-strip__list">
-          <view wx:for="{{favorites}}" wx:key="id" class="favorite-item" data-source-kind="{{item.source_kind}}" data-id="{{item.dish_id || item.place_id}}" bindtap="handleFavoriteQuickTap">
-            <image wx:if="{{item.image_url}}" class="favorite-item__image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
-            <view wx:else class="favorite-item__image favorite-item__image--empty">无图</view>
+          <view wx:for="{{favorites}}" wx:key="id" class="favorite-item {{item.selected ? 'favorite-item--selected' : ''}}" role="button" aria-label="{{item.selected ? '取消选择' : '选择'}}{{item.name}}" data-source-kind="{{item.source_kind}}" data-id="{{item.dish_id || item.place_id}}" bindtap="handleFavoriteQuickTap">
+            <view class="favorite-item__image-wrap {{item.selected ? 'favorite-item__image-wrap--selected' : ''}}">
+              <image wx:if="{{item.image_url}}" class="favorite-item__image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
+              <view wx:else class="favorite-item__image favorite-item__image--empty">无图</view>
+              <view wx:if="{{item.selected}}" class="favorite-item__selected">已选</view>
+            </view>
             <view class="favorite-item__name">{{item.name}}</view>
           </view>
         </view>

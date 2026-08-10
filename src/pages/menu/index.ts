@@ -96,6 +96,10 @@ type SelectionItem = {
   image_url: string
 }
 
+type SelectableFavorite = MenuFavorite & {
+  selected: boolean
+}
+
 type CachedMenuContent = {
   revision: number
   cachedAt: number
@@ -242,6 +246,13 @@ function selectionKey(sourceKind: MenuScheduleSourceKind, id: string | null): st
   return `${sourceKind}:${id || ""}`
 }
 
+function toSelectableFavorite(favorite: MenuFavorite): SelectableFavorite {
+  return {
+    ...favorite,
+    selected: false
+  }
+}
+
 function selectionFromDish(dish: Dish | MenuPlaceDishPreview, placeId: string | null = null): SelectionItem {
   const fullDish = dish as Dish
   const resolvedPlaceId = placeId || fullDish.place_id || null
@@ -337,7 +348,7 @@ Page({
     selectionSlotCount: 3,
     selectionLoaded: false,
     selectedItems: [] as SelectionItem[],
-    favorites: [] as MenuFavorite[],
+    favorites: [] as SelectableFavorite[],
     showBasketDialog: false,
     savingSelection: false
   },
@@ -389,7 +400,7 @@ Page({
 
   async loadSelectionContext() {
     try {
-      const favorites = await listMenuFavorites()
+      const favorites = (await listMenuFavorites()).map(toSelectableFavorite)
       if (!isAsyncPageActive(this)) return
       if (this.data.selectionPurpose === "favorites") {
         this.setData({
@@ -439,6 +450,13 @@ Page({
           ...dish,
           selected: selected.has(selectionKey("dish", dish.id))
         }))
+      })),
+      favorites: this.data.favorites.map((favorite) => ({
+        ...favorite,
+        selected: selected.has(selectionKey(
+          favorite.source_kind,
+          favorite.source_kind === "dish" ? favorite.dish_id : favorite.place_id
+        ))
       }))
     })
   },

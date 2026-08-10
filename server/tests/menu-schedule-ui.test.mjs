@@ -14,10 +14,13 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
   assert.match(page, /wx:if="\{\{displayMode === 'quick' && !selectionMode\}\}" class="menu-toolbar"/);
   assert.match(page, /placeholder="\{\{activeRecordType === 'outside' \? '搜索店铺或店内菜品' : '搜索全部在家菜品'\}\}"/);
   assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
+  assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
+  assert.match(page, /wx:if="\{\{item\.selected\}\}" class="favorite-item__selected">已选</);
   assert.match(page, /class="selection-basket"/);
   assert.match(page, /<app-dialog[\s\S]*class="basket-grid"[\s\S]*trash-2-danger/);
   assert.match(logic, /query\.mode === "select" \|\| query\.mode === "favorites"/);
   assert.match(logic, /replaceMenuScheduleMeal\(/);
+  assert.match(logic, /favorites: this\.data\.favorites\.map\(\(favorite\) => \(\{/);
 });
 
 test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {
