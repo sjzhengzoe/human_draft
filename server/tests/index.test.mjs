@@ -94,6 +94,11 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    lte(field, value) {
+      this.rows = this.rows.filter((row) => row[field] <= value);
+      return this;
+    }
+
     lt(field, value) {
       this.rows = this.rows.filter((row) => row[field] < value);
       return this;
@@ -616,6 +621,69 @@ test("menu overview combines metadata, permissions, and initial content", async 
     filteredOutsideOverview.outside_places.map((place) => place.name),
     ["街角面馆"],
   );
+});
+
+test("menu schedule lists dated meals and ranks outside dishes by their store", async (t) => {
+  const firstMealId = "40000000-0000-4000-8000-000000000001";
+  const secondMealId = "40000000-0000-4000-8000-000000000002";
+  const homeDishId = "40000000-0000-4000-8000-000000000003";
+  const outsideDishId = "40000000-0000-4000-8000-000000000004";
+  const storeId = "40000000-0000-4000-8000-000000000005";
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        menu_schedule_meals: [
+          { id: firstMealId, user_id: USER_ID, meal_date: "2026-08-03", meal_period: "lunch", slot_count: 3 },
+          { id: secondMealId, user_id: USER_ID, meal_date: "2026-08-04", meal_period: "dinner", slot_count: 3 },
+        ],
+        menu_schedule_items: [
+          { id: "41000000-0000-4000-8000-000000000001", user_id: USER_ID, meal_id: firstMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
+          { id: "41000000-0000-4000-8000-000000000002", user_id: USER_ID, meal_id: firstMealId, source_kind: "dish", record_type: "outside", dish_id: outsideDishId, place_id: storeId, snapshot_name: "牛肉面", snapshot_place_name: "街角面馆", snapshot_image_path: "noodle.webp", position: 1 },
+          { id: "41000000-0000-4000-8000-000000000003", user_id: USER_ID, meal_id: firstMealId, source_kind: "place", record_type: "outside", dish_id: null, place_id: storeId, snapshot_name: "街角面馆", snapshot_place_name: "街角面馆", snapshot_image_path: "store.webp", position: 2 },
+          { id: "41000000-0000-4000-8000-000000000004", user_id: USER_ID, meal_id: secondMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
+        ],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const scheduleResponse = await app.inject({
+    method: "GET",
+    url: "/api/menu-schedule?start=2026-08-03&end=2026-08-09",
+    headers: authHeaders,
+  });
+  assert.equal(scheduleResponse.statusCode, 200);
+  assert.equal(scheduleResponse.json().data.meals.length, 2);
+  assert.equal(scheduleResponse.json().data.meals[0].items.length, 3);
+
+  const rankingResponse = await app.inject({
+    method: "GET",
+    url: "/api/menu-ranking?start=2026-08-03&end=2026-08-09",
+    headers: authHeaders,
+  });
+  assert.equal(rankingResponse.statusCode, 200);
+  assert.deepEqual(
+    rankingResponse.json().data.items.map((item) => ({ name: item.name, type: item.type, count: item.count })),
+    [
+      { name: "番茄炒鸡蛋", type: "dish", count: 2 },
+      { name: "街角面馆", type: "place", count: 1 },
+    ],
+  );
+});
+
+test("menu schedule migration adds isolated history tables without rewriting legacy menu rows", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608100001_menu_schedule.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /create table if not exists public\.menu_schedule_meals/i);
+  assert.match(migration, /create table if not exists public\.menu_schedule_items/i);
+  assert.match(migration, /create table if not exists public\.menu_favorites/i);
+  assert.match(migration, /unique \(user_id, meal_date, meal_period\)/i);
+  assert.match(migration, /replace_menu_schedule_meal\(/i);
+  assert.match(migration, /alter table public\.menu_schedule_meals enable row level security/i);
+  assert.doesNotMatch(migration, /delete from public\.dishes|drop table public\.dishes/i);
 });
 
 test("menu places expose stores first and their linked dishes separately", async (t) => {

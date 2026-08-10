@@ -1,0 +1,20 @@
+page, .page, .add-favorite { font-family: "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+page { background: var(--ui-color-background-page); }
+.page { min-height: 100vh; box-sizing: border-box; padding: 24rpx var(--ui-page-gutter) calc(40rpx + env(safe-area-inset-bottom)); }
+.favorites-header { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-bottom: 22rpx; }
+.favorites-title { color: var(--ui-color-text-primary); font-size: var(--ui-font-size-large); font-weight: 750; }
+.favorites-hint { margin-top: 6rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-small); }
+.add-favorite { display: flex; width: auto !important; min-height: 62rpx; flex: none; align-items: center; gap: 8rpx; margin: 0 !important; padding: 0 22rpx; border-radius: 999rpx; background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); font-size: var(--ui-font-size-base); line-height: normal; }
+.add-favorite::after { border: 0; }
+.favorite-list { overflow: hidden; border: 1rpx solid var(--ui-color-border); border-radius: 24rpx; background: var(--ui-color-background-surface); }
+.favorite-row { display: flex; min-height: 112rpx; align-items: center; gap: 16rpx; padding: 14rpx 18rpx; border-top: 1rpx solid var(--ui-color-border); }
+.favorite-row:first-child { border-top: 0; }
+.favorite-image { width: 82rpx; height: 82rpx; flex: none; border-radius: 15rpx; background: var(--ui-color-background-subtle); }
+.favorite-image--empty { display: flex; align-items: center; justify-content: center; color: var(--ui-color-text-placeholder); font-size: var(--ui-font-size-small); }
+.favorite-copy { min-width: 0; flex: 1; }
+.favorite-name { overflow: hidden; color: var(--ui-color-text-primary); font-size: var(--ui-font-size-base); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.favorite-type { margin-top: 6rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-small); }
+.favorite-actions { display: flex; gap: 2rpx; }
+.favorite-action { display: flex; width: 56rpx; height: 56rpx; align-items: center; justify-content: center; }
+.favorite-action--disabled { opacity: .28; }
+.state { padding: 160rpx 30rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-base); line-height: 1.6; text-align: center; }

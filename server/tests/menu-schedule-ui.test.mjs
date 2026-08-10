@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+
+test("menu exposes one shared weekly-menu entry and a searchable selection mode", async () => {
+  const [page, logic] = await Promise.all([
+    read("src/pages/menu/index.wxml"),
+    read("src/pages/menu/index.ts"),
+  ]);
+  assert.match(page, />本周菜单</);
+  assert.doesNotMatch(page, />随机菜单</);
+  assert.match(page, /wx:if="\{\{displayMode === 'quick' && !selectionMode\}\}" class="menu-toolbar"/);
+  assert.match(page, /placeholder="\{\{activeRecordType === 'outside' \? '搜索店铺或店内菜品' : '搜索全部在家菜品'\}\}"/);
+  assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
+  assert.match(page, /class="selection-basket"/);
+  assert.match(page, /<app-dialog[\s\S]*class="basket-grid"[\s\S]*trash-2-danger/);
+  assert.match(logic, /query\.mode === "select" \|\| query\.mode === "favorites"/);
+  assert.match(logic, /replaceMenuScheduleMeal\(/);
+});
+
+test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {
+  const [page, logic] = await Promise.all([
+    read("src/pages/menu/day-plan/index.wxml"),
+    read("src/pages/menu/day-plan/index.ts"),
+  ]);
+  assert.match(page, /custom-navigation title="本周菜单"/);
+  assert.match(page, /\['day', 'week', 'month', 'year'\]/);
+  assert.match(page, />随机菜单</);
+  assert.match(page, /activeMode === 'week'/);
+  assert.match(page, /activeMode === 'month'/);
+  assert.match(page, /class="year-grid"/);
+  assert.match(page, /bindtap="handleRanking"/);
+  assert.match(logic, /slot_count \|\| DEFAULT_SLOT_COUNT/);
+  assert.match(logic, /if \(slot\.locked && slot\.item\)/);
+});
+
+test("ranking mixes dishes and stores while the server caps statistics at today", async () => {
+  const [page, logic] = await Promise.all([
+    read("src/pages/menu/ranking/index.wxml"),
+    read("server/domains/menu/schedule.mjs"),
+  ]);
+  assert.match(page, /item\.type === 'place' \? '店铺' : '菜品'/);
+  assert.doesNotMatch(page, /菜品排行|店铺排行/);
+  assert.match(logic, /const effectiveEnd = range\.end < today \? range\.end : today/);
+  assert.match(logic, /seenInMeal\.has\(key\)/);
+  assert.match(logic, /item\.record_type === "outside" \|\| item\.source_kind === "place"/);
+});

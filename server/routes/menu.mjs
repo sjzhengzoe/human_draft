@@ -22,6 +22,13 @@ import {
   updateMenuPlace
 } from "../domains/menu/places.mjs"
 import { getMenuOverview } from "../domains/menu/overview.mjs"
+import {
+  getMenuRanking,
+  listMenuFavorites,
+  listMenuSchedule,
+  replaceMenuFavorites,
+  replaceMenuScheduleMeal
+} from "../domains/menu/schedule.mjs"
 
 export function registerMenuRoutes(app, context) {
   const { authenticated, contentSecurity, getSupabaseAdmin } = context
@@ -35,6 +42,51 @@ export function registerMenuRoutes(app, context) {
         request.query || {}
       ),
       can_write: request.auth.user.can_write
+    }
+  }))
+
+  app.get("/api/menu-schedule", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await listMenuSchedule(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.query || {}
+    )
+  }))
+
+  app.put("/api/menu-schedule/meal", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      meal: await replaceMenuScheduleMeal(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.body || {}
+      )
+    }
+  }))
+
+  app.get("/api/menu-ranking", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: await getMenuRanking(
+      getSupabaseAdmin(),
+      request.auth.user.id,
+      request.query || {}
+    )
+  }))
+
+  app.get("/api/menu-favorites", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: { items: await listMenuFavorites(getSupabaseAdmin(), request.auth.user.id) }
+  }))
+
+  app.put("/api/menu-favorites", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      items: await replaceMenuFavorites(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.body || {}
+      )
     }
   }))
 

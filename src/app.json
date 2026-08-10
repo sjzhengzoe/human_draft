@@ -7,6 +7,8 @@
     "pages/menu/place/index",
     "pages/menu/place-edit/index",
     "pages/menu/day-plan/index",
+    "pages/menu/ranking/index",
+    "pages/menu/favorites/index",
     "pages/menu/print/index",
     "pages/media/index",
     "pages/media/edit/index",

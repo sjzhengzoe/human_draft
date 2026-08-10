@@ -3,8 +3,13 @@ import type {
   Dish,
   DishListParams,
   MealPeriod,
+  MenuFavorite,
   MenuPlace,
-  MenuRecordType
+  MenuRankingItem,
+  MenuRecordType,
+  MenuScheduleItem,
+  MenuScheduleMeal,
+  MenuScheduleSourceKind
 } from "../types/api"
 import type { DiningScene } from "../types/dining"
 import { getCurrentUser } from "./auth"
@@ -182,6 +187,92 @@ export async function listDishes(params: DishListParams): Promise<Dish[]> {
     path: `/api/dishes${toQuery(params)}`
   })
   return Array.isArray(data.items) ? data.items.map(normalizeDish) : []
+}
+
+export async function getMenuScheduleRange(
+  start: string,
+  end: string
+): Promise<{ start: string; end: string; meals: MenuScheduleMeal[] }> {
+  const data = await request<{
+    start: string
+    end: string
+    meals: MenuScheduleMeal[]
+  }>({ path: `/api/menu-schedule${toQuery({ start, end })}` })
+  return {
+    start: data.start,
+    end: data.end,
+    meals: Array.isArray(data.meals) ? data.meals : []
+  }
+}
+
+export async function replaceMenuScheduleMeal(input: {
+  mealDate: string
+  mealPeriod: MealPeriod
+  slotCount: number
+  items: Array<{
+    source_kind: MenuScheduleSourceKind
+    dish_id?: string
+    place_id?: string
+  }>
+}): Promise<MenuScheduleMeal> {
+  const data = await request<{ meal: MenuScheduleMeal }>({
+    path: "/api/menu-schedule/meal",
+    method: "PUT",
+    data: {
+      meal_date: input.mealDate,
+      meal_period: input.mealPeriod,
+      slot_count: input.slotCount,
+      items: input.items
+    }
+  })
+  return data.meal
+}
+
+export async function getMenuRanking(
+  start: string,
+  end: string
+): Promise<{
+  start: string
+  end: string
+  effective_end: string
+  items: MenuRankingItem[]
+}> {
+  const data = await request<{
+    start: string
+    end: string
+    effective_end: string
+    items: MenuRankingItem[]
+  }>({ path: `/api/menu-ranking${toQuery({ start, end })}` })
+  return {
+    ...data,
+    items: Array.isArray(data.items) ? data.items : []
+  }
+}
+
+export async function listMenuFavorites(): Promise<MenuFavorite[]> {
+  const data = await request<{ items: MenuFavorite[] }>({ path: "/api/menu-favorites" })
+  return Array.isArray(data.items) ? data.items : []
+}
+
+export async function replaceMenuFavorites(items: Array<{
+  source_kind: MenuScheduleSourceKind
+  dish_id?: string
+  place_id?: string
+}>): Promise<MenuFavorite[]> {
+  const data = await request<{ items: MenuFavorite[] }>({
+    path: "/api/menu-favorites",
+    method: "PUT",
+    data: { items }
+  })
+  return Array.isArray(data.items) ? data.items : []
+}
+
+export function scheduleItemSelectionKey(item: Pick<
+MenuScheduleItem,
+"source_kind" | "dish_id" | "place_id"
+>): string {
+  const id = item.source_kind === "dish" ? item.dish_id : item.place_id
+  return `${item.source_kind}:${id || ""}`
 }
 
 export async function getDish(id: string): Promise<Dish> {

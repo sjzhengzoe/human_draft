@@ -1,7 +1,11 @@
 import {
   getMenuOverview,
+  getMenuScheduleRange,
+  listMenuFavorites,
   listDishes,
   listMenuPlaces,
+  replaceMenuFavorites,
+  replaceMenuScheduleMeal,
   reorderDishSortOrders,
   reorderMenuPlaceSortOrders
 } from "../../services/menu"
@@ -9,8 +13,11 @@ import type {
   Category,
   Dish,
   MealPeriod,
+  MenuFavorite,
   MenuPlace,
-  MenuPlaceDishPreview
+  MenuPlaceDishPreview,
+  MenuScheduleItem,
+  MenuScheduleSourceKind
 } from "../../types/api"
 import type { DiningScene } from "../../types/dining"
 import {
@@ -40,6 +47,8 @@ let dragInsertAfter = false
 let sortOriginalIds: string[] = []
 let outsideSortOriginalIds = new Map<string, string[]>()
 let outsidePlaceOriginalIds: string[] = []
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+let searchRequestId = 0
 
 type MealPeriodTag = {
   key: MealPeriod
@@ -59,18 +68,32 @@ type MenuDish = Dish & {
   recordTypeLabel: string
   displayCategory: string
   tasteTags: string[]
+  selected: boolean
 }
 
 type QuickOutsideDish = MenuPlaceDishPreview & {
   mainIngredientText: string
   cookingMethodText: string
   tasteText: string
+  selected: boolean
 }
 
 type QuickMenuPlace = Omit<MenuPlace, "dishes" | "preview_dishes"> & {
   browseVisible: boolean
   dishes: QuickOutsideDish[]
   preview_dishes: QuickOutsideDish[]
+  selected: boolean
+}
+
+type SelectionItem = {
+  key: string
+  source_kind: MenuScheduleSourceKind
+  record_type: "home" | "outside"
+  dish_id: string | null
+  place_id: string | null
+  name: string
+  place_name: string
+  image_url: string
 }
 
 type CachedMenuContent = {
@@ -134,7 +157,8 @@ function toMenuDish(dish: Dish): MenuDish {
       .join("、"),
     mainIngredientText: dish.main_ingredients.slice(0, 3).join("、"),
     cookingMethodText: cookingMethods.join("、"),
-    tasteText: tasteTags.join("、")
+    tasteText: tasteTags.join("、"),
+    selected: false
   }
 }
 
@@ -144,7 +168,8 @@ function toQuickOutsideDish(dish: MenuPlaceDishPreview): QuickOutsideDish {
     ...dish,
     mainIngredientText: dish.main_ingredients.slice(0, 3).join("、"),
     cookingMethodText: cookingMethods.join("、"),
-    tasteText: normalizeTasteTags(dish.taste).join("、")
+    tasteText: normalizeTasteTags(dish.taste).join("、"),
+    selected: false
   }
 }
 
@@ -153,7 +178,8 @@ function toQuickMenuPlace(place: MenuPlace): QuickMenuPlace {
     ...place,
     browseVisible: false,
     dishes: place.dishes.map(toQuickOutsideDish),
-    preview_dishes: place.preview_dishes.map(toQuickOutsideDish)
+    preview_dishes: place.preview_dishes.map(toQuickOutsideDish),
+    selected: false
   }
 }
 
@@ -212,6 +238,65 @@ function resetDragSession(): void {
   dragInsertAfter = false
 }
 
+function selectionKey(sourceKind: MenuScheduleSourceKind, id: string | null): string {
+  return `${sourceKind}:${id || ""}`
+}
+
+function selectionFromDish(dish: Dish | MenuPlaceDishPreview, placeId: string | null = null): SelectionItem {
+  const fullDish = dish as Dish
+  const resolvedPlaceId = placeId || fullDish.place_id || null
+  const recordType = fullDish.record_type || (resolvedPlaceId ? "outside" : "home")
+  return {
+    key: selectionKey("dish", dish.id),
+    source_kind: "dish",
+    record_type: recordType,
+    dish_id: dish.id,
+    place_id: resolvedPlaceId,
+    name: dish.name,
+    place_name: "",
+    image_url: dish.thumbnail_url || dish.image_url || ""
+  }
+}
+
+function selectionFromPlace(place: QuickMenuPlace): SelectionItem {
+  return {
+    key: selectionKey("place", place.id),
+    source_kind: "place",
+    record_type: "outside",
+    dish_id: null,
+    place_id: place.id,
+    name: place.name,
+    place_name: place.name,
+    image_url: place.thumbnail_url || place.image_url || ""
+  }
+}
+
+function selectionFromScheduleItem(item: MenuScheduleItem): SelectionItem {
+  return {
+    key: selectionKey(item.source_kind, item.source_kind === "dish" ? item.dish_id : item.place_id),
+    source_kind: item.source_kind,
+    record_type: item.record_type,
+    dish_id: item.dish_id,
+    place_id: item.place_id,
+    name: item.name,
+    place_name: item.place_name,
+    image_url: item.image_url
+  }
+}
+
+function selectionFromFavorite(item: MenuFavorite): SelectionItem {
+  return {
+    key: selectionKey(item.source_kind, item.source_kind === "dish" ? item.dish_id : item.place_id),
+    source_kind: item.source_kind,
+    record_type: item.record_type,
+    dish_id: item.dish_id,
+    place_id: item.place_id,
+    name: item.name,
+    place_name: item.source_kind === "place" ? item.name : "",
+    image_url: item.image_url
+  }
+}
+
 Page({
   data: {
     categories: [] as Category[],
@@ -241,11 +326,47 @@ Page({
     metadataLoaded: false,
     loadedRevision: -1,
     lastLoadedAt: 0,
-    errorMessage: ""
+    errorMessage: "",
+    searchKeyword: "",
+    searching: false,
+    selectionMode: false,
+    selectionPurpose: "meal" as "meal" | "favorites",
+    selectionDate: "",
+    selectionPeriod: "lunch" as MealPeriod,
+    selectionTitle: "选择菜品",
+    selectionSlotCount: 3,
+    selectionLoaded: false,
+    selectedItems: [] as SelectionItem[],
+    favorites: [] as MenuFavorite[],
+    showBasketDialog: false,
+    savingSelection: false
+  },
+
+  onLoad(query: Record<string, string | undefined>) {
+    const selectionMode = query.mode === "select" || query.mode === "favorites"
+    if (!selectionMode) return
+    const selectionPurpose = query.mode === "favorites" ? "favorites" : "meal"
+    const selectionPeriod = ["breakfast", "lunch", "afternoon_tea", "dinner"].includes(query.period || "")
+      ? query.period as MealPeriod
+      : "lunch"
+    const selectionDate = /^\d{4}-\d{2}-\d{2}$/.test(query.date || "") ? query.date || "" : ""
+    this.setData({
+      selectionMode: true,
+      selectionPurpose,
+      selectionPeriod,
+      selectionDate,
+      selectionTitle: selectionPurpose === "favorites"
+        ? "选择常吃"
+        : `选择${MEAL_PERIOD_TEXT[selectionPeriod]}`,
+      displayMode: "quick"
+    })
   },
 
   onShow() {
     activateAsyncPage(this)
+    if (this.data.selectionMode && !this.data.selectionLoaded) {
+      this.loadSelectionContext()
+    }
     const revisionChanged = this.data.loadedRevision !== getMenuDataRevision()
     const cacheExpired = Date.now() - this.data.lastLoadedAt > MENU_CACHE_MAX_AGE_MS
     if (!this.data.metadataLoaded || revisionChanged || cacheExpired) {
@@ -261,6 +382,65 @@ Page({
     outsideSortOriginalIds.clear()
     outsidePlaceOriginalIds = []
     menuContentCache.clear()
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = null
+    searchRequestId += 1
+  },
+
+  async loadSelectionContext() {
+    try {
+      const favorites = await listMenuFavorites()
+      if (!isAsyncPageActive(this)) return
+      if (this.data.selectionPurpose === "favorites") {
+        this.setData({
+          favorites,
+          selectedItems: favorites.map(selectionFromFavorite),
+          selectionLoaded: true
+        }, () => this.applySelectionMarks())
+        return
+      }
+      if (!this.data.selectionDate) {
+        this.setData({ favorites, selectionLoaded: true })
+        return
+      }
+      const schedule = await getMenuScheduleRange(this.data.selectionDate, this.data.selectionDate)
+      if (!isAsyncPageActive(this)) return
+      const meal = schedule.meals.find((item) => item.meal_period === this.data.selectionPeriod)
+      this.setData({
+        favorites,
+        selectedItems: (meal?.items || []).map(selectionFromScheduleItem),
+        selectionSlotCount: meal?.slot_count || 3,
+        selectionLoaded: true
+      }, () => this.applySelectionMarks())
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "已选菜单加载失败", icon: "none" })
+        this.setData({ selectionLoaded: true })
+      }
+    }
+  },
+
+  applySelectionMarks() {
+    if (!this.data.selectionMode) return
+    const selected = new Set(this.data.selectedItems.map((item) => item.key))
+    this.setData({
+      dishes: this.data.dishes.map((dish) => ({
+        ...dish,
+        selected: selected.has(selectionKey("dish", dish.id))
+      })),
+      outsidePlaces: this.data.outsidePlaces.map((place) => ({
+        ...place,
+        selected: selected.has(selectionKey("place", place.id)),
+        dishes: place.dishes.map((dish) => ({
+          ...dish,
+          selected: selected.has(selectionKey("dish", dish.id))
+        })),
+        preview_dishes: place.preview_dishes.map((dish) => ({
+          ...dish,
+          selected: selected.has(selectionKey("dish", dish.id))
+        }))
+      }))
+    })
   },
 
   async refreshData(reloadMetadata: boolean, allowCache = false) {
@@ -299,7 +479,7 @@ Page({
           loadedRevision: currentRevision,
           lastLoadedAt: cached.cachedAt,
           errorMessage: ""
-        })
+        }, () => this.applySelectionMarks())
         return
       }
     }
@@ -404,7 +584,7 @@ Page({
           metadataLoaded: true
         })
       }
-      this.setData(dataPatch)
+      this.setData(dataPatch, () => this.applySelectionMarks())
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const message = error instanceof Error ? error.message : "菜单加载失败"
@@ -417,6 +597,127 @@ Page({
     }
   },
 
+  handleSearchInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const searchKeyword = String(event.detail.value || "").trim()
+    this.setData({ searchKeyword })
+    if (searchTimer) clearTimeout(searchTimer)
+    if (!searchKeyword) {
+      this.setData({ searching: false }, () => this.refreshData(false, true))
+      return
+    }
+    searchTimer = setTimeout(() => this.performSearch(searchKeyword), 260)
+  },
+
+  async performSearch(keyword: string) {
+    const requestId = ++searchRequestId
+    const recordType = this.data.activeRecordType
+    this.setData({ searching: true, contentLoading: true, errorMessage: "" })
+    try {
+      if (recordType === "outside") {
+        const places = await listMenuPlaces({ place_type: "outside" })
+        if (requestId !== searchRequestId || keyword !== this.data.searchKeyword) return
+        const normalized = keyword.toLocaleLowerCase()
+        const matches = places.flatMap((place) => {
+          const placeMatches = place.name.toLocaleLowerCase().includes(normalized)
+          const matchingDishes = place.dishes.filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
+          if (!placeMatches && !matchingDishes.length) return []
+          return [{
+            ...place,
+            dishes: placeMatches ? place.dishes : matchingDishes,
+            preview_dishes: placeMatches ? place.preview_dishes : matchingDishes.slice(0, 5)
+          }]
+        })
+        this.setData({
+          dishes: [],
+          outsidePlaces: matches.map(toQuickMenuPlace),
+          browseCurrentIndex: 0
+        }, () => this.applySelectionMarks())
+      } else {
+        const dishes = await listDishes({ record_type: "home", sort: "custom", page_size: 100 })
+        if (requestId !== searchRequestId || keyword !== this.data.searchKeyword) return
+        const normalized = keyword.toLocaleLowerCase()
+        this.setData({
+          dishes: dishes.filter((dish) => dish.name.toLocaleLowerCase().includes(normalized)).map(toMenuDish),
+          outsidePlaces: [],
+          browseCurrentIndex: 0
+        }, () => this.applySelectionMarks())
+      }
+    } catch (error) {
+      if (requestId === searchRequestId && isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "搜索失败", icon: "none" })
+      }
+    } finally {
+      if (requestId === searchRequestId && isAsyncPageActive(this)) {
+        this.setData({ searching: false, contentLoading: false })
+      }
+    }
+  },
+
+  toggleSelection(item: SelectionItem) {
+    const exists = this.data.selectedItems.some((selected) => selected.key === item.key)
+    const selectedItems = exists
+      ? this.data.selectedItems.filter((selected) => selected.key !== item.key)
+      : [...this.data.selectedItems, item]
+    this.setData({ selectedItems }, () => this.applySelectionMarks())
+  },
+
+  handleFavoriteQuickTap(event: WechatMiniprogram.TouchEvent) {
+    const sourceKind = String(event.currentTarget.dataset.sourceKind || "") as MenuScheduleSourceKind
+    const id = String(event.currentTarget.dataset.id || "")
+    const key = selectionKey(sourceKind, id)
+    const favorite = this.data.favorites.find((item) =>
+      selectionKey(item.source_kind, item.source_kind === "dish" ? item.dish_id : item.place_id) === key
+    )
+    if (favorite) this.toggleSelection(selectionFromFavorite(favorite))
+  },
+
+  handleBasketOpen() {
+    this.setData({ showBasketDialog: true })
+  },
+
+  handleBasketCancel() {
+    this.setData({ showBasketDialog: false })
+  },
+
+  handleBasketRemove(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || "")
+    this.setData({
+      selectedItems: this.data.selectedItems.filter((item) => item.key !== key)
+    }, () => this.applySelectionMarks())
+  },
+
+  handleFavoritesManage() {
+    wx.navigateTo({ url: "/pages/menu/favorites/index" })
+  },
+
+  async handleSelectionSave() {
+    if (this.data.savingSelection) return
+    this.setData({ savingSelection: true })
+    const items = this.data.selectedItems.map((item) => item.source_kind === "dish"
+      ? { source_kind: "dish" as const, dish_id: item.dish_id || undefined }
+      : { source_kind: "place" as const, place_id: item.place_id || undefined })
+    try {
+      if (this.data.selectionPurpose === "favorites") {
+        await replaceMenuFavorites(items)
+      } else {
+        await replaceMenuScheduleMeal({
+          mealDate: this.data.selectionDate,
+          mealPeriod: this.data.selectionPeriod,
+          slotCount: Math.max(1, this.data.selectionSlotCount, items.length),
+          items
+        })
+      }
+      if (!isAsyncPageActive(this)) return
+      this.setData({ showBasketDialog: false })
+      wx.showToast({ title: "已保存", icon: "success" })
+      wx.navigateBack()
+    } catch (error) {
+      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ savingSelection: false })
+    }
+  },
+
   handleFilterTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
@@ -425,9 +726,13 @@ Page({
     }
     const filter = String(event.currentTarget.dataset.filter || "all")
     if (filter === this.data.activeFilter) return
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = null
+    searchRequestId += 1
     this.setData({
       activeFilter: filter,
       activeRecordType: recordTypeFromFilter(filter),
+      searchKeyword: "",
       browseCurrentIndex: 0,
       sortEditing: false,
       contentLoading: true,
@@ -449,9 +754,13 @@ Page({
       this.data.categories
     )
     if (filter === this.data.activeFilter) return
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = null
+    searchRequestId += 1
     this.setData({
       activeFilter: filter,
       activeRecordType: recordType,
+      searchKeyword: "",
       browseCurrentIndex: 0,
       sortEditing: false,
       contentLoading: true,
@@ -468,6 +777,13 @@ Page({
     const displayMode = String(event.currentTarget.dataset.mode || "quick") as DisplayMode
     if (displayMode !== "quick" && displayMode !== "browse") return
     if (displayMode === this.data.displayMode) return
+    if (displayMode === "browse" && this.data.searchKeyword) {
+      if (searchTimer) clearTimeout(searchTimer)
+      searchTimer = null
+      searchRequestId += 1
+      this.setData({ displayMode, searchKeyword: "" }, () => this.refreshData(false, true))
+      return
+    }
     if (displayMode === "quick") {
       this.setData({ displayMode })
       return
@@ -609,6 +925,21 @@ Page({
       return
     }
     const id = String(event.currentTarget.dataset.id || "")
+    if (this.data.selectionMode) {
+      const homeDish = this.data.dishes.find((dish) => dish.id === id)
+      if (homeDish) {
+        this.toggleSelection(selectionFromDish(homeDish))
+        return
+      }
+      for (const place of this.data.outsidePlaces) {
+        const outsideDish = place.dishes.find((dish) => dish.id === id)
+        if (outsideDish) {
+          this.toggleSelection(selectionFromDish(outsideDish, place.id))
+          return
+        }
+      }
+      return
+    }
     if (id) wx.navigateTo({ url: `/pages/menu/edit/index?id=${id}` })
   },
 
@@ -648,6 +979,11 @@ Page({
   handlePlaceTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.sortEditing || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
+    if (this.data.selectionMode) {
+      const place = this.data.outsidePlaces.find((item) => item.id === id)
+      if (place) this.toggleSelection(selectionFromPlace(place))
+      return
+    }
     if (id) wx.navigateTo({ url: `/pages/menu/place/index?id=${id}` })
   },
 

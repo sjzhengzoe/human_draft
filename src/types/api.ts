@@ -105,3 +105,47 @@ export type DishListParams = {
   page?: number
   page_size?: number
 }
+
+export type MenuScheduleSourceKind = "dish" | "place"
+
+export type MenuScheduleItem = {
+  id: string
+  source_kind: MenuScheduleSourceKind
+  record_type: MenuRecordType
+  dish_id: string | null
+  place_id: string | null
+  name: string
+  place_name: string
+  image_url: string
+  place_image_url: string
+  position: number
+}
+
+export type MenuScheduleMeal = {
+  id: string
+  meal_date: string
+  meal_period: MealPeriod
+  slot_count: number
+  items: MenuScheduleItem[]
+  created_at: string
+  updated_at: string
+}
+
+export type MenuRankingItem = {
+  key: string
+  type: MenuScheduleSourceKind
+  name: string
+  image_url: string
+  count: number
+}
+
+export type MenuFavorite = {
+  id: string
+  source_kind: MenuScheduleSourceKind
+  dish_id: string | null
+  place_id: string | null
+  name: string
+  record_type: MenuRecordType
+  image_url: string
+  sort_order: number
+}

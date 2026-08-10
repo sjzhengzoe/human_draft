@@ -1,0 +1,27 @@
+<custom-navigation title="排行榜" />
+<view class="page page--with-navigation">
+  <view class="dimension-tabs" role="tablist" aria-label="排行榜统计范围">
+    <view class="dimension-tab {{dimension === 'week' ? 'dimension-tab--active' : ''}}" data-dimension="week" bindtap="handleDimensionTap">周</view>
+    <view class="dimension-tab {{dimension === 'month' ? 'dimension-tab--active' : ''}}" data-dimension="month" bindtap="handleDimensionTap">月</view>
+    <view class="dimension-tab {{dimension === 'year' ? 'dimension-tab--active' : ''}}" data-dimension="year" bindtap="handleDimensionTap">年</view>
+  </view>
+
+  <view class="period-bar">
+    <view class="period-arrow" role="button" aria-label="上一个统计范围" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-left" size="26" /></view>
+    <view class="period-copy"><view class="period-label">{{periodLabel}}</view><view class="period-effective">{{effectiveLabel}}</view></view>
+    <view class="period-arrow" role="button" aria-label="下一个统计范围" data-direction="1" bindtap="handleMove"><app-icon name="arrow-right" size="26" /></view>
+  </view>
+
+  <view wx:if="{{loading}}" class="state">正在统计…</view>
+  <view wx:elif="{{errorMessage}}" class="state">{{errorMessage}}</view>
+  <view wx:elif="{{items.length === 0}}" class="state">当前时间范围还没有可以统计的菜单</view>
+  <view wx:else class="ranking-list">
+    <view wx:for="{{items}}" wx:key="key" class="ranking-row">
+      <view class="ranking-number ranking-number--{{index < 3 ? 'top' : 'normal'}}">{{index + 1}}</view>
+      <image wx:if="{{item.image_url}}" class="ranking-image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
+      <view wx:else class="ranking-image ranking-image--empty">无图</view>
+      <view class="ranking-copy"><view class="ranking-name">{{item.name}}</view><view class="ranking-tag">{{item.type === 'place' ? '店铺' : '菜品'}}</view></view>
+      <view class="ranking-count">{{item.count}}次</view>
+    </view>
+  </view>
+</view>
