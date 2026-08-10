@@ -222,6 +222,37 @@ function resolveCategoryFilter(
   return defaultCategoryFilter(recordType, categories)
 }
 
+async function loadFilteredMenuItems(
+  activeFilter: string,
+  homePlaceId: string
+): Promise<{ dishes: Dish[]; outsidePlaces: MenuPlace[] }> {
+  const recordType = recordTypeFromFilter(activeFilter)
+  const homeCategoryId = activeFilter.startsWith("home:")
+    ? activeFilter.slice("home:".length)
+    : ""
+  const outsideCategoryId = activeFilter.startsWith("outside:")
+    ? activeFilter.slice("outside:".length)
+    : ""
+  const [dishes, outsidePlaces] = await Promise.all([
+    recordType === "outside"
+      ? Promise.resolve([] as Dish[])
+      : listDishes({
+        place_id: homePlaceId || undefined,
+        category_id: homeCategoryId || undefined,
+        record_type: "home",
+        sort: "custom",
+        page_size: 100
+      }),
+    recordType === "home"
+      ? Promise.resolve([] as MenuPlace[])
+      : listMenuPlaces({
+        place_type: "outside",
+        outside_category_id: outsideCategoryId || undefined
+      })
+  ])
+  return { dishes, outsidePlaces }
+}
+
 function getBrowsePosition(itemCount: number, requestedIndex: number) {
   if (itemCount <= 0) {
     return {
@@ -369,7 +400,9 @@ Page({
       selectionTitle: selectionPurpose === "favorites"
         ? "选择常吃"
         : `选择${MEAL_PERIOD_TEXT[selectionPeriod]}`,
-      displayMode: "quick"
+      displayMode: "quick",
+      activeFilter: "all",
+      activeRecordType: "all"
     })
   },
 
@@ -533,35 +566,34 @@ Page({
         categories = overview.categories
         outsideCategories = overview.outsideCategories
         homePlaceId = overview.homePlaceId
-        activeFilter = overview.activeFilter
-        activeRecordType = overview.activeRecordType
-        dishes = overview.dishes
-        outsidePlaces = overview.outsidePlaces
         canWrite = overview.canWrite
-      } else {
-        const homeCategoryId = activeFilter.startsWith("home:")
-          ? activeFilter.slice("home:".length)
-          : ""
-        const outsideCategoryId = activeFilter.startsWith("outside:")
-          ? activeFilter.slice("outside:".length)
-          : ""
-        if (activeRecordType === "home") {
-          dishes = await listDishes({
-            place_id: homePlaceId || undefined,
-            category_id: homeCategoryId || undefined,
-            record_type: "home",
-            sort: "custom",
-            page_size: 100
-          })
+        if (this.data.selectionMode) {
+          activeFilter = resolveCategoryFilter(
+            this.data.activeFilter,
+            categories,
+            outsideCategories
+          )
+          activeRecordType = recordTypeFromFilter(activeFilter)
+          const content = await loadFilteredMenuItems(activeFilter, homePlaceId)
+          dishes = content.dishes
+          outsidePlaces = content.outsidePlaces
         } else {
-          outsidePlaces = await listMenuPlaces({
-            place_type: "outside",
-            outside_category_id: outsideCategoryId || undefined
-          })
+          activeFilter = overview.activeFilter
+          activeRecordType = overview.activeRecordType
+          dishes = overview.dishes
+          outsidePlaces = overview.outsidePlaces
         }
+      } else {
+        const content = await loadFilteredMenuItems(activeFilter, homePlaceId)
+        dishes = content.dishes
+        outsidePlaces = content.outsidePlaces
       }
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      const itemCount = activeRecordType === "outside" ? outsidePlaces.length : dishes.length
+      const itemCount = activeRecordType === "outside"
+        ? outsidePlaces.length
+        : activeRecordType === "all"
+          ? dishes.length + outsidePlaces.length
+          : dishes.length
       const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
       const loadedRevision = getMenuDataRevision()
       const loadedAt = Date.now()
@@ -631,35 +663,33 @@ Page({
     const recordType = this.data.activeRecordType
     this.setData({ searching: true, contentLoading: true, errorMessage: "" })
     try {
-      if (recordType === "outside") {
-        const places = await listMenuPlaces({ place_type: "outside" })
-        if (requestId !== searchRequestId || keyword !== this.data.searchKeyword) return
-        const normalized = keyword.toLocaleLowerCase()
-        const matches = places.flatMap((place) => {
-          const placeMatches = place.name.toLocaleLowerCase().includes(normalized)
-          const matchingDishes = place.dishes.filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
-          if (!placeMatches && !matchingDishes.length) return []
-          return [{
-            ...place,
-            dishes: placeMatches ? place.dishes : matchingDishes,
-            preview_dishes: placeMatches ? place.preview_dishes : matchingDishes.slice(0, 5)
-          }]
-        })
-        this.setData({
-          dishes: [],
-          outsidePlaces: matches.map(toQuickMenuPlace),
-          browseCurrentIndex: 0
-        }, () => this.applySelectionMarks())
-      } else {
-        const dishes = await listDishes({ record_type: "home", sort: "custom", page_size: 100 })
-        if (requestId !== searchRequestId || keyword !== this.data.searchKeyword) return
-        const normalized = keyword.toLocaleLowerCase()
-        this.setData({
-          dishes: dishes.filter((dish) => dish.name.toLocaleLowerCase().includes(normalized)).map(toMenuDish),
-          outsidePlaces: [],
-          browseCurrentIndex: 0
-        }, () => this.applySelectionMarks())
-      }
+      const [dishes, places] = await Promise.all([
+        recordType === "outside"
+          ? Promise.resolve([] as Dish[])
+          : listDishes({ record_type: "home", sort: "custom", page_size: 100 }),
+        recordType === "home"
+          ? Promise.resolve([] as MenuPlace[])
+          : listMenuPlaces({ place_type: "outside" })
+      ])
+      if (requestId !== searchRequestId || keyword !== this.data.searchKeyword) return
+      const normalized = keyword.toLocaleLowerCase()
+      const matches = places.flatMap((place) => {
+        const placeMatches = place.name.toLocaleLowerCase().includes(normalized)
+        const matchingDishes = place.dishes.filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
+        if (!placeMatches && !matchingDishes.length) return []
+        return [{
+          ...place,
+          dishes: placeMatches ? place.dishes : matchingDishes,
+          preview_dishes: placeMatches ? place.preview_dishes : matchingDishes.slice(0, 5)
+        }]
+      })
+      this.setData({
+        dishes: dishes
+          .filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
+          .map(toMenuDish),
+        outsidePlaces: matches.map(toQuickMenuPlace),
+        browseCurrentIndex: 0
+      }, () => this.applySelectionMarks())
     } catch (error) {
       if (requestId === searchRequestId && isAsyncPageActive(this)) {
         wx.showToast({ title: error instanceof Error ? error.message : "搜索失败", icon: "none" })
@@ -767,10 +797,9 @@ Page({
     const recordType = String(event.currentTarget.dataset.type || "all") as RecordTypeFilter
     if (!["all", "home", "outside"].includes(recordType)) return
     if (recordType === this.data.activeRecordType) return
-    const filter = defaultCategoryFilter(
-      recordType,
-      this.data.categories
-    )
+    const filter = this.data.selectionMode
+      ? recordType
+      : defaultCategoryFilter(recordType, this.data.categories)
     if (filter === this.data.activeFilter) return
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = null

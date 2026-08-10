@@ -12,7 +12,7 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
   assert.match(page, />本周菜单</);
   assert.doesNotMatch(page, />随机菜单</);
   assert.match(page, /wx:if="\{\{displayMode === 'quick' && !selectionMode\}\}" class="menu-toolbar"/);
-  assert.match(page, /placeholder="\{\{activeRecordType === 'outside' \? '搜索店铺或店内菜品' : '搜索全部在家菜品'\}\}"/);
+  assert.match(page, /placeholder="\{\{activeRecordType === 'all' \? '搜索全部菜品或店铺'/);
   assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
   assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
   assert.match(page, /wx:if="\{\{item\.selected\}\}" class="favorite-item__selected">已选</);
@@ -21,6 +21,22 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
   assert.match(logic, /query\.mode === "select" \|\| query\.mode === "favorites"/);
   assert.match(logic, /replaceMenuScheduleMeal\(/);
   assert.match(logic, /favorites: this\.data\.favorites\.map\(\(favorite\) => \(\{/);
+});
+
+test("weekly-menu selection defaults both dining scene and category to all", async () => {
+  const [page, logic] = await Promise.all([
+    read("src/pages/menu/index.wxml"),
+    read("src/pages/menu/index.ts"),
+  ]);
+  assert.match(page, /wx:if="\{\{selectionMode\}\}" class="record-filter__item \{\{activeRecordType === 'all'/);
+  assert.match(page, /activeRecordType === 'home' && selectionMode[\s\S]*data-filter="home"[\s\S]*>全部</);
+  assert.match(page, /activeRecordType === 'all'[\s\S]*data-filter="all"[\s\S]*>全部</);
+  assert.match(page, /activeRecordType !== 'outside' && dishes\.length/);
+  assert.match(page, /activeRecordType !== 'home' && outsidePlaces\.length/);
+  assert.match(page, /搜索全部菜品或店铺/);
+  assert.match(logic, /activeFilter: "all",\s*activeRecordType: "all"/);
+  assert.match(logic, /recordType === "outside"[\s\S]*recordType === "home"[\s\S]*listMenuPlaces/);
+  assert.match(logic, /const filter = this\.data\.selectionMode\s*\? recordType/);
 });
 
 test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {
