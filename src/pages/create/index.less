@@ -61,10 +61,10 @@
   box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
 }
 
-.feature-item--featured {
-  width: 100%;
-  min-height: 138rpx;
-  padding-right: 28rpx;
+.feature-item--illustrated {
+  min-height: 156rpx;
+  gap: 0;
+  padding: 0;
 }
 
 .feature-item--hover {
@@ -73,6 +73,17 @@
 
 .feature-item--disabled {
   opacity: 0.52;
+}
+
+.feature-item__image {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .feature-item__mark {
@@ -86,9 +97,31 @@
   background: var(--ui-color-action-primary);
 }
 
-.feature-item__title {
+.feature-item__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
   min-width: 0;
   flex: 1;
+  align-items: center;
+}
+
+.feature-item--illustrated .feature-item__content {
+  align-self: stretch;
+  box-sizing: border-box;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: 60%;
+  padding: 20rpx 0 20rpx 22rpx;
+}
+
+.feature-item__title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
   color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
   font-weight: 500;
@@ -96,10 +129,52 @@
   word-break: keep-all;
 }
 
+.feature-item__title-text {
+  flex: none;
+}
+
+.feature-item--illustrated .feature-item__title {
+  font-size: var(--ui-font-size-large);
+  font-weight: 650;
+  letter-spacing: 1rpx;
+}
+
+.feature-item__title-highlight {
+  display: block;
+  flex: none;
+  width: 112rpx;
+  height: 18rpx;
+  margin: -10rpx -6rpx 0;
+  transform: rotate(-1.5deg);
+}
+
 .feature-item__arrow {
+  position: relative;
+  z-index: 2;
   flex: none;
   color: var(--ui-color-text-disabled);
   line-height: 1;
+}
+
+.feature-item--illustrated .feature-item__arrow {
+  position: absolute;
+  top: 50%;
+  right: 10rpx;
+  transform: translateY(-50%);
+}
+
+.feature-item--illustrated .feature-item__image {
+  transform: translateX(-16rpx);
+}
+
+.feature-item--illustrated .feature-item__arrow {
+  display: flex;
+  width: 32rpx;
+  height: 32rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-surface-translucent);
 }
 
 // 较矮屏幕收紧纵向尺寸，默认模块无需滚动也能完整展示。
@@ -122,9 +197,14 @@
     padding: 18rpx;
   }
 
-  .feature-item--featured {
-    width: 100%;
-    min-height: 118rpx;
+  .feature-item--illustrated {
+    min-height: 144rpx;
+  }
+
+  .feature-item--illustrated .feature-item__content {
+    padding-top: 16rpx;
+    padding-bottom: 16rpx;
+    padding-left: 18rpx;
   }
 
   .feature-item__mark {

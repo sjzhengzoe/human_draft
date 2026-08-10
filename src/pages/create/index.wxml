@@ -16,7 +16,7 @@
           wx:for="{{group.items}}"
           wx:key="key"
           wx:for-item="item"
-          class="feature-item {{item.featured ? 'feature-item--featured' : ''}} {{item.available ? '' : 'feature-item--disabled'}}"
+          class="feature-item feature-item--{{item.key}} {{item.image ? 'feature-item--illustrated' : ''}} {{item.available ? '' : 'feature-item--disabled'}}"
           hover-class="feature-item--hover"
           hover-stay-time="80"
           data-key="{{item.key}}"
@@ -26,8 +26,19 @@
           data-requires-login="{{item.requiresLogin}}"
           bindtap="handleFeatureTap"
         >
-          <view class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
-          <view class="feature-item__title">{{item.title}}</view>
+          <image wx:if="{{item.image}}" class="feature-item__image" src="{{item.image}}" mode="aspectFill" />
+          <view wx:else class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
+          <view class="feature-item__content">
+            <view class="feature-item__title">
+              <text class="feature-item__title-text">{{item.title}}</text>
+              <image
+                wx:if="{{item.image}}"
+                class="feature-item__title-highlight"
+                src="/assets/home-modules/title-highlight-pure-black.png"
+                mode="scaleToFill"
+              />
+            </view>
+          </view>
           <view class="feature-item__arrow"><app-icon name="chevron-right" size="24" /></view>
         </view>
       </view>
