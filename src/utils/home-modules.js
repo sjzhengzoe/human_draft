@@ -10,6 +10,7 @@ const HOME_FEATURE_GROUPS = [
         icon: "notebook-pen",
         title: "图文卡片",
         image: "/assets/home-modules/text-card-bold.png",
+        decoration: "/assets/home-modules/decor-flora.png",
         path: "/pages/text-card/index",
         available: true,
         requiresLogin: false
@@ -19,6 +20,7 @@ const HOME_FEATURE_GROUPS = [
         icon: "cooking-pot",
         title: "我的菜单",
         image: "/assets/home-modules/menu-bold.png",
+        decoration: "/assets/home-modules/decor-cat.png",
         path: "/pages/menu/index",
         available: true,
         requiresLogin: true
@@ -28,6 +30,7 @@ const HOME_FEATURE_GROUPS = [
         icon: "clapperboard",
         title: "影视片单",
         image: "/assets/home-modules/media-bold.png",
+        decoration: "/assets/home-modules/decor-cat-belly-up.png",
         path: "/pages/media/index",
         available: true,
         requiresLogin: true
@@ -61,6 +64,7 @@ const HOME_FEATURE_GROUPS = [
         icon: "dumbbell",
         title: "运动养宠",
         image: "/assets/home-modules/exercise-bold.png",
+        decoration: "/assets/home-modules/decor-frenchie-sleeping.png",
         path: "/exercise/pages/index",
         available: true,
         requiresLogin: true
@@ -94,6 +98,7 @@ const HOME_FEATURE_GROUPS = [
         icon: "flag",
         title: "人生节点",
         image: "/assets/home-modules/key-moments-bold.png",
+        decoration: "/assets/home-modules/decor-cat-stretched.png",
         path: "/pages/key-moments/index",
         available: true,
         requiresLogin: true

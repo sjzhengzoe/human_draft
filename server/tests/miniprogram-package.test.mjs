@@ -46,7 +46,7 @@ test("bundled image and audio stay within the 200 KB quality limit", async () =>
   );
 });
 
-test("dynamic home module images are PNG files explicitly included in uploads", async () => {
+test("dynamic home module assets are PNG files explicitly included in uploads", async () => {
   const projectConfig = JSON.parse(
     await readFile(path.join(projectRoot, "project.config.json"), "utf8"),
   );
@@ -54,10 +54,12 @@ test("dynamic home module images are PNG files explicitly included in uploads", 
     path.join(sourceRoot, "utils/home-modules.js"),
     "utf8",
   );
-  const imagePaths = [...moduleSource.matchAll(/image: "(\/assets\/home-modules\/[^"]+)"/g)]
+  const imagePaths = [
+    ...moduleSource.matchAll(/(?:image|decoration): "(\/assets\/home-modules\/[^"]+)"/g),
+  ]
     .map((match) => match[1]);
 
-  assert.equal(imagePaths.length, 10);
+  assert.equal(imagePaths.length, 15);
   assert.equal(imagePaths.every((imagePath) => imagePath.endsWith(".png")), true);
   assert.equal(
     projectConfig.packOptions.include.some(
