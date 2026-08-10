@@ -1,12 +1,15 @@
-<custom-navigation title="本周菜单" />
+<view class="planner-shell">
+  <view class="planner-navigation">
+    <custom-navigation title="本周菜单" />
+  </view>
 
-<view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
-  <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在准备菜单…</view>
-</view>
+  <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
+    <view class="fullscreen-loading__spinner" />
+    <view class="fullscreen-loading__text">正在准备菜单…</view>
+  </view>
 
-<scroll-view wx:else class="page-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-  <view class="page page--with-navigation">
+<view wx:else class="planner-page">
+  <view class="planner-header">
     <view class="planner-toolbar">
       <view class="time-tabs" role="tablist" aria-label="查看范围">
         <view wx:for="{{['day', 'week', 'month', 'year']}}" wx:key="*this" class="time-tab {{activeMode === item ? 'time-tab--active' : ''}}" data-mode="{{item}}" bindtap="handleModeTap">{{item === 'day' ? '日' : item === 'week' ? '周' : item === 'month' ? '月' : '年'}}</view>
@@ -22,6 +25,10 @@
       </view>
       <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="26" /></view>
     </view>
+  </view>
+
+  <scroll-view class="planner-content" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="planner-content__inner">
 
     <view wx:if="{{errorMessage}}" class="state-card">
       <view class="state-card__title">暂时没能打开菜单</view>
@@ -72,13 +79,25 @@
       </view>
     </block>
 
-    <view wx:elif="{{activeMode === 'week'}}" class="week-list">
-      <view wx:for="{{weekDays}}" wx:key="date" wx:for-item="day" class="week-day {{day.isToday ? 'week-day--today' : ''}}">
-        <view class="week-day__header"><view>{{day.dayLabel}}</view><view>{{day.dateLabel}}{{day.isToday ? ' · 今天' : ''}}</view></view>
-        <view wx:for="{{day.meals}}" wx:key="key" wx:for-item="meal" class="week-meal" data-date="{{day.date}}" data-period="{{meal.key}}" bindtap="handleMealEdit">
-          <view class="week-meal__label">{{meal.label}}</view>
-          <view class="week-meal__summary {{meal.count ? '' : 'week-meal__summary--empty'}}">{{meal.summary}}</view>
-          <app-icon name="chevron-right" size="24" />
+    <view wx:elif="{{activeMode === 'week'}}" class="week-matrix">
+      <view class="week-matrix__header">
+        <view class="week-matrix__corner" />
+        <view wx:for="{{['早餐', '午餐', '下午茶', '晚餐']}}" wx:key="*this" class="week-matrix__heading">{{item}}</view>
+      </view>
+      <view wx:for="{{weekDays}}" wx:key="date" wx:for-item="day" wx:for-index="dayIndex" class="week-matrix__row {{dayIndex === weekDays.length - 1 ? 'week-matrix__row--last' : ''}}">
+        <view class="week-matrix__day {{day.isToday ? 'week-matrix__day--today' : ''}}">
+          <view class="week-matrix__day-label">{{day.dayLabel}}</view>
+          <view class="week-matrix__date">{{day.dateLabel}}</view>
+        </view>
+        <view wx:for="{{day.meals}}" wx:key="key" wx:for-item="meal" class="week-matrix__cell {{meal.count ? 'week-matrix__cell--filled' : 'week-matrix__cell--empty'}}" role="button" aria-label="{{meal.count ? day.dayLabel + meal.label + '，已选择' + meal.count + '项' : '安排' + day.dayLabel + meal.label}}" data-date="{{day.date}}" data-period="{{meal.key}}" bindtap="handleMealEdit">
+          <block wx:if="{{meal.count}}">
+            <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="entry" class="week-matrix__item">
+              <image wx:if="{{entry.imageUrl}}" class="week-matrix__thumbnail" src="{{entry.imageUrl}}" mode="aspectFill" lazy-load />
+              <view wx:else class="week-matrix__thumbnail week-matrix__thumbnail--fallback">{{entry.fallbackText}}</view>
+              <view class="week-matrix__item-name">{{entry.name}}</view>
+            </view>
+          </block>
+          <app-icon wx:else name="plus" size="24" />
         </view>
       </view>
     </view>
@@ -101,8 +120,10 @@
         <view class="year-card__meta">记录 {{item.mealCount}} 餐</view>
       </view>
     </view>
-  </view>
-</scroll-view>
+    </view>
+  </scroll-view>
+</view>
+</view>
 
 <app-dialog visible="{{showRemoveDialog}}" title="删除一个档位" content="最后一个档位中的菜品也会一起移除。" confirmText="删除" bind:cancel="handleRemoveCancel" bind:confirm="handleRemoveConfirm" />
 <operation-loading visible="{{saving}}" text="正在保存菜单…" />

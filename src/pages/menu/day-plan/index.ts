@@ -43,8 +43,13 @@ type WeekDay = {
   meals: Array<{
     key: MealPeriod
     label: string
-    summary: string
     count: number
+    items: Array<{
+      key: string
+      name: string
+      imageUrl: string
+      fallbackText: string
+    }>
   }>
 }
 
@@ -187,11 +192,17 @@ function toWeekDays(meals: MenuScheduleMeal[], anchor: string): WeekDay[] {
       isToday: date === today,
       meals: MEAL_DEFINITIONS.map((definition) => {
         const meal = mealFor(meals, date, definition.key)
+        const items = (meal?.items || []).map((item, itemIndex) => ({
+          key: `${date}:${definition.key}:${item.id || itemIndex}`,
+          name: item.name,
+          imageUrl: item.image_url || item.place_image_url || "",
+          fallbackText: item.name.slice(0, 1)
+        }))
         return {
           key: definition.key,
           label: definition.label,
-          summary: meal?.items.map((item) => item.name).join("、") || "还没有安排",
-          count: meal?.items.length || 0
+          count: items.length,
+          items
         }
       })
     }

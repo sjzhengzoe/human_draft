@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "本周菜单",
   "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationBarTextStyle": "black",
+  "disableScroll": true
 }

@@ -21,19 +21,36 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
 });
 
 test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {
-  const [page, logic] = await Promise.all([
+  const [page, logic, style, config] = await Promise.all([
     read("src/pages/menu/day-plan/index.wxml"),
     read("src/pages/menu/day-plan/index.ts"),
+    read("src/pages/menu/day-plan/index.less"),
+    read("src/pages/menu/day-plan/index.json"),
   ]);
   assert.match(page, /custom-navigation title="本周菜单"/);
+  assert.match(page, /class="planner-shell"/);
+  assert.match(page, /class="planner-navigation"[\s\S]*class="planner-page"/);
+  assert.match(page, /class="planner-header"[\s\S]*class="planner-content"/);
+  assert.match(page, /bounces="\{\{false\}\}"/);
   assert.match(page, /\['day', 'week', 'month', 'year'\]/);
   assert.match(page, />随机菜单</);
   assert.match(page, /activeMode === 'week'/);
+  assert.match(page, /class="week-matrix"/);
+  assert.match(page, /class="week-matrix__thumbnail"/);
+  assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
+  assert.match(page, /week-matrix__cell--empty/);
+  assert.doesNotMatch(page, /week-meal__summary/);
   assert.match(page, /activeMode === 'month'/);
   assert.match(page, /class="year-grid"/);
   assert.match(page, /bindtap="handleRanking"/);
   assert.match(logic, /slot_count \|\| DEFAULT_SLOT_COUNT/);
+  assert.match(logic, /imageUrl: item\.image_url \|\| item\.place_image_url/);
   assert.match(logic, /if \(slot\.locked && slot\.item\)/);
+  assert.match(style, /\.planner-shell \{[^}]*height: 100vh[^}]*overflow: hidden/);
+  assert.match(style, /\.planner-page \{[^}]*height: 0[^}]*flex: 1/);
+  assert.match(style, /\.planner-content \{[^}]*flex: 1/);
+  assert.doesNotMatch(style, /\.page-scroll \{[^}]*height: 100vh/);
+  assert.equal(JSON.parse(config).disableScroll, true);
 });
 
 test("ranking mixes dishes and stores while the server caps statistics at today", async () => {

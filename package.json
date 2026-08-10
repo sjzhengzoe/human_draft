@@ -10,6 +10,8 @@
     "import:dishes": "node --env-file-if-exists=.env scripts/import-dishes.mjs",
     "images:audit": "node --env-file-if-exists=.env scripts/optimize-storage-images.mjs",
     "images:migrate": "node --env-file-if-exists=.env scripts/optimize-storage-images.mjs --apply",
+    "menu:refresh-outside-assets": "node --env-file-if-exists=.env server/scripts/refresh-outside-menu-assets.mjs",
+    "menu:upsert-drink-stand": "node --env-file-if-exists=.env server/scripts/upsert-drink-stand.mjs",
     "typecheck": "tsc --noEmit",
     "build": "pnpm run typecheck"
   },
