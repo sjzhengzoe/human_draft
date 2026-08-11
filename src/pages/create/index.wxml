@@ -39,7 +39,6 @@
               <text class="feature-item__title-text">{{item.title}}</text>
             </view>
           </view>
-          <view class="feature-item__arrow"><app-icon name="chevron-right" size="24" /></view>
         </view>
       </view>
     </view>
