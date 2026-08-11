@@ -4,6 +4,7 @@ Component({
   data: {
     themeColors: UI_COLORS,
     imageDisplayStyles: [] as string[],
+    measuredImageUrls: [] as string[],
   },
 
   properties: {
@@ -22,6 +23,7 @@ Component({
     previewCount: { type: Number, value: 0 },
     mergeStartIndex: { type: Number, value: -1 },
     fitAdaptiveImages: { type: Boolean, value: false },
+    progressiveRendering: { type: Boolean, value: false },
     exportReady: { type: Boolean, value: false },
     actionLabel: { type: String, value: "图文创作操作" },
     showAppend: { type: Boolean, value: false },
@@ -34,8 +36,19 @@ Component({
   },
 
   observers: {
-    renderedImageUrls() {
-      this.setData({ imageDisplayStyles: [] });
+    renderedImageUrls(renderedImageUrls: unknown[]) {
+      const urls = Array.isArray(renderedImageUrls)
+        ? renderedImageUrls.map((url) => String(url || ""))
+        : [];
+      const imageDisplayStyles = urls.map((url, index) =>
+        url === this.data.measuredImageUrls[index]
+          ? this.data.imageDisplayStyles[index] || ""
+          : "",
+      );
+      this.setData({
+        imageDisplayStyles,
+        measuredImageUrls: urls,
+      });
     },
   },
 

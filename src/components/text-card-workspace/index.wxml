@@ -48,7 +48,7 @@
             <view class="card-preview-overlay__title">{{renderErrorMessage}}</view>
             <button class="card-preview-overlay__retry" bindtap="handleRetryPreview">重新生成</button>
           </view>
-          <view wx:elif="{{isRenderingCards}}" class="card-preview-overlay">
+          <view wx:elif="{{isRenderingCards && !progressiveRendering}}" class="card-preview-overlay">
             <view class="card-preview-overlay__spinner" />
             <view class="card-preview-overlay__title">正在更新预览 {{renderProgressText}}</view>
           </view>
@@ -100,6 +100,7 @@
       <text>预览 · </text>
       <text wx:if="{{mergeStartIndex >= 0 && activeIndex >= mergeStartIndex}}">合并版 · </text>
       {{activeIndex + 1}} / {{previewCount}}
+      <text wx:if="{{isRenderingCards && renderedImageUrls.length}}"> · 生成中 {{renderProgressText}}</text>
     </view>
 
     <text-card-action-bar

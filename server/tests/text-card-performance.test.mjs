@@ -86,6 +86,46 @@ test("combined text cards grow with content without blocking the remaining previ
   )
 })
 
+test("xiaohongshu previews publish each completed card immediately", async () => {
+  const [templateOne, template, workspace, workspaceController] =
+    await Promise.all([
+      readProjectFile("src/components/text-card-template-one/index.ts"),
+      readProjectFile("src/components/text-card-template-one/index.wxml"),
+      readProjectFile("src/components/text-card-workspace/index.wxml"),
+      readProjectFile("src/components/text-card-workspace/index.ts")
+    ])
+  const refreshRender = getMethodSource(
+    templateOne,
+    "refreshRenderedImages",
+    "retryPreview"
+  )
+  const generateImages = getMethodSource(
+    templateOne,
+    "generateImages",
+    "generateSlideImage"
+  )
+
+  assert.match(refreshRender, /renderedImageUrls: \[\]/)
+  assert.match(
+    refreshRender,
+    /\(readyUrls\) => \{[\s\S]*?renderedImageUrls: readyUrls,[\s\S]*?renderProgressText:/
+  )
+  assert.ok(
+    (generateImages.match(/onImageReady\?\.\(\[\.\.\.urls\]\)/g) || [])
+      .length >= 2
+  )
+  assert.match(template, /progressive-rendering="\{\{true\}\}"/)
+  assert.match(
+    workspace,
+    /isRenderingCards && !progressiveRendering/
+  )
+  assert.match(workspace, /生成中 \{\{renderProgressText\}\}/)
+  assert.match(
+    workspaceController,
+    /url === this\.data\.measuredImageUrls\[index\]/
+  )
+})
+
 test("text card pages share presentation and render infrastructure", async () => {
   const templateBases = [
     "components/text-card-template-one",

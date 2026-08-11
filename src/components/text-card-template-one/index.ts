@@ -50,6 +50,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   type CopyMode = "xiaohongshu" | "douyin";
   type RenderQuality = "preview" | "export";
   type RenderProgress = (completed: number, total: number) => void;
+  type RenderImageReady = (urls: string[]) => void;
 
 
   type CombinedFontOption = {
@@ -412,14 +413,19 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
           renderError: false,
           renderErrorMessage: "生成失败，请重试",
           renderProgressText: `0/${this.data.previewCount}`,
+          renderedImageUrls: [],
+          activeIndex: 0,
         });
 
         try {
           const urls = await this.renderSlidesToImages(
             requestId,
-            (completed, total) => {
+            (readyUrls) => {
               if (requestId === renderRequestId) {
-                this.setData({ renderProgressText: `${completed}/${total}` });
+                this.setData({
+                  renderedImageUrls: readyUrls,
+                  renderProgressText: `${readyUrls.length}/${this.data.previewCount}`,
+                });
               }
             },
           );
@@ -452,9 +458,14 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
 
       renderSlidesToImages(
         requestId: number,
-        onProgress?: RenderProgress,
+        onImageReady?: RenderImageReady,
       ): Promise<string[]> {
-        return this.generateImages("preview", requestId, onProgress);
+        return this.generateImages(
+          "preview",
+          requestId,
+          undefined,
+          onImageReady,
+        );
       },
 
       generateExportImages(onProgress?: RenderProgress): Promise<string[]> {
@@ -465,6 +476,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         quality: RenderQuality,
         previewRequestId?: number,
         onProgress?: RenderProgress,
+        onImageReady?: RenderImageReady,
       ): Promise<string[]> {
         const slides = this.data.slides;
         const metrics = createCanvasMetrics(quality);
@@ -499,6 +511,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
                 metrics,
               ),
             );
+            onImageReady?.([...urls]);
             onProgress?.(urls.length, total);
           }
 
@@ -513,6 +526,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
                 metrics,
               ),
             );
+            onImageReady?.([...urls]);
             onProgress?.(urls.length, total);
           }
 
@@ -674,12 +688,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
               createPreviewSignature(PREVIEW_CACHE_VERSION, content),
             )
           : undefined;
-        const renderedImageUrls =
-          cachedUrls ||
-          (slides.length &&
-          this.data.renderedImageUrls.length > nextActiveIndex
-            ? this.data.renderedImageUrls.slice(0, previewCount)
-            : []);
+        const renderedImageUrls = cachedUrls || [];
         renderRequestId += 1;
 
         this.setData(
