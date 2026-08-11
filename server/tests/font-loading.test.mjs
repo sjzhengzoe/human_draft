@@ -25,6 +25,10 @@ test("fonts use one shared lazy loader and one canonical definition each", async
   assert.equal(config.match(/source: `url/g)?.length, 4)
   assert.match(loader, /fontPromises = new Map/)
   assert.match(loader, /wx\.loadFontFace/)
+  assert.match(loader, /DEFAULT_FONT_LOAD_TIMEOUT/)
+  assert.match(loader, /FontLoadTimeoutError/)
+  assert.match(loader, /timeoutMs = options\.timeoutMs \?\? DEFAULT_FONT_LOAD_TIMEOUT/)
+  assert.match(loader, /if \(!\(error instanceof FontLoadTimeoutError\)\)/)
 
   for (const consumer of [uiFont, templateOne, templateTwo, templateThree, menuPrint]) {
     assert.doesNotMatch(consumer, /wx\.loadFontFace/)
@@ -36,6 +40,7 @@ test("fonts use one shared lazy loader and one canonical definition each", async
 
   assert.match(uiFont, /APP_FONTS\.ui|UI_FONT/)
   assert.match(templateOne, /APP_FONTS\.red3/)
+  assert.match(templateOne, /PREVIEW_FONT_LOAD_TIMEOUT = 1000/)
   assert.match(templateTwo, /APP_FONTS\.ui/)
   assert.match(templateThree, /APP_FONTS\.lantingExtraLight/)
   assert.match(menuPrint, /APP_FONTS\.ui/)

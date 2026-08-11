@@ -22,6 +22,7 @@
   show-clear-undo="{{showClearUndo}}"
   bind:copytemplate="handleCopyTemplate"
   bind:swiperchange="handleSwiperChange"
+  bind:previewimageload="handlePreviewImageLoad"
   bind:retrypreview="retryPreview"
   bind:action="handleAction"
   bind:undoclear="handleUndoClear"

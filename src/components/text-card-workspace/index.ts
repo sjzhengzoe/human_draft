@@ -5,6 +5,8 @@ Component({
     themeColors: UI_COLORS,
     imageDisplayStyles: [] as string[],
     measuredImageUrls: [] as string[],
+    latestRenderedImageUrl: "",
+    latestRenderedImageIndex: 0,
   },
 
   properties: {
@@ -45,9 +47,12 @@ Component({
           ? this.data.imageDisplayStyles[index] || ""
           : "",
       );
+      const latestRenderedImageIndex = Math.max(0, urls.length - 1);
       this.setData({
         imageDisplayStyles,
         measuredImageUrls: urls,
+        latestRenderedImageUrl: urls[latestRenderedImageIndex] || "",
+        latestRenderedImageIndex,
       });
     },
   },
@@ -68,11 +73,19 @@ Component({
     handleCardImageLoad(
       event: WechatMiniprogram.CustomEvent<{ width?: number; height?: number }>,
     ) {
-      if (!this.properties.fitAdaptiveImages) return;
       const index = Number(event.currentTarget.dataset.index);
+      const url = String(event.currentTarget.dataset.url || "");
+      const notifyLoaded = () => {
+        this.triggerEvent("previewimageload", { index, url });
+      };
+      if (!this.properties.fitAdaptiveImages) {
+        notifyLoaded();
+        return;
+      }
       const width = Number(event.detail.width) || 0;
       const height = Number(event.detail.height) || 0;
       if (!Number.isInteger(index) || index < 0 || width <= 0 || height <= 0) {
+        notifyLoaded();
         return;
       }
 
@@ -82,10 +95,13 @@ Component({
         `--card-item-width: ${Math.round(600 * widthScale)}rpx`,
         `--card-item-compact-width: ${Math.round(520 * widthScale)}rpx`,
       ].join("; ");
-      if (this.data.imageDisplayStyles[index] === displayStyle) return;
+      if (this.data.imageDisplayStyles[index] === displayStyle) {
+        notifyLoaded();
+        return;
+      }
       const imageDisplayStyles = [...this.data.imageDisplayStyles];
       imageDisplayStyles[index] = displayStyle;
-      this.setData({ imageDisplayStyles });
+      this.setData({ imageDisplayStyles }, notifyLoaded);
     },
 
     handleAction(event: WechatMiniprogram.CustomEvent<{ key?: string }>) {

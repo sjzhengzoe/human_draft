@@ -50,7 +50,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   type CopyMode = "xiaohongshu" | "douyin";
   type RenderQuality = "preview" | "export";
   type RenderProgress = (completed: number, total: number) => void;
-  type RenderImageReady = (urls: string[]) => void;
+  type RenderImageReady = (urls: string[]) => Promise<void>;
 
 
   type CombinedFontOption = {
@@ -108,6 +108,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
   const PREVIEW_CACHE_VERSION = "xiaohongshu-v3";
+  const PREVIEW_FONT_LOAD_TIMEOUT = 1000;
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
   const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
@@ -185,6 +186,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   let renderRequestId = 0;
   const enqueueRender = createRenderQueue();
   const clearUndo = createTimedUndo<ClearSnapshot>();
+  const previewImageWaiters = new Map<string, () => void>();
 
   Component({
     data: {
@@ -218,6 +220,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       },
       detached() {
         renderRequestId += 1;
+        releasePreviewImageWaiters();
         clearUndo.clear();
       },
     },
@@ -420,14 +423,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         try {
           const urls = await this.renderSlidesToImages(
             requestId,
-            (readyUrls) => {
-              if (requestId === renderRequestId) {
-                this.setData({
-                  renderedImageUrls: readyUrls,
-                  renderProgressText: `${readyUrls.length}/${this.data.previewCount}`,
-                });
-              }
-            },
+            (readyUrls) => this.publishPreviewImages(requestId, readyUrls),
           );
           if (requestId !== renderRequestId) return;
 
@@ -454,6 +450,45 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       retryPreview() {
         if (this.data.isRenderingCards) return;
         this.refreshRenderedImages();
+      },
+
+      publishPreviewImages(
+        requestId: number,
+        readyUrls: string[],
+      ): Promise<void> {
+        const latestUrl = readyUrls[readyUrls.length - 1];
+        if (!latestUrl || requestId !== renderRequestId) {
+          return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve) => {
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            previewImageWaiters.delete(latestUrl);
+            resolve();
+          };
+          const timeoutId = setTimeout(finish, 1200);
+          previewImageWaiters.set(latestUrl, finish);
+          this.setData({
+            renderedImageUrls: readyUrls,
+            renderProgressText: `${readyUrls.length}/${this.data.previewCount}`,
+          });
+        });
+      },
+
+      handlePreviewImageLoad(
+        event: WechatMiniprogram.CustomEvent<{ url?: string }>,
+      ) {
+        const url = String(event.detail.url || "");
+        const finish = previewImageWaiters.get(url);
+        if (finish) {
+          wx.nextTick(() => {
+            setTimeout(finish, 32);
+          });
+        }
       },
 
       renderSlidesToImages(
@@ -511,7 +546,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
                 metrics,
               ),
             );
-            onImageReady?.([...urls]);
+            if (onImageReady) await onImageReady([...urls]);
             onProgress?.(urls.length, total);
           }
 
@@ -526,7 +561,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
                 metrics,
               ),
             );
-            onImageReady?.([...urls]);
+            if (onImageReady) await onImageReady([...urls]);
             onProgress?.(urls.length, total);
           }
 
@@ -690,6 +725,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
           : undefined;
         const renderedImageUrls = cachedUrls || [];
         renderRequestId += 1;
+        releasePreviewImageWaiters();
 
         this.setData(
           {
@@ -727,6 +763,12 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       return error.message;
     }
     return "生成失败，请重试";
+  }
+
+
+  function releasePreviewImageWaiters() {
+    for (const finish of previewImageWaiters.values()) finish();
+    previewImageWaiters.clear();
   }
 
 
@@ -969,5 +1011,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   }
 
   function ensureRed3FontLoaded() {
-    return loadAppFont(APP_FONTS.red3);
+    return loadAppFont(APP_FONTS.red3, {
+      timeoutMs: PREVIEW_FONT_LOAD_TIMEOUT,
+    });
   }

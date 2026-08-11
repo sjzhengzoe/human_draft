@@ -108,22 +108,44 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   assert.match(refreshRender, /renderedImageUrls: \[\]/)
   assert.match(
     refreshRender,
-    /\(readyUrls\) => \{[\s\S]*?renderedImageUrls: readyUrls,[\s\S]*?renderProgressText:/
+    /this\.publishPreviewImages\(requestId, readyUrls\)/
   )
   assert.ok(
-    (generateImages.match(/onImageReady\?\.\(\[\.\.\.urls\]\)/g) || [])
+    (generateImages.match(/await onImageReady\(\[\.\.\.urls\]\)/g) || [])
       .length >= 2
   )
   assert.match(template, /progressive-rendering="\{\{true\}\}"/)
+  assert.match(template, /bind:previewimageload="handlePreviewImageLoad"/)
+  assert.match(
+    workspace,
+    /wx:elif="\{\{progressiveRendering && isRenderingCards && renderedImageUrls\.length\}\}"[\s\S]*?src="\{\{latestRenderedImageUrl\}\}"/
+  )
+  assert.match(workspace, /data-index="\{\{latestRenderedImageIndex\}\}"/)
   assert.match(
     workspace,
     /isRenderingCards && !progressiveRendering/
   )
-  assert.match(workspace, /生成中 \{\{renderProgressText\}\}/)
+  assert.match(
+    workspace,
+    /\{\{renderedImageUrls\.length\}\} \/ \{\{previewCount\}\} · 生成中/
+  )
   assert.match(
     workspaceController,
     /url === this\.data\.measuredImageUrls\[index\]/
   )
+  assert.match(
+    workspaceController,
+    /triggerEvent\("previewimageload", \{ index, url \}\)/
+  )
+  assert.match(
+    workspaceController,
+    /latestRenderedImageUrl: urls\[latestRenderedImageIndex\] \|\| ""/
+  )
+  assert.match(
+    templateOne,
+    /previewImageWaiters\.set\(latestUrl, finish\)[\s\S]*?renderedImageUrls: readyUrls/
+  )
+  assert.match(templateOne, /wx\.nextTick\(\(\) => \{[\s\S]*?setTimeout\(finish, 32\)/)
 })
 
 test("text card pages share presentation and render infrastructure", async () => {

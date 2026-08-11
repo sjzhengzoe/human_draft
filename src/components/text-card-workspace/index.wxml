@@ -23,6 +23,25 @@
       </view>
     </view>
 
+    <view
+      wx:elif="{{progressiveRendering && isRenderingCards && renderedImageUrls.length}}"
+      class="card-swiper card-slide"
+    >
+      <view
+        class="card-item"
+        style="{{fitAdaptiveImages ? imageDisplayStyles[latestRenderedImageIndex] : ''}}"
+      >
+        <image
+          class="card-image"
+          src="{{latestRenderedImageUrl}}"
+          mode="widthFix"
+          data-index="{{latestRenderedImageIndex}}"
+          data-url="{{latestRenderedImageUrl}}"
+          bindload="handleCardImageLoad"
+        />
+      </view>
+    </view>
+
     <swiper
       wx:else
       class="card-swiper"
@@ -42,6 +61,7 @@
             src="{{item}}"
             mode="widthFix"
             data-index="{{index}}"
+            data-url="{{item}}"
             bindload="handleCardImageLoad"
           />
           <view wx:if="{{renderError}}" class="card-preview-overlay">
@@ -98,9 +118,14 @@
 
     <view class="page-count" wx:if="{{contentCount}}">
       <text>预览 · </text>
-      <text wx:if="{{mergeStartIndex >= 0 && activeIndex >= mergeStartIndex}}">合并版 · </text>
-      {{activeIndex + 1}} / {{previewCount}}
-      <text wx:if="{{isRenderingCards && renderedImageUrls.length}}"> · 生成中 {{renderProgressText}}</text>
+      <block wx:if="{{progressiveRendering && isRenderingCards && renderedImageUrls.length}}">
+        <text wx:if="{{mergeStartIndex >= 0 && latestRenderedImageIndex >= mergeStartIndex}}">合并版 · </text>
+        {{renderedImageUrls.length}} / {{previewCount}} · 生成中
+      </block>
+      <block wx:else>
+        <text wx:if="{{mergeStartIndex >= 0 && activeIndex >= mergeStartIndex}}">合并版 · </text>
+        {{activeIndex + 1}} / {{previewCount}}
+      </block>
     </view>
 
     <text-card-action-bar
