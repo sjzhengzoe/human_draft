@@ -1074,10 +1074,15 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
     fontSize: number,
     isCancelled: () => boolean,
   ) {
-    let forceReload = false;
     while (!isCancelled()) {
       try {
-        await loadAppFont(APP_FONTS.red3, { timeoutMs: 0, forceReload });
+        await loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
+        if (isRed3CanvasFontAvailable(canvas, fontSize)) return true;
+
+        await loadAppFont(APP_FONTS.red3, {
+          timeoutMs: 0,
+          forceRegister: true,
+        });
         if (await waitForRed3CanvasFont(canvas, fontSize, isCancelled)) {
           return true;
         }
@@ -1086,21 +1091,6 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       }
 
       if (isCancelled()) return false;
-
-      try {
-        await loadAppFont(APP_FONTS.red3, {
-          timeoutMs: 0,
-          forceReload: true,
-          usePersistentCache: false,
-        });
-        if (await waitForRed3CanvasFont(canvas, fontSize, isCancelled)) {
-          return true;
-        }
-      } catch {
-        // Retry the persistent download so a later launch can use the saved font.
-      }
-
-      forceReload = true;
       await delay(RED3_FONT_RETRY_DELAY);
     }
 

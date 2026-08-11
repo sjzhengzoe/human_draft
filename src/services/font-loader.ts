@@ -4,23 +4,28 @@ const FONT_READY_DELAY = 80
 const DEFAULT_FONT_LOAD_TIMEOUT = 10000
 const FONT_DOWNLOAD_TIMEOUT = 60000
 const FONT_CACHE_STORAGE_PREFIX = "app-font-cache:"
-const fontPromises = new Map<string, Promise<void>>()
+const cachedFontFilePromises = new Map<string, Promise<string>>()
+const cachedFontSourcePromises = new Map<string, Promise<string>>()
+const fontRegistrationPromises = new Map<string, Promise<void>>()
 
 class FontLoadTimeoutError extends Error {}
 
 type FontLoadOptions = {
   timeoutMs?: number
-  forceReload?: boolean
-  usePersistentCache?: boolean
+  forceRegister?: boolean
 }
 
 function getFontCacheKey(font: AppFontDefinition) {
-  return [font.family, font.source, font.weight].join("|")
+  return [
+    font.family,
+    font.persistentCache.version,
+    font.persistentCache.fileName,
+    font.weight
+  ].join("|")
 }
 
 function getPersistentFontPath(font: AppFontDefinition) {
-  const cache = font.persistentCache
-  return cache ? `${wx.env.USER_DATA_PATH}/${cache.fileName}` : ""
+  return `${wx.env.USER_DATA_PATH}/${font.persistentCache.fileName}`
 }
 
 function getPersistentFontVersionKey(font: AppFontDefinition) {
@@ -36,6 +41,32 @@ function removeFile(filePath: string): Promise<void> {
       fail: () => resolve()
     })
   })
+}
+
+function fileExists(filePath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    wx.getFileSystemManager().access({
+      path: filePath,
+      success: () => resolve(true),
+      fail: () => resolve(false)
+    })
+  })
+}
+
+function getSharedPromise<T>(
+  cache: Map<string, Promise<T>>,
+  cacheKey: string,
+  createPromise: () => Promise<T>
+) {
+  const cachedPromise = cache.get(cacheKey)
+  if (cachedPromise) return cachedPromise
+
+  const promise = createPromise()
+  cache.set(cacheKey, promise)
+  void promise.catch(() => {
+    if (cache.get(cacheKey) === promise) cache.delete(cacheKey)
+  })
+  return promise
 }
 
 function readFontFileAsBase64(filePath: string): Promise<string> {
@@ -85,29 +116,67 @@ function saveFontFile(tempFilePath: string, filePath: string): Promise<void> {
 }
 
 async function getPersistentFontSource(font: AppFontDefinition): Promise<string> {
-  const cache = font.persistentCache
-  if (!cache) return font.source
+  const cacheKey = getFontCacheKey(font)
+  return getSharedPromise(cachedFontSourcePromises, cacheKey, async () => {
+    let filePath = await getPersistentFontFile(font)
+    let base64: string
 
-  const filePath = getPersistentFontPath(font)
-  const versionKey = getPersistentFontVersionKey(font)
-  const savedVersion = wx.getStorageSync<string>(versionKey)
-
-  if (savedVersion === cache.version) {
     try {
-      const base64 = await readFontFileAsBase64(filePath)
-      return `url("data:font/woff2;base64,${base64}")`
+      base64 = await readFontFileAsBase64(filePath)
     } catch {
-      await removeFile(filePath)
+      await invalidatePersistentFontFile(font)
+      filePath = await getPersistentFontFile(font)
+      base64 = await readFontFileAsBase64(filePath)
     }
-  } else {
-    await removeFile(filePath)
-  }
 
-  const tempFilePath = await downloadFontFile(font.url)
-  await saveFontFile(tempFilePath, filePath)
-  const base64 = await readFontFileAsBase64(filePath)
-  wx.setStorageSync(versionKey, cache.version)
-  return `url("data:font/woff2;base64,${base64}")`
+    return `url("data:font/woff2;base64,${base64}")`
+  })
+}
+
+type StoredFontCache = {
+  fileName: string
+  version: string
+}
+
+function isCurrentFontCache(
+  value: unknown,
+  font: AppFontDefinition
+): boolean {
+  const cache = font.persistentCache
+  if (value === cache.version) return true
+  if (!value || typeof value !== "object") return false
+  const stored = value as Partial<StoredFontCache>
+  return stored.version === cache.version && stored.fileName === cache.fileName
+}
+
+function getPersistentFontFile(font: AppFontDefinition): Promise<string> {
+  const cacheKey = getFontCacheKey(font)
+  return getSharedPromise(cachedFontFilePromises, cacheKey, async () => {
+    const filePath = getPersistentFontPath(font)
+    const versionKey = getPersistentFontVersionKey(font)
+    const storedCache = wx.getStorageSync<unknown>(versionKey)
+
+    if (isCurrentFontCache(storedCache, font) && await fileExists(filePath)) {
+      if (typeof storedCache === "string") {
+        wx.setStorageSync(versionKey, font.persistentCache)
+      }
+      return filePath
+    }
+
+    await removeFile(filePath)
+    wx.removeStorageSync(versionKey)
+    const tempFilePath = await downloadFontFile(font.url)
+    await saveFontFile(tempFilePath, filePath)
+    wx.setStorageSync(versionKey, font.persistentCache)
+    return filePath
+  })
+}
+
+async function invalidatePersistentFontFile(font: AppFontDefinition) {
+  const cacheKey = getFontCacheKey(font)
+  cachedFontFilePromises.delete(cacheKey)
+  wx.removeStorageSync(getPersistentFontVersionKey(font))
+  await removeFile(getPersistentFontPath(font))
 }
 
 function registerFontFace(
@@ -159,33 +228,20 @@ export function loadAppFont(
   options: FontLoadOptions = {}
 ): Promise<void> {
   const cacheKey = getFontCacheKey(font)
-  const cachedPromise = fontPromises.get(cacheKey)
-  if (cachedPromise && !options.forceReload) return cachedPromise
+  const cachedPromise = fontRegistrationPromises.get(cacheKey)
+  if (cachedPromise && !options.forceRegister) return cachedPromise
   const timeoutMs = options.timeoutMs ?? DEFAULT_FONT_LOAD_TIMEOUT
 
   const fontPromise = (async () => {
-    let source = font.source
-    if (font.persistentCache && options.usePersistentCache !== false) {
-      try {
-        source = await getPersistentFontSource(font)
-      } catch {
-        source = font.source
-      }
-    }
+    const source = await getPersistentFontSource(font)
+    await registerFontFace(font, source, timeoutMs)
+  })()
 
-    try {
-      await registerFontFace(font, source, timeoutMs)
-    } catch (error) {
-      if (source === font.source) throw error
-      await registerFontFace(font, font.source, timeoutMs)
+  fontRegistrationPromises.set(cacheKey, fontPromise)
+  void fontPromise.catch(() => {
+    if (fontRegistrationPromises.get(cacheKey) === fontPromise) {
+      fontRegistrationPromises.delete(cacheKey)
     }
-  })().catch((error: unknown) => {
-    if (!(error instanceof FontLoadTimeoutError)) {
-      fontPromises.delete(cacheKey)
-    }
-    throw error
   })
-
-  fontPromises.set(cacheKey, fontPromise)
   return fontPromise
 }

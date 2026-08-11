@@ -2,9 +2,8 @@ export type AppFontDefinition = {
   family: string
   name: string
   url: string
-  source: string
   weight: "normal" | "600"
-  persistentCache?: {
+  persistentCache: {
     fileName: string
     version: string
   }
@@ -21,14 +20,16 @@ export const APP_FONTS = {
     family: "HumanDraftUI",
     name: "方正博雅仿刊宋",
     url: UI_FONT_URL,
-    source: `url("${UI_FONT_URL}")`,
-    weight: "normal"
+    weight: "normal",
+    persistentCache: {
+      fileName: "fangzhengboyafangkansong.woff2",
+      version: "20260731-ui"
+    }
   },
   red3: {
     family: "Red3GB2312",
     name: "红三",
     url: RED3_FONT_URL,
-    source: `url("${RED3_FONT_URL}")`,
     weight: "normal",
     persistentCache: {
       fileName: "red3-gb2312.woff2",
@@ -39,14 +40,20 @@ export const APP_FONTS = {
     family: "FangzhengLantingheiExtralight",
     name: "方正兰亭黑 ExtraLight",
     url: LANTING_EXTRA_LIGHT_URL,
-    source: `url("${LANTING_EXTRA_LIGHT_URL}")`,
-    weight: "normal"
+    weight: "normal",
+    persistentCache: {
+      fileName: "FZLTHProGlobal-Extralight.woff2",
+      version: "20260802"
+    }
   },
   lantingSemibold: {
     family: "MenuMetaText",
     name: "方正兰亭黑 Semibold",
     url: LANTING_SEMIBOLD_URL,
-    source: `url("${LANTING_SEMIBOLD_URL}")`,
-    weight: "600"
+    weight: "600",
+    persistentCache: {
+      fileName: "FZLTHProGlobal-Semibold.woff2",
+      version: "20260705"
+    }
   }
 } as const satisfies Record<string, AppFontDefinition>

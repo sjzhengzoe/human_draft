@@ -6,10 +6,10 @@ import { initializeUIFont } from "./services/ui-font"
 
 const RED3_PRELOAD_RETRY_DELAY = 3000
 
-function preloadRed3Font(forceReload = false) {
+function preloadRed3Font(forceRegister = false) {
   void loadAppFont(APP_FONTS.red3, {
     timeoutMs: 0,
-    forceReload
+    forceRegister
   }).catch(() => {
     setTimeout(() => preloadRed3Font(true), RED3_PRELOAD_RETRY_DELAY)
   })
