@@ -71,7 +71,7 @@
 
 .card-item {
   position: relative;
-  width: 600rpx;
+  width: var(--card-item-width, 600rpx);
   max-width: 100%;
   overflow: hidden;
   border: 1rpx solid var(--ui-border);
@@ -348,7 +348,7 @@
   }
 
   .card-item {
-    width: 520rpx;
+    width: var(--card-item-compact-width, 520rpx);
   }
 
   .card-item--empty {

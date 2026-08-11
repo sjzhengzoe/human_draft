@@ -106,11 +106,12 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
-  const PREVIEW_CACHE_VERSION = "xiaohongshu-v2";
+  const PREVIEW_CACHE_VERSION = "xiaohongshu-v3";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
   const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
   const EXPORT_CANVAS_WIDTH = 2880;
+  const MAX_COMBINED_CANVAS_HEIGHT_RATIO = 16 / 9;
   const RED3_FONT_FAMILY = APP_FONTS.red3.family;
   const SECOND_THEME_BASE_WIDTH = 300;
   const COMBINED_FONT_OPTIONS: CombinedFontOption[] = [
@@ -584,35 +585,44 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         backgroundImage: unknown,
         metrics: CanvasMetrics,
       ): Promise<string> {
-        const ctx = canvas.getContext("2d");
-
         canvas.width = metrics.width;
         canvas.height = metrics.height;
 
-        ctx.clearRect(0, 0, metrics.width, metrics.height);
-        ctx.drawImage(backgroundImage, 0, 0, metrics.width, metrics.height);
-        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.texture;
-        ctx.fillRect(0, 0, metrics.width, metrics.height);
-        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.black;
-        ctx.textBaseline = "top";
-        ctx.textAlign = "left";
-
+        const measurementContext = canvas.getContext("2d");
         const layout = createCombinedLayout(
           slides,
           fontFamily,
-          ctx,
+          measurementContext,
           metrics,
         );
-        if (layout.height > metrics.height - metrics.combinedSafeY * 2) {
-          throw new Error("合并版内容过长，请减少卡片或精简文案");
-        }
+        const requiredCanvasHeight =
+          layout.height + metrics.combinedSafeY * 2;
+        const maxCanvasHeight = Math.round(
+          metrics.width * MAX_COMBINED_CANVAS_HEIGHT_RATIO,
+        );
+        const canvasHeight = Math.min(
+          Math.max(metrics.height, requiredCanvasHeight),
+          maxCanvasHeight,
+        );
+
+        canvas.width = metrics.width;
+        canvas.height = canvasHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, metrics.width, canvasHeight);
+        ctx.drawImage(backgroundImage, 0, 0, metrics.width, canvasHeight);
+        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.texture;
+        ctx.fillRect(0, 0, metrics.width, canvasHeight);
+        ctx.fillStyle = TEXT_CARD_RENDER_COLORS.black;
+        ctx.textBaseline = "top";
+        ctx.textAlign = "left";
+        ctx.font = layout.font;
         const textTop = Math.max(
           metrics.combinedSafeY,
-          Math.round((metrics.height - layout.height) / 2),
+          Math.round((canvasHeight - layout.height) / 2),
         );
         let y = textTop;
 
-        ctx.font = layout.font;
         layout.sections.forEach((section, index) => {
           ctx.fillText(section.order, metrics.combinedPaddingLeft, y);
           y += layout.lineHeight + layout.orderBottomGap;
@@ -635,7 +645,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
           }
         });
 
-        return canvasToTempFilePath(canvas, metrics.width, metrics.height);
+        return canvasToTempFilePath(canvas, metrics.width, canvasHeight);
       },
 
       getExportCanvas(): Promise<Canvas2DNode> {
@@ -703,7 +713,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   function getRenderErrorMessage(error: unknown) {
     if (
       error instanceof Error &&
-      /^(第 \d+ 页内容过长|合并版内容过长)/.test(error.message)
+      /^第 \d+ 页内容过长/.test(error.message)
     ) {
       return error.message;
     }

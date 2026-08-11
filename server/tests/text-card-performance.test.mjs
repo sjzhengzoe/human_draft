@@ -48,6 +48,44 @@ test("text card previews stay lightweight, cached, and cancellable", async () =>
   )
 })
 
+test("combined text cards grow with content without blocking the remaining previews", async () => {
+  const [templateOne, template, workspace, workspaceStyle] = await Promise.all([
+    readProjectFile("src/components/text-card-template-one/index.ts"),
+    readProjectFile("src/components/text-card-template-one/index.wxml"),
+    readProjectFile("src/components/text-card-workspace/index.wxml"),
+    readProjectFile("src/components/text-card-workspace/index.less")
+  ])
+  const combinedRender = getMethodSource(
+    templateOne,
+    "generateCombinedImage",
+    "getExportCanvas"
+  )
+
+  assert.match(templateOne, /MAX_COMBINED_CANVAS_HEIGHT_RATIO = 16 \/ 9/)
+  assert.match(
+    combinedRender,
+    /requiredCanvasHeight =[\s\S]*?layout\.height \+ metrics\.combinedSafeY \* 2/
+  )
+  assert.match(
+    combinedRender,
+    /Math\.min\([\s\S]*?Math\.max\(metrics\.height, requiredCanvasHeight\)[\s\S]*?maxCanvasHeight/
+  )
+  assert.match(combinedRender, /const textTop = Math\.max\(/)
+  assert.match(
+    combinedRender,
+    /return canvasToTempFilePath\(canvas, metrics\.width, canvasHeight\)/
+  )
+  assert.doesNotMatch(combinedRender, /throw new Error/)
+  assert.doesNotMatch(templateOne, /合并版内容过长|减少卡片或精简文案/)
+  assert.match(template, /fit-adaptive-images="\{\{true\}\}"/)
+  assert.match(workspace, /bindload="handleCardImageLoad"/)
+  assert.match(workspace, /imageDisplayStyles\[index\]/)
+  assert.match(
+    workspaceStyle,
+    /width: var\(--card-item-width, 600rpx\);/
+  )
+})
+
 test("text card pages share presentation and render infrastructure", async () => {
   const templateBases = [
     "components/text-card-template-one",

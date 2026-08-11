@@ -14,6 +14,7 @@
   content-count="{{slides.length}}"
   preview-count="{{previewCount}}"
   merge-start-index="{{slides.length}}"
+  fit-adaptive-images="{{true}}"
   export-ready="{{hasCustomContent && !isRenderingCards && !renderError && renderedImageUrls.length === previewCount}}"
   action-label="小红书图文操作"
   show-append="{{true}}"

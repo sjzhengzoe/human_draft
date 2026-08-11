@@ -33,8 +33,17 @@
       bindchange="handleSwiperChange"
     >
       <swiper-item wx:for="{{renderedImageUrls}}" wx:key="*this" class="card-slide">
-        <view class="card-item">
-          <image class="card-image" src="{{item}}" mode="widthFix" />
+        <view
+          class="card-item"
+          style="{{fitAdaptiveImages ? imageDisplayStyles[index] : ''}}"
+        >
+          <image
+            class="card-image"
+            src="{{item}}"
+            mode="widthFix"
+            data-index="{{index}}"
+            bindload="handleCardImageLoad"
+          />
           <view wx:if="{{renderError}}" class="card-preview-overlay">
             <view class="card-preview-overlay__title">{{renderErrorMessage}}</view>
             <button class="card-preview-overlay__retry" bindtap="handleRetryPreview">重新生成</button>
