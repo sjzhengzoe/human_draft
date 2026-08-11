@@ -58,7 +58,12 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(logic, /handleRatingTap[\s\S]*?selectedRating[\s\S]*?loadCurrentView\(\{ reset: true \}\)/);
   assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
   assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*var\(--media-color-rating\);/s);
-  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s);
+  assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
+  assert.equal(page.match(/class="record-card__overlay"/g)?.length, 2);
+  assert.match(styles, /\.record-card__overlay\s*\{[^}]*position:\s*absolute;[^}]*background:\s*linear-gradient\(to bottom, transparent, var\(--ui-color-overlay-strong\)\);/s);
+  assert.match(styles, /\.record-card__title\s*\{[^}]*color:\s*var\(--ui-color-text-inverse\);/s);
+  assert.doesNotMatch(page, /record-card__body/);
+  assert.doesNotMatch(styles, /\.record-card\s*\{[^}]*border:\s*1rpx|\.record-card\s*\{[^}]*box-shadow:/s);
   assert.doesNotMatch(page, /包含全部分类|包含全部记录|只展示所选状态|四列卡片/);
   assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
   assert.ok(page.indexOf('class="category-list status-list"') < page.indexOf('class="media-toolbar"'));

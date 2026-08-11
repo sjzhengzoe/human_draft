@@ -238,8 +238,7 @@
 
 .record-card__title {
   display: -webkit-box;
-  min-height: 64rpx;
-  color: var(--ui-color-text-primary);
+  color: var(--ui-color-text-inverse);
   font-size: var(--ui-font-size-base);
   font-weight: 650;
   line-height: 1.35;
@@ -288,7 +287,7 @@
 
 .record-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 12rpx;
   padding: 0 var(--ui-page-gutter-compact);
@@ -297,10 +296,8 @@
 .record-card {
   min-width: 0;
   overflow: hidden;
-  border: 1rpx solid var(--ui-border);
   border-radius: var(--ui-radius-card);
-  background: var(--ui-surface);
-  box-shadow: 0 5rpx 15rpx var(--ui-color-shadow-subtle);
+  background: var(--ui-color-background-subtle);
 }
 
 .record-card__cover-frame {
@@ -325,16 +322,21 @@
   color: var(--ui-color-text-placeholder);
 }
 
-.record-card__body {
+.record-card__overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   box-sizing: border-box;
-  padding: 14rpx 12rpx 16rpx;
+  padding: 54rpx 14rpx 14rpx;
+  background: linear-gradient(to bottom, transparent, var(--ui-color-overlay-strong));
 }
 
 .record-card__rating {
   display: flex;
   align-items: center;
-  margin-top: 8rpx;
-  color: var(--ui-color-text-disabled);
+  margin-top: 6rpx;
+  color: var(--ui-color-text-inverse-muted);
   font-size: var(--ui-font-size-small);
   letter-spacing: -2rpx;
   line-height: 1;
