@@ -76,6 +76,12 @@ type WorkspaceBounds = {
 const CANVAS_ID = "imageCropperCanvas"
 const WORKSPACE_INSET_RPX = 24
 const MIN_CROP_PX = 56
+const RATIO_OPTIONS = [
+  { label: "自由", value: 0 },
+  { label: "1:1", value: 1 },
+  { label: "4:3", value: 4 / 3 },
+  { label: "16:9", value: 16 / 9 }
+]
 const cropStates = new WeakMap<object, CropState>()
 const cropGestures = new WeakMap<object, CropGesture>()
 
@@ -112,8 +118,13 @@ Component({
   },
 
   data: {
+    ratioOptions: RATIO_OPTIONS,
     ready: false,
     processing: false,
+    ratioPanelVisible: false,
+    ratioLocked: false,
+    activeRatio: 0,
+    activeRatioLabel: "自由",
     statusBarHeight: wx.getSystemInfoSync().statusBarHeight || 0,
     displaySrc: "",
     imageLeft: 0,
@@ -167,6 +178,7 @@ Component({
           this.properties.shape as CropShape,
           Number(this.properties.aspectRatio)
         )
+        const ratioLocked = fixedAspectRatio > 0
         const initialFrame = initialCropFrame({
           imageLeft,
           imageTop,
@@ -190,6 +202,12 @@ Component({
 
         cropStates.set(this, state)
         cropGestures.delete(this)
+        this.setData({
+          ratioPanelVisible: false,
+          ratioLocked,
+          activeRatio: fixedAspectRatio,
+          activeRatioLabel: ratioLabel(fixedAspectRatio)
+        })
         this.syncState(state, true)
       } catch (error) {
         console.error("初始化图片裁剪失败", error)
@@ -233,6 +251,7 @@ Component({
       const touch = event.touches[0]
       const state = cropStates.get(this)
       if (!touch || !state || this.data.processing) return
+      if (this.data.ratioPanelVisible) this.setData({ ratioPanelVisible: false })
       cropGestures.set(this, {
         mode: "move",
         startClientX: touch.clientX,
@@ -273,6 +292,38 @@ Component({
 
     handleGestureEnd() {
       cropGestures.delete(this)
+    },
+
+    handleRatioToolTap() {
+      if (this.data.processing || !this.data.ready || this.data.ratioLocked) return
+      this.setData({ ratioPanelVisible: !this.data.ratioPanelVisible })
+    },
+
+    handleRatioOptionTap(event: WechatMiniprogram.TouchEvent) {
+      if (this.data.processing || !this.data.ready || this.data.ratioLocked) return
+      const ratio = Number(event.currentTarget.dataset.value)
+      if (!Number.isFinite(ratio) || ratio < 0) return
+      const state = cropStates.get(this)
+      if (!state) return
+      const frame = initialCropFrame({
+        imageLeft: state.imageLeft,
+        imageTop: state.imageTop,
+        imageWidth: state.imageWidth,
+        imageHeight: state.imageHeight,
+        fixedAspectRatio: ratio
+      })
+      state.cropLeft = frame.left
+      state.cropTop = frame.top
+      state.cropWidth = frame.width
+      state.cropHeight = frame.height
+      state.fixedAspectRatio = ratio
+      cropGestures.delete(this)
+      this.setData({
+        ratioPanelVisible: false,
+        activeRatio: ratio,
+        activeRatioLabel: ratioLabel(ratio)
+      })
+      this.syncState(state)
     },
 
     syncState(state: CropState, ready = false) {
@@ -386,6 +437,14 @@ Component({
 function resolveFixedAspectRatio(shape: CropShape, aspectRatio: number) {
   if (shape === "circle" || shape === "square") return 1
   return Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 0
+}
+
+function ratioLabel(ratio: number): string {
+  if (!ratio) return "自由"
+  const matched = RATIO_OPTIONS.find((option) => Math.abs(option.value - ratio) < 0.001)
+  if (matched) return matched.label
+  if (Math.abs(ratio - 3 / 4) < 0.001) return "3:4"
+  return "固定"
 }
 
 function initialCropFrame(input: {
