@@ -7,6 +7,7 @@ import {
   consumeExerciseRestDay,
   getExerciseDashboard,
   getExerciseRestCalendar,
+  revokeExerciseRestDay,
 } from "../domains/exercise/service.mjs";
 
 const USER_ID = "10000000-0000-4000-8000-000000000002";
@@ -25,8 +26,13 @@ function createSupabaseMock(tables) {
     },
     from(table) {
       const filters = [];
+      let operation = "read";
       const query = {
         select() {
+          return query;
+        },
+        delete() {
+          operation = "delete";
           return query;
         },
         eq(field, value) {
@@ -44,6 +50,10 @@ function createSupabaseMock(tables) {
         async maybeSingle() {
           reads.push({ table, filters });
           const matching = filterRows(tables[table] || [], filters);
+          if (operation === "delete") {
+            const matchingRows = new Set(matching);
+            tables[table] = (tables[table] || []).filter((row) => !matchingRows.has(row));
+          }
           return { data: matching[0] || null, error: null };
         },
         async order() {
@@ -407,6 +417,82 @@ test("a rest day cannot be applied to a future date", async () => {
   assert.equal(supabase.rpcCalls.length, 0);
 });
 
+test("a used rest day can be revoked only in the current month", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+    ],
+    exercise_daily_goal_changes: [
+      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+    ],
+    exercise_completion_events: [],
+    exercise_daily_rest_days: [
+      { user_id: USER_ID, rest_date: "2026-08-02" },
+      { user_id: OTHER_USER_ID, rest_date: "2026-08-02" },
+    ],
+  });
+
+  const dashboard = await revokeExerciseRestDay(
+    supabase,
+    USER_ID,
+    { date: "2026-08-02" },
+    AUGUST_THIRD_CHINA,
+  );
+
+  assert.equal(dashboard.rest_days.used, 0);
+  assert.equal(dashboard.rest_days.remaining, 3);
+  assert.equal(
+    supabase.reads.some((read) =>
+      read.table === "exercise_daily_rest_days"
+      && read.filters.some(([operator, field, value]) =>
+        operator === "eq" && field === "user_id" && value === USER_ID
+      )
+      && read.filters.some(([operator, field, value]) =>
+        operator === "eq" && field === "rest_date" && value === "2026-08-02"
+      )
+    ),
+    true,
+  );
+});
+
+test("rest-day revocation rejects historical months and unused dates", async () => {
+  const historicalSupabase = createSupabaseMock({});
+  await assert.rejects(
+    revokeExerciseRestDay(
+      historicalSupabase,
+      USER_ID,
+      { date: "2026-07-31" },
+      AUGUST_THIRD_CHINA,
+    ),
+    { code: "INVALID_EXERCISE_REVOKE_DATE" },
+  );
+
+  const unusedSupabase = createSupabaseMock({
+    exercise_daily_rest_days: [],
+  });
+  await assert.rejects(
+    revokeExerciseRestDay(
+      unusedSupabase,
+      USER_ID,
+      { date: "2026-08-02" },
+      AUGUST_THIRD_CHINA,
+    ),
+    { code: "EXERCISE_REST_DAY_NOT_USED" },
+  );
+});
+
+test("rest-day page exposes current-month revocation with confirmation", async () => {
+  const [pageSource, templateSource] = await Promise.all([
+    readFile(new URL("../../src/exercise/pages/rest-days/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/exercise/pages/rest-days/index.wxml", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(pageSource, /selectedCanRevokeRestDay/);
+  assert.match(pageSource, /revokeExerciseRestDay\(this\.data\.selectedDate\)/);
+  assert.match(templateSource, /\{\{selectionActionText\}\}/);
+  assert.match(templateSource, /title="\{\{confirmTitle\}\}"/);
+});
+
 test("a tracked past date can receive a missed exercise completion", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
@@ -475,9 +561,11 @@ test("exercise home lets a tracked calendar day drive the completion date", asyn
 
   assert.match(pageSource, /handleCalendarDayTap/);
   assert.match(pageSource, /completeExercise\(minutes, selectedDate\)/);
+  assert.match(pageSource, /revokeExerciseRestDay\(selectedDate\)/);
   assert.match(templateSource, /data-date="\{\{item\.date\}\}"/);
   assert.match(templateSource, /bindtap="handleCalendarDayTap"/);
   assert.match(templateSource, /\{\{selectedTaskTitle\}\}/);
+  assert.match(templateSource, /title="撤回休息日"/);
 });
 
 test("daily goal settings migration applies new goals from the next day", async () => {

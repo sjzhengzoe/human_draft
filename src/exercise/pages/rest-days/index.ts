@@ -1,6 +1,7 @@
 import {
   consumeExerciseRestDay,
-  getExerciseRestCalendar
+  getExerciseRestCalendar,
+  revokeExerciseRestDay
 } from "../../services/exercise"
 import type {
   ExerciseCalendarDayState,
@@ -28,9 +29,13 @@ type RestCalendarCell = {
 const CALENDAR_CAT_IMAGE = "/exercise/assets/calendar/happy-cat.png"
 const CALENDAR_DOG_IMAGE = "/exercise/assets/calendar/unhappy-dog.png"
 
-function selectionHint(cell?: RestCalendarCell) {
+function selectionHint(cell: RestCalendarCell | undefined, isCurrentMonth: boolean) {
   if (!cell) return "切换月份查看其他日期"
-  if (cell.restUsed) return "这一天已使用休息日权限完成"
+  if (cell.restUsed) {
+    return isCurrentMonth
+      ? "这一天已使用休息日，可撤回"
+      : "这一天已使用休息日，历史月份不可撤回"
+  }
   if (cell.state === "completed") return "这一天已经完成，无需补卡"
   if (!cell.canUseRestDay) return "该月休息日权限已用完"
   return "可使用该月休息日权限完成补卡"
@@ -68,8 +73,14 @@ Page({
     selectedDate: "",
     selectedDateLabel: "",
     selectedCanUseRestDay: false,
+    selectedCanRevokeRestDay: false,
+    selectedActionEnabled: false,
+    selectionActionText: "使用休息日权限",
     selectedHint: "切换月份查看其他日期",
     confirmVisible: false,
+    confirmAction: "use",
+    confirmTitle: "使用休息日权限",
+    confirmButtonText: "确认使用",
     confirmContent: "",
     restDaysUsed: 0,
     restDaysTotal: 0,
@@ -131,6 +142,9 @@ Page({
       (item) => item.state === "incomplete"
     ).length
     const selectedCell = cells.find((item) => item.date === preferredDate)
+    const selectedCanRevokeRestDay = Boolean(
+      selectedCell?.restUsed && calendar.month.is_current
+    )
     let emptyMessage = ""
     if (incompleteDays === 0) {
       emptyMessage = "本月全部完成，无需补卡"
@@ -150,7 +164,12 @@ Page({
       selectedDate: preferredDate,
       selectedDateLabel: preferredDate ? displayDate(preferredDate, calendar.today) : "",
       selectedCanUseRestDay: Boolean(selectedCell?.canUseRestDay),
-      selectedHint: selectionHint(selectedCell),
+      selectedCanRevokeRestDay,
+      selectedActionEnabled: selectedCanRevokeRestDay || Boolean(selectedCell?.canUseRestDay),
+      selectionActionText: selectedCell?.restUsed
+        ? calendar.month.is_current ? "撤回休息日" : "仅本月可撤回"
+        : "使用休息日权限",
+      selectedHint: selectionHint(selectedCell, calendar.month.is_current),
       restDaysUsed: calendar.month.rest_days.used,
       restDaysTotal: calendar.month.rest_days.total,
       restDaysRemaining: calendar.month.rest_days.remaining,
@@ -219,15 +238,37 @@ Page({
       selectedDate: date,
       selectedDateLabel: displayDate(date, this.data.today),
       selectedCanUseRestDay: cell.canUseRestDay,
-      selectedHint: selectionHint(cell)
+      selectedCanRevokeRestDay: cell.restUsed && this.data.monthValue === this.data.today.slice(0, 7),
+      selectedActionEnabled: cell.canUseRestDay
+        || (cell.restUsed && this.data.monthValue === this.data.today.slice(0, 7)),
+      selectionActionText: cell.restUsed
+        ? this.data.monthValue === this.data.today.slice(0, 7) ? "撤回休息日" : "仅本月可撤回"
+        : "使用休息日权限",
+      selectedHint: selectionHint(
+        cell,
+        this.data.monthValue === this.data.today.slice(0, 7)
+      )
     })
   },
 
-  handleUseRestDay() {
-    if (this.data.busy || !this.data.selectedDate || !this.data.selectedCanUseRestDay) return
+  handleSelectionAction() {
+    if (this.data.busy || !this.data.selectedDate || !this.data.selectedActionEnabled) return
+    if (this.data.selectedCanRevokeRestDay) {
+      this.setData({
+        confirmVisible: true,
+        confirmAction: "revoke",
+        confirmTitle: "撤回休息日",
+        confirmButtonText: "确认撤回",
+        confirmContent: `撤回后，${this.data.selectedDateLabel}会恢复为实际运动状态，并返还本月 1 天休息权限。`
+      })
+      return
+    }
     const remaining = Math.max(0, this.data.restDaysRemaining - 1)
     this.setData({
       confirmVisible: true,
+      confirmAction: "use",
+      confirmTitle: "使用休息日权限",
+      confirmButtonText: "确认使用",
       confirmContent: `使用后将把${this.data.selectedDateLabel}的日常任务标记为完成。使用后该月还剩 ${remaining} 天休息权限。`
     })
   },
@@ -238,19 +279,29 @@ Page({
   },
 
   async handleConfirm() {
-    if (this.data.busy || !this.data.selectedDate || !this.data.selectedCanUseRestDay) return
+    if (this.data.busy || !this.data.selectedDate || !this.data.selectedActionEnabled) return
     const selectedLabel = this.data.selectedDateLabel
+    const isRevoke = this.data.confirmAction === "revoke"
     this.setData({ confirmVisible: false, busy: true })
     try {
-      await consumeExerciseRestDay(this.data.selectedDate)
+      if (isRevoke) {
+        await revokeExerciseRestDay(this.data.selectedDate)
+      } else {
+        await consumeExerciseRestDay(this.data.selectedDate)
+      }
       if (!isAsyncPageActive(this)) return
       await this.loadCalendar(this.data.monthValue, true)
       if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: `${selectedLabel}已补卡`, icon: "success" })
+      wx.showToast({
+        title: isRevoke ? `${selectedLabel}已撤回` : `${selectedLabel}已补卡`,
+        icon: "success"
+      })
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
-          title: error instanceof Error ? error.message : "补卡失败",
+          title: error instanceof Error
+            ? error.message
+            : isRevoke ? "撤回失败" : "补卡失败",
           icon: "none"
         })
       }

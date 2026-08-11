@@ -1,6 +1,7 @@
 import {
   completeExercise,
-  getExerciseDashboard
+  getExerciseDashboard,
+  revokeExerciseRestDay
 } from "../services/exercise"
 import type { ExerciseBowlLevel, ExerciseDashboard } from "../../types/exercise"
 import { getCurrentUser } from "../../services/auth"
@@ -171,6 +172,9 @@ Page({
     selectedPendingTotal: 0,
     selectedRecordedMinutes: 0,
     selectedOverachievedMinutes: 0,
+    selectedRestUsed: false,
+    selectedCanRevokeRestDay: false,
+    selectedActionDisabled: false,
     restDaysUsed: 0,
     restDaysTotal: 0,
     restDaysRemaining: 0,
@@ -196,7 +200,9 @@ Page({
     minutesDialogVisible: false,
     minutesDialogTitle: "",
     minutesDialogPlaceholder: "",
-    minutesInput: ""
+    minutesInput: "",
+    revokeDialogVisible: false,
+    revokeDialogContent: ""
   },
 
   onLoad() {
@@ -301,6 +307,8 @@ Page({
   applySelectedDay(cell: ExerciseCalendarCell, today: string, updateCells = true) {
     const stateImages = getImagesForState(cell.bowlLevel, cell.date)
     const label = dateDisplayLabel(cell.date, today)
+    const canRevokeRestDay = cell.restUsed
+      && cell.date.slice(0, 7) === today.slice(0, 7)
     this.setData({
       selectedDate: cell.date,
       selectedDateLabel: label,
@@ -312,7 +320,12 @@ Page({
       selectedPendingTotal: cell.pendingMinutes,
       selectedRecordedMinutes: cell.recordedMinutes,
       selectedOverachievedMinutes: cell.overachievedMinutes,
-      completeButtonText: cell.pendingMinutes === 0 ? "记录额外运动" : "完成运动",
+      selectedRestUsed: cell.restUsed,
+      selectedCanRevokeRestDay: canRevokeRestDay,
+      selectedActionDisabled: cell.restUsed && !canRevokeRestDay,
+      completeButtonText: cell.restUsed
+        ? canRevokeRestDay ? "撤回休息日" : "仅本月可撤回"
+        : cell.pendingMinutes === 0 ? "记录额外运动" : "完成运动",
       bowlLabel: cell.bowlLabel,
       emotionLabel: PET_STATE_LABELS[cell.bowlLevel],
       petImage: stateImages.petImage,
@@ -388,6 +401,14 @@ Page({
 
   handleComplete() {
     if (this.data.busy) return
+    if (this.data.selectedRestUsed) {
+      if (!this.data.selectedCanRevokeRestDay) return
+      this.setData({
+        revokeDialogVisible: true,
+        revokeDialogContent: `撤回后，${this.data.selectedDateLabel}会恢复为实际运动状态，并返还本月 1 天休息权限。`
+      })
+      return
+    }
     this.setData({
       minutesDialogVisible: true,
       minutesDialogTitle: "记录运动分钟",
@@ -407,6 +428,23 @@ Page({
   closeMinutesDialog() {
     if (this.data.busy) return
     this.setData({ minutesDialogVisible: false, minutesInput: "" })
+  },
+
+  closeRevokeDialog() {
+    if (this.data.busy) return
+    this.setData({ revokeDialogVisible: false })
+  },
+
+  confirmRevokeDialog() {
+    if (this.data.busy || !this.data.selectedCanRevokeRestDay) return
+    const selectedDate = this.data.selectedDate
+    const selectedLabel = this.data.selectedDateLabel
+    this.setData({ revokeDialogVisible: false })
+    this.runAction(
+      "revoke",
+      () => revokeExerciseRestDay(selectedDate),
+      `${selectedLabel}已撤回`
+    )
   },
 
   confirmMinutesDialog() {

@@ -94,20 +94,20 @@
       <view class="selection-copy__hint">{{selectedHint}}</view>
     </view>
     <button
-      class="use-button"
-      disabled="{{busy || !selectedCanUseRestDay}}"
+      class="use-button {{selectedCanRevokeRestDay ? 'use-button--revoke' : ''}}"
+      disabled="{{busy || !selectedActionEnabled}}"
       loading="{{busy}}"
-      bindtap="handleUseRestDay"
-    >使用休息日权限</button>
+      bindtap="handleSelectionAction"
+    >{{selectionActionText}}</button>
   </view>
 
   <app-dialog
     wx:if="{{confirmVisible}}"
     visible="{{true}}"
-    title="使用休息日权限"
+    title="{{confirmTitle}}"
     content="{{confirmContent}}"
     cancel-text="取消"
-    confirm-text="确认使用"
+    confirm-text="{{confirmButtonText}}"
     bindcancel="handleConfirmCancel"
     bindconfirm="handleConfirm"
   />

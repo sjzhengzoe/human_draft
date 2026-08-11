@@ -33,6 +33,19 @@ function dateString(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function isValidDateString(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsedDate = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsedDate.getTime())
+    && dateString(
+      parsedDate.getUTCFullYear(),
+      parsedDate.getUTCMonth() + 1,
+      parsedDate.getUTCDate(),
+    ) === value;
+}
+
 function monthContext(now = new Date()) {
   const { year, month, day } = datePartsInChina(now);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -589,22 +602,45 @@ export async function consumeExerciseRestDay(
   return getExerciseDashboard(supabase, userId, now);
 }
 
+export async function revokeExerciseRestDay(
+  supabase,
+  userId,
+  body = {},
+  now = new Date(),
+) {
+  const context = monthContext(now);
+  const restDate = body.date;
+  assertCondition(
+    isValidDateString(restDate)
+      && restDate <= context.today
+      && restDate.slice(0, 7) === context.today.slice(0, 7),
+    400,
+    "INVALID_EXERCISE_REVOKE_DATE",
+    "只能撤回本月已使用的休息日。",
+  );
+  const deleteResult = await supabase
+    .from("exercise_daily_rest_days")
+    .delete()
+    .eq("user_id", userId)
+    .eq("rest_date", restDate)
+    .select("rest_date")
+    .maybeSingle();
+  throwSupabaseError(deleteResult.error, "撤回休息日失败。");
+  assertCondition(
+    Boolean(deleteResult.data),
+    409,
+    "EXERCISE_REST_DAY_NOT_USED",
+    "该日期没有可撤回的休息日记录。",
+  );
+  return getExerciseDashboard(supabase, userId, now);
+}
+
 export async function completeExerciseTasks(supabase, userId, body, now = new Date()) {
   const minutes = integerValue(body.minutes, "完成分钟数", 1, 10_000);
   const context = monthContext(now);
   const completionDate = body.date || context.today;
-  const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(completionDate)
-    ? new Date(`${completionDate}T00:00:00.000Z`)
-    : null;
-  const isValidDate = parsedDate
-    && !Number.isNaN(parsedDate.getTime())
-    && dateString(
-      parsedDate.getUTCFullYear(),
-      parsedDate.getUTCMonth() + 1,
-      parsedDate.getUTCDate(),
-    ) === completionDate;
   assertCondition(
-    isValidDate && completionDate <= context.today,
+    isValidDateString(completionDate) && completionDate <= context.today,
     400,
     "INVALID_EXERCISE_COMPLETION_DATE",
     "只能记录不晚于今天的有效日期。",

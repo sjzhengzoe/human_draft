@@ -34,6 +34,14 @@ export function consumeExerciseRestDay(date: string): Promise<ExerciseDashboard>
   })
 }
 
+export function revokeExerciseRestDay(date: string): Promise<ExerciseDashboard> {
+  return request<ExerciseDashboard>({
+    path: "/api/exercise/rest-day",
+    method: "DELETE",
+    data: { date }
+  })
+}
+
 export function getExerciseRestCalendar(month = ""): Promise<ExerciseRestCalendar> {
   return request<ExerciseRestCalendar>({
     path: "/api/exercise/rest-calendar",

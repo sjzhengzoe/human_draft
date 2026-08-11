@@ -109,9 +109,9 @@
 
   <view class="action-section">
     <button
-      class="task-button task-button--dark"
-      disabled="{{busy}}"
-      loading="{{busyAction === 'complete'}}"
+      class="task-button task-button--dark {{selectedCanRevokeRestDay ? 'task-button--danger' : ''}}"
+      disabled="{{busy || selectedActionDisabled}}"
+      loading="{{busyAction === 'complete' || busyAction === 'revoke'}}"
       bindtap="handleComplete"
     >
       <view class="task-button__title">{{completeButtonText}}</view>
@@ -151,4 +151,15 @@
       <button class="minutes-dialog-button minutes-dialog-button--confirm" disabled="{{busy}}" bindtap="confirmMinutesDialog">确定</button>
     </view>
   </app-dialog>
+
+  <app-dialog
+    wx:if="{{revokeDialogVisible}}"
+    visible="{{true}}"
+    title="撤回休息日"
+    content="{{revokeDialogContent}}"
+    cancel-text="取消"
+    confirm-text="确认撤回"
+    bindcancel="closeRevokeDialog"
+    bindconfirm="confirmRevokeDialog"
+  />
 </view>

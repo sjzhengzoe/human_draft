@@ -4,6 +4,7 @@ import {
   getExerciseDashboard,
   getExerciseRestCalendar,
   resetExerciseState,
+  revokeExerciseRestDay,
   saveExerciseSettings
 } from "../domains/exercise/service.mjs"
 
@@ -61,6 +62,19 @@ export function registerExerciseRoutes(app, context) {
     async (request) => ({
       ok: true,
       data: await consumeExerciseRestDay(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        request.body || {}
+      )
+    })
+  )
+
+  app.delete(
+    "/api/exercise/rest-day",
+    { preHandler: authenticated },
+    async (request) => ({
+      ok: true,
+      data: await revokeExerciseRestDay(
         getSupabaseAdmin(),
         request.auth.user.id,
         request.body || {}
