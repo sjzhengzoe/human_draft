@@ -24,34 +24,27 @@ export async function uploadOptimizedImagePair(
 
   const { imagePath, thumbnailPath } = optimizedImagePaths(basePath);
   const bucket = supabase.storage.from(bucketName);
-  const { error: imageError } = await bucket.upload(imagePath, optimized.original, {
-    cacheControl: "31536000",
-    contentType: optimized.originalContentType,
-    upsert: false,
-  });
-  if (imageError) {
-    const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", uploadErrorMessage);
-    wrapped.cause = imageError;
-    throw wrapped;
-  }
-
-  const { error: thumbnailError } = await bucket.upload(
-    thumbnailPath,
-    optimized.thumbnail,
-    {
+  const [imageResult, thumbnailResult] = await Promise.all([
+    bucket.upload(imagePath, optimized.original, {
+      cacheControl: "31536000",
+      contentType: optimized.originalContentType,
+      upsert: false,
+    }),
+    bucket.upload(thumbnailPath, optimized.thumbnail, {
       cacheControl: "31536000",
       contentType: optimized.thumbnailContentType,
       upsert: false,
-    },
-  );
-  if (thumbnailError) {
-    await bucket.remove([imagePath]);
+    }),
+  ]);
+  if (imageResult.error || thumbnailResult.error) {
+    await bucket.remove([imagePath, thumbnailPath]);
+    const imageFailed = Boolean(imageResult.error);
     const wrapped = new HttpError(
       500,
-      "THUMBNAIL_UPLOAD_FAILED",
-      thumbnailErrorMessage,
+      imageFailed ? "IMAGE_UPLOAD_FAILED" : "THUMBNAIL_UPLOAD_FAILED",
+      imageFailed ? uploadErrorMessage : thumbnailErrorMessage,
     );
-    wrapped.cause = thumbnailError;
+    wrapped.cause = imageResult.error || thumbnailResult.error;
     throw wrapped;
   }
 

@@ -69,6 +69,28 @@ test("key moment items own the edit hit area and isolate the corner delete contr
   );
 });
 
+test("key moment images keep their source ratio and make the shared crop step optional", async () => {
+  const [page, styles, logic] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /class="moment-image"[\s\S]*?mode="widthFix"/);
+  assert.match(page, /class="image-editor__preview"[\s\S]*?mode="aspectFit"[\s\S]*?bindtap="handleChooseImage"/);
+  assert.match(page, /<image-cropper[\s\S]*?shape="rectangle"[\s\S]*?title="调整节点图片"/);
+  assert.match(page, /<image-cropper[\s\S]*?output-size="1440"[\s\S]*?output-type="jpg"[\s\S]*?output-quality="0\.88"/);
+  assert.doesNotMatch(page, /<image-cropper[\s\S]*?aspect-ratio=/);
+  assert.doesNotMatch(page, /image-editor__action|可直接使用|>裁剪<|bind:original|free-ratio|allow-original/);
+  assert.doesNotMatch(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 4 \/ 3;/);
+  assert.match(
+    logic,
+    /showImageCropper: true,[\s\S]*?cropSourcePath: file\.tempFilePath/,
+  );
+  assert.match(logic, /handleImageCropConfirm\([\s\S]*?selectedImagePath: tempFilePath/);
+  assert.doesNotMatch(logic, /handleOpenImageCropper|handleImageOriginal/);
+});
+
 test("key moments offer user-scoped horizontal and vertical display settings", async () => {
   const [page, styles, logic, settingsPage, settingsLogic, storage, appConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
@@ -90,8 +112,6 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
     /class="add-button"[\s\S]*?aria-label="新增人生节点"[\s\S]*?<app-icon name="plus-white"/,
   );
   assert.match(page, /moment-card--\{\{displayLayout\}\}/);
-  assert.match(page, /shape="rectangle"[\s\S]*?aspect-ratio="\{\{imageCropAspectRatio\}\}"/);
-  assert.match(styles, /\.moment-image\s*\{[\s\S]*?width: 236rpx;[\s\S]*?aspect-ratio: 4 \/ 3;/);
   assert.match(styles, /\.moment-card--vertical\s*\{[\s\S]*?display: block;/);
   assert.match(styles, /\.moment-card--vertical \.moment-image\s*\{[\s\S]*?width: 100%;/);
   assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.id\)/);
@@ -102,6 +122,43 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
   assert.match(storage, /KEY_MOMENT_DISPLAY_LAYOUT_V1/);
   assert.match(storage, /storageKey\(userId\)/);
   assert.match(appConfig, /"pages\/key-moments\/settings\/index"/);
+});
+
+test("key moments reuse cached periods and update cached lists after writes", async () => {
+  const [page, service, cache, auth] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/utils/key-moment-data-cache.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/auth.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /if \(!this\.data\.hasLoaded\) \{[\s\S]*?this\.loadItems\(\)/);
+  assert.match(page, /this\.data\.keyMomentRevision !== getKeyMomentDataRevision\(\)/);
+  assert.match(page, /if \(!cached\?\.fresh\) void this\.loadItems\(\{ background: true, silent: true \}\)/);
+  assert.match(page, /syncItemsFromCache/);
+  assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已保存"[\s\S]{0,80}?await this\.loadItems\(\)/);
+  assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已删除"[\s\S]{0,80}?await this\.loadItems\(\)/);
+  assert.match(page, /finally \{[\s\S]*?wx\.hideLoading\(\)[\s\S]*?if \(toastTitle[\s\S]*?wx\.showToast/);
+  assert.match(service, /if \(cached\?\.fresh\) return cached\.items/);
+  assert.match(service, /pendingKeyMomentRequests/);
+  assert.match(service, /updateCachedKeyMoment\(data\.item\)/);
+  assert.match(service, /removeCachedKeyMoment\(id\)/);
+  assert.match(cache, /KEY_MOMENT_CACHE_FRESH_MS = 5 \* 60 \* 60 \* 1000/);
+  assert.match(cache, /MAX_CACHED_KEY_MOMENT_QUERIES = 24/);
+  assert.match(auth, /clearKeyMomentDataCache\(\)/);
+});
+
+test("key moment image loading and uploads avoid unnecessary serial work", async () => {
+  const [page, routes, storage, imageProcessing] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../domains/shared/image-storage.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../lib/image-processing.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /thumbnail_url \|\| item\.image_url[\s\S]*?lazy-load/);
+  assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
+  assert.match(storage, /const \[imageResult, thumbnailResult\] = await Promise\.all/);
+  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 1_920[\s\S]*?width: 1_080/);
 });
 
 test("key moments migration creates user-owned records and a private image bucket", async () => {

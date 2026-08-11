@@ -28,10 +28,12 @@ export function registerKeyMomentRoutes(app, context) {
     if (request.isMultipart()) {
       ({ fields, image } = await readKeyMomentMultipart(request));
     }
-    if (fields.content) {
-      await contentSecurity.checkText(request.auth.user.openid, fields.content);
-    }
-    if (image) await contentSecurity.checkImage(image);
+    await Promise.all([
+      fields.content
+        ? contentSecurity.checkText(request.auth.user.openid, fields.content)
+        : undefined,
+      image ? contentSecurity.checkImage(image) : undefined,
+    ]);
     const item = await createKeyMoment(
       getSupabaseAdmin(),
       request.auth.user.id,

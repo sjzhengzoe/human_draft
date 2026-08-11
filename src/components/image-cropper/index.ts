@@ -1,4 +1,5 @@
 type CropShape = "circle" | "square" | "rectangle"
+type CropHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w"
 
 type CanvasImage = {
   src: string
@@ -15,17 +16,6 @@ type CanvasNode = {
 
 type CanvasContext = {
   clearRect: (x: number, y: number, width: number, height: number) => void
-  save: () => void
-  restore: () => void
-  translate: (x: number, y: number) => void
-  rotate: (angle: number) => void
-  drawImage(
-    image: unknown,
-    destinationX: number,
-    destinationY: number,
-    destinationWidth: number,
-    destinationHeight: number
-  ): void
   drawImage(
     image: unknown,
     sourceX: number,
@@ -39,45 +29,53 @@ type CanvasContext = {
   ): void
 }
 
+type CropFrame = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 type CropState = {
   naturalWidth: number
   naturalHeight: number
-  viewportWidth: number
-  viewportHeight: number
-  minScale: number
-  scale: number
-  offsetX: number
-  offsetY: number
+  imageLeft: number
+  imageTop: number
+  imageWidth: number
+  imageHeight: number
+  cropLeft: number
+  cropTop: number
+  cropWidth: number
+  cropHeight: number
+  fixedAspectRatio: number
 }
 
-type CropGesture =
-  | {
-      mode: "move"
-      startClientX: number
-      startClientY: number
-      startOffsetX: number
-      startOffsetY: number
-    }
-  | {
-      mode: "scale"
-      startDistance: number
-      startScale: number
-      startOffsetX: number
-      startOffsetY: number
-    }
+type CropGesture = {
+  mode: "move" | "resize"
+  handle?: CropHandle
+  startClientX: number
+  startClientY: number
+  startFrame: CropFrame
+}
 
 type TouchPoint = {
   clientX: number
   clientY: number
 }
 
-const STAGE_RPX = 536
-const VIEWPORT_WIDTH_RPX = 420
+type ImageInfo = {
+  width: number
+  height: number
+}
+
+type WorkspaceBounds = {
+  width?: number
+  height?: number
+}
+
 const CANVAS_ID = "imageCropperCanvas"
-// Keep a small rendered-image buffer around the crop frame. A boundary that is
-// mathematically exact can still expose the stage background after sub-pixel
-// rounding on high-density screens.
-const EDGE_GUARD_PX = 2
+const WORKSPACE_INSET_RPX = 24
+const MIN_CROP_PX = 56
 const cropStates = new WeakMap<object, CropState>()
 const cropGestures = new WeakMap<object, CropGesture>()
 
@@ -89,7 +87,7 @@ Component({
     },
     shape: {
       type: String,
-      value: "square"
+      value: "rectangle"
     },
     title: {
       type: String,
@@ -99,25 +97,34 @@ Component({
       type: Number,
       value: 1080
     },
+    outputType: {
+      type: String,
+      value: "png"
+    },
+    outputQuality: {
+      type: Number,
+      value: 0.86
+    },
     aspectRatio: {
       type: Number,
-      value: 1
+      value: 0
     }
   },
 
   data: {
     ready: false,
     processing: false,
-    rotating: false,
+    statusBarHeight: wx.getSystemInfoSync().statusBarHeight || 0,
     displaySrc: "",
-    displayWidth: 0,
-    displayHeight: 0,
-    offsetX: 0,
-    offsetY: 0,
-    frameLeft: 0,
-    frameTop: 0,
-    frameWidth: 0,
-    frameHeight: 0
+    imageLeft: 0,
+    imageTop: 0,
+    imageWidth: 0,
+    imageHeight: 0,
+    cropLeft: 0,
+    cropTop: 0,
+    cropWidth: 0,
+    cropHeight: 0,
+    fixedAspectRatio: 0
   },
 
   lifetimes: {
@@ -131,219 +138,193 @@ Component({
   },
 
   methods: {
-    initializeCrop(requestedSrc?: string): Promise<boolean> {
-      const src = requestedSrc || this.properties.src
+    async initializeCrop(): Promise<void> {
+      const src = this.properties.src
       if (!src) {
         this.triggerEvent("error", { message: "未选择图片" })
-        return Promise.resolve(false)
+        return
       }
 
       this.setData({ displaySrc: src, ready: false })
+      try {
+        const [workspace, imageInfo] = await Promise.all([
+          this.measureWorkspace(),
+          this.getImageInfo(src)
+        ])
+        const windowWidth = wx.getSystemInfoSync().windowWidth
+        const inset = (windowWidth * WORKSPACE_INSET_RPX) / 750
+        const availableWidth = Math.max(workspace.width - inset * 2, 1)
+        const availableHeight = Math.max(workspace.height - inset * 2, 1)
+        const displayScale = Math.min(
+          availableWidth / imageInfo.width,
+          availableHeight / imageInfo.height
+        )
+        const imageWidth = imageInfo.width * displayScale
+        const imageHeight = imageInfo.height * displayScale
+        const imageLeft = (workspace.width - imageWidth) / 2
+        const imageTop = (workspace.height - imageHeight) / 2
+        const fixedAspectRatio = resolveFixedAspectRatio(
+          this.properties.shape as CropShape,
+          Number(this.properties.aspectRatio)
+        )
+        const initialFrame = initialCropFrame({
+          imageLeft,
+          imageTop,
+          imageWidth,
+          imageHeight,
+          fixedAspectRatio
+        })
+        const state: CropState = {
+          naturalWidth: imageInfo.width,
+          naturalHeight: imageInfo.height,
+          imageLeft,
+          imageTop,
+          imageWidth,
+          imageHeight,
+          cropLeft: initialFrame.left,
+          cropTop: initialFrame.top,
+          cropWidth: initialFrame.width,
+          cropHeight: initialFrame.height,
+          fixedAspectRatio
+        }
+
+        cropStates.set(this, state)
+        cropGestures.delete(this)
+        this.syncState(state, true)
+      } catch (error) {
+        console.error("初始化图片裁剪失败", error)
+        this.triggerEvent("error", { message: "无法读取图片，请重试" })
+      }
+    },
+
+    measureWorkspace(): Promise<{ width: number; height: number }> {
       return new Promise((resolve) => {
+        this.createSelectorQuery()
+          .select(".crop-workspace")
+          .boundingClientRect((result) => {
+            const bounds = result as WorkspaceBounds | null
+            if (bounds?.width && bounds.height) {
+              resolve({ width: bounds.width, height: bounds.height })
+              return
+            }
+            const systemInfo = wx.getSystemInfoSync()
+            resolve({
+              width: systemInfo.windowWidth,
+              height: Math.max(systemInfo.windowHeight - 180, 240)
+            })
+          })
+          .exec()
+      })
+    },
+
+    getImageInfo(src: string): Promise<ImageInfo> {
+      return new Promise((resolve, reject) => {
         wx.getImageInfo({
           src,
-          success: (imageInfo) => {
-            const windowWidth = wx.getSystemInfoSync().windowWidth
-            const aspectRatio = Math.max(Number(this.properties.aspectRatio) || 1, 0.5)
-            const viewportWidth = (windowWidth * VIEWPORT_WIDTH_RPX) / 750
-            const viewportHeight = viewportWidth / aspectRatio
-            const stageSize = (windowWidth * STAGE_RPX) / 750
-            const frameLeft = (stageSize - viewportWidth) / 2
-            const frameTop = (stageSize - viewportHeight) / 2
-            const minScale = Math.max(
-              (viewportWidth + EDGE_GUARD_PX * 2) / imageInfo.width,
-              (viewportHeight + EDGE_GUARD_PX * 2) / imageInfo.height
-            )
-            const displayWidth = imageInfo.width * minScale
-            const displayHeight = imageInfo.height * minScale
-            const state: CropState = {
-              naturalWidth: imageInfo.width,
-              naturalHeight: imageInfo.height,
-              viewportWidth,
-              viewportHeight,
-              minScale,
-              scale: minScale,
-              offsetX: (viewportWidth - displayWidth) / 2,
-              offsetY: (viewportHeight - displayHeight) / 2
-            }
-
-            cropStates.set(this, state)
-            cropGestures.delete(this)
-            this.setData({
-              frameLeft,
-              frameTop,
-              frameWidth: viewportWidth,
-              frameHeight: viewportHeight
-            })
-            this.syncTransform(state, true)
-            resolve(true)
-          },
-          fail: () => {
-            this.triggerEvent("error", { message: "无法读取图片，请重试" })
-            resolve(false)
-          }
+          success: (result) => resolve({ width: result.width, height: result.height }),
+          fail: reject
         })
       })
     },
 
     noop() {},
 
-    handleTouchStart(event: WechatMiniprogram.TouchEvent) {
-      this.beginGesture(event.touches)
-    },
-
-    handleTouchMove(event: WechatMiniprogram.TouchEvent) {
+    handleFrameTouchStart(event: WechatMiniprogram.TouchEvent) {
+      const touch = event.touches[0]
       const state = cropStates.get(this)
-      const gesture = cropGestures.get(this)
-      if (!state || !gesture || !event.touches.length) return
-
-      if (gesture.mode === "move" && event.touches.length === 1) {
-        const touch = event.touches[0]
-        applyTransform(
-          state,
-          state.scale,
-          gesture.startOffsetX + touch.clientX - gesture.startClientX,
-          gesture.startOffsetY + touch.clientY - gesture.startClientY
-        )
-        this.syncTransform(state)
-        return
-      }
-
-      if (gesture.mode === "scale" && event.touches.length >= 2) {
-        const distance = getTouchDistance(event.touches[0], event.touches[1])
-        const requestedScale = gesture.startScale * (distance / gesture.startDistance)
-        const nextScale = clampScale(state, requestedScale)
-        const ratio = nextScale / gesture.startScale
-        const anchorX = state.viewportWidth / 2
-        const anchorY = state.viewportHeight / 2
-
-        applyTransform(
-          state,
-          nextScale,
-          anchorX - (anchorX - gesture.startOffsetX) * ratio,
-          anchorY - (anchorY - gesture.startOffsetY) * ratio
-        )
-        this.syncTransform(state)
-      }
-    },
-
-    handleTouchEnd(event: WechatMiniprogram.TouchEvent) {
-      if (event.touches.length) {
-        this.beginGesture(event.touches)
-        return
-      }
-      cropGestures.delete(this)
-    },
-
-    beginGesture(touches: TouchPoint[]) {
-      const state = cropStates.get(this)
-      if (!state || !touches.length) {
-        cropGestures.delete(this)
-        return
-      }
-
-      if (touches.length >= 2) {
-        cropGestures.set(this, {
-          mode: "scale",
-          startDistance: Math.max(getTouchDistance(touches[0], touches[1]), 1),
-          startScale: state.scale,
-          startOffsetX: state.offsetX,
-          startOffsetY: state.offsetY
-        })
-        return
-      }
-
+      if (!touch || !state || this.data.processing) return
       cropGestures.set(this, {
         mode: "move",
-        startClientX: touches[0].clientX,
-        startClientY: touches[0].clientY,
-        startOffsetX: state.offsetX,
-        startOffsetY: state.offsetY
+        startClientX: touch.clientX,
+        startClientY: touch.clientY,
+        startFrame: frameFromState(state)
       })
     },
 
-    syncTransform(state: CropState, ready = false) {
+    handleResizeTouchStart(event: WechatMiniprogram.TouchEvent) {
+      const touch = event.touches[0]
+      const state = cropStates.get(this)
+      const handle = String(event.currentTarget.dataset.handle || "") as CropHandle
+      if (!touch || !state || !isCropHandle(handle) || this.data.processing) return
+      cropGestures.set(this, {
+        mode: "resize",
+        handle,
+        startClientX: touch.clientX,
+        startClientY: touch.clientY,
+        startFrame: frameFromState(state)
+      })
+    },
+
+    handleGestureMove(event: WechatMiniprogram.TouchEvent) {
+      const touch = event.touches[0]
+      const state = cropStates.get(this)
+      const gesture = cropGestures.get(this)
+      if (!touch || !state || !gesture || this.data.processing) return
+
+      const deltaX = touch.clientX - gesture.startClientX
+      const deltaY = touch.clientY - gesture.startClientY
+      if (gesture.mode === "move") {
+        moveCropFrame(state, gesture.startFrame, deltaX, deltaY)
+      } else if (gesture.handle) {
+        resizeCropFrame(state, gesture.startFrame, gesture.handle, deltaX, deltaY)
+      }
+      this.syncState(state)
+    },
+
+    handleGestureEnd() {
+      cropGestures.delete(this)
+    },
+
+    syncState(state: CropState, ready = false) {
       this.setData({
         ready: ready || this.data.ready,
-        displayWidth: state.naturalWidth * state.scale,
-        displayHeight: state.naturalHeight * state.scale,
-        offsetX: state.offsetX,
-        offsetY: state.offsetY
+        imageLeft: state.imageLeft,
+        imageTop: state.imageTop,
+        imageWidth: state.imageWidth,
+        imageHeight: state.imageHeight,
+        cropLeft: state.cropLeft,
+        cropTop: state.cropTop,
+        cropWidth: state.cropWidth,
+        cropHeight: state.cropHeight,
+        fixedAspectRatio: state.fixedAspectRatio
       })
     },
 
     handleCancel() {
-      if (this.data.processing || this.data.rotating) return
+      if (this.data.processing) return
       this.triggerEvent("cancel")
-    },
-
-    async handleRotate() {
-      const state = cropStates.get(this)
-      if (!state || this.data.processing || this.data.rotating) return
-
-      this.setData({ rotating: true })
-      try {
-        const canvas = await this.getCanvas()
-        const currentSrc = this.data.displaySrc || this.properties.src
-        const image = await loadCanvasImage(canvas, currentSrc)
-        const outputWidth = state.naturalHeight
-        const outputHeight = state.naturalWidth
-
-        canvas.width = outputWidth
-        canvas.height = outputHeight
-        const ctx = canvas.getContext("2d")
-        ctx.clearRect(0, 0, outputWidth, outputHeight)
-        ctx.save()
-        ctx.translate(outputWidth, 0)
-        ctx.rotate(Math.PI / 2)
-        ctx.drawImage(image, 0, 0, state.naturalWidth, state.naturalHeight)
-        ctx.restore()
-
-        const rotatedSrc = await canvasToTempFilePath(canvas, outputWidth, outputHeight)
-        await this.initializeCrop(rotatedSrc)
-      } catch (error) {
-        console.error("旋转图片失败", error)
-        this.triggerEvent("error", { message: "图片旋转失败，请重试" })
-      } finally {
-        this.setData({ rotating: false })
-      }
     },
 
     async handleConfirm() {
       const state = cropStates.get(this)
-      if (!state || this.data.processing || this.data.rotating) return
+      if (!state || this.data.processing || !this.data.ready) return
 
-      // Normalize once more before exporting so stale or rounded gesture data
-      // can never request pixels outside the source image.
-      applyTransform(state, state.scale, state.offsetX, state.offsetY)
-
+      const cropped = isCropped(state)
+      let resultPath = ""
+      let errorMessage = ""
       this.setData({ processing: true })
-      wx.showLoading({ title: "裁剪中", mask: true })
-
+      wx.showLoading({ title: "保存中", mask: true })
       try {
         const canvas = await this.getCanvas()
-        const image = await loadCanvasImage(
-          canvas,
-          this.data.displaySrc || this.properties.src
+        const image = await loadCanvasImage(canvas, this.data.displaySrc || this.properties.src)
+        const imageScaleX = state.naturalWidth / state.imageWidth
+        const imageScaleY = state.naturalHeight / state.imageHeight
+        const sourceX = clamp(
+          (state.cropLeft - state.imageLeft) * imageScaleX,
+          0,
+          state.naturalWidth
         )
-        const outputWidth = Math.max(Number(this.properties.outputSize) || 1080, 320)
-        const outputHeight = Math.max(
-          Math.round(outputWidth / Math.max(Number(this.properties.aspectRatio) || 1, 0.5)),
-          320
-        )
-        const sourceWidth = Math.min(state.viewportWidth / state.scale, state.naturalWidth)
-        const sourceHeight = Math.min(
-          state.viewportHeight / state.scale,
+        const sourceY = clamp(
+          (state.cropTop - state.imageTop) * imageScaleY,
+          0,
           state.naturalHeight
         )
-        const sourceX = Math.min(
-          Math.max(-state.offsetX / state.scale, 0),
-          state.naturalWidth - sourceWidth
-        )
-        const sourceY = Math.min(
-          Math.max(-state.offsetY / state.scale, 0),
-          state.naturalHeight - sourceHeight
-        )
+        const sourceWidth = Math.min(state.cropWidth * imageScaleX, state.naturalWidth - sourceX)
+        const sourceHeight = Math.min(state.cropHeight * imageScaleY, state.naturalHeight - sourceY)
+        const maximumOutputWidth = Math.max(Number(this.properties.outputSize) || 1080, 320)
+        const outputScale = Math.min(maximumOutputWidth / sourceWidth, 1)
+        const outputWidth = Math.max(Math.round(sourceWidth * outputScale), 1)
+        const outputHeight = Math.max(Math.round(sourceHeight * outputScale), 1)
 
         canvas.width = outputWidth
         canvas.height = outputHeight
@@ -361,15 +342,28 @@ Component({
           outputHeight
         )
 
-        const tempFilePath = await canvasToTempFilePath(canvas, outputWidth, outputHeight)
-        this.triggerEvent("confirm", { tempFilePath })
+        resultPath = await canvasToTempFilePath(
+          canvas,
+          outputWidth,
+          outputHeight,
+          normalizedOutputType(this.properties.outputType),
+          normalizedOutputQuality(this.properties.outputQuality)
+        )
       } catch (error) {
-        console.error("裁剪图片失败", error)
-        this.triggerEvent("error", { message: "图片裁剪失败，请重试" })
+        console.error("保存裁剪图片失败", error)
+        errorMessage = cropExportErrorMessage(error)
       } finally {
         wx.hideLoading()
         this.setData({ processing: false })
       }
+      if (errorMessage) {
+        this.triggerEvent("error", { message: errorMessage })
+        return
+      }
+      this.triggerEvent("confirm", {
+        tempFilePath: resultPath,
+        cropped
+      })
     },
 
     getCanvas(): Promise<CanvasNode> {
@@ -389,41 +383,179 @@ Component({
   }
 })
 
-function getTouchDistance(first: TouchPoint, second: TouchPoint) {
-  return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)
+function resolveFixedAspectRatio(shape: CropShape, aspectRatio: number) {
+  if (shape === "circle" || shape === "square") return 1
+  return Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 0
 }
 
-function clampScale(state: CropState, scale: number) {
-  return Math.min(Math.max(scale, state.minScale), state.minScale * 5)
+function initialCropFrame(input: {
+  imageLeft: number
+  imageTop: number
+  imageWidth: number
+  imageHeight: number
+  fixedAspectRatio: number
+}): CropFrame {
+  if (!input.fixedAspectRatio) {
+    return {
+      left: input.imageLeft,
+      top: input.imageTop,
+      width: input.imageWidth,
+      height: input.imageHeight
+    }
+  }
+
+  const imageAspectRatio = input.imageWidth / input.imageHeight
+  const width = imageAspectRatio > input.fixedAspectRatio
+    ? input.imageHeight * input.fixedAspectRatio
+    : input.imageWidth
+  const height = width / input.fixedAspectRatio
+  return {
+    left: input.imageLeft + (input.imageWidth - width) / 2,
+    top: input.imageTop + (input.imageHeight - height) / 2,
+    width,
+    height
+  }
 }
 
-function applyTransform(
+function frameFromState(state: CropState): CropFrame {
+  return {
+    left: state.cropLeft,
+    top: state.cropTop,
+    width: state.cropWidth,
+    height: state.cropHeight
+  }
+}
+
+function moveCropFrame(
   state: CropState,
-  scale: number,
-  offsetX: number,
-  offsetY: number
+  start: CropFrame,
+  deltaX: number,
+  deltaY: number
 ) {
-  const nextScale = clampScale(state, scale)
-  const displayWidth = state.naturalWidth * nextScale
-  const displayHeight = state.naturalHeight * nextScale
-
-  state.scale = nextScale
-  state.offsetX = clampOffset(
-    offsetX,
-    state.viewportWidth,
-    displayWidth
+  state.cropLeft = clamp(
+    start.left + deltaX,
+    state.imageLeft,
+    state.imageLeft + state.imageWidth - start.width
   )
-  state.offsetY = clampOffset(
-    offsetY,
-    state.viewportHeight,
-    displayHeight
+  state.cropTop = clamp(
+    start.top + deltaY,
+    state.imageTop,
+    state.imageTop + state.imageHeight - start.height
   )
 }
 
-function clampOffset(offset: number, viewportSize: number, displaySize: number) {
-  const minimum = viewportSize - displaySize + EDGE_GUARD_PX
-  const maximum = -EDGE_GUARD_PX
-  return Math.min(maximum, Math.max(minimum, offset))
+function resizeCropFrame(
+  state: CropState,
+  start: CropFrame,
+  handle: CropHandle,
+  deltaX: number,
+  deltaY: number
+) {
+  if (state.fixedAspectRatio) {
+    resizeFixedCropFrame(state, start, handle, deltaX, deltaY)
+    return
+  }
+  resizeFreeCropFrame(state, start, handle, deltaX, deltaY)
+}
+
+function resizeFreeCropFrame(
+  state: CropState,
+  start: CropFrame,
+  handle: CropHandle,
+  deltaX: number,
+  deltaY: number
+) {
+  const imageRight = state.imageLeft + state.imageWidth
+  const imageBottom = state.imageTop + state.imageHeight
+  const minimumWidth = Math.min(MIN_CROP_PX, state.imageWidth)
+  const minimumHeight = Math.min(MIN_CROP_PX, state.imageHeight)
+  let left = start.left
+  let top = start.top
+  let right = start.left + start.width
+  let bottom = start.top + start.height
+
+  if (handle.includes("w")) {
+    left = clamp(start.left + deltaX, state.imageLeft, right - minimumWidth)
+  }
+  if (handle.includes("e")) {
+    right = clamp(start.left + start.width + deltaX, left + minimumWidth, imageRight)
+  }
+  if (handle.includes("n")) {
+    top = clamp(start.top + deltaY, state.imageTop, bottom - minimumHeight)
+  }
+  if (handle.includes("s")) {
+    bottom = clamp(start.top + start.height + deltaY, top + minimumHeight, imageBottom)
+  }
+
+  state.cropLeft = left
+  state.cropTop = top
+  state.cropWidth = right - left
+  state.cropHeight = bottom - top
+}
+
+function resizeFixedCropFrame(
+  state: CropState,
+  start: CropFrame,
+  handle: CropHandle,
+  deltaX: number,
+  deltaY: number
+) {
+  if (!isCornerHandle(handle)) return
+  const east = handle.includes("e")
+  const south = handle.includes("s")
+  const anchorX = east ? start.left : start.left + start.width
+  const anchorY = south ? start.top : start.top + start.height
+  const pointerX = (east ? start.left + start.width : start.left) + deltaX
+  const pointerY = (south ? start.top + start.height : start.top) + deltaY
+  const candidateWidth = Math.abs(pointerX - anchorX)
+  const candidateHeight = Math.abs(pointerY - anchorY)
+  const widthDelta = Math.abs(candidateWidth - start.width) / Math.max(start.width, 1)
+  const heightDelta = Math.abs(candidateHeight - start.height) / Math.max(start.height, 1)
+  const horizontalLimit = east
+    ? state.imageLeft + state.imageWidth - anchorX
+    : anchorX - state.imageLeft
+  const verticalLimit = south
+    ? state.imageTop + state.imageHeight - anchorY
+    : anchorY - state.imageTop
+  const maximumWidth = Math.min(horizontalLimit, verticalLimit * state.fixedAspectRatio)
+  const desiredWidth = heightDelta > widthDelta
+    ? candidateHeight * state.fixedAspectRatio
+    : candidateWidth
+  const minimumWidth = Math.min(
+    maximumWidth,
+    Math.max(
+      Math.min(MIN_CROP_PX, state.imageWidth),
+      Math.min(MIN_CROP_PX, state.imageHeight) * state.fixedAspectRatio
+    )
+  )
+  const width = clamp(desiredWidth, minimumWidth, maximumWidth)
+  const height = width / state.fixedAspectRatio
+
+  state.cropLeft = east ? anchorX : anchorX - width
+  state.cropTop = south ? anchorY : anchorY - height
+  state.cropWidth = width
+  state.cropHeight = height
+}
+
+function isCropHandle(value: string): value is CropHandle {
+  return ["nw", "n", "ne", "e", "se", "s", "sw", "w"].includes(value)
+}
+
+function isCornerHandle(handle: CropHandle) {
+  return handle === "nw" || handle === "ne" || handle === "se" || handle === "sw"
+}
+
+function isCropped(state: CropState) {
+  const tolerance = 0.5
+  return Math.abs(state.cropLeft - state.imageLeft) > tolerance
+    || Math.abs(state.cropTop - state.imageTop) > tolerance
+    || Math.abs(state.cropWidth - state.imageWidth) > tolerance
+    || Math.abs(state.cropHeight - state.imageHeight) > tolerance
+}
+
+function clamp(value: number, minimum: number, maximum: number) {
+  if (maximum < minimum) return maximum
+  return Math.min(maximum, Math.max(minimum, value))
 }
 
 function loadCanvasImage(canvas: CanvasNode, src: string) {
@@ -435,17 +567,45 @@ function loadCanvasImage(canvas: CanvasNode, src: string) {
   })
 }
 
-function canvasToTempFilePath(canvas: CanvasNode, outputWidth: number, outputHeight: number) {
+function canvasToTempFilePath(
+  canvas: CanvasNode,
+  width: number,
+  height: number,
+  fileType: "jpg" | "png",
+  quality: number
+) {
   return new Promise<string>((resolve, reject) => {
     wx.canvasToTempFilePath({
       canvas,
-      width: outputWidth,
-      height: outputHeight,
-      destWidth: outputWidth,
-      destHeight: outputHeight,
-      fileType: "png",
+      x: 0,
+      y: 0,
+      width,
+      height,
+      destWidth: width,
+      destHeight: height,
+      fileType,
+      quality,
       success: (result) => resolve(result.tempFilePath),
       fail: reject
     })
   })
+}
+
+function normalizedOutputType(value: string): "jpg" | "png" {
+  return value === "png" ? "png" : "jpg"
+}
+
+function normalizedOutputQuality(value: number): number {
+  return Number.isFinite(value) ? clamp(value, 0.5, 1) : 0.86
+}
+
+function cropExportErrorMessage(error: unknown): string {
+  const message = typeof error === "object" && error && "errMsg" in error
+    ? String((error as { errMsg?: unknown }).errMsg || "")
+    : error instanceof Error
+      ? error.message
+      : String(error || "")
+  return /too\s*large|file\s*large|文件.{0,4}大/i.test(message)
+    ? "图片文件过大，请缩小裁剪范围后重试"
+    : "图片保存失败，请重试"
 }

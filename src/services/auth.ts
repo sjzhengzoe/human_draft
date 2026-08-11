@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope, AppUser, AuthSession } from "../types/api"
+import { clearKeyMomentDataCache } from "../utils/key-moment-data-cache"
 import { clearLuggageDataCache } from "../utils/luggage-data-cache"
 import { clearMediaDataCache } from "../utils/media-data-cache"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
@@ -71,6 +72,7 @@ export function redirectToLogin(expectedToken?: string): void {
   if (!clearStoredSession(expectedToken)) return
   clearLuggageDataCache()
   clearMediaDataCache()
+  clearKeyMomentDataCache()
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {
@@ -115,6 +117,7 @@ export async function logout(): Promise<void> {
   clearStoredSession()
   clearLuggageDataCache()
   clearMediaDataCache()
+  clearKeyMomentDataCache()
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {

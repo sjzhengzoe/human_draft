@@ -1,5 +1,29 @@
 import type { KeyMoment, KeyMomentGranularity } from "../types/key-moments"
+import {
+  cacheKeyMoments,
+  getCachedKeyMoments,
+  getKeyMomentDataRevision,
+  keyMomentQueryKey,
+  removeCachedKeyMoment,
+  updateCachedKeyMoment
+} from "../utils/key-moment-data-cache"
 import { request, upload } from "./request"
+
+type KeyMomentQuery = {
+  granularity: KeyMomentGranularity
+  date: string
+}
+
+type CacheReadOptions = {
+  forceRefresh?: boolean
+}
+
+type PendingKeyMomentRequest = {
+  revision: number
+  promise: Promise<KeyMoment[]>
+}
+
+const pendingKeyMomentRequests = new Map<string, PendingKeyMomentRequest>()
 
 function queryString(values: Record<string, string>): string {
   return `?${Object.keys(values)
@@ -7,14 +31,38 @@ function queryString(values: Record<string, string>): string {
     .join("&")}`
 }
 
-export async function listKeyMoments(input: {
-  granularity: KeyMomentGranularity
-  date: string
-}): Promise<KeyMoment[]> {
-  const data = await request<{ items: KeyMoment[] }>({
-    path: `/api/key-moments${queryString(input)}`
-  })
-  return data.items
+export async function listKeyMoments(
+  input: KeyMomentQuery,
+  options: CacheReadOptions = {}
+): Promise<KeyMoment[]> {
+  const cached = options.forceRefresh ? null : getCachedKeyMoments(input)
+  if (cached?.fresh) return cached.items
+
+  const key = keyMomentQueryKey(input)
+  const revision = getKeyMomentDataRevision()
+  const existingRequest = pendingKeyMomentRequests.get(key)
+  if (existingRequest?.revision === revision) return existingRequest.promise
+
+  const currentRequest: PendingKeyMomentRequest = {
+    revision,
+    promise: request<{ items: KeyMoment[] }>({
+      path: `/api/key-moments${queryString(input)}`
+    }).then((data) => {
+      if (revision === getKeyMomentDataRevision()) {
+        cacheKeyMoments(input, data.items)
+        return getCachedKeyMoments(input)?.items || []
+      }
+      return getCachedKeyMoments(input)?.items || data.items
+    })
+  }
+  pendingKeyMomentRequests.set(key, currentRequest)
+  try {
+    return await currentRequest.promise
+  } finally {
+    if (pendingKeyMomentRequests.get(key) === currentRequest) {
+      pendingKeyMomentRequests.delete(key)
+    }
+  }
 }
 
 export async function createKeyMoment(input: {
@@ -31,6 +79,7 @@ export async function createKeyMoment(input: {
         occurred_at: input.occurredAt
       }
     })
+    updateCachedKeyMoment(data.item)
     return data.item
   }
   const data = await request<{ item: KeyMoment }>({
@@ -38,6 +87,7 @@ export async function createKeyMoment(input: {
     method: "POST",
     data: { content: input.content, occurred_at: input.occurredAt }
   })
+  updateCachedKeyMoment(data.item)
   return data.item
 }
 
@@ -50,6 +100,7 @@ export async function updateKeyMoment(
     method: "PUT",
     data: { content: input.content, occurred_at: input.occurredAt }
   })
+  updateCachedKeyMoment(data.item)
   return data.item
 }
 
@@ -58,6 +109,7 @@ export async function replaceKeyMomentImage(id: string, imagePath: string): Prom
     path: `/api/key-moments/${id}/image`,
     filePath: imagePath
   })
+  updateCachedKeyMoment(data.item)
   return data.item
 }
 
@@ -66,9 +118,11 @@ export async function deleteKeyMomentImage(id: string): Promise<KeyMoment> {
     path: `/api/key-moments/${id}/image`,
     method: "DELETE"
   })
+  updateCachedKeyMoment(data.item)
   return data.item
 }
 
-export function deleteKeyMoment(id: string): Promise<void> {
-  return request<void>({ path: `/api/key-moments/${id}`, method: "DELETE" })
+export async function deleteKeyMoment(id: string): Promise<void> {
+  await request<void>({ path: `/api/key-moments/${id}`, method: "DELETE" })
+  removeCachedKeyMoment(id)
 }

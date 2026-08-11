@@ -232,8 +232,9 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuPage, /wx:if="\{\{item\.browseVisible\}\}" class="browse-slide-scroll"/);
   assert.match(menuLogic, /handleBrowseChange\(event:\s*WechatMiniprogram\.SwiperChange\)/);
   assert.doesNotMatch(menuLogic, /getBrowseMetrics|BROWSE_CARD_STRIDE_RPX|scrollLeft/);
-  assert.match(cropper, /viewportWidth/);
-  assert.match(cropper, /viewportHeight/);
+  assert.match(cropper, /imageWidth/);
+  assert.match(cropper, /imageHeight/);
+  assert.match(cropper, /fixedAspectRatio/);
   assert.match(cropper, /canvas\.height = outputHeight/);
 });
 

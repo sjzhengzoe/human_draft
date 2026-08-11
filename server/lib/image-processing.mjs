@@ -17,8 +17,8 @@ export const IMAGE_PROFILES = Object.freeze({
     thumbnail: Object.freeze({ width: 480, height: 480 }),
   }),
   keyMoment: Object.freeze({
-    original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 900, height: 900 }),
+    original: Object.freeze({ width: 1_920, height: 1_920, quality: 88 }),
+    thumbnail: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
   }),
   mediaCover: Object.freeze({
     original: Object.freeze({}),
@@ -35,6 +35,15 @@ function toWebp(source, options) {
       fit: "inside",
       withoutEnlargement: true,
     });
+  }
+
+  if (options.quality) {
+    return output.webp({
+      quality: options.quality,
+      alphaQuality: options.quality,
+      effort: 4,
+      smartSubsample: true,
+    }).toBuffer();
   }
 
   if (IMAGE_COMPRESSION_PERCENT === 0) {

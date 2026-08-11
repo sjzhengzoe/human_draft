@@ -30,6 +30,10 @@ Component({
     customActions: {
       type: Boolean,
       value: false
+    },
+    fullscreen: {
+      type: Boolean,
+      value: false
     }
   },
   methods: {

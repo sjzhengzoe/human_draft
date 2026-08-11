@@ -91,6 +91,19 @@ test("media cover optimization creates a 3:4 list thumbnail", async () => {
   assert.deepEqual([thumbnail.width, thumbnail.height], [240, 320]);
 });
 
+test("key moment photos use bounded lossy originals and lightweight thumbnails", async () => {
+  const input = await createTestImage(3_200, 2_400);
+  const result = await optimizeImage(input, IMAGE_PROFILES.keyMoment);
+  const [original, thumbnail] = await Promise.all([
+    sharp(result.original).metadata(),
+    sharp(result.thumbnail).metadata(),
+  ]);
+  assert.deepEqual([original.width, original.height], [1_920, 1_440]);
+  assert.deepEqual([thumbnail.width, thumbnail.height], [1_080, 810]);
+  assert.equal(IMAGE_PROFILES.keyMoment.original.quality, 88);
+  assert.equal(IMAGE_PROFILES.keyMoment.thumbnail.quality, 82);
+});
+
 test("image optimization preserves transparent pixels", async () => {
   const input = await sharp({
     create: {

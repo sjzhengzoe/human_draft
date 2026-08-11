@@ -80,7 +80,8 @@
                 wx:if="{{item.thumbnail_url || item.image_url}}"
                 class="moment-image"
                 src="{{item.thumbnail_url || item.image_url}}"
-                mode="aspectFill"
+                mode="widthFix"
+                lazy-load
                 data-url="{{item.image_url || item.thumbnail_url}}"
                 catchtap="handlePreview"
               />
@@ -120,13 +121,12 @@
             wx:if="{{selectedImagePath || currentImageUrl}}"
             class="image-editor__preview"
             src="{{selectedImagePath || currentImageUrl}}"
-            mode="aspectFill"
+            mode="aspectFit"
             bindtap="handleChooseImage"
           />
           <view wx:else class="image-editor__empty" bindtap="handleChooseImage">
             <app-icon name="image-plus" size="36" />
             <text>{{selectingImage ? '选择中…' : '上传图片'}}</text>
-            <text class="image-editor__crop-hint">选择后裁剪</text>
           </view>
           <view
             wx:if="{{selectedImagePath || currentImageUrl}}"
@@ -172,9 +172,10 @@
   wx:if="{{showImageCropper}}"
   src="{{cropSourcePath}}"
   shape="rectangle"
-  title="裁剪节点图片"
-  output-size="1080"
-  aspect-ratio="{{imageCropAspectRatio}}"
+  title="调整节点图片"
+  output-size="1440"
+  output-type="jpg"
+  output-quality="0.88"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"

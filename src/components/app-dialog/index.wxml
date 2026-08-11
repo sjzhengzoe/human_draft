@@ -1,6 +1,6 @@
 <view
   wx:if="{{visible}}"
-  class="app-dialog"
+  class="app-dialog {{fullscreen ? 'app-dialog--fullscreen' : ''}}"
   catchtouchmove="noop"
 >
   <view class="app-dialog__panel">

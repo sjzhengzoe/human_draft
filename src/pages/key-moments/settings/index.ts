@@ -29,7 +29,7 @@ Page({
       {
         value: "vertical" as KeyMomentDisplayLayout,
         title: "上图下文",
-        description: "图片按 4:3 完整展示，更适合看照片"
+        description: "图片按原比例完整展示，更适合看照片"
       }
     ]
   },

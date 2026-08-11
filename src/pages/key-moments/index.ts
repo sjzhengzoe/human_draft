@@ -24,6 +24,10 @@ import {
   getKeyMomentDisplayLayout
 } from "../../utils/key-moment-settings"
 import type { KeyMomentDisplayLayout } from "../../utils/key-moment-settings"
+import {
+  getCachedKeyMoments,
+  getKeyMomentDataRevision
+} from "../../utils/key-moment-data-cache"
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -119,13 +123,13 @@ Page({
     activeGranularity: "day" as KeyMomentGranularity,
     anchorDate: INITIAL_DATE_TIME.date,
     periodLabel: periodLabel("day", INITIAL_DATE_TIME.date),
-    imageCropAspectRatio: 4 / 3,
     displayLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT as KeyMomentDisplayLayout,
     items: [] as KeyMomentTimelineItem[],
     canWrite: false,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    keyMomentRevision: -1,
     showEditor: false,
     showDeleteConfirm: false,
     editingId: "",
@@ -150,40 +154,82 @@ Page({
   onShow() {
     const user = getCurrentUser()
     if (user) {
-      this.setData({ displayLayout: getKeyMomentDisplayLayout(user.id) })
+      const displayLayout = getKeyMomentDisplayLayout(user.id)
+      if (displayLayout !== this.data.displayLayout) this.setData({ displayLayout })
     }
-    this.loadItems()
+    if (!this.data.hasLoaded) {
+      void this.loadItems()
+      return
+    }
+    if (this.data.keyMomentRevision !== getKeyMomentDataRevision()) {
+      if (!this.syncItemsFromCache()) void this.loadItems({ background: true })
+      return
+    }
+    const cached = getCachedKeyMoments({
+      granularity: this.data.activeGranularity,
+      date: this.data.anchorDate
+    })
+    if (!cached?.fresh) void this.loadItems({ background: true, silent: true })
   },
 
   onUnload() {
     deactivateAsyncPage(this)
   },
 
-  async loadItems() {
+  syncItemsFromCache(input?: {
+    granularity: KeyMomentGranularity
+    date: string
+  }): boolean {
+    const query = input || {
+      granularity: this.data.activeGranularity,
+      date: this.data.anchorDate
+    }
+    const cached = getCachedKeyMoments(query)
+    if (!cached) return false
+    this.setData({
+      items: toTimelineItems(cached.items),
+      keyMomentRevision: getKeyMomentDataRevision()
+    })
+    return true
+  },
+
+  async loadItems(options: {
+    background?: boolean
+    forceRefresh?: boolean
+    silent?: boolean
+  } = {}) {
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
+    const input = {
+      granularity: this.data.activeGranularity,
+      date: this.data.anchorDate
+    }
+    const cached = options.forceRefresh ? null : getCachedKeyMoments(input)
+    const canRenderImmediately = Boolean(cached?.fresh)
     this.setData({
-      loading: showInitialLoading,
-      contentLoading: !showInitialLoading
+      loading: showInitialLoading && !canRenderImmediately,
+      contentLoading: !showInitialLoading && !options.background && !canRenderImmediately
     })
     try {
       const session = await ensureLogin()
-      const items = await listKeyMoments({
-        granularity: this.data.activeGranularity,
-        date: this.data.anchorDate
-      })
+      const items = cached?.fresh
+        ? cached.items
+        : await listKeyMoments(input, { forceRefresh: options.forceRefresh })
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
         displayLayout: getKeyMomentDisplayLayout(session.user.id),
         items: toTimelineItems(items),
-        canWrite: session.user.can_write
+        canWrite: session.user.can_write,
+        keyMomentRevision: getKeyMomentDataRevision()
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      wx.showToast({
-        title: error instanceof Error ? error.message : "加载失败",
-        icon: "none"
-      })
+      if (!options.silent) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "加载失败",
+          icon: "none"
+        })
+      }
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
         this.setData({ loading: false, contentLoading: false, hasLoaded: true })
@@ -356,6 +402,8 @@ Page({
       return
     }
     const occurredAt = `${this.data.editorDate}T${this.data.editorTime}:00+08:00`
+    let toastTitle = ""
+    let toastIcon: "success" | "none" = "success"
     this.setData({ saving: true })
     wx.showLoading({ title: "保存中", mask: true })
     try {
@@ -379,19 +427,22 @@ Page({
         anchorDate: this.data.editorDate,
         periodLabel: periodLabel(this.data.activeGranularity, this.data.editorDate)
       })
-      wx.showToast({ title: "已保存", icon: "success" })
-      await this.loadItems()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "保存失败",
-          icon: "none",
-          duration: 2600
-        })
+      if (!this.syncItemsFromCache({
+        granularity: this.data.activeGranularity,
+        date: this.data.editorDate
+      })) {
+        await this.loadItems({ background: true })
       }
+      toastTitle = "已保存"
+    } catch (error) {
+      toastTitle = error instanceof Error ? error.message : "保存失败"
+      toastIcon = "none"
     } finally {
       wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ saving: false })
+    }
+    if (toastTitle && isAsyncPageActive(this)) {
+      wx.showToast({ title: toastTitle, icon: toastIcon })
     }
   },
 
@@ -414,25 +465,28 @@ Page({
 
   async handleDeleteConfirm() {
     if (!this.data.editingId || this.data.deleting) return
+    let toastTitle = ""
+    let toastIcon: "success" | "none" = "success"
     this.setData({ deleting: true })
     wx.showLoading({ title: "删除中", mask: true })
     try {
       await deleteKeyMoment(this.data.editingId)
       if (!isAsyncPageActive(this)) return
       this.setData({ showDeleteConfirm: false, showEditor: false, editingId: "" })
-      wx.showToast({ title: "已删除", icon: "success" })
-      await this.loadItems()
+      if (!this.syncItemsFromCache()) await this.loadItems({ background: true })
+      toastTitle = "已删除"
     } catch (error) {
       if (isAsyncPageActive(this)) {
         this.setData({ showDeleteConfirm: false, editingId: "" })
-        wx.showToast({
-          title: error instanceof Error ? error.message : "删除失败",
-          icon: "none"
-        })
       }
+      toastTitle = error instanceof Error ? error.message : "删除失败"
+      toastIcon = "none"
     } finally {
       wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
+    if (toastTitle && isAsyncPageActive(this)) {
+      wx.showToast({ title: toastTitle, icon: toastIcon })
     }
   }
 })

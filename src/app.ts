@@ -1,4 +1,5 @@
 import { getCurrentUser } from "./services/auth"
+import { initializeToastDefaults } from "./services/toast"
 import { initializeUIFont } from "./services/ui-font"
 
 App<IAppOption>({
@@ -6,6 +7,7 @@ App<IAppOption>({
     currentUser: null
   },
   onLaunch() {
+    initializeToastDefaults()
     this.globalData.currentUser = getCurrentUser()
     void initializeUIFont().catch(() => undefined)
   },

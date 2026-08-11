@@ -1,41 +1,73 @@
 <app-dialog
   visible="{{true}}"
-  title="{{title}}"
+  fullscreen="{{true}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"
 >
-  <view slot="body">
-    <view
-      class="crop-stage"
-      catchtouchstart="handleTouchStart"
-      catchtouchmove="handleTouchMove"
-      catchtouchend="handleTouchEnd"
-      catchtouchcancel="handleTouchEnd"
-    >
+  <view slot="body" class="crop-editor">
+    <view class="crop-editor__topbar" style="padding-top: {{statusBarHeight}}px;">
+      <button
+        class="crop-editor__cancel"
+        disabled="{{processing}}"
+        bindtap="handleCancel"
+      >取消</button>
+      <view class="crop-editor__title">{{title}}</view>
+      <view class="crop-editor__topbar-spacer" />
+    </view>
+
+    <view class="crop-workspace">
       <image
-        class="crop-stage__image"
+        class="crop-image"
         src="{{displaySrc}}"
         mode="scaleToFill"
-        style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{displayWidth}}px; height: {{displayHeight}}px; transform: translate3d({{offsetX}}px, {{offsetY}}px, 0);"
+        style="left: {{imageLeft}}px; top: {{imageTop}}px; width: {{imageWidth}}px; height: {{imageHeight}}px;"
       />
+
       <view
-        class="crop-stage__guide crop-stage__guide--{{shape}}"
-        style="top: {{frameTop}}px; left: {{frameLeft}}px; width: {{frameWidth}}px; height: {{frameHeight}}px;"
-      />
+        wx:if="{{ready}}"
+        class="crop-frame crop-frame--{{shape}}"
+        style="left: {{cropLeft}}px; top: {{cropTop}}px; width: {{cropWidth}}px; height: {{cropHeight}}px;"
+        catchtouchstart="handleFrameTouchStart"
+        catchtouchmove="handleGestureMove"
+        catchtouchend="handleGestureEnd"
+        catchtouchcancel="handleGestureEnd"
+      >
+        <block wx:if="{{shape !== 'circle'}}">
+          <view class="crop-frame__grid crop-frame__grid--vertical crop-frame__grid--vertical-first" />
+          <view class="crop-frame__grid crop-frame__grid--vertical crop-frame__grid--vertical-second" />
+          <view class="crop-frame__grid crop-frame__grid--horizontal crop-frame__grid--horizontal-first" />
+          <view class="crop-frame__grid crop-frame__grid--horizontal crop-frame__grid--horizontal-second" />
+        </block>
+
+        <view class="crop-handle crop-handle--nw" data-handle="nw" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+        <view class="crop-handle crop-handle--ne" data-handle="ne" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+        <view class="crop-handle crop-handle--se" data-handle="se" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+        <view class="crop-handle crop-handle--sw" data-handle="sw" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+
+        <block wx:if="{{!fixedAspectRatio}}">
+          <view class="crop-handle crop-handle--n" data-handle="n" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+          <view class="crop-handle crop-handle--e" data-handle="e" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+          <view class="crop-handle crop-handle--s" data-handle="s" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+          <view class="crop-handle crop-handle--w" data-handle="w" catchtouchstart="handleResizeTouchStart" catchtouchmove="handleGestureMove" catchtouchend="handleGestureEnd" catchtouchcancel="handleGestureEnd" />
+        </block>
+      </view>
+
+      <view wx:if="{{!ready}}" class="crop-loading">正在读取图片…</view>
     </view>
-    <view class="crop-modal__tools">
-      <button
-        class="crop-modal__rotate"
-        loading="{{rotating}}"
-        disabled="{{processing || rotating || !ready}}"
-        bindtap="handleRotate"
-      >顺时针旋转 90°</button>
-    </view>
-    <view class="crop-modal__hint">单指拖动，双指缩放，白框内为保留范围</view>
   </view>
-  <view slot="actions" class="crop-modal__actions">
-    <button class="crop-modal__button crop-modal__button--secondary" disabled="{{processing || rotating}}" bindtap="handleCancel">取消</button>
-    <button class="crop-modal__button crop-modal__button--primary" loading="{{processing}}" disabled="{{processing || rotating || !ready}}" bindtap="handleConfirm">使用图片</button>
+
+  <view slot="actions" class="crop-toolbar">
+    <view
+      class="crop-toolbar__tool crop-toolbar__tool--active"
+      role="button"
+      aria-label="裁剪工具，已启用"
+    ><app-icon name="crop-white" size="42" /></view>
+    <button
+      class="crop-toolbar__done"
+      loading="{{processing}}"
+      disabled="{{processing || !ready}}"
+      bindtap="handleConfirm"
+    >完成</button>
   </view>
 </app-dialog>
 
