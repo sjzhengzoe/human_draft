@@ -26,15 +26,17 @@ export function loadAppFont(
   const fontPromise = new Promise<void>((resolve, reject) => {
     let settled = false
     let readyTimer: ReturnType<typeof setTimeout> | undefined
-    const timeoutTimer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      reject(new FontLoadTimeoutError(`字体加载超时：${font.name}`))
-    }, timeoutMs)
+    const timeoutTimer = timeoutMs > 0
+      ? setTimeout(() => {
+          if (settled) return
+          settled = true
+          reject(new FontLoadTimeoutError(`字体加载超时：${font.name}`))
+        }, timeoutMs)
+      : undefined
     const finish = (error?: unknown) => {
       if (settled) return
       settled = true
-      clearTimeout(timeoutTimer)
+      if (timeoutTimer) clearTimeout(timeoutTimer)
       if (readyTimer) clearTimeout(readyTimer)
       if (error) {
         reject(error)

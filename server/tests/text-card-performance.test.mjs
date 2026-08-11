@@ -111,6 +111,7 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   )
 
   assert.match(refreshRender, /renderedImageUrls: \[\]/)
+  assert.match(templateOne, /PREVIEW_CACHE_VERSION = "xiaohongshu-v4"/)
   assert.match(
     refreshRender,
     /this\.publishPreviewImages\(requestId, readyUrls\)/

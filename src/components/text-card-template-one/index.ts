@@ -107,7 +107,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
-  const PREVIEW_CACHE_VERSION = "xiaohongshu-v3";
+  const PREVIEW_CACHE_VERSION = "xiaohongshu-v4";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
   const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
@@ -1010,5 +1010,5 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   }
 
   function ensureRed3FontLoaded() {
-    return loadAppFont(APP_FONTS.red3);
+    return loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
   }

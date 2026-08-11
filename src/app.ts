@@ -12,7 +12,7 @@ App<IAppOption>({
     initializeToastDefaults()
     this.globalData.currentUser = getCurrentUser()
     void initializeUIFont().catch(() => undefined)
-    void loadAppFont(APP_FONTS.red3).catch(() => undefined)
+    void loadAppFont(APP_FONTS.red3, { timeoutMs: 0 }).catch(() => undefined)
   },
   onShow() {
     const user = getCurrentUser()

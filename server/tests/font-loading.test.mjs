@@ -40,8 +40,9 @@ test("fonts use one shared lazy loader and one canonical definition each", async
   assert.match(dayPlan, /initializeUIFont/)
 
   assert.match(uiFont, /APP_FONTS\.ui|UI_FONT/)
-  assert.match(app, /loadAppFont\(APP_FONTS\.red3\)/)
+  assert.match(app, /loadAppFont\(APP_FONTS\.red3, \{ timeoutMs: 0 \}\)/)
   assert.match(templateOne, /APP_FONTS\.red3/)
+  assert.match(templateOne, /loadAppFont\(APP_FONTS\.red3, \{ timeoutMs: 0 \}\)/)
   assert.match(templateTwo, /APP_FONTS\.ui/)
   assert.match(templateThree, /APP_FONTS\.lantingExtraLight/)
   assert.match(menuPrint, /APP_FONTS\.ui/)
