@@ -51,7 +51,7 @@
           </view>
           <view wx:elif="{{isRenderingCards && !progressiveRendering}}" class="card-preview-overlay">
             <view class="card-preview-overlay__spinner" />
-            <view class="card-preview-overlay__title">正在更新预览 {{renderProgressText}}</view>
+            <view class="card-preview-overlay__title">{{processingText}}<text wx:if="{{renderProgressText}}"> {{renderProgressText}}</text></view>
           </view>
           <view
             wx:if="{{showCircleImagePicker && !isExampleContent}}"
@@ -90,7 +90,7 @@
       <swiper-item wx:elif="{{!renderedImageUrls.length}}" class="card-slide">
         <view class="card-item card-item--preview-loading">
           <view class="card-loading">
-            <view class="card-loading__title">正在生成预览 {{renderProgressText}}</view>
+            <view class="card-loading__title">{{processingText}}<text wx:if="{{renderProgressText}}"> {{renderProgressText}}</text></view>
             <view class="card-loading__desc">完成后可导出高清图片</view>
           </view>
         </view>

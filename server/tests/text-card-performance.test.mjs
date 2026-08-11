@@ -118,6 +118,8 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   assert.match(templateOne, /forceReload: true/)
   assert.match(templateOne, /usePersistentCache: false/)
   assert.doesNotMatch(templateOne, /"Songti SC"|"PingFang SC"/)
+  assert.match(template, /processing-text="正在处理图片中"/)
+  assert.match(workspace, /\{\{processingText\}\}/)
   assert.match(
     refreshRender,
     /this\.publishPreviewImages\(requestId, readyUrls\)/
@@ -251,7 +253,7 @@ test("text card UI exposes preview and high-resolution export states", async () 
   const workspaceTemplate = await readProjectFile(
     "src/components/text-card-workspace/index.wxml"
   )
-  assert.match(workspaceTemplate, /正在更新预览/)
+  assert.match(workspaceTemplate, /\{\{processingText\}\}/)
   assert.match(workspaceTemplate, /预览 ·/)
 
   const templateBases = [

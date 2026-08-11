@@ -10,6 +10,7 @@
   render-error="{{renderError}}"
   render-error-message="{{renderErrorMessage}}"
   is-rendering-cards="{{isRenderingCards}}"
+  processing-text="正在处理图片中"
   render-progress-text="{{renderProgressText}}"
   content-count="{{slides.length}}"
   preview-count="{{previewCount}}"

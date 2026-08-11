@@ -116,6 +116,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   const RED3_FONT_FAMILY = APP_FONTS.red3.family;
   const RED3_FONT_CHECK_INTERVAL = 120;
   const RED3_FONT_CHECK_TIMEOUT = 12000;
+  const RED3_FONT_RETRY_DELAY = 3000;
   const RED3_FONT_CHECK_SAMPLES = [
     "WAIT 0123456789 ilMW",
     "珍惜浪费生命流动",
@@ -420,7 +421,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
           isRenderingCards: true,
           renderError: false,
           renderErrorMessage: "生成失败，请重试",
-          renderProgressText: `0/${this.data.previewCount}`,
+          renderProgressText: "",
           renderedImageUrls: [],
           activeIndex: 0,
         });
@@ -532,7 +533,12 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
           if (!slides.length || isStalePreview()) return urls;
 
           const canvas = await this.getExportCanvas();
-          await ensureRed3CanvasFont(canvas, metrics.combinedFontSize);
+          const fontReady = await ensureRed3CanvasFont(
+            canvas,
+            metrics.combinedFontSize,
+            isStalePreview,
+          );
+          if (!fontReady || isStalePreview()) return [];
           const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
           for (const [index, slide] of slides.entries()) {
@@ -756,9 +762,6 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
 
 
   function getRenderErrorMessage(error: unknown) {
-    if (error instanceof Red3FontUnavailableError) {
-      return error.message;
-    }
     if (
       error instanceof Error &&
       /^第 \d+ 页内容过长/.test(error.message)
@@ -1017,12 +1020,6 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
     return loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
   }
 
-  class Red3FontUnavailableError extends Error {
-    constructor() {
-      super("红三字体加载失败，请检查网络后重试");
-    }
-  }
-
   function delay(duration: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, duration));
   }
@@ -1062,34 +1059,50 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   async function waitForRed3CanvasFont(
     canvas: Canvas2DNode,
     fontSize: number,
+    isCancelled: () => boolean,
   ) {
     const expiresAt = Date.now() + RED3_FONT_CHECK_TIMEOUT;
-    while (Date.now() < expiresAt) {
-      if (isRed3CanvasFontAvailable(canvas, fontSize)) return;
+    while (Date.now() < expiresAt && !isCancelled()) {
+      if (isRed3CanvasFontAvailable(canvas, fontSize)) return true;
       await delay(RED3_FONT_CHECK_INTERVAL);
     }
-    throw new Red3FontUnavailableError();
+    return false;
   }
 
   async function ensureRed3CanvasFont(
     canvas: Canvas2DNode,
     fontSize: number,
+    isCancelled: () => boolean,
   ) {
-    try {
-      await ensureRed3FontLoaded();
-      await waitForRed3CanvasFont(canvas, fontSize);
-      return;
-    } catch {
+    let forceReload = false;
+    while (!isCancelled()) {
+      try {
+        await loadAppFont(APP_FONTS.red3, { timeoutMs: 0, forceReload });
+        if (await waitForRed3CanvasFont(canvas, fontSize, isCancelled)) {
+          return true;
+        }
+      } catch {
+        // Keep the page in its processing state while the background retry continues.
+      }
+
+      if (isCancelled()) return false;
+
       try {
         await loadAppFont(APP_FONTS.red3, {
           timeoutMs: 0,
           forceReload: true,
           usePersistentCache: false,
         });
-        await waitForRed3CanvasFont(canvas, fontSize);
-        return;
+        if (await waitForRed3CanvasFont(canvas, fontSize, isCancelled)) {
+          return true;
+        }
       } catch {
-        throw new Red3FontUnavailableError();
+        // Retry the persistent download so a later launch can use the saved font.
       }
+
+      forceReload = true;
+      await delay(RED3_FONT_RETRY_DELAY);
     }
+
+    return false;
   }

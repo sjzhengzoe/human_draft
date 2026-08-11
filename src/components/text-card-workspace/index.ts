@@ -18,6 +18,7 @@ Component({
     renderError: { type: Boolean, value: false },
     renderErrorMessage: { type: String, value: "预览生成失败" },
     isRenderingCards: { type: Boolean, value: false },
+    processingText: { type: String, value: "正在生成预览" },
     renderProgressText: { type: String, value: "" },
     contentCount: { type: Number, value: 0 },
     previewCount: { type: Number, value: 0 },
