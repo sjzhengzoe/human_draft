@@ -20,43 +20,9 @@ async function createFontLoaderHarness(state) {
   }).outputText
   const module = { exports: {} }
   const wx = {
-    env: { USER_DATA_PATH: "/font-cache" },
-    getStorageSync(key) {
-      return state.storage.get(key)
-    },
-    setStorageSync(key, value) {
-      state.storage.set(key, value)
-    },
-    removeStorageSync(key) {
-      state.storage.delete(key)
-    },
-    getFileSystemManager() {
-      return {
-        access({ path, success, fail }) {
-          state.files.has(path) ? success() : fail({ errMsg: "missing" })
-        },
-        readFile({ filePath, success, fail }) {
-          state.readCount += 1
-          state.files.has(filePath)
-            ? success({ data: "d09GMgAAAAA=" })
-            : fail({ errMsg: "missing" })
-        },
-        saveFile({ filePath, success }) {
-          state.files.add(filePath)
-          success({ savedFilePath: filePath })
-        },
-        unlink({ filePath, success }) {
-          state.files.delete(filePath)
-          success()
-        }
-      }
-    },
-    downloadFile({ success }) {
-      state.downloadCount += 1
-      success({ statusCode: 200, tempFilePath: "/tmp/font.woff2" })
-    },
-    loadFontFace({ success }) {
+    loadFontFace({ source, success }) {
       state.registrationCount += 1
+      state.sources.push(source)
       success({ status: "loaded" })
     }
   }
@@ -90,28 +56,16 @@ test("fonts use one shared lazy loader and one canonical definition each", async
     ])
 
   assert.doesNotMatch(config, /source: `url/)
-  assert.doesNotMatch(config, /persistentCache\?:/)
-  assert.equal(config.match(/fileName:/g)?.length, 5)
-  assert.match(config, /fileName: "fangzhengboyafangkansong\.woff2"/)
-  assert.match(config, /fileName: "red3-gb2312\.woff2"/)
-  assert.match(config, /fileName: "FZLTHProGlobal-Extralight\.woff2"/)
-  assert.match(config, /fileName: "FZLTHProGlobal-Semibold\.woff2"/)
-  assert.match(loader, /cachedFontFilePromises = new Map/)
-  assert.match(loader, /cachedFontSourcePromises = new Map/)
-  assert.match(loader, /fontRegistrationPromises = new Map/)
-  assert.match(loader, /getSharedPromise/)
-  assert.match(loader, /fileExists/)
+  assert.doesNotMatch(config, /persistentCache|fileName|version:/)
+  assert.match(config, /red3-gb2312\.woff2\?v=20260705/)
+  assert.match(loader, /fontLoadPromises = new Map/)
   assert.match(loader, /wx\.loadFontFace/)
-  assert.match(loader, /wx\.downloadFile/)
-  assert.match(loader, /wx\.env\.USER_DATA_PATH/)
-  assert.match(loader, /encoding: "base64"/)
-  assert.match(loader, /data:font\/woff2;base64/)
-  assert.match(loader, /getPersistentFontSource/)
-  assert.match(loader, /DEFAULT_FONT_LOAD_TIMEOUT/)
-  assert.match(loader, /FontLoadTimeoutError/)
-  assert.match(loader, /timeoutMs = options\.timeoutMs \?\? DEFAULT_FONT_LOAD_TIMEOUT/)
-  assert.match(loader, /cachedPromise && !options\.forceRegister/)
-  assert.doesNotMatch(loader, /font\.source|usePersistentCache/)
+  assert.match(loader, /source: `url\("\$\{font\.url\}"\)`/)
+  assert.match(loader, /global: true/)
+  assert.match(loader, /scopes: \["webview", "native"\]/)
+  assert.doesNotMatch(loader, /downloadFile|getFileSystemManager|USER_DATA_PATH/)
+  assert.doesNotMatch(loader, /getStorageSync|setStorageSync|removeStorageSync/)
+  assert.doesNotMatch(loader, /base64|persistentCache|forceRegister/)
 
   for (const consumer of [uiFont, templateOne, templateTwo, templateThree, menuPrint]) {
     assert.doesNotMatch(consumer, /wx\.loadFontFace/)
@@ -123,9 +77,10 @@ test("fonts use one shared lazy loader and one canonical definition each", async
 
   assert.match(uiFont, /APP_FONTS\.ui|UI_FONT/)
   assert.match(app, /preloadRed3Font\(\)/)
-  assert.match(app, /setTimeout\(\(\) => preloadRed3Font\(true\)/)
+  assert.match(app, /setTimeout\(preloadRed3Font, RED3_PRELOAD_RETRY_DELAY\)/)
   assert.match(templateOne, /APP_FONTS\.red3/)
-  assert.match(templateOne, /loadAppFont\(APP_FONTS\.red3, \{ timeoutMs: 0 \}\)/)
+  assert.match(templateOne, /loadAppFont\(APP_FONTS\.red3\)/)
+  assert.doesNotMatch(templateOne, /forceRegister|timeoutMs: 0/)
   assert.match(templateTwo, /APP_FONTS\.ui/)
   assert.match(templateThree, /APP_FONTS\.lantingExtraLight/)
   assert.match(menuPrint, /APP_FONTS\.ui/)
@@ -133,45 +88,28 @@ test("fonts use one shared lazy loader and one canonical definition each", async
   assert.match(nginx, /Cache-Control "public, max-age=31536000, immutable"/)
 })
 
-test("font cache shares download and read work, then survives a new runtime", async () => {
+test("font loader uses the official HTTPS source and only merges duplicate runtime calls", async () => {
   const state = {
-    storage: new Map(),
-    files: new Set(),
-    downloadCount: 0,
-    readCount: 0,
-    registrationCount: 0
+    registrationCount: 0,
+    sources: []
   }
   const font = {
     family: "TestFont",
     name: "测试字体",
     url: "https://example.com/test.woff2?v=1",
-    weight: "normal",
-    persistentCache: {
-      fileName: "test.woff2",
-      version: "1"
-    }
+    weight: "normal"
   }
 
   const firstRuntime = await createFontLoaderHarness(state)
   await Promise.all([
-    firstRuntime.loadAppFont(font, { timeoutMs: 0 }),
-    firstRuntime.loadAppFont(font, { timeoutMs: 0 })
+    firstRuntime.loadAppFont(font),
+    firstRuntime.loadAppFont(font)
   ])
-  assert.equal(state.downloadCount, 1)
-  assert.equal(state.readCount, 1)
   assert.equal(state.registrationCount, 1)
-
-  await firstRuntime.loadAppFont(font, {
-    timeoutMs: 0,
-    forceRegister: true
-  })
-  assert.equal(state.downloadCount, 1)
-  assert.equal(state.readCount, 1)
-  assert.equal(state.registrationCount, 2)
+  assert.deepEqual(state.sources, ['url("https://example.com/test.woff2?v=1")'])
 
   const secondRuntime = await createFontLoaderHarness(state)
-  await secondRuntime.loadAppFont(font, { timeoutMs: 0 })
-  assert.equal(state.downloadCount, 1)
-  assert.equal(state.readCount, 2)
-  assert.equal(state.registrationCount, 3)
+  await secondRuntime.loadAppFont(font)
+  assert.equal(state.registrationCount, 2)
+  assert.equal(state.sources[1], 'url("https://example.com/test.woff2?v=1")')
 })

@@ -1017,7 +1017,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   }
 
   function ensureRed3FontLoaded() {
-    return loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
+    return loadAppFont(APP_FONTS.red3);
   }
 
   function delay(duration: number) {
@@ -1076,13 +1076,9 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   ) {
     while (!isCancelled()) {
       try {
-        await loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
+        await loadAppFont(APP_FONTS.red3);
         if (isRed3CanvasFontAvailable(canvas, fontSize)) return true;
 
-        await loadAppFont(APP_FONTS.red3, {
-          timeoutMs: 0,
-          forceRegister: true,
-        });
         if (await waitForRed3CanvasFont(canvas, fontSize, isCancelled)) {
           return true;
         }
