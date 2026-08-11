@@ -60,7 +60,11 @@
         <view
           wx:for="{{calendarCells}}"
           wx:key="key"
-          class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}} {{item.restUsed ? 'calendar-day--rest' : ''}}"
+          class="calendar-day calendar-day--{{item.state}} {{item.isToday ? 'calendar-day--today' : ''}} {{item.isSelected ? 'calendar-day--selected' : ''}} {{item.restUsed ? 'calendar-day--rest' : ''}}"
+          role="{{item.selectable ? 'button' : ''}}"
+          aria-label="{{item.ariaLabel}}"
+          data-date="{{item.date}}"
+          bindtap="handleCalendarDayTap"
         >
           <view wx:if="{{item.state === 'completed'}}" class="calendar-day__pet-frame">
             <image
@@ -89,16 +93,16 @@
 
   <view class="balance-card">
     <view class="balance-header">
-      <view class="balance-heading">今日任务</view>
-      <view wx:if="{{todayDailyTaskState === 'pending'}}" class="task-row__remaining">
-        <text class="task-row__hint">还需</text><text class="task-row__value">{{todayPendingMinutes}}</text><text class="task-row__unit">分钟</text>
+      <view class="balance-heading">{{selectedTaskTitle}}</view>
+      <view wx:if="{{selectedDailyTaskState === 'pending'}}" class="task-row__remaining">
+        <text class="task-row__hint">还需</text><text class="task-row__value">{{selectedPendingMinutes}}</text><text class="task-row__unit">分钟</text>
       </view>
-      <view wx:elif="{{todayDailyTaskState === 'rest'}}" class="task-row__status">今日休息</view>
+      <view wx:elif="{{selectedDailyTaskState === 'rest'}}" class="task-row__status">已使用休息日</view>
       <view wx:else class="task-completion-summary">
         <text>共完成</text>
-        <text class="task-completion-summary__value">{{todayRecordedMinutes}}</text>
+        <text class="task-completion-summary__value">{{selectedRecordedMinutes}}</text>
         <text>分钟</text>
-        <text wx:if="{{todayOverachievedMinutes > 0}}" class="task-completion-summary__extra">· 超额 {{todayOverachievedMinutes}} 分钟</text>
+        <text wx:if="{{selectedOverachievedMinutes > 0}}" class="task-completion-summary__extra">· 超额 {{selectedOverachievedMinutes}} 分钟</text>
       </view>
     </view>
   </view>

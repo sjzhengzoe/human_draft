@@ -69,6 +69,23 @@ test("key moment items own the edit hit area and isolate the corner delete contr
   );
 });
 
+test("tapping the key moment page title scrolls the timeline back to the top", async () => {
+  const [page, logic, navigationPage, navigationLogic] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/components/custom-navigation/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/components/custom-navigation/index.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /title-tappable="\{\{true\}\}"[\s\S]*?bind:titletap="handleScrollToTop"/);
+  assert.match(page, /scroll-with-animation="\{\{true\}\}"[\s\S]*?scroll-into-view="\{\{timelineScrollAnchor\}\}"/);
+  assert.match(page, /id="timeline-scroll-top"/);
+  assert.match(logic, /handleScrollToTop\(\)[\s\S]*?timelineScrollAnchor: ""[\s\S]*?timelineScrollAnchor: "timeline-scroll-top"/);
+  assert.match(navigationPage, /class="custom-navigation__content \{\{titleTappable[\s\S]*?bindtap="handleTitleTap"/);
+  assert.match(navigationPage, /class="custom-navigation__back"[\s\S]*?catchtap="handleBack"/);
+  assert.doesNotMatch(navigationPage, /class="custom-navigation__back"[\s\S]*?bindtap="handleBack"/);
+  assert.match(navigationLogic, /handleTitleTap\(\)[\s\S]*?triggerEvent\("titletap"\)/);
+});
+
 test("key moment images keep their source ratio and make the shared crop step optional", async () => {
   const [page, styles, logic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),

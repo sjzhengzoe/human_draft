@@ -92,10 +92,20 @@ type ExerciseImageSelections = {
 
 type ExerciseCalendarCell = {
   key: string
+  date: string
   day: number | string
   state: string
   isToday: boolean
+  isSelected: boolean
+  selectable: boolean
   restUsed: boolean
+  dailyMinutes: number
+  pendingMinutes: number
+  recordedMinutes: number
+  overachievedMinutes: number
+  bowlLevel: ExerciseBowlLevel
+  bowlLabel: string
+  ariaLabel: string
 }
 
 function pickRandomImage(images: readonly string[]) {
@@ -139,17 +149,28 @@ function shiftCalendarMonth(value: string, offset: number) {
   return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`
 }
 
+function dateDisplayLabel(date: string, today: string) {
+  if (date === today) return "今日"
+  const month = Number(date.slice(5, 7))
+  const day = Number(date.slice(8, 10))
+  return `${month}月${day}日`
+}
+
 Page({
   data: {
     loading: true,
     hasLoaded: false,
     busy: false,
     busyAction: "",
-    todayPendingMinutes: 0,
-    todayDailyTaskState: "pending",
-    todayPendingTotal: 0,
-    todayRecordedMinutes: 0,
-    todayOverachievedMinutes: 0,
+    selectedDate: "",
+    todayDate: "",
+    selectedDateLabel: "今日",
+    selectedTaskTitle: "今日任务",
+    selectedPendingMinutes: 0,
+    selectedDailyTaskState: "pending",
+    selectedPendingTotal: 0,
+    selectedRecordedMinutes: 0,
+    selectedOverachievedMinutes: 0,
     restDaysUsed: 0,
     restDaysTotal: 0,
     restDaysRemaining: 0,
@@ -192,45 +213,78 @@ Page({
   },
 
   applyDashboard(dashboard: ExerciseDashboard) {
-    const bowlLevel = dashboard.cat.bowl_level
-    const stateImages = getImagesForState(bowlLevel, dashboard.today.date)
     const restDays = dashboard.rest_days
-    const dailyPendingMinutes = dashboard.today.daily_pending_minutes
-    const pendingTotal = dailyPendingMinutes
     const calendarCells: ExerciseCalendarCell[] = [
       ...Array.from({ length: dashboard.month.first_weekday }, (_, index) => ({
         key: `blank-${index}`,
+        date: "",
         day: "",
         state: "blank",
         isToday: false,
-        restUsed: false
+        isSelected: false,
+        selectable: false,
+        restUsed: false,
+        dailyMinutes: 0,
+        pendingMinutes: 0,
+        recordedMinutes: 0,
+        overachievedMinutes: 0,
+        bowlLevel: "empty" as ExerciseBowlLevel,
+        bowlLabel: "没有",
+        ariaLabel: ""
       })),
       ...dashboard.month.days.map((item) => ({
         key: item.date,
+        date: item.date,
         day: item.day,
         state: item.state,
         isToday: item.date === dashboard.today.date,
-        restUsed: item.rest_used
+        isSelected: false,
+        selectable: item.state === "completed" || item.state === "incomplete",
+        restUsed: item.rest_used,
+        dailyMinutes: item.daily_minutes || 0,
+        pendingMinutes: item.daily_pending_minutes || 0,
+        recordedMinutes: item.recorded_minutes || 0,
+        overachievedMinutes: item.overachieved_minutes || 0,
+        bowlLevel: item.bowl_level || "empty",
+        bowlLabel: item.bowl_label || "没有",
+        ariaLabel: `${Number(item.date.slice(5, 7))}月${item.day}日${item.state === "completed" ? "已完成" : item.state === "incomplete" ? "未完成" : "不可选择"}`
       }))
     ]
+    const preferredDate = this.data.selectedDate
+    let selectedDay = calendarCells.find((item) => item.date === preferredDate && item.selectable)
+    if (!selectedDay) {
+      selectedDay = calendarCells.find((item) => item.date === dashboard.today.date && item.selectable)
+    }
+    if (!selectedDay) {
+      selectedDay = {
+        key: dashboard.today.date,
+        date: dashboard.today.date,
+        day: Number(dashboard.today.date.slice(8, 10)),
+        state: dashboard.today.completed ? "completed" : "incomplete",
+        isToday: true,
+        isSelected: false,
+        selectable: true,
+        restUsed: restDays.used_today,
+        dailyMinutes: dashboard.today.daily_minutes,
+        pendingMinutes: dashboard.today.daily_pending_minutes,
+        recordedMinutes: dashboard.today.recorded_minutes,
+        overachievedMinutes: dashboard.today.overachieved_minutes,
+        bowlLevel: dashboard.cat.bowl_level,
+        bowlLabel: dashboard.cat.bowl_label,
+        ariaLabel: "今日"
+      }
+    }
+    const selectedCells = calendarCells.map((item) => ({
+      ...item,
+      isSelected: item.date === selectedDay.date
+    }))
     this.setData({
-      todayPendingMinutes: dailyPendingMinutes,
-      todayDailyTaskState: restDays.used_today
-        ? "rest"
-        : dailyPendingMinutes === 0 ? "completed" : "pending",
-      todayPendingTotal: pendingTotal,
-      todayRecordedMinutes: dashboard.today.recorded_minutes,
-      todayOverachievedMinutes: dashboard.today.overachieved_minutes,
       restDaysUsed: restDays.used,
       restDaysTotal: restDays.total,
       restDaysRemaining: restDays.remaining,
       restDayUsedToday: restDays.used_today,
       restDayEntryText: `休息日补卡 · 本月剩余 ${restDays.remaining} 天`,
-      completeButtonText: pendingTotal === 0 ? "记录额外运动" : "完成运动",
-      bowlLabel: dashboard.cat.bowl_label,
-      emotionLabel: PET_STATE_LABELS[bowlLevel],
-      petImage: stateImages.petImage,
-      bowlImage: stateImages.bowlImage,
+      todayDate: dashboard.today.date,
       calendarMonthLabel: `${dashboard.month.year}年${dashboard.month.month}月`,
       calendarMonthValue: dashboard.month.value,
       calendarPickerValue: `${dashboard.month.value}-01`,
@@ -239,7 +293,36 @@ Page({
       calendarIsCurrent: dashboard.month.is_current,
       calendarCanGoPrevious: dashboard.month.value > dashboard.month.min_month,
       calendarCanGoNext: dashboard.month.value < dashboard.month.max_month,
-      calendarCells
+      calendarCells: selectedCells
+    })
+    this.applySelectedDay(selectedDay, dashboard.today.date, false)
+  },
+
+  applySelectedDay(cell: ExerciseCalendarCell, today: string, updateCells = true) {
+    const stateImages = getImagesForState(cell.bowlLevel, cell.date)
+    const label = dateDisplayLabel(cell.date, today)
+    this.setData({
+      selectedDate: cell.date,
+      selectedDateLabel: label,
+      selectedTaskTitle: `${label}任务`,
+      selectedPendingMinutes: cell.pendingMinutes,
+      selectedDailyTaskState: cell.restUsed
+        ? "rest"
+        : cell.pendingMinutes === 0 ? "completed" : "pending",
+      selectedPendingTotal: cell.pendingMinutes,
+      selectedRecordedMinutes: cell.recordedMinutes,
+      selectedOverachievedMinutes: cell.overachievedMinutes,
+      completeButtonText: cell.pendingMinutes === 0 ? "记录额外运动" : "完成运动",
+      bowlLabel: cell.bowlLabel,
+      emotionLabel: PET_STATE_LABELS[cell.bowlLevel],
+      petImage: stateImages.petImage,
+      bowlImage: stateImages.bowlImage,
+      ...(updateCells ? {
+        calendarCells: this.data.calendarCells.map((item) => ({
+          ...item,
+          isSelected: item.date === cell.date
+        }))
+      } : {})
     })
   },
 
@@ -285,6 +368,14 @@ Page({
     this.loadDashboard(month)
   },
 
+  handleCalendarDayTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.calendarLoading || this.data.busy) return
+    const date = String(event.currentTarget.dataset.date || "")
+    const selectedDay = this.data.calendarCells.find((item) => item.date === date)
+    if (!selectedDay?.selectable) return
+    this.applySelectedDay(selectedDay, this.data.todayDate)
+  },
+
   handleSettings() {
     if (this.data.busy) return
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
@@ -300,10 +391,10 @@ Page({
     this.setData({
       minutesDialogVisible: true,
       minutesDialogTitle: "记录运动分钟",
-      minutesDialogPlaceholder: this.data.todayPendingTotal > 0
-        ? `今日还需 ${this.data.todayPendingTotal} 分钟，可继续记录超额`
+      minutesDialogPlaceholder: this.data.selectedPendingTotal > 0
+        ? `${this.data.selectedDateLabel}还需 ${this.data.selectedPendingTotal} 分钟，可继续记录超额`
         : "输入额外运动分钟数",
-      minutesInput: this.data.todayPendingTotal > 0 ? String(this.data.todayPendingTotal) : ""
+      minutesInput: this.data.selectedPendingTotal > 0 ? String(this.data.selectedPendingTotal) : ""
     })
   },
 
@@ -326,7 +417,15 @@ Page({
       return
     }
     this.setData({ minutesDialogVisible: false, minutesInput: "" })
-    this.runAction("complete", () => completeExercise(minutes), `已记录 ${minutes} 分钟`)
+    const selectedDate = this.data.selectedDate
+    const successMessage = selectedDate === this.data.todayDate
+      ? `已记录 ${minutes} 分钟`
+      : `已补记 ${minutes} 分钟`
+    this.runAction(
+      "complete",
+      () => completeExercise(minutes, selectedDate),
+      successMessage
+    )
   },
 
   async runAction(

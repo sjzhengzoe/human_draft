@@ -1,4 +1,8 @@
-<custom-navigation title="人生节点" />
+<custom-navigation
+  title="人生节点"
+  title-tappable="{{true}}"
+  bind:titletap="handleScrollToTop"
+/>
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
@@ -36,7 +40,15 @@
     ><app-icon name="plus-white" size="26" /></button>
   </view>
 
-  <scroll-view class="timeline-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view
+    class="timeline-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    scroll-with-animation="{{true}}"
+    scroll-into-view="{{timelineScrollAnchor}}"
+  >
+    <view id="timeline-scroll-top" />
     <view wx:if="{{contentLoading}}" class="content-loading">
       <view class="content-loading__spinner" />
       <view class="content-loading__text">正在加载…</view>

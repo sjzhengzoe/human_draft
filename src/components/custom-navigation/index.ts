@@ -50,9 +50,17 @@ Component({
     customBack: {
       type: Boolean,
       value: false
+    },
+    titleTappable: {
+      type: Boolean,
+      value: false
     }
   },
   methods: {
+    handleTitleTap() {
+      if (this.data.titleTappable) this.triggerEvent("titletap")
+    },
+
     handleBack() {
       if (this.data.customBack) {
         this.triggerEvent("back")

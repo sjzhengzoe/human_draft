@@ -23,6 +23,10 @@
   padding: 0 190rpx;
 }
 
+.custom-navigation__content--tappable {
+  cursor: pointer;
+}
+
 .custom-navigation__back {
   position: absolute;
   top: 0;
@@ -43,6 +47,9 @@
 }
 
 .custom-navigation__title {
+  display: flex;
+  min-height: 56rpx;
+  align-items: center;
   max-width: 100%;
   overflow: hidden;
   color: var(--ui-color-text-primary);
@@ -54,4 +61,8 @@
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.custom-navigation__title--tappable {
+  padding: 0 20rpx;
 }

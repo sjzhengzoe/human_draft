@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   calculateTodayProgress,
+  completeExerciseTasks,
   consumeExerciseRestDay,
   getExerciseDashboard,
   getExerciseRestCalendar,
@@ -174,19 +175,27 @@ test("dashboard reads the current month and builds daily calendar states", async
   assert.deepEqual(dashboard.month.days.slice(0, 4), [
     {
       date: "2026-08-01", day: 1, state: "untracked", rest_used: false,
-      can_use_rest_day: false,
+      can_use_rest_day: false, daily_minutes: null, daily_completed_minutes: null,
+      daily_pending_minutes: null, recorded_minutes: null, overachieved_minutes: null,
+      bowl_level: null, bowl_label: null,
     },
     {
       date: "2026-08-02", day: 2, state: "untracked", rest_used: false,
-      can_use_rest_day: false,
+      can_use_rest_day: false, daily_minutes: null, daily_completed_minutes: null,
+      daily_pending_minutes: null, recorded_minutes: null, overachieved_minutes: null,
+      bowl_level: null, bowl_label: null,
     },
     {
       date: "2026-08-03", day: 3, state: "incomplete", rest_used: false,
-      can_use_rest_day: true,
+      can_use_rest_day: true, daily_minutes: 20, daily_completed_minutes: 8,
+      daily_pending_minutes: 12, recorded_minutes: 8, overachieved_minutes: 0,
+      bowl_level: "low", bowl_label: "偏少",
     },
     {
       date: "2026-08-04", day: 4, state: "future", rest_used: false,
-      can_use_rest_day: false,
+      can_use_rest_day: false, daily_minutes: null, daily_completed_minutes: null,
+      daily_pending_minutes: null, recorded_minutes: null, overachieved_minutes: null,
+      bowl_level: null, bowl_label: null,
     },
   ]);
   assert.equal(dashboard.cat.bowl_level, "low");
@@ -396,6 +405,79 @@ test("a rest day cannot be applied to a future date", async () => {
     { code: "INVALID_EXERCISE_REST_DATE" },
   );
   assert.equal(supabase.rpcCalls.length, 0);
+});
+
+test("a tracked past date can receive a missed exercise completion", async () => {
+  const supabase = createSupabaseMock({
+    exercise_profiles: [
+      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+    ],
+    exercise_daily_goal_changes: [
+      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+    ],
+    exercise_completion_events: [],
+    exercise_daily_rest_days: [],
+  });
+
+  const dashboard = await completeExerciseTasks(
+    supabase,
+    USER_ID,
+    { date: "2026-08-02", minutes: 20 },
+    AUGUST_THIRD_CHINA,
+  );
+
+  assert.deepEqual(supabase.rpcCalls, [{
+    name: "record_exercise_daily_completion",
+    args: {
+      p_user_id: USER_ID,
+      p_completion_date: "2026-08-02",
+      p_minutes: 20,
+    },
+  }]);
+  assert.equal(dashboard.month.value, "2026-08");
+});
+
+test("exercise completion rejects future, invalid, and untracked dates", async () => {
+  for (const date of ["2026-08-04", "2026-02-31"]) {
+    const supabase = createSupabaseMock({});
+    await assert.rejects(
+      completeExerciseTasks(
+        supabase,
+        USER_ID,
+        { date, minutes: 20 },
+        AUGUST_THIRD_CHINA,
+      ),
+      { code: "INVALID_EXERCISE_COMPLETION_DATE" },
+    );
+    assert.equal(supabase.rpcCalls.length, 0);
+  }
+
+  const untrackedSupabase = createSupabaseMock({
+    exercise_daily_goal_changes: [],
+  });
+  await assert.rejects(
+    completeExerciseTasks(
+      untrackedSupabase,
+      USER_ID,
+      { date: "2026-08-02", minutes: 20 },
+      AUGUST_THIRD_CHINA,
+    ),
+    { code: "EXERCISE_DATE_NOT_TRACKED" },
+  );
+  assert.equal(untrackedSupabase.rpcCalls.length, 0);
+});
+
+test("exercise home lets a tracked calendar day drive the completion date", async () => {
+  const [pageSource, templateSource] = await Promise.all([
+    readFile(new URL("../../src/exercise/pages/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/exercise/pages/index.wxml", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(pageSource, /handleCalendarDayTap/);
+  assert.match(pageSource, /completeExercise\(minutes, selectedDate\)/);
+  assert.match(templateSource, /data-date="\{\{item\.date\}\}"/);
+  assert.match(templateSource, /bindtap="handleCalendarDayTap"/);
+  assert.match(templateSource, /\{\{selectedTaskTitle\}\}/);
 });
 
 test("daily goal settings migration applies new goals from the next day", async () => {

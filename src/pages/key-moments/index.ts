@@ -130,6 +130,7 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     keyMomentRevision: -1,
+    timelineScrollAnchor: "",
     showEditor: false,
     showDeleteConfirm: false,
     editingId: "",
@@ -174,6 +175,14 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
+  },
+
+  handleScrollToTop() {
+    this.setData({ timelineScrollAnchor: "" }, () => {
+      if (isAsyncPageActive(this)) {
+        this.setData({ timelineScrollAnchor: "timeline-scroll-top" })
+      }
+    })
   },
 
   syncItemsFromCache(input?: {

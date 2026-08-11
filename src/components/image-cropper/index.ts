@@ -76,6 +76,7 @@ type WorkspaceBounds = {
 const CANVAS_ID = "imageCropperCanvas"
 const WORKSPACE_INSET_RPX = 24
 const MIN_CROP_PX = 56
+const EXPORT_EDGE_GUARD_PX = 2
 const RATIO_OPTIONS = [
   { label: "自由", value: 0 },
   { label: "1:1", value: 1 },
@@ -121,7 +122,6 @@ Component({
     ratioOptions: RATIO_OPTIONS,
     ready: false,
     processing: false,
-    ratioPanelVisible: false,
     ratioLocked: false,
     activeRatio: 0,
     activeRatioLabel: "自由",
@@ -202,8 +202,8 @@ Component({
 
         cropStates.set(this, state)
         cropGestures.delete(this)
+        constrainCropFrame(state)
         this.setData({
-          ratioPanelVisible: false,
           ratioLocked,
           activeRatio: fixedAspectRatio,
           activeRatioLabel: ratioLabel(fixedAspectRatio)
@@ -251,7 +251,6 @@ Component({
       const touch = event.touches[0]
       const state = cropStates.get(this)
       if (!touch || !state || this.data.processing) return
-      if (this.data.ratioPanelVisible) this.setData({ ratioPanelVisible: false })
       cropGestures.set(this, {
         mode: "move",
         startClientX: touch.clientX,
@@ -287,16 +286,12 @@ Component({
       } else if (gesture.handle) {
         resizeCropFrame(state, gesture.startFrame, gesture.handle, deltaX, deltaY)
       }
+      constrainCropFrame(state)
       this.syncState(state)
     },
 
     handleGestureEnd() {
       cropGestures.delete(this)
-    },
-
-    handleRatioToolTap() {
-      if (this.data.processing || !this.data.ready || this.data.ratioLocked) return
-      this.setData({ ratioPanelVisible: !this.data.ratioPanelVisible })
     },
 
     handleRatioOptionTap(event: WechatMiniprogram.TouchEvent) {
@@ -317,9 +312,9 @@ Component({
       state.cropWidth = frame.width
       state.cropHeight = frame.height
       state.fixedAspectRatio = ratio
+      constrainCropFrame(state)
       cropGestures.delete(this)
       this.setData({
-        ratioPanelVisible: false,
         activeRatio: ratio,
         activeRatioLabel: ratioLabel(ratio)
       })
@@ -350,6 +345,7 @@ Component({
       const state = cropStates.get(this)
       if (!state || this.data.processing || !this.data.ready) return
 
+      constrainCropFrame(state)
       const cropped = isCropped(state)
       let resultPath = ""
       let errorMessage = ""
@@ -387,10 +383,10 @@ Component({
           sourceY,
           sourceWidth,
           sourceHeight,
-          0,
-          0,
-          outputWidth,
-          outputHeight
+          -EXPORT_EDGE_GUARD_PX,
+          -EXPORT_EDGE_GUARD_PX,
+          outputWidth + EXPORT_EDGE_GUARD_PX * 2,
+          outputHeight + EXPORT_EDGE_GUARD_PX * 2
         )
 
         resultPath = await canvasToTempFilePath(
@@ -515,6 +511,26 @@ function resizeCropFrame(
     return
   }
   resizeFreeCropFrame(state, start, handle, deltaX, deltaY)
+}
+
+function constrainCropFrame(state: CropState): void {
+  const imageRight = state.imageLeft + state.imageWidth
+  const imageBottom = state.imageTop + state.imageHeight
+  let width = Math.min(Math.max(state.cropWidth, 1), state.imageWidth)
+  let height = Math.min(Math.max(state.cropHeight, 1), state.imageHeight)
+
+  if (state.fixedAspectRatio > 0) {
+    height = width / state.fixedAspectRatio
+    if (height > state.imageHeight) {
+      height = state.imageHeight
+      width = height * state.fixedAspectRatio
+    }
+  }
+
+  state.cropWidth = width
+  state.cropHeight = height
+  state.cropLeft = clamp(state.cropLeft, state.imageLeft, imageRight - width)
+  state.cropTop = clamp(state.cropTop, state.imageTop, imageBottom - height)
 }
 
 function resizeFreeCropFrame(

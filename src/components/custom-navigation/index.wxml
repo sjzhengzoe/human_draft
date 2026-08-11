@@ -6,17 +6,26 @@
     class="custom-navigation__bar"
     style="height: {{totalNavigationHeight}}px; padding-top: {{statusBarHeight}}px; background: {{background}};"
   >
-    <view class="custom-navigation__content" style="height: {{navigationBarHeight}}px;">
+    <view
+      class="custom-navigation__content {{titleTappable ? 'custom-navigation__content--tappable' : ''}}"
+      style="height: {{navigationBarHeight}}px;"
+      bindtap="handleTitleTap"
+    >
       <view
         wx:if="{{showBack}}"
         class="custom-navigation__back"
         role="button"
         aria-label="返回"
-        bindtap="handleBack"
+        catchtap="handleBack"
       >
         <view class="custom-navigation__back-glyph"><app-icon name="arrow-left" size="30" /></view>
       </view>
-      <view wx:if="{{title}}" class="custom-navigation__title">{{title}}</view>
+      <view
+        wx:if="{{title}}"
+        class="custom-navigation__title {{titleTappable ? 'custom-navigation__title--tappable' : ''}}"
+        role="{{titleTappable ? 'button' : ''}}"
+        aria-label="{{titleTappable ? title + '，返回顶部' : ''}}"
+      >{{title}}</view>
     </view>
   </view>
 </view>

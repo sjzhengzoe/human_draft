@@ -57,29 +57,24 @@
   </view>
 
   <view slot="actions" class="crop-controls">
-    <view wx:if="{{ratioPanelVisible}}" class="crop-ratio-panel">
-      <view
-        wx:for="{{ratioOptions}}"
-        wx:key="label"
-        class="crop-ratio-option {{activeRatio === item.value ? 'crop-ratio-option--active' : ''}}"
-        data-value="{{item.value}}"
-        role="button"
-        aria-label="裁剪比例 {{item.label}}"
-        bindtap="handleRatioOptionTap"
-      >{{item.label}}</view>
-    </view>
     <view class="crop-toolbar">
       <view
         class="crop-toolbar__tool crop-toolbar__tool--active"
         role="button"
         aria-label="裁剪工具，已启用"
       ><app-icon name="crop-white" size="42" /></view>
-      <view
-        class="crop-toolbar__ratio-tool {{ratioPanelVisible ? 'crop-toolbar__ratio-tool--active' : ''}} {{ratioLocked ? 'crop-toolbar__ratio-tool--locked' : ''}}"
-        role="button"
-        aria-label="{{ratioLocked ? '裁剪比例已固定为' + activeRatioLabel : '选择裁剪比例，当前' + activeRatioLabel}}"
-        bindtap="handleRatioToolTap"
-      >比例 {{activeRatioLabel}}</view>
+      <view wx:if="{{!ratioLocked}}" class="crop-toolbar__ratios" aria-label="裁剪比例">
+        <view
+          wx:for="{{ratioOptions}}"
+          wx:key="label"
+          class="crop-ratio-option {{activeRatio === item.value ? 'crop-ratio-option--active' : ''}}"
+          data-value="{{item.value}}"
+          role="button"
+          aria-label="裁剪比例 {{item.label}}"
+          bindtap="handleRatioOptionTap"
+        >{{item.label}}</view>
+      </view>
+      <view wx:else class="crop-toolbar__fixed-ratio">比例 {{activeRatioLabel}}</view>
       <button
         class="crop-toolbar__done"
         loading="{{processing}}"

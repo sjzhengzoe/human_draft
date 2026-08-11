@@ -20,8 +20,8 @@ test("shared image cropper uses a fullscreen adjustable frame with optional fixe
   assert.match(page, /data-handle="nw"[\s\S]*?handleResizeTouchStart/);
   assert.match(page, /wx:if="\{\{!fixedAspectRatio\}\}"[\s\S]*?data-handle="n"/);
   assert.match(page, /aria-label="裁剪工具，已启用"[\s\S]*?<app-icon name="crop-white"/);
-  assert.match(page, /class="crop-toolbar__ratio-tool[\s\S]*?bindtap="handleRatioToolTap"/);
-  assert.match(page, /wx:for="\{\{ratioOptions\}\}"[\s\S]*?bindtap="handleRatioOptionTap"/);
+  assert.match(page, /class="crop-toolbar__ratios"[\s\S]*?wx:for="\{\{ratioOptions\}\}"[\s\S]*?bindtap="handleRatioOptionTap"/);
+  assert.doesNotMatch(page, /handleRatioToolTap|ratioPanelVisible/);
   assert.match(page, /class="crop-toolbar__done"[\s\S]*?bindtap="handleConfirm"[\s\S]*?>完成/);
   assert.doesNotMatch(page, /原图|data-mode|handleModeTap|handleRotate/);
 
@@ -37,6 +37,8 @@ test("shared image cropper uses a fullscreen adjustable frame with optional fixe
   assert.match(logic, /label: "16:9", value: 16 \/ 9/);
   assert.match(logic, /handleRatioOptionTap[\s\S]*?state\.fixedAspectRatio = ratio/);
   assert.match(logic, /const ratioLocked = fixedAspectRatio > 0/);
+  assert.match(logic, /function constrainCropFrame[\s\S]*?state\.cropLeft = clamp[\s\S]*?state\.cropTop = clamp/);
+  assert.match(logic, /-EXPORT_EDGE_GUARD_PX,[\s\S]*?outputWidth \+ EXPORT_EDGE_GUARD_PX \* 2/);
   assert.match(logic, /outputType:[\s\S]*?value: "png"/);
   assert.match(logic, /outputQuality:[\s\S]*?value: 0\.86/);
   assert.match(logic, /const outputScale = Math\.min\(maximumOutputWidth \/ sourceWidth, 1\)/);
@@ -47,7 +49,7 @@ test("shared image cropper uses a fullscreen adjustable frame with optional fixe
   assert.match(styles, /\.crop-editor\s*\{[^}]*height:\s*100%/);
   assert.match(styles, /\.crop-frame\s*\{[^}]*box-shadow:\s*0 0 0 2000rpx/);
   assert.match(styles, /\.crop-toolbar__done[^}]*background:\s*var\(--ui-color-success\)/);
-  assert.match(styles, /\.crop-ratio-option--active[^}]*background:\s*var\(--ui-color-action-primary\)/);
+  assert.match(styles, /\.crop-ratio-option--active[^}]*background:\s*var\(--ui-color-surface-faint\)/);
   assert.match(config, /"app-icon": "\/components\/app-icon\/index"/);
   assert.match(dialogLogic, /fullscreen:/);
   assert.match(dialogPage, /app-dialog--fullscreen/);

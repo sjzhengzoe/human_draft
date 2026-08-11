@@ -328,12 +328,13 @@ export async function getExerciseDashboard(
     let state = "future";
     let restUsed = false;
     let canUseRestDay = false;
+    let dayProgress = null;
     if (date <= currentContext.today) {
       if (date < trackingStartDate) {
         state = "untracked";
       } else {
         restUsed = calendarRestDates.has(date);
-        const dayProgress = calculateTodayProgress({
+        dayProgress = calculateTodayProgress({
           dailyMinutes: dailyGoalOnDate(effectiveGoals, date, profile.daily_minutes),
           completionMinutes: calendarCompletionMinutesByDate.get(date) || 0,
           restDayUsed: restUsed,
@@ -352,6 +353,13 @@ export async function getExerciseDashboard(
       state,
       rest_used: restUsed,
       can_use_rest_day: canUseRestDay,
+      daily_minutes: dayProgress?.dailyMinutes ?? null,
+      daily_completed_minutes: dayProgress?.dailyCompletedMinutes ?? null,
+      daily_pending_minutes: dayProgress?.dailyPendingMinutes ?? null,
+      recorded_minutes: dayProgress?.recordedMinutes ?? null,
+      overachieved_minutes: dayProgress?.overachievedMinutes ?? null,
+      bowl_level: dayProgress?.bowlLevel ?? null,
+      bowl_label: dayProgress?.bowlLabel ?? null,
     };
   });
   const completedDays = calendarDays.filter((item) => item.state === "completed").length;
@@ -584,11 +592,45 @@ export async function consumeExerciseRestDay(
 export async function completeExerciseTasks(supabase, userId, body, now = new Date()) {
   const minutes = integerValue(body.minutes, "完成分钟数", 1, 10_000);
   const context = monthContext(now);
+  const completionDate = body.date || context.today;
+  const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(completionDate)
+    ? new Date(`${completionDate}T00:00:00.000Z`)
+    : null;
+  const isValidDate = parsedDate
+    && !Number.isNaN(parsedDate.getTime())
+    && dateString(
+      parsedDate.getUTCFullYear(),
+      parsedDate.getUTCMonth() + 1,
+      parsedDate.getUTCDate(),
+    ) === completionDate;
+  assertCondition(
+    isValidDate && completionDate <= context.today,
+    400,
+    "INVALID_EXERCISE_COMPLETION_DATE",
+    "只能记录不晚于今天的有效日期。",
+  );
+
+  if (completionDate < context.today) {
+    const goalResult = await supabase
+      .from("exercise_daily_goal_changes")
+      .select("effective_date")
+      .eq("user_id", userId)
+      .lte("effective_date", completionDate)
+      .order("effective_date", { ascending: false });
+    throwSupabaseError(goalResult.error, "读取运动目标历史失败。");
+    assertCondition(
+      (goalResult.data || []).length > 0,
+      409,
+      "EXERCISE_DATE_NOT_TRACKED",
+      "该日期尚未开始记录运动。",
+    );
+  }
+
   const { error } = await supabase.rpc("record_exercise_daily_completion", {
     p_user_id: userId,
-    p_completion_date: context.today,
+    p_completion_date: completionDate,
     p_minutes: minutes,
   });
   throwSupabaseError(error, "记录运动失败。");
-  return getExerciseDashboard(supabase, userId, now);
+  return getExerciseDashboard(supabase, userId, now, completionDate.slice(0, 7));
 }

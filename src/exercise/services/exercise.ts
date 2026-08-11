@@ -41,10 +41,10 @@ export function getExerciseRestCalendar(month = ""): Promise<ExerciseRestCalenda
   })
 }
 
-export function completeExercise(minutes: number): Promise<ExerciseDashboard> {
+export function completeExercise(minutes: number, date = ""): Promise<ExerciseDashboard> {
   return request<ExerciseDashboard>({
     path: "/api/exercise/complete",
     method: "POST",
-    data: { minutes }
+    data: date ? { minutes, date } : { minutes }
   })
 }

@@ -254,42 +254,34 @@
 }
 
 .crop-controls {
-  position: relative;
   background: var(--ui-color-action-primary);
 }
 
-.crop-ratio-panel {
-  position: absolute;
-  z-index: 6;
-  right: 28rpx;
-  bottom: 100%;
-  left: 28rpx;
+.crop-toolbar__ratios {
   display: flex;
+  min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 12rpx;
-  padding: 16rpx;
-  border-radius: 18rpx;
-  background: var(--ui-color-background-surface);
-  box-shadow: 0 12rpx 40rpx var(--ui-color-shadow-strong);
+  gap: 4rpx;
 }
 
 .crop-ratio-option {
   display: flex;
-  min-width: 0;
+  width: auto;
+  min-width: 60rpx;
   height: 64rpx;
-  flex: 1;
+  box-sizing: border-box;
+  flex: none;
   align-items: center;
   justify-content: center;
+  padding: 0 10rpx;
   border-radius: 14rpx;
-  background: var(--ui-color-background-subtle);
-  color: var(--ui-color-text-primary);
-  font-size: var(--ui-font-size-base);
+  color: var(--ui-color-text-inverse-muted);
+  font-size: var(--ui-font-size-small);
   font-weight: 600;
 }
 
 .crop-ratio-option--active {
-  background: var(--ui-color-action-primary);
+  background: var(--ui-color-surface-faint);
   color: var(--ui-color-text-inverse);
 }
 
@@ -318,7 +310,7 @@
   background: var(--ui-color-surface-faint);
 }
 
-.crop-toolbar__ratio-tool {
+.crop-toolbar__fixed-ratio {
   display: flex;
   width: auto;
   min-width: 0;
@@ -331,16 +323,6 @@
   color: var(--ui-color-text-inverse-muted);
   font-size: var(--ui-font-size-small);
   font-weight: 600;
-}
-
-.crop-toolbar__ratio-tool--active {
-  background: var(--ui-color-surface-faint);
-  color: var(--ui-color-text-inverse);
-}
-
-.crop-toolbar__ratio-tool--locked {
-  color: var(--ui-color-text-inverse-muted);
-  opacity: 0.55;
 }
 
 .crop-toolbar__done {

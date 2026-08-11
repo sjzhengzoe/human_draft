@@ -45,6 +45,13 @@ export type ExerciseDashboard = {
       state: ExerciseCalendarDayState
       rest_used: boolean
       can_use_rest_day: boolean
+      daily_minutes: number | null
+      daily_completed_minutes: number | null
+      daily_pending_minutes: number | null
+      recorded_minutes: number | null
+      overachieved_minutes: number | null
+      bowl_level: ExerciseBowlLevel | null
+      bowl_label: string | null
     }>
   }
   cat: {
