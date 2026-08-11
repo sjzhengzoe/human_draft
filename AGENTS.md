@@ -8,6 +8,7 @@
 - Reuse existing shared modal components before adding new dialog behavior. Native image preview and system pickers are exempt because they are platform controls rather than business dialogs.
 - Short text-only utility buttons, such as undo actions, should size to their label plus balanced horizontal padding. Do not use a fixed width or an oversized minimum width unless the layout explicitly requires equal-width controls.
 - Follow `docs/ui-icons.md`. Familiar, single-purpose utility actions such as settings, back, close, add, edit, delete, search, and filter should use the shared `app-icon` as icon-only controls without duplicate visible text. Every icon-only control must have an accurate `aria-label` and at least a `56rpx × 56rpx` hit area. Keep visible text when an icon would be ambiguous, business-specific, or consequential.
+- Before adding a short text button, badge, or generic status label, check whether an existing shared `app-icon` communicates the meaning clearly. When it does, use the icon without duplicate visible text and carry the meaning in the surrounding control's accessibility label.
 - Selected tabs and mutually exclusive top-level filter tabs must use `--ui-color-action-primary` as a black background and `--ui-color-text-inverse` as white text. Do not use a white selected background with dark text, an underline-only selected state, or a feature accent color for the selected tab.
 
 ## UI Typography Rules

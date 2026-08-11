@@ -17,6 +17,7 @@ function setCreateTabBarMasked(page: CreatePageInstance, masked: boolean) {
 Component({
   data: {
     featureGroups: getVisibleHomeFeatureGroups(),
+    loggedIn: Boolean(getCurrentUser()),
     loginDialogVisible: false,
     loginDialogContent: ""
   },
@@ -40,7 +41,10 @@ Component({
         })
       }
 
-      this.setData({ featureGroups: getVisibleHomeFeatureGroups() })
+      this.setData({
+        featureGroups: getVisibleHomeFeatureGroups(),
+        loggedIn: Boolean(getCurrentUser())
+      })
 
       if (page.hasRendered) {
         wx.nextTick(() => hideGlobalLoading())

@@ -9,6 +9,11 @@ import {
   loadFootprintCityGeometry,
   type FootprintCityGeometryData
 } from "../../services/footprint-map"
+import {
+  listFootprintCityCodes,
+  mergeLocalFootprintCityCodes,
+  setFootprintCityVisited
+} from "../../services/footprint"
 import { initializeUIFont } from "../../services/ui-font"
 import {
   drawFootprintMap,
@@ -17,8 +22,8 @@ import {
   type FootprintMapLevel
 } from "../../utils/footprint-map"
 import {
-  readVisitedFootprintCityCodes,
-  saveVisitedFootprintCityCodes
+  clearVisitedFootprintCityCodes,
+  readVisitedFootprintCityCodes
 } from "../../utils/footprint-storage"
 
 type FootprintCityView = FootprintCityDefinition & {
@@ -54,6 +59,7 @@ let selectedProvinceName = ""
 let canvasState: FootprintCanvasState | undefined
 let cityGeometry: FootprintCityGeometryData | undefined
 let pageActive = false
+const pendingCityCodes = new Set<string>()
 
 function createProvinceView(
   province: FootprintProvinceDefinition
@@ -101,17 +107,20 @@ Page({
     visitedCityCount: 0,
     visitedProvinces: [] as FootprintProvinceView[],
     unvisitedProvinces: [] as FootprintProvinceView[],
+    footprintSyncing: true,
     mapCityLoading: true,
     mapCityFailed: false
   },
 
   onLoad() {
     pageActive = true
+    pendingCityCodes.clear()
     visitedCityCodes = readVisitedFootprintCityCodes()
     const lists = createProvinceLists()
     const activeTab = lists.visited.length > 0 ? "visited" : "unvisited"
     this.setData({ activeTab })
     this.rebuildLists()
+    void this.syncCloudFootprint()
     void initializeUIFont()
       .then(() => {
         if (pageActive) this.drawMap()
@@ -128,6 +137,7 @@ Page({
 
   onUnload() {
     pageActive = false
+    pendingCityCodes.clear()
     canvasState = undefined
     cityGeometry = undefined
     expandedProvinceCode = ""
@@ -149,6 +159,32 @@ Page({
       },
       callback
     )
+  },
+
+  async syncCloudFootprint() {
+    const localCityCodes = readVisitedFootprintCityCodes()
+    this.setData({ footprintSyncing: true })
+    try {
+      const cloudCityCodes = localCityCodes.size > 0
+        ? await mergeLocalFootprintCityCodes([...localCityCodes])
+        : await listFootprintCityCodes()
+      if (!pageActive) return
+      visitedCityCodes = new Set(cloudCityCodes)
+      if (localCityCodes.size > 0) clearVisitedFootprintCityCodes()
+      const lists = createProvinceLists()
+      const activeTab = lists.visited.length > 0 ? "visited" : "unvisited"
+      expandedProvinceCode = ""
+      selectedProvinceName = ""
+      this.setData({ activeTab }, () => {
+        this.rebuildLists(() => this.drawMap())
+      })
+    } catch (error) {
+      if (!pageActive) return
+      console.warn("全国足迹云端同步失败", error)
+      wx.showToast({ title: "足迹同步失败，请稍后重试", icon: "none" })
+    } finally {
+      if (pageActive) this.setData({ footprintSyncing: false })
+    }
   },
 
   initializeCanvas(): Promise<void> {
@@ -251,16 +287,23 @@ Page({
     this.rebuildLists(() => this.drawMap())
   },
 
-  handleCityTap(event: WechatMiniprogram.TouchEvent) {
+  async handleCityTap(event: WechatMiniprogram.TouchEvent) {
     const cityCode = String(event.currentTarget.dataset.code || "")
     const provinceCode = String(event.currentTarget.dataset.provinceCode || "")
     const provinceName = String(event.currentTarget.dataset.provinceName || "")
-    if (!cityCode || !provinceCode || !provinceName) return
+    if (
+      !cityCode ||
+      !provinceCode ||
+      !provinceName ||
+      this.data.footprintSyncing ||
+      pendingCityCodes.has(cityCode)
+    ) return
 
-    if (visitedCityCodes.has(cityCode)) visitedCityCodes.delete(cityCode)
+    const wasVisited = visitedCityCodes.has(cityCode)
+    if (wasVisited) visitedCityCodes.delete(cityCode)
     else visitedCityCodes.add(cityCode)
 
-    saveVisitedFootprintCityCodes(visitedCityCodes)
+    pendingCityCodes.add(cityCode)
     const province = FOOTPRINT_PROVINCES.find((item) => item.code === provinceCode)
     const provinceHasVisited = Boolean(
       province?.cities.some((city) => visitedCityCodes.has(city.code))
@@ -270,5 +313,19 @@ Page({
     expandedProvinceCode = remainsInCurrentTab ? provinceCode : ""
     selectedProvinceName = remainsInCurrentTab ? provinceName : ""
     this.rebuildLists(() => this.drawMap())
+
+    try {
+      await setFootprintCityVisited(cityCode, !wasVisited)
+    } catch (error) {
+      if (wasVisited) visitedCityCodes.add(cityCode)
+      else visitedCityCodes.delete(cityCode)
+      if (pageActive) {
+        console.warn("保存全国足迹失败", error)
+        this.rebuildLists(() => this.drawMap())
+        wx.showToast({ title: "足迹保存失败，已恢复原状态", icon: "none" })
+      }
+    } finally {
+      pendingCityCodes.delete(cityCode)
+    }
   }
 })

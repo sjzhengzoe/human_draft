@@ -23,3 +23,7 @@ export function saveVisitedFootprintCityCodes(codes: Set<string>): void {
   }
   wx.setStorageSync(FOOTPRINT_STORAGE_KEY, stored)
 }
+
+export function clearVisitedFootprintCityCodes(): void {
+  wx.removeStorageSync(FOOTPRINT_STORAGE_KEY)
+}

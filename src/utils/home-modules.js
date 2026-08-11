@@ -110,7 +110,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/footprint-bold.png",
         path: "/pages/footprint/index",
         available: true,
-        requiresLogin: false
+        requiresLogin: true
       }
     ]
   }

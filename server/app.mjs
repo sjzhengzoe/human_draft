@@ -11,6 +11,7 @@ import { registerChatTopicRoutes } from "./routes/chat-topics.mjs";
 import { registerContentSecurityRoutes } from "./routes/content-security.mjs";
 import { registerDiningRoutes } from "./routes/dining.mjs";
 import { registerExerciseRoutes } from "./routes/exercise.mjs";
+import { registerFootprintRoutes } from "./routes/footprint.mjs";
 import { registerKeyMomentRoutes } from "./routes/key-moments.mjs";
 import { registerLuggageRoutes } from "./routes/luggage.mjs";
 import { registerMediaRoutes } from "./routes/media.mjs";
@@ -23,6 +24,7 @@ const routeRegistrars = [
   registerAuthRoutes,
   registerContentSecurityRoutes,
   registerExerciseRoutes,
+  registerFootprintRoutes,
   registerMenuRoutes,
   registerMediaRoutes,
   registerActivityRoutes,

@@ -484,6 +484,96 @@ test("media and dining detail routes load records by id", async (t) => {
   assert.equal(unauthenticatedResponse.json().error.code, "UNAUTHORIZED");
 });
 
+test("footprint routes require login and scope reads and writes to the authenticated user", async (t) => {
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      user_footprint_cities: [
+        { user_id: USER_ID, city_code: "110100" },
+        { user_id: OTHER_USER_ID, city_code: "310100" },
+      ],
+    }),
+    rpc: {
+      merge_user_footprint_cities: ({ p_user_id, p_city_codes }) => ({
+        data: p_city_codes.map((city_code) => ({ city_code })),
+        error: p_user_id === USER_ID ? null : new Error("wrong user"),
+      }),
+      set_user_footprint_city: ({ p_user_id }) => ({
+        data: null,
+        error: p_user_id === USER_ID ? null : new Error("wrong user"),
+      }),
+    },
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const unauthenticatedResponse = await app.inject({
+    method: "GET",
+    url: "/api/footprint",
+  });
+  assert.equal(unauthenticatedResponse.statusCode, 401);
+
+  const listResponse = await app.inject({
+    method: "GET",
+    url: "/api/footprint",
+    headers: authHeaders,
+  });
+  assert.equal(listResponse.statusCode, 200);
+  assert.deepEqual(listResponse.json(), {
+    ok: true,
+    data: { city_codes: ["110100"] },
+  });
+
+  const mergeResponse = await app.inject({
+    method: "PUT",
+    url: "/api/footprint/merge-local",
+    headers: authHeaders,
+    payload: { city_codes: ["310100", "110100", "310100"] },
+  });
+  assert.equal(mergeResponse.statusCode, 200);
+  assert.deepEqual(mergeResponse.json().data.city_codes, ["110100", "310100"]);
+
+  const saveResponse = await app.inject({
+    method: "PUT",
+    url: "/api/footprint/cities/440100",
+    headers: authHeaders,
+    payload: { visited: true },
+  });
+  assert.equal(saveResponse.statusCode, 200);
+  assert.deepEqual(saveResponse.json().data, {
+    city_code: "440100",
+    visited: true,
+  });
+  assert.deepEqual(
+    supabase.rpcCalls.filter((call) => call.name.includes("footprint")),
+    [
+      {
+        name: "merge_user_footprint_cities",
+        params: {
+          p_user_id: USER_ID,
+          p_city_codes: ["110100", "310100"],
+        },
+      },
+      {
+        name: "set_user_footprint_city",
+        params: {
+          p_user_id: USER_ID,
+          p_city_code: "440100",
+          p_visited: true,
+        },
+      },
+    ],
+  );
+
+  const invalidResponse = await app.inject({
+    method: "PUT",
+    url: "/api/footprint/cities/not-a-city",
+    headers: authHeaders,
+    payload: { visited: true },
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_FOOTPRINT_CITY_CODE");
+});
+
 test("menu overview combines metadata, permissions, and initial content", async (t) => {
   const category = {
     id: SOURCE_ID,

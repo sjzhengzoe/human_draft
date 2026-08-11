@@ -98,6 +98,30 @@
   background: var(--ui-color-action-primary);
 }
 
+.feature-item__login-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-color-overlay-soft);
+  pointer-events: none;
+}
+
+.feature-item__login-lock {
+  display: flex;
+  width: 64rpx;
+  height: 64rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid var(--ui-color-border-inverse);
+  border-radius: 50%;
+  background: var(--ui-color-surface-translucent);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow);
+}
+
 .feature-item__content {
   position: relative;
   z-index: 2;

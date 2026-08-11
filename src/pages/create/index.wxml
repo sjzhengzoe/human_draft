@@ -19,6 +19,8 @@
           class="feature-item feature-item--{{item.key}} {{item.image ? 'feature-item--illustrated' : ''}} {{item.available ? '' : 'feature-item--disabled'}}"
           hover-class="feature-item--hover"
           hover-stay-time="80"
+          role="button"
+          aria-label="{{item.title}}{{!loggedIn && item.requiresLogin ? '，需要登录' : ''}}"
           data-key="{{item.key}}"
           data-title="{{item.title}}"
           data-path="{{item.path}}"
@@ -28,6 +30,13 @@
         >
           <image wx:if="{{item.image}}" class="feature-item__image" src="{{item.image}}" mode="aspectFill" />
           <view wx:else class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
+          <view
+            wx:if="{{!loggedIn && item.requiresLogin}}"
+            class="feature-item__login-overlay"
+            aria-hidden="{{true}}"
+          >
+            <view class="feature-item__login-lock"><app-icon name="lock-keyhole" size="26" /></view>
+          </view>
           <image
             wx:if="{{item.decoration}}"
             class="feature-item__decoration"
