@@ -6,16 +6,6 @@ const HOME_FEATURE_GROUPS = [
     title: "生活灵感",
     items: [
       {
-        key: "text-card",
-        icon: "notebook-pen",
-        title: "图文卡片",
-        image: "/assets/home-modules/text-card-bold.png",
-        decoration: "/assets/home-modules/decor-flora.png",
-        path: "/pages/text-card/index",
-        available: true,
-        requiresLogin: false
-      },
-      {
         key: "menu",
         icon: "cooking-pot",
         title: "我的菜单",
@@ -59,6 +49,16 @@ const HOME_FEATURE_GROUPS = [
     key: "management",
     title: "日常管理",
     items: [
+      {
+        key: "text-card",
+        icon: "notebook-pen",
+        title: "图文卡片",
+        image: "/assets/home-modules/text-card-bold.png",
+        decoration: "/assets/home-modules/decor-flora.png",
+        path: "/pages/text-card/index",
+        available: true,
+        requiresLogin: false
+      },
       {
         key: "exercise",
         icon: "dumbbell",
