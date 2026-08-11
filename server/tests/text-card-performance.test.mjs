@@ -111,7 +111,13 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   )
 
   assert.match(refreshRender, /renderedImageUrls: \[\]/)
-  assert.match(templateOne, /PREVIEW_CACHE_VERSION = "xiaohongshu-v4"/)
+  assert.match(templateOne, /PREVIEW_CACHE_VERSION = "xiaohongshu-v5"/)
+  assert.match(generateImages, /await ensureRed3CanvasFont\(/)
+  assert.doesNotMatch(generateImages, /系统字体回退/)
+  assert.match(templateOne, /isRed3CanvasFontAvailable/)
+  assert.match(templateOne, /forceReload: true/)
+  assert.match(templateOne, /usePersistentCache: false/)
+  assert.doesNotMatch(templateOne, /"Songti SC"|"PingFang SC"/)
   assert.match(
     refreshRender,
     /this\.publishPreviewImages\(requestId, readyUrls\)/

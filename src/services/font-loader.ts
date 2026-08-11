@@ -10,6 +10,8 @@ class FontLoadTimeoutError extends Error {}
 
 type FontLoadOptions = {
   timeoutMs?: number
+  forceReload?: boolean
+  usePersistentCache?: boolean
 }
 
 function getFontCacheKey(font: AppFontDefinition) {
@@ -158,12 +160,12 @@ export function loadAppFont(
 ): Promise<void> {
   const cacheKey = getFontCacheKey(font)
   const cachedPromise = fontPromises.get(cacheKey)
-  if (cachedPromise) return cachedPromise
+  if (cachedPromise && !options.forceReload) return cachedPromise
   const timeoutMs = options.timeoutMs ?? DEFAULT_FONT_LOAD_TIMEOUT
 
   const fontPromise = (async () => {
     let source = font.source
-    if (font.persistentCache) {
+    if (font.persistentCache && options.usePersistentCache !== false) {
       try {
         source = await getPersistentFontSource(font)
       } catch {

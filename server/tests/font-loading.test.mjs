@@ -37,6 +37,8 @@ test("fonts use one shared lazy loader and one canonical definition each", async
   assert.match(loader, /DEFAULT_FONT_LOAD_TIMEOUT/)
   assert.match(loader, /FontLoadTimeoutError/)
   assert.match(loader, /timeoutMs = options\.timeoutMs \?\? DEFAULT_FONT_LOAD_TIMEOUT/)
+  assert.match(loader, /cachedPromise && !options\.forceReload/)
+  assert.match(loader, /options\.usePersistentCache !== false/)
   assert.match(loader, /if \(!\(error instanceof FontLoadTimeoutError\)\)/)
 
   for (const consumer of [uiFont, templateOne, templateTwo, templateThree, menuPrint]) {

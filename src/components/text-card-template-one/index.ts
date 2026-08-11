@@ -107,13 +107,19 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
   const LEGACY_STORAGE_KEY = "XIAOHONGSHU_FORM_DATA_CONTENT";
   const BACKGROUND_IMAGE = "/assets/background/theme_bg22-optimized.jpg";
   const CANVAS_ID = "xiaohongshuExportCanvas";
-  const PREVIEW_CACHE_VERSION = "xiaohongshu-v4";
+  const PREVIEW_CACHE_VERSION = "xiaohongshu-v5";
   const BASE_CANVAS_WIDTH = 1080;
   const BASE_CANVAS_HEIGHT = 1440;
   const PREVIEW_CANVAS_WIDTH = BASE_CANVAS_WIDTH;
   const EXPORT_CANVAS_WIDTH = 2880;
   const MAX_COMBINED_CANVAS_HEIGHT_RATIO = 16 / 9;
   const RED3_FONT_FAMILY = APP_FONTS.red3.family;
+  const RED3_FONT_CHECK_INTERVAL = 120;
+  const RED3_FONT_CHECK_TIMEOUT = 12000;
+  const RED3_FONT_CHECK_SAMPLES = [
+    "WAIT 0123456789 ilMW",
+    "珍惜浪费生命流动",
+  ];
   const SECOND_THEME_BASE_WIDTH = 300;
   const COMBINED_FONT_OPTIONS: CombinedFontOption[] = [
     {
@@ -259,7 +265,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
             }
           })
           .catch((error) => {
-            console.warn("加载 red3 字体失败，使用系统字体回退", error);
+            console.error("加载 red3 字体失败", error);
           });
       },
 
@@ -521,17 +527,12 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
         return enqueueRender(async () => {
           if (isStalePreview()) return [];
 
-          try {
-            await ensureRed3FontLoaded();
-          } catch (error) {
-            console.warn("red3 字体不可用，使用系统字体回退", error);
-          }
-
           const urls: string[] = [];
 
           if (!slides.length || isStalePreview()) return urls;
 
           const canvas = await this.getExportCanvas();
+          await ensureRed3CanvasFont(canvas, metrics.combinedFontSize);
           const backgroundImage = await loadCanvasImage(canvas, BACKGROUND_IMAGE);
 
           for (const [index, slide] of slides.entries()) {
@@ -755,6 +756,9 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
 
 
   function getRenderErrorMessage(error: unknown) {
+    if (error instanceof Red3FontUnavailableError) {
+      return error.message;
+    }
     if (
       error instanceof Error &&
       /^第 \d+ 页内容过长/.test(error.message)
@@ -854,7 +858,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
       metrics.width -
       metrics.combinedPaddingLeft -
       metrics.combinedPaddingRight;
-    const font = `normal ${metrics.combinedFontSize}px "${fontFamily}", "PingFang SC", "Helvetica Neue", Arial, sans-serif`;
+    const font = `normal ${metrics.combinedFontSize}px "${fontFamily}"`;
     ctx.font = font;
     const sections = slides.map((slide) => {
       const body = getCombinedBody(slide.paragraphs);
@@ -993,7 +997,7 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
     return {
       width,
       height,
-      textFont: `normal ${combinedFontSize}px "${RED3_FONT_FAMILY}", "Songti SC", STSong, "Noto Serif CJK SC", serif`,
+      textFont: `normal ${combinedFontSize}px "${RED3_FONT_FAMILY}"`,
       textX,
       safeY: scaleCanvasValue(100),
       lineHeight,
@@ -1011,4 +1015,81 @@ import { createTimedUndo } from "../../features/text-card/timed-undo";
 
   function ensureRed3FontLoaded() {
     return loadAppFont(APP_FONTS.red3, { timeoutMs: 0 });
+  }
+
+  class Red3FontUnavailableError extends Error {
+    constructor() {
+      super("红三字体加载失败，请检查网络后重试");
+    }
+  }
+
+  function delay(duration: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, duration));
+  }
+
+  function readCanvasFontSignature(
+    ctx: Canvas2DContext,
+    fontFamily: string,
+    fontSize: number,
+  ) {
+    ctx.font = `normal ${fontSize}px "${fontFamily}"`;
+    return RED3_FONT_CHECK_SAMPLES.map(
+      (sample) => ctx.measureText(sample).width,
+    );
+  }
+
+  function isRed3CanvasFontAvailable(
+    canvas: Canvas2DNode,
+    fontSize: number,
+  ) {
+    const ctx = canvas.getContext("2d");
+    const red3Signature = readCanvasFontSignature(
+      ctx,
+      RED3_FONT_FAMILY,
+      fontSize,
+    );
+    const missingFontSignature = readCanvasFontSignature(
+      ctx,
+      "__HumanDraftMissingFont__",
+      fontSize,
+    );
+
+    return red3Signature.some(
+      (width, index) => Math.abs(width - missingFontSignature[index]) > 0.5,
+    );
+  }
+
+  async function waitForRed3CanvasFont(
+    canvas: Canvas2DNode,
+    fontSize: number,
+  ) {
+    const expiresAt = Date.now() + RED3_FONT_CHECK_TIMEOUT;
+    while (Date.now() < expiresAt) {
+      if (isRed3CanvasFontAvailable(canvas, fontSize)) return;
+      await delay(RED3_FONT_CHECK_INTERVAL);
+    }
+    throw new Red3FontUnavailableError();
+  }
+
+  async function ensureRed3CanvasFont(
+    canvas: Canvas2DNode,
+    fontSize: number,
+  ) {
+    try {
+      await ensureRed3FontLoaded();
+      await waitForRed3CanvasFont(canvas, fontSize);
+      return;
+    } catch {
+      try {
+        await loadAppFont(APP_FONTS.red3, {
+          timeoutMs: 0,
+          forceReload: true,
+          usePersistentCache: false,
+        });
+        await waitForRed3CanvasFont(canvas, fontSize);
+        return;
+      } catch {
+        throw new Red3FontUnavailableError();
+      }
+    }
   }
