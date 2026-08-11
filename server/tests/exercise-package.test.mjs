@@ -19,7 +19,7 @@ test("exercise pets and bowls are served remotely instead of shipped in the pack
   assert.equal(appConfig.pages.includes("pages/exercise/index"), false);
   assert.deepEqual(
     appConfig.subPackages.find((item) => item.root === "exercise")?.pages,
-    ["pages/index", "pages/settings/index", "pages/rest-days/index"],
+    ["pages/index", "pages/settings/index"],
   );
   assert.equal(projectConfig.setting.ignoreUploadUnusedFiles, true);
   assert.equal(

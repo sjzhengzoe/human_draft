@@ -19,10 +19,12 @@ export type ExerciseDashboard = {
     target_minutes: number
   }
   rest_days: {
-    used: number
-    total: number
-    remaining: number
+    balance: number
+    monthly_grant: number
     used_today: boolean
+  }
+  year: {
+    incomplete_days: number
   }
   month: {
     value: string
@@ -36,8 +38,6 @@ export type ExerciseDashboard = {
     completed_days: number
     rest_days: {
       used: number
-      total: number
-      remaining: number
     }
     days: Array<{
       date: string
@@ -63,19 +63,4 @@ export type ExerciseDashboard = {
     status_text: string
     pace_gap_minutes: number
   }
-}
-
-export type ExerciseRestCalendar = {
-  today: string
-  month: ExerciseDashboard["month"]
-  stats: {
-    month: ExercisePeriodStats
-    year: ExercisePeriodStats
-  }
-}
-
-export type ExercisePeriodStats = {
-  tracked_days: number
-  completed_days: number
-  incomplete_days: number
 }

@@ -4,7 +4,6 @@ import test from "node:test";
 
 const nativeScrollPageConfigs = [
   "../../src/exercise/pages/index.json",
-  "../../src/exercise/pages/rest-days/index.json",
   "../../src/exercise/pages/settings/index.json",
   "../../src/pages/media/categories/index.json",
   "../../src/pages/media/category-edit/index.json",

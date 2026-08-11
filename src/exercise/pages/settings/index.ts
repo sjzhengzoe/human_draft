@@ -16,7 +16,6 @@ Page({
     resetting: false,
     dailyMinutes: "30",
     monthlyRestDays: "4",
-    restDaysUsed: 0,
     resetConfirmVisible: false
   },
 
@@ -35,8 +34,7 @@ Page({
       if (!isAsyncPageActive(this)) return
       this.setData({
         dailyMinutes: String(dashboard.profile.daily_minutes),
-        monthlyRestDays: String(dashboard.profile.monthly_rest_days),
-        restDaysUsed: dashboard.rest_days.used
+        monthlyRestDays: String(dashboard.profile.monthly_rest_days)
       })
     } catch (error) {
       if (isAsyncPageActive(this)) {
@@ -74,14 +72,6 @@ Page({
       wx.showToast({ title: "休息天数需为 0–28", icon: "none" })
       return
     }
-    if (monthlyRestDays < this.data.restDaysUsed) {
-      wx.showToast({
-        title: `不能少于本月已使用的 ${this.data.restDaysUsed} 天`,
-        icon: "none"
-      })
-      return
-    }
-
     this.setData({ saving: true })
     try {
       await saveExerciseSettings({
@@ -89,7 +79,7 @@ Page({
         monthly_rest_days: monthlyRestDays
       })
       if (!isAsyncPageActive(this)) return
-      wx.showToast({ title: "已保存，每日目标明天生效", icon: "none" })
+      wx.showToast({ title: "已保存：目标明天生效，额度下月生效", icon: "none" })
       setTimeout(() => {
         if (isAsyncPageActive(this)) wx.navigateBack()
       }, 450)

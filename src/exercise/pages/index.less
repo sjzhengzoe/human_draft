@@ -113,6 +113,24 @@
   margin-top: 8rpx;
 }
 
+.mini-calendar__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--ui-color-border-subtle);
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-small);
+  line-height: 1.35;
+}
+
+.mini-calendar__summary text {
+  color: var(--ui-color-text-strong);
+  font-weight: 700;
+}
+
 .calendar-day {
   position: relative;
   display: flex;
@@ -347,17 +365,6 @@
   gap: 14rpx;
 }
 
-.rest-day-entry {
-  display: flex;
-  min-height: 48rpx;
-  align-items: center;
-  justify-content: center;
-  color: var(--ui-color-text-placeholder);
-  font-size: var(--ui-font-size-base);
-  line-height: normal;
-  text-align: center;
-}
-
 .task-button {
   display: flex;
   width: 100% !important;
@@ -384,6 +391,12 @@
   border-color: var(--ui-color-action-primary);
   background: var(--ui-color-action-primary);
   color: var(--ui-color-text-inverse);
+}
+
+.task-button--secondary {
+  border-color: var(--ui-color-border-strong);
+  background: var(--ui-surface);
+  color: var(--ui-color-text-primary);
 }
 
 .task-button--danger {

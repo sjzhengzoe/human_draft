@@ -1,5 +1,6 @@
 import {
   completeExercise,
+  consumeExerciseRestDay,
   getExerciseDashboard,
   revokeExerciseRestDay
 } from "../services/exercise"
@@ -100,6 +101,7 @@ type ExerciseCalendarCell = {
   isSelected: boolean
   selectable: boolean
   restUsed: boolean
+  canUseRestDay: boolean
   dailyMinutes: number
   pendingMinutes: number
   recordedMinutes: number
@@ -173,13 +175,15 @@ Page({
     selectedRecordedMinutes: 0,
     selectedOverachievedMinutes: 0,
     selectedRestUsed: false,
+    selectedCanUseRestDay: false,
+    selectedShowUseRestDay: false,
+    selectedUseRestDayText: "使用休息日",
     selectedCanRevokeRestDay: false,
     selectedActionDisabled: false,
-    restDaysUsed: 0,
-    restDaysTotal: 0,
-    restDaysRemaining: 0,
-    restDayUsedToday: false,
-    restDayEntryText: "使用休息日权限",
+    yearIncompleteDays: 0,
+    calendarIncompleteDays: 0,
+    restCreditBalance: 0,
+    currentMonthGrant: 0,
     completeButtonText: "完成运动",
     bowlLabel: "没有",
     emotionLabel: PET_STATE_LABELS.empty,
@@ -201,8 +205,11 @@ Page({
     minutesDialogTitle: "",
     minutesDialogPlaceholder: "",
     minutesInput: "",
-    revokeDialogVisible: false,
-    revokeDialogContent: ""
+    restDialogVisible: false,
+    restDialogAction: "use",
+    restDialogTitle: "使用休息日",
+    restDialogContent: "",
+    restDialogConfirmText: "确认使用"
   },
 
   onLoad() {
@@ -230,6 +237,7 @@ Page({
         isSelected: false,
         selectable: false,
         restUsed: false,
+        canUseRestDay: false,
         dailyMinutes: 0,
         pendingMinutes: 0,
         recordedMinutes: 0,
@@ -247,6 +255,7 @@ Page({
         isSelected: false,
         selectable: item.state === "completed" || item.state === "incomplete",
         restUsed: item.rest_used,
+        canUseRestDay: item.can_use_rest_day,
         dailyMinutes: item.daily_minutes || 0,
         pendingMinutes: item.daily_pending_minutes || 0,
         recordedMinutes: item.recorded_minutes || 0,
@@ -271,6 +280,7 @@ Page({
         isSelected: false,
         selectable: true,
         restUsed: restDays.used_today,
+        canUseRestDay: false,
         dailyMinutes: dashboard.today.daily_minutes,
         pendingMinutes: dashboard.today.daily_pending_minutes,
         recordedMinutes: dashboard.today.recorded_minutes,
@@ -284,12 +294,14 @@ Page({
       ...item,
       isSelected: item.date === selectedDay.date
     }))
+    const calendarIncompleteDays = dashboard.month.days.filter(
+      (item) => item.state === "incomplete"
+    ).length
     this.setData({
-      restDaysUsed: restDays.used,
-      restDaysTotal: restDays.total,
-      restDaysRemaining: restDays.remaining,
-      restDayUsedToday: restDays.used_today,
-      restDayEntryText: `休息日补卡 · 本月剩余 ${restDays.remaining} 天`,
+      yearIncompleteDays: dashboard.year.incomplete_days,
+      calendarIncompleteDays,
+      restCreditBalance: dashboard.rest_days.balance,
+      currentMonthGrant: dashboard.rest_days.monthly_grant,
       todayDate: dashboard.today.date,
       calendarMonthLabel: `${dashboard.month.year}年${dashboard.month.month}月`,
       calendarMonthValue: dashboard.month.value,
@@ -308,7 +320,6 @@ Page({
     const stateImages = getImagesForState(cell.bowlLevel, cell.date)
     const label = dateDisplayLabel(cell.date, today)
     const canRevokeRestDay = cell.restUsed
-      && cell.date.slice(0, 7) === today.slice(0, 7)
     this.setData({
       selectedDate: cell.date,
       selectedDateLabel: label,
@@ -321,10 +332,15 @@ Page({
       selectedRecordedMinutes: cell.recordedMinutes,
       selectedOverachievedMinutes: cell.overachievedMinutes,
       selectedRestUsed: cell.restUsed,
+      selectedCanUseRestDay: cell.canUseRestDay,
+      selectedShowUseRestDay: !cell.restUsed && cell.state === "incomplete",
+      selectedUseRestDayText: cell.canUseRestDay
+        ? "使用休息日"
+        : "休息额度不足",
       selectedCanRevokeRestDay: canRevokeRestDay,
-      selectedActionDisabled: cell.restUsed && !canRevokeRestDay,
+      selectedActionDisabled: false,
       completeButtonText: cell.restUsed
-        ? canRevokeRestDay ? "撤回休息日" : "仅本月可撤回"
+        ? "撤回休息日"
         : cell.pendingMinutes === 0 ? "记录额外运动" : "完成运动",
       bowlLabel: cell.bowlLabel,
       emotionLabel: PET_STATE_LABELS[cell.bowlLevel],
@@ -394,18 +410,16 @@ Page({
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },
 
-  handleRestDay() {
-    if (this.data.busy) return
-    wx.navigateTo({ url: "/exercise/pages/rest-days/index" })
-  },
-
   handleComplete() {
     if (this.data.busy) return
     if (this.data.selectedRestUsed) {
       if (!this.data.selectedCanRevokeRestDay) return
       this.setData({
-        revokeDialogVisible: true,
-        revokeDialogContent: `撤回后，${this.data.selectedDateLabel}会恢复为实际运动状态，并返还本月 1 天休息权限。`
+        restDialogVisible: true,
+        restDialogAction: "revoke",
+        restDialogTitle: "撤回休息日",
+        restDialogContent: `撤回后，${this.data.selectedDateLabel}会恢复为实际运动状态，并返还 1 天休息额度。`,
+        restDialogConfirmText: "确认撤回"
       })
       return
     }
@@ -430,20 +444,37 @@ Page({
     this.setData({ minutesDialogVisible: false, minutesInput: "" })
   },
 
-  closeRevokeDialog() {
-    if (this.data.busy) return
-    this.setData({ revokeDialogVisible: false })
+  handleUseRestDay() {
+    if (this.data.busy || !this.data.selectedCanUseRestDay) return
+    const remaining = Math.max(0, this.data.restCreditBalance - 1)
+    this.setData({
+      restDialogVisible: true,
+      restDialogAction: "use",
+      restDialogTitle: "使用休息日",
+      restDialogContent: `使用后将把${this.data.selectedDateLabel}的日常任务标记为完成，并消耗 1 天休息额度。使用后剩余 ${remaining} 天。`,
+      restDialogConfirmText: "确认使用"
+    })
   },
 
-  confirmRevokeDialog() {
-    if (this.data.busy || !this.data.selectedCanRevokeRestDay) return
+  closeRestDialog() {
+    if (this.data.busy) return
+    this.setData({ restDialogVisible: false })
+  },
+
+  confirmRestDialog() {
+    if (this.data.busy) return
     const selectedDate = this.data.selectedDate
     const selectedLabel = this.data.selectedDateLabel
-    this.setData({ revokeDialogVisible: false })
+    const isRevoke = this.data.restDialogAction === "revoke"
+    if (isRevoke && !this.data.selectedCanRevokeRestDay) return
+    if (!isRevoke && !this.data.selectedCanUseRestDay) return
+    this.setData({ restDialogVisible: false })
     this.runAction(
-      "revoke",
-      () => revokeExerciseRestDay(selectedDate),
-      `${selectedLabel}已撤回`
+      isRevoke ? "revoke" : "rest",
+      () => isRevoke
+        ? revokeExerciseRestDay(selectedDate)
+        : consumeExerciseRestDay(selectedDate),
+      isRevoke ? `${selectedLabel}已撤回` : `${selectedLabel}已休息`
     )
   },
 

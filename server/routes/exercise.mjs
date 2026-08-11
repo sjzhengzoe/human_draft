@@ -2,7 +2,6 @@ import {
   completeExerciseTasks,
   consumeExerciseRestDay,
   getExerciseDashboard,
-  getExerciseRestCalendar,
   resetExerciseState,
   revokeExerciseRestDay,
   saveExerciseSettings
@@ -20,20 +19,6 @@ export function registerExerciseRoutes(app, context) {
       request.query?.month
     )
   }))
-
-  app.get(
-    "/api/exercise/rest-calendar",
-    { preHandler: authenticated },
-    async (request) => ({
-      ok: true,
-      data: await getExerciseRestCalendar(
-        getSupabaseAdmin(),
-        request.auth.user.id,
-        new Date(),
-        request.query?.month
-      )
-    })
-  )
 
   app.put(
     "/api/exercise/settings",

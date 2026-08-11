@@ -87,6 +87,10 @@
           <text wx:if="{{item.restUsed}}" class="calendar-day__rest-mark">休</text>
         </view>
       </view>
+      <view class="mini-calendar__summary">
+        <view>本年未完成 {{yearIncompleteDays}} 天 · 本月未完成 {{calendarIncompleteDays}} 天</view>
+        <view>可用休息额度 <text>{{restCreditBalance}}</text> 天 · 本月发放 {{currentMonthGrant}} 天</view>
+      </view>
     </view>
 
   </view>
@@ -116,12 +120,15 @@
     >
       <view class="task-button__title">{{completeButtonText}}</view>
     </button>
-    <view
-      class="rest-day-entry"
-      role="button"
-      aria-label="选择休息日补卡日期"
-      bindtap="handleRestDay"
-    >{{restDayEntryText}}</view>
+    <button
+      wx:if="{{selectedShowUseRestDay}}"
+      class="task-button task-button--secondary"
+      disabled="{{busy || !selectedCanUseRestDay}}"
+      loading="{{busyAction === 'rest'}}"
+      bindtap="handleUseRestDay"
+    >
+      <view class="task-button__title">{{selectedUseRestDayText}}</view>
+    </button>
   </view>
 
   <app-dialog
@@ -153,13 +160,13 @@
   </app-dialog>
 
   <app-dialog
-    wx:if="{{revokeDialogVisible}}"
+    wx:if="{{restDialogVisible}}"
     visible="{{true}}"
-    title="撤回休息日"
-    content="{{revokeDialogContent}}"
+    title="{{restDialogTitle}}"
+    content="{{restDialogContent}}"
     cancel-text="取消"
-    confirm-text="确认撤回"
-    bindcancel="closeRevokeDialog"
-    bindconfirm="confirmRevokeDialog"
+    confirm-text="{{restDialogConfirmText}}"
+    bindcancel="closeRestDialog"
+    bindconfirm="confirmRestDialog"
   />
 </view>

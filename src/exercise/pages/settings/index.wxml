@@ -20,7 +20,8 @@
 
     <view class="field">
       <view class="field__main">
-        <view class="field__label">每月休息天数</view>
+        <view class="field__label">每月发放休息额度</view>
+        <view class="field__hint">每月自动累计，不会过期；调整后下月生效</view>
       </view>
       <view class="number-input">
         <app-input custom-class="number-input__control" type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
@@ -40,7 +41,7 @@
   <view class="reset-card">
     <view class="reset-card__main">
       <view class="reset-card__title">清空全部运动历史</view>
-      <view class="reset-card__desc">清空运动和休息记录，保留当前设置。</view>
+      <view class="reset-card__desc">清空运动和休息记录，保留当前设置与已发放额度。</view>
     </view>
     <button
       class="reset-button"
@@ -54,7 +55,7 @@
     wx:if="{{resetConfirmVisible}}"
     visible="{{true}}"
     title="清空全部运动历史"
-    content="将永久清空所有运动记录和休息日记录。每日运动分钟数与每月休息天数会保留。"
+    content="将永久清空所有运动记录和休息日记录，已使用的休息额度会返还。当前设置与已发放额度会保留。"
     cancel-text="取消"
     confirm-text="确认清空"
     bindcancel="handleResetCancel"
