@@ -9,15 +9,6 @@ export async function listFootprintCityCodes(): Promise<string[]> {
   return data.city_codes
 }
 
-export async function mergeLocalFootprintCityCodes(cityCodes: string[]): Promise<string[]> {
-  const data = await request<FootprintCityCodesResponse>({
-    path: "/api/footprint/merge-local",
-    method: "PUT",
-    data: { city_codes: cityCodes }
-  })
-  return data.city_codes
-}
-
 export async function setFootprintCityVisited(
   cityCode: string,
   visited: boolean

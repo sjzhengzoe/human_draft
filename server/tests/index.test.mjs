@@ -493,10 +493,6 @@ test("footprint routes require login and scope reads and writes to the authentic
       ],
     }),
     rpc: {
-      merge_user_footprint_cities: ({ p_user_id, p_city_codes }) => ({
-        data: p_city_codes.map((city_code) => ({ city_code })),
-        error: p_user_id === USER_ID ? null : new Error("wrong user"),
-      }),
       set_user_footprint_city: ({ p_user_id }) => ({
         data: null,
         error: p_user_id === USER_ID ? null : new Error("wrong user"),
@@ -523,15 +519,6 @@ test("footprint routes require login and scope reads and writes to the authentic
     data: { city_codes: ["110100"] },
   });
 
-  const mergeResponse = await app.inject({
-    method: "PUT",
-    url: "/api/footprint/merge-local",
-    headers: authHeaders,
-    payload: { city_codes: ["310100", "110100", "310100"] },
-  });
-  assert.equal(mergeResponse.statusCode, 200);
-  assert.deepEqual(mergeResponse.json().data.city_codes, ["110100", "310100"]);
-
   const saveResponse = await app.inject({
     method: "PUT",
     url: "/api/footprint/cities/440100",
@@ -547,13 +534,6 @@ test("footprint routes require login and scope reads and writes to the authentic
     supabase.rpcCalls.filter((call) => call.name.includes("footprint")),
     [
       {
-        name: "merge_user_footprint_cities",
-        params: {
-          p_user_id: USER_ID,
-          p_city_codes: ["110100", "310100"],
-        },
-      },
-      {
         name: "set_user_footprint_city",
         params: {
           p_user_id: USER_ID,
@@ -563,6 +543,14 @@ test("footprint routes require login and scope reads and writes to the authentic
       },
     ],
   );
+
+  const removedMergeResponse = await app.inject({
+    method: "PUT",
+    url: "/api/footprint/merge-local",
+    headers: authHeaders,
+    payload: { city_codes: ["110100"] },
+  });
+  assert.equal(removedMergeResponse.statusCode, 404);
 
   const invalidResponse = await app.inject({
     method: "PUT",

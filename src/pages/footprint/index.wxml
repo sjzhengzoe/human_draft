@@ -140,4 +140,4 @@
   </view>
 </view>
 
-<operation-loading visible="{{footprintSyncing}}" text="正在同步足迹…" />
+<operation-loading visible="{{footprintLoading}}" text="正在加载足迹…" />

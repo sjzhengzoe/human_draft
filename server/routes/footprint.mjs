@@ -1,6 +1,5 @@
 import {
   listFootprintCityCodes,
-  mergeFootprintCityCodes,
   setFootprintCityVisited,
 } from "../domains/footprint/service.mjs";
 
@@ -13,17 +12,6 @@ export function registerFootprintRoutes(app, context) {
       city_codes: await listFootprintCityCodes(
         getSupabaseAdmin(),
         request.auth.user.id,
-      ),
-    },
-  }));
-
-  app.put("/api/footprint/merge-local", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      city_codes: await mergeFootprintCityCodes(
-        getSupabaseAdmin(),
-        request.auth.user.id,
-        request.body || {},
       ),
     },
   }));

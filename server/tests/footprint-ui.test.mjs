@@ -33,39 +33,40 @@ test("footprint page is registered and reachable from the home modules", async (
   )
 })
 
-test("footprint records sync per authenticated user and preserve local data until migration succeeds", async () => {
-  const [page, logic, client, storage, route, migration] = await Promise.all([
+test("footprint records load and save directly against the authenticated user's cloud data", async () => {
+  const [page, logic, client, route, migration, cleanupMigration] = await Promise.all([
     readProjectFile("src/pages/footprint/index.wxml"),
     readProjectFile("src/pages/footprint/index.ts"),
     readProjectFile("src/services/footprint.ts"),
-    readProjectFile("src/utils/footprint-storage.ts"),
     readProjectFile("server/routes/footprint.mjs"),
-    readProjectFile("supabase/migrations/202608110002_user_footprint_cities.sql")
+    readProjectFile("supabase/migrations/202608110002_user_footprint_cities.sql"),
+    readProjectFile("supabase/migrations/202608110003_remove_footprint_local_merge.sql")
   ])
 
-  assert.match(page, /operation-loading visible="\{\{footprintSyncing\}\}"/)
-  assert.match(logic, /await mergeLocalFootprintCityCodes\(\[\.\.\.localCityCodes\]\)/)
-  assert.match(logic, /visitedCityCodes = new Set\(cloudCityCodes\)[\s\S]*?clearVisitedFootprintCityCodes\(\)/)
+  assert.match(page, /operation-loading visible="\{\{footprintLoading\}\}"/)
+  assert.match(logic, /const cloudCityCodes = await listFootprintCityCodes\(\)/)
   assert.match(logic, /await setFootprintCityVisited\(cityCode, !wasVisited\)/)
   assert.match(logic, /足迹保存失败，已恢复原状态/)
-  assert.match(client, /path: "\/api\/footprint\/merge-local"/)
   assert.match(client, /path: `\/api\/footprint\/cities\/\$\{encodeURIComponent\(cityCode\)\}`/)
-  assert.match(storage, /wx\.removeStorageSync\(FOOTPRINT_STORAGE_KEY\)/)
+  assert.doesNotMatch(logic, /footprint-storage|mergeLocalFootprint|localCityCodes/)
+  assert.doesNotMatch(client, /merge-local|mergeLocalFootprint/)
+  assert.doesNotMatch(route, /merge-local|mergeFootprint/)
   assert.ok(
-    (route.match(/preHandler: authenticated/g) || []).length >= 3,
+    (route.match(/preHandler: authenticated/g) || []).length >= 2,
     "every footprint route should require authentication"
   )
   assert.match(migration, /create table if not exists public\.user_footprint_cities/i)
   assert.match(migration, /references public\.app_users\(id\) on delete cascade/i)
   assert.match(migration, /primary key \(user_id, city_code\)/i)
   assert.match(migration, /enable row level security/i)
-  assert.match(migration, /create or replace function public\.merge_user_footprint_cities/i)
-  assert.match(
-    migration,
-    /on conflict on constraint user_footprint_cities_pkey do nothing/i
-  )
   assert.match(migration, /revoke all on function[\s\S]*from public, anon, authenticated/i)
   assert.doesNotMatch(migration, /drop table|drop column|truncate/i)
+  assert.match(cleanupMigration, /drop function if exists public\.merge_user_footprint_cities/i)
+  assert.doesNotMatch(cleanupMigration, /drop table|delete from|truncate/i)
+  await assert.rejects(
+    readProjectFile("src/utils/footprint-storage.ts"),
+    (error) => error?.code === "ENOENT"
+  )
 })
 
 test("footprint regions use stable pinyin order and a consistent total", async () => {

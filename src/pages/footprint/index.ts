@@ -11,7 +11,6 @@ import {
 } from "../../services/footprint-map"
 import {
   listFootprintCityCodes,
-  mergeLocalFootprintCityCodes,
   setFootprintCityVisited
 } from "../../services/footprint"
 import { initializeUIFont } from "../../services/ui-font"
@@ -21,10 +20,6 @@ import {
   type FootprintCanvasNode,
   type FootprintMapLevel
 } from "../../utils/footprint-map"
-import {
-  clearVisitedFootprintCityCodes,
-  readVisitedFootprintCityCodes
-} from "../../utils/footprint-storage"
 
 type FootprintCityView = FootprintCityDefinition & {
   visited: boolean
@@ -107,7 +102,7 @@ Page({
     visitedCityCount: 0,
     visitedProvinces: [] as FootprintProvinceView[],
     unvisitedProvinces: [] as FootprintProvinceView[],
-    footprintSyncing: true,
+    footprintLoading: true,
     mapCityLoading: true,
     mapCityFailed: false
   },
@@ -115,12 +110,10 @@ Page({
   onLoad() {
     pageActive = true
     pendingCityCodes.clear()
-    visitedCityCodes = readVisitedFootprintCityCodes()
-    const lists = createProvinceLists()
-    const activeTab = lists.visited.length > 0 ? "visited" : "unvisited"
-    this.setData({ activeTab })
+    visitedCityCodes = new Set()
+    this.setData({ activeTab: "unvisited" })
     this.rebuildLists()
-    void this.syncCloudFootprint()
+    void this.loadCloudFootprint()
     void initializeUIFont()
       .then(() => {
         if (pageActive) this.drawMap()
@@ -161,16 +154,12 @@ Page({
     )
   },
 
-  async syncCloudFootprint() {
-    const localCityCodes = readVisitedFootprintCityCodes()
-    this.setData({ footprintSyncing: true })
+  async loadCloudFootprint() {
+    this.setData({ footprintLoading: true })
     try {
-      const cloudCityCodes = localCityCodes.size > 0
-        ? await mergeLocalFootprintCityCodes([...localCityCodes])
-        : await listFootprintCityCodes()
+      const cloudCityCodes = await listFootprintCityCodes()
       if (!pageActive) return
       visitedCityCodes = new Set(cloudCityCodes)
-      if (localCityCodes.size > 0) clearVisitedFootprintCityCodes()
       const lists = createProvinceLists()
       const activeTab = lists.visited.length > 0 ? "visited" : "unvisited"
       expandedProvinceCode = ""
@@ -180,10 +169,10 @@ Page({
       })
     } catch (error) {
       if (!pageActive) return
-      console.warn("全国足迹云端同步失败", error)
-      wx.showToast({ title: "足迹同步失败，请稍后重试", icon: "none" })
+      console.warn("全国足迹加载失败", error)
+      wx.showToast({ title: "足迹加载失败，请稍后重试", icon: "none" })
     } finally {
-      if (pageActive) this.setData({ footprintSyncing: false })
+      if (pageActive) this.setData({ footprintLoading: false })
     }
   },
 
@@ -295,7 +284,7 @@ Page({
       !cityCode ||
       !provinceCode ||
       !provinceName ||
-      this.data.footprintSyncing ||
+      this.data.footprintLoading ||
       pendingCityCodes.has(cityCode)
     ) return
 
