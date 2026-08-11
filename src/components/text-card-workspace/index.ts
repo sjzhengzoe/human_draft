@@ -5,8 +5,6 @@ Component({
     themeColors: UI_COLORS,
     imageDisplayStyles: [] as string[],
     measuredImageUrls: [] as string[],
-    latestRenderedImageUrl: "",
-    latestRenderedImageIndex: 0,
   },
 
   properties: {
@@ -47,12 +45,9 @@ Component({
           ? this.data.imageDisplayStyles[index] || ""
           : "",
       );
-      const latestRenderedImageIndex = Math.max(0, urls.length - 1);
       this.setData({
         imageDisplayStyles,
         measuredImageUrls: urls,
-        latestRenderedImageUrl: urls[latestRenderedImageIndex] || "",
-        latestRenderedImageIndex,
       });
     },
   },

@@ -104,6 +104,11 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
     "generateImages",
     "generateSlideImage"
   )
+  const publishPreview = getMethodSource(
+    templateOne,
+    "publishPreviewImages",
+    "handlePreviewImageLoad"
+  )
 
   assert.match(refreshRender, /renderedImageUrls: \[\]/)
   assert.match(
@@ -116,18 +121,15 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   )
   assert.match(template, /progressive-rendering="\{\{true\}\}"/)
   assert.match(template, /bind:previewimageload="handlePreviewImageLoad"/)
-  assert.match(
-    workspace,
-    /wx:elif="\{\{progressiveRendering && isRenderingCards && renderedImageUrls\.length\}\}"[\s\S]*?src="\{\{latestRenderedImageUrl\}\}"/
-  )
-  assert.match(workspace, /data-index="\{\{latestRenderedImageIndex\}\}"/)
+  assert.doesNotMatch(workspace, /latestRenderedImageUrl|latestRenderedImageIndex/)
+  assert.doesNotMatch(publishPreview, /activeIndex/)
   assert.match(
     workspace,
     /isRenderingCards && !progressiveRendering/
   )
   assert.match(
     workspace,
-    /\{\{renderedImageUrls\.length\}\} \/ \{\{previewCount\}\} · 生成中/
+    /已生成 \{\{renderedImageUrls\.length\}\} \/ \{\{previewCount\}\}/
   )
   assert.match(
     workspaceController,
@@ -136,10 +138,6 @@ test("xiaohongshu previews publish each completed card immediately", async () =>
   assert.match(
     workspaceController,
     /triggerEvent\("previewimageload", \{ index, url \}\)/
-  )
-  assert.match(
-    workspaceController,
-    /latestRenderedImageUrl: urls\[latestRenderedImageIndex\] \|\| ""/
   )
   assert.match(
     templateOne,
