@@ -165,7 +165,7 @@ async function assertMediaTitleAvailable(supabase, userId, title, mediaType, exc
     !duplicate,
     409,
     "MEDIA_TITLE_EXISTS",
-    `“${title}”已存在于“${mediaType}”分类中，不能重复添加。`,
+    `“${title}”已存在于“${mediaType}”分类中，名称不能重复。`,
   );
 }
 

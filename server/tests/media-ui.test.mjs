@@ -42,7 +42,8 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
   assert.match(page, />选择评分<\/text>/);
   assert.match(page, /data-rating="0" bindtap="handleRatingTap">全部<\/view>/);
-  assert.match(page, /wx:for="\{\{ratingOptions\}\}"[\s\S]*?bindtap="handleRatingTap">\{\{item\}\}★<\/view>/);
+  assert.match(page, /wx:for="\{\{ratingOptions\}\}"[\s\S]*?data-rating="\{\{item\.value\}\}"[\s\S]*?bindtap="handleRatingTap">\{\{item\.label\}\}<\/view>/);
+  assert.match(logic, /\{ value: 5, label: "五星" \}[\s\S]*\{ value: 1, label: "一星" \}/);
   assert.ok(page.indexOf("<block wx:else>") < page.indexOf(">选择评分"));
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);

@@ -2037,6 +2037,19 @@ test("media writes accept an omitted platform and validate selected platforms be
   assert.equal(duplicateResponse.json().error.code, "MEDIA_TITLE_EXISTS");
   assert.equal(supabase.rpcCalls.length, 0);
 
+  const crossCategoryDuplicateResponse = await app.inject({
+    method: "POST",
+    url: "/api/media",
+    headers: authHeaders,
+    payload: {
+      title: "千与千寻",
+      media_type: "动漫",
+    },
+  });
+  assert.equal(crossCategoryDuplicateResponse.statusCode, 201);
+  assert.equal(supabase.rpcCalls.length, 1);
+  assert.equal(supabase.rpcCalls[0].params.p_media_type, "动漫");
+
   const emptyResponse = await app.inject({
     method: "POST",
     url: "/api/media",
@@ -2047,7 +2060,7 @@ test("media writes accept an omitted platform and validate selected platforms be
     },
   });
   assert.equal(emptyResponse.statusCode, 201);
-  assert.deepEqual(supabase.rpcCalls[0].params.p_platforms, []);
+  assert.deepEqual(supabase.rpcCalls[1].params.p_platforms, []);
 
   const validResponse = await app.inject({
     method: "POST",
@@ -2060,7 +2073,7 @@ test("media writes accept an omitted platform and validate selected platforms be
     },
   });
   assert.equal(validResponse.statusCode, 201);
-  assert.deepEqual(supabase.rpcCalls[1], {
+  assert.deepEqual(supabase.rpcCalls[2], {
     name: "create_media_entry_at_end",
     params: {
       p_user_id: USER_ID,
@@ -2325,7 +2338,7 @@ test("changing an unscored work to completed defaults its required rating to thr
   assert.equal(response.json().data.item.is_revisitable, false);
 });
 
-test("media edits reject a duplicate title in the same category", async (t) => {
+test("media edits allow the same title in a different category", async (t) => {
   const existing = {
     id: MEDIA_ID,
     title: "原名称",
@@ -2338,6 +2351,7 @@ test("media edits reject a duplicate title in the same category", async (t) => {
     ...existing,
     id: TARGET_ID,
     title: "重复名称",
+    media_type: "电视剧",
     sort_order: 2000,
   };
   const app = buildServer({
@@ -2355,8 +2369,8 @@ test("media edits reject a duplicate title in the same category", async (t) => {
     payload: { title: " 重复名称 " },
   });
 
-  assert.equal(response.statusCode, 409);
-  assert.equal(response.json().error.code, "MEDIA_TITLE_EXISTS");
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.item.title, "重复名称");
 });
 
 test("swap routes map only their expected SQLSTATE errors", async (t) => {

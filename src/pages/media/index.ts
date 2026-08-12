@@ -21,6 +21,10 @@ import { getMediaDataRevision } from "../../utils/media-data-revision"
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned">
 type RatingFilter = 0 | 1 | 2 | 3 | 4 | 5
+type RatingFilterOption = {
+  value: Exclude<RatingFilter, 0>
+  label: string
+}
 type LoadCurrentViewOptions = {
   refreshShared?: boolean
   reset?: boolean
@@ -44,6 +48,13 @@ type CachedSequence = {
 
 const PAGE_SIZE = 60
 const SEARCH_DEBOUNCE_MS = 180
+const RATING_FILTER_OPTIONS: RatingFilterOption[] = [
+  { value: 5, label: "五星" },
+  { value: 4, label: "四星" },
+  { value: 3, label: "三星" },
+  { value: 2, label: "二星" },
+  { value: 1, label: "一星" }
+]
 let mediaSearchTimer: ReturnType<typeof setTimeout> | null = null
 const contentScrollPositions = new WeakMap<object, number>()
 
@@ -197,7 +208,7 @@ Page({
     keyword: "",
     appliedKeyword: "",
     selectedRating: 0 as RatingFilter,
-    ratingOptions: [1, 2, 3, 4, 5] as RatingFilter[],
+    ratingOptions: RATING_FILTER_OPTIONS,
     canWrite: false,
     loading: true,
     contentLoading: false,

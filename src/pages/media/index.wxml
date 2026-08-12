@@ -42,7 +42,7 @@
       </view>
       <view class="category-list rating-list" role="group" aria-label="按评分筛选">
         <view class="category-chip {{selectedRating === 0 ? 'category-chip--active' : ''}}" data-rating="0" bindtap="handleRatingTap">全部</view>
-        <view wx:for="{{ratingOptions}}" wx:key="*this" class="category-chip {{selectedRating === item ? 'category-chip--active' : ''}}" data-rating="{{item}}" bindtap="handleRatingTap">{{item}}★</view>
+        <view wx:for="{{ratingOptions}}" wx:key="value" class="category-chip {{selectedRating === item.value ? 'category-chip--active' : ''}}" data-rating="{{item.value}}" bindtap="handleRatingTap">{{item.label}}</view>
       </view>
       <view class="search-row">
         <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
