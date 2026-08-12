@@ -50,7 +50,7 @@ test("luggage overview uses a full-height charcoal surface and reset only appear
   assert.match(styles, /\.packing-overview__topline\s*\{[^}]*min-height:\s*58rpx/s);
   assert.match(styles, /\.packing-progress__value\s*\{[^}]*background:\s*var\(--ui-color-text-inverse\)/s);
   assert.doesNotMatch(styles, /\.packing-overview\s*\{[^}]*background:\s*var\(--ui-color-action-primary\)/s);
-  assert.match(icon, /stroke="#ffffff"/);
+  assert.match(icon, /(?:fill|stroke)="#ffffff"/);
   assert.match(page, /title="重新开始收拾"/);
   assert.match(page, /清单内容不会改变/);
   assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);

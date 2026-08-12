@@ -1,17 +1,12 @@
-ISC License
+Doodle Icons notice
 
-Copyright (c) 2026 Lucide Icons and Contributors
+Original icon design: Khushmeen Sidhu
+Source: https://khushmeen.com/icons.html
+Distribution reference: react-doodle-icons v1.0.0 by Mike Acler
+Package source: https://github.com/agilek/react-doodle-icons
+Package license: MIT, as declared by the package metadata
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-Selected icons are vendored from lucide-static v1.24.0.
+The original Doodle Icons distribution allows personal and commercial use
+without attribution. This project vendors selected SVG paths, adapts their
+colors and sizing, and adds matching project-specific glyphs where the source
+set does not include the required business icon.
