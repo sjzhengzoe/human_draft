@@ -2,7 +2,7 @@
   position: relative;
   min-height: calc(100vh - var(--app-navigation-height));
   box-sizing: border-box;
-  padding: 36rpx var(--ui-page-gutter) calc(112rpx + env(safe-area-inset-bottom));
+  padding: 28rpx var(--ui-page-gutter) calc(112rpx + env(safe-area-inset-bottom));
   overflow: hidden;
   background: var(--ui-page-background);
 }
@@ -38,11 +38,11 @@
 
 .profile-card {
   display: flex;
-  min-height: 184rpx;
+  min-height: 152rpx;
   box-sizing: border-box;
   align-items: center;
-  gap: 24rpx;
-  padding: 32rpx 34rpx;
+  gap: 20rpx;
+  padding: 24rpx 28rpx;
   overflow: hidden;
   border: 0;
   border-radius: var(--ui-radius-panel);
@@ -50,15 +50,11 @@
   box-shadow: 0 10rpx 28rpx var(--ui-color-shadow-subtle);
 }
 
-.profile-card--accent {
-  box-shadow: 0 10rpx 28rpx var(--ui-color-shadow-subtle);
-}
-
 .profile-avatar,
 .profile-avatar-fallback {
   flex: none;
-  width: 108rpx;
-  height: 108rpx;
+  width: 92rpx;
+  height: 92rpx;
   box-sizing: border-box;
   border: 4rpx solid var(--ui-surface);
   border-radius: 50%;
@@ -78,7 +74,7 @@
 }
 
 .profile-avatar--brand {
-  padding: 22rpx;
+  padding: 18rpx;
   background: var(--ui-surface);
 }
 
@@ -93,8 +89,21 @@
   white-space: nowrap;
 }
 
-.profile-main { min-width: 0; flex: 1; }
-.profile-role { display: inline-flex; margin-top: 10rpx; padding: 7rpx 14rpx; border-radius: 999rpx; background: var(--ui-subtle-background); color: var(--ui-color-text-muted); font-size: var(--ui-font-size-small); }
+.profile-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-role {
+  display: inline-flex;
+  flex: none;
+  margin-top: 6rpx;
+  padding: 5rpx 10rpx;
+  border-radius: 999rpx;
+  background: var(--ui-subtle-background);
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+}
 
 .settings-section { margin-top: 32rpx; }
 
@@ -151,4 +160,25 @@
 .settings-item__arrow {
   color: var(--ui-color-text-placeholder);
   line-height: 1;
+}
+
+.settings-logout-button {
+  display: flex;
+  width: 100%;
+  height: 88rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 48rpx;
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-surface);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+}
+
+.settings-logout-button--hover {
+  background: var(--ui-hover-background);
 }

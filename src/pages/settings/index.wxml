@@ -8,7 +8,7 @@
 
   <view class="page">
     <view class="settings-content">
-      <view class="profile-card {{isAdmin ? 'profile-card--accent' : ''}}">
+      <view class="profile-card">
         <image wx:if="{{avatarUrl}}" class="profile-avatar" src="{{avatarUrl}}" mode="aspectFill" />
         <image
           wx:elif="{{!loggedIn}}"
@@ -20,7 +20,7 @@
         <view wx:else class="profile-avatar-fallback">{{avatarInitial}}</view>
         <view class="profile-main">
           <view class="profile-name">{{displayName}}</view>
-          <view wx:if="{{loggedIn}}" class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
+          <view wx:if="{{isAdmin}}" class="profile-role">管理员</view>
         </view>
         <view
           wx:if="{{!loggedIn}}"
@@ -31,32 +31,6 @@
           hover-stay-time="80"
           bindtap="handleLoginTap"
         ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
-      </view>
-
-      <view wx:if="{{loggedIn}}" class="settings-section">
-        <view class="settings-section__title">账号</view>
-        <view class="settings-list">
-          <view
-            class="settings-item"
-            role="button"
-            aria-label="复制账号 ID"
-            hover-class="settings-item--hover"
-            hover-stay-time="80"
-            bindtap="handleCopyOpenIdTap"
-          >
-            <view class="settings-item__label-group"><app-icon name="copy" size="27" /><text class="settings-item__label">复制账号 ID</text></view>
-          </view>
-          <view
-            class="settings-item"
-            role="button"
-            aria-label="退出登录"
-            hover-class="settings-item--hover"
-            hover-stay-time="80"
-            bindtap="handleLogoutTap"
-          >
-            <view class="settings-item__label-group"><app-icon name="log-out" size="27" /><text class="settings-item__label">退出登录</text></view>
-          </view>
-        </view>
       </view>
 
       <view class="settings-section">
@@ -75,6 +49,16 @@
           </view>
         </view>
       </view>
+
+      <view
+        wx:if="{{loggedIn}}"
+        class="settings-logout-button"
+        role="button"
+        aria-label="退出登录"
+        hover-class="settings-logout-button--hover"
+        hover-stay-time="80"
+        bindtap="handleLogoutTap"
+      ><app-icon name="log-out" size="27" /><text>退出登录</text></view>
     </view>
   </view>
 </block>

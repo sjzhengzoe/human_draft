@@ -13,7 +13,6 @@ Component({
     avatarUrl: "",
     avatarInitial: "E",
     isAdmin: false,
-    openid: "",
     themeColors: UI_COLORS
   },
   pageLifetimes: {
@@ -30,8 +29,7 @@ Component({
           displayName: "游客",
           avatarUrl: "",
           avatarInitial: "E",
-          isAdmin: false,
-          openid: ""
+          isAdmin: false
         })
         return
       }
@@ -42,8 +40,7 @@ Component({
         displayName: user.display_name,
         avatarUrl: user.avatar_url,
         avatarInitial: user.display_name.trim().slice(0, 1) || "E",
-        isAdmin: user.is_admin,
-        openid: user.openid
+        isAdmin: user.is_admin
       })
     }
   },
@@ -68,13 +65,6 @@ Component({
             wx.switchTab({ url: "/pages/create/index" })
           }
         }
-      })
-    },
-    handleCopyOpenIdTap() {
-      if (!this.data.openid) return
-      wx.setClipboardData({
-        data: this.data.openid,
-        success: () => wx.showToast({ title: "账号 ID 已复制", icon: "success" })
       })
     },
     handleModuleSettingsTap() {
