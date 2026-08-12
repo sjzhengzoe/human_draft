@@ -1,25 +1,13 @@
 import { getCurrentUser, logout } from "../../services/auth"
-import {
-  getHomeModuleSettingGroups,
-  setHomeModuleVisible
-} from "../../utils/home-modules"
 import { UI_COLORS } from "../../styles/colors"
 
 type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
 }
 
-function setTabBarHidden(instance: WechatMiniprogram.Component.TrivialInstance, hidden: boolean) {
-  const page = instance as SettingsPageInstance
-  const tabBar = page.getTabBar && page.getTabBar()
-  if (tabBar) tabBar.setData({ hidden })
-}
-
 Component({
   data: {
     ready: false,
-    showModuleSettings: false,
-    moduleGroups: getHomeModuleSettingGroups(),
     loggedIn: false,
     displayName: "",
     avatarUrl: "",
@@ -32,7 +20,7 @@ Component({
     show() {
       const page = this as SettingsPageInstance
       const tabBar = page.getTabBar && page.getTabBar()
-      if (tabBar) tabBar.setData({ selected: 1, hidden: this.data.showModuleSettings })
+      if (tabBar) tabBar.setData({ selected: 1, hidden: false })
 
       const user = getCurrentUser()
       if (!user) {
@@ -90,32 +78,10 @@ Component({
       })
     },
     handleModuleSettingsTap() {
-      this.refreshModuleSettings()
-      this.setData({ showModuleSettings: true })
-      setTabBarHidden(this, true)
-    },
-    handleModuleSettingsBack() {
-      this.setData({ showModuleSettings: false })
-      setTabBarHidden(this, false)
-    },
-    refreshModuleSettings() {
-      this.setData({
-        moduleGroups: getHomeModuleSettingGroups()
+      wx.navigateTo({
+        url: "/pages/settings/home-modules/index",
+        fail: () => wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
       })
-    },
-    handleModuleVisibleChange(
-      event: WechatMiniprogram.SwitchChange<WechatMiniprogram.IAnyObject, { key?: string }>
-    ) {
-      const key = String(event.currentTarget.dataset.key || "")
-      if (!key) return
-      const updated = setHomeModuleVisible(key, event.detail.value)
-      if (!updated) {
-        wx.showToast({
-          title: "至少保留一个首页模块",
-          icon: "none"
-        })
-      }
-      this.refreshModuleSettings()
     }
   }
 })

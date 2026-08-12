@@ -1,0 +1,27 @@
+<view class="module-settings-page">
+  <custom-navigation
+    title="首页模块显示设置"
+    background="{{themeColors.pageBackground}}"
+  />
+
+  <view class="module-settings-content">
+    <view wx:for="{{moduleGroups}}" wx:key="key" class="module-settings-section">
+      <view class="module-settings-section__title">{{item.title}}</view>
+      <view class="module-settings-list">
+        <view wx:for="{{item.items}}" wx:key="key" class="module-settings-item">
+          <view class="module-settings-item__main">
+            <view class="module-settings-item__icon"><app-icon name="{{item.icon}}" size="24" /></view>
+            <view class="module-settings-item__title">{{item.title}}</view>
+          </view>
+          <switch
+            class="module-settings-switch"
+            checked="{{item.visible}}"
+            color="{{themeColors.actionPrimary}}"
+            data-key="{{item.key}}"
+            bindchange="handleModuleVisibleChange"
+          />
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

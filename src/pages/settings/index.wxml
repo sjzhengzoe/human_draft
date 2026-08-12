@@ -1,34 +1,4 @@
-<view wx:if="{{showModuleSettings}}" class="module-settings-page">
-  <custom-navigation
-    title="首页模块显示设置"
-    background="{{themeColors.pageBackground}}"
-    custom-back="{{true}}"
-    bind:back="handleModuleSettingsBack"
-  />
-
-  <view class="module-settings-content">
-    <view wx:for="{{moduleGroups}}" wx:key="key" class="module-settings-section">
-      <view class="module-settings-section__title">{{item.title}}</view>
-      <view class="module-settings-list">
-        <view wx:for="{{item.items}}" wx:key="key" class="module-settings-item">
-          <view class="module-settings-item__main">
-            <view class="module-settings-item__icon"><app-icon name="{{item.icon}}" size="24" /></view>
-            <view class="module-settings-item__title">{{item.title}}</view>
-          </view>
-          <switch
-            class="module-settings-switch"
-            checked="{{item.visible}}"
-            color="{{themeColors.actionPrimary}}"
-            data-key="{{item.key}}"
-            bindchange="handleModuleVisibleChange"
-          />
-        </view>
-      </view>
-    </view>
-  </view>
-</view>
-
-<view wx:elif="{{!ready}}" class="fullscreen-loading">
+<view wx:if="{{!ready}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
   <view class="fullscreen-loading__text">正在加载账号…</view>
 </view>
@@ -38,74 +8,73 @@
 
   <view class="page">
     <view class="settings-content">
-    <view class="profile-card {{isAdmin ? 'profile-card--accent' : ''}}">
-      <image wx:if="{{avatarUrl}}" class="profile-avatar" src="{{avatarUrl}}" mode="aspectFill" />
-      <image
-        wx:elif="{{!loggedIn}}"
-        class="profile-avatar profile-avatar--brand"
-        src="/assets/brand/human-draft-logo-mark.png"
-        mode="aspectFit"
-        aria-label="人类草稿"
-      />
-      <view wx:else class="profile-avatar-fallback">{{avatarInitial}}</view>
-      <view class="profile-main">
-        <view class="profile-name">{{displayName}}</view>
-        <view wx:if="{{loggedIn}}" class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
-      </view>
-      <view
-        wx:if="{{!loggedIn}}"
-        class="profile-login-button"
-        role="button"
-        aria-label="登录"
-        hover-class="profile-login-button--hover"
-        hover-stay-time="80"
-        bindtap="handleLoginTap"
-      ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
-    </view>
-
-    <view wx:if="{{loggedIn}}" class="settings-section">
-      <view class="settings-section__title">账号</view>
-      <view class="settings-list">
-        <view
-          class="settings-item"
-          role="button"
-          aria-label="复制账号 ID"
-          hover-class="settings-item--hover"
-          hover-stay-time="80"
-          bindtap="handleCopyOpenIdTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="copy" size="27" /><text class="settings-item__label">复制账号 ID</text></view>
+      <view class="profile-card {{isAdmin ? 'profile-card--accent' : ''}}">
+        <image wx:if="{{avatarUrl}}" class="profile-avatar" src="{{avatarUrl}}" mode="aspectFill" />
+        <image
+          wx:elif="{{!loggedIn}}"
+          class="profile-avatar profile-avatar--brand"
+          src="/assets/brand/human-draft-logo-mark.png"
+          mode="aspectFit"
+          aria-label="人类草稿"
+        />
+        <view wx:else class="profile-avatar-fallback">{{avatarInitial}}</view>
+        <view class="profile-main">
+          <view class="profile-name">{{displayName}}</view>
+          <view wx:if="{{loggedIn}}" class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
         </view>
         <view
-          class="settings-item"
+          wx:if="{{!loggedIn}}"
+          class="profile-login-button"
           role="button"
-          aria-label="退出登录"
-          hover-class="settings-item--hover"
+          aria-label="登录"
+          hover-class="profile-login-button--hover"
           hover-stay-time="80"
-          bindtap="handleLogoutTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="log-out" size="27" /><text class="settings-item__label">退出登录</text></view>
-        </view>
+          bindtap="handleLoginTap"
+        ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
       </view>
-    </view>
 
-    <view class="settings-section">
-      <view class="settings-section__title">通用</view>
-      <view class="settings-list">
-        <view
-          class="settings-item"
-          hover-class="settings-item--hover"
-          hover-stay-time="80"
-          bindtap="handleModuleSettingsTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页模块显示设置</text></view>
-          <view class="settings-item__right">
-            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+      <view wx:if="{{loggedIn}}" class="settings-section">
+        <view class="settings-section__title">账号</view>
+        <view class="settings-list">
+          <view
+            class="settings-item"
+            role="button"
+            aria-label="复制账号 ID"
+            hover-class="settings-item--hover"
+            hover-stay-time="80"
+            bindtap="handleCopyOpenIdTap"
+          >
+            <view class="settings-item__label-group"><app-icon name="copy" size="27" /><text class="settings-item__label">复制账号 ID</text></view>
+          </view>
+          <view
+            class="settings-item"
+            role="button"
+            aria-label="退出登录"
+            hover-class="settings-item--hover"
+            hover-stay-time="80"
+            bindtap="handleLogoutTap"
+          >
+            <view class="settings-item__label-group"><app-icon name="log-out" size="27" /><text class="settings-item__label">退出登录</text></view>
           </view>
         </view>
       </view>
-    </view>
 
+      <view class="settings-section">
+        <view class="settings-section__title">通用</view>
+        <view class="settings-list">
+          <view
+            class="settings-item"
+            hover-class="settings-item--hover"
+            hover-stay-time="80"
+            bindtap="handleModuleSettingsTap"
+          >
+            <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页模块显示设置</text></view>
+            <view class="settings-item__right">
+              <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </block>
