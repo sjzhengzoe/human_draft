@@ -18,11 +18,12 @@
   flex: 1;
   padding: 22rpx var(--ui-page-gutter) calc(102rpx + env(safe-area-inset-bottom));
   overflow-x: hidden;
-  overflow-y: hidden;
+  overflow-y: auto;
   background: var(--ui-page-background);
 }
 
 .home-banner {
+  position: relative;
   width: 100%;
   height: 248rpx;
   box-sizing: border-box;
@@ -35,6 +36,85 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.home-banner__greeting {
+  position: absolute;
+  z-index: 1;
+  top: 34rpx;
+  left: 30rpx;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-large);
+  font-weight: 650;
+  letter-spacing: 1rpx;
+  line-height: 1.3;
+}
+
+.recent-section {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 30rpx;
+}
+
+.recent-list {
+  display: flex;
+  gap: 14rpx;
+}
+
+.recent-item {
+  display: flex;
+  width: calc((100% - 14rpx) / 2);
+  min-width: 0;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 14rpx;
+  padding: 16rpx 18rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-surface);
+  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow-subtle);
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
+}
+
+.recent-list--single .recent-item {
+  width: 100%;
+}
+
+.recent-item--hover {
+  opacity: 0.88;
+  transform: scale(0.985);
+}
+
+.recent-item__mark {
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  background: var(--ui-color-action-primary);
+}
+
+.recent-item__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item__lock {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-muted);
 }
 
 .feature-section {
@@ -75,6 +155,7 @@
   border-radius: var(--ui-radius-card);
   background: var(--ui-surface);
   box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
+  transition: opacity 100ms ease-out, transform 100ms ease-out;
 }
 
 .feature-item--illustrated {
@@ -84,7 +165,8 @@
 }
 
 .feature-item--hover {
-  background: var(--ui-subtle-background);
+  opacity: 0.88;
+  transform: scale(0.985);
 }
 
 .feature-item--disabled {
@@ -116,25 +198,25 @@
 .feature-item__login-overlay {
   position: absolute;
   z-index: 3;
-  inset: 0;
+  top: 12rpx;
+  right: 12rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ui-color-overlay-soft);
   pointer-events: none;
 }
 
 .feature-item__login-lock {
   display: flex;
-  width: 64rpx;
-  height: 64rpx;
+  width: 48rpx;
+  height: 48rpx;
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  border: 1rpx solid var(--ui-color-border-inverse);
+  border: 1rpx solid var(--ui-color-border);
   border-radius: 50%;
   background: var(--ui-color-surface-translucent);
-  box-shadow: 0 6rpx 18rpx var(--ui-color-shadow);
+  box-shadow: 0 4rpx 12rpx var(--ui-color-shadow-subtle);
 }
 
 .feature-item__content {
@@ -203,6 +285,29 @@
   .home-banner {
     height: 188rpx;
     margin-bottom: 16rpx;
+  }
+
+  .recent-section {
+    margin-bottom: 14rpx;
+  }
+
+  .recent-list {
+    gap: 8rpx;
+  }
+
+  .recent-item {
+    width: calc((100% - 8rpx) / 2);
+    min-height: 76rpx;
+    padding: 12rpx 16rpx;
+  }
+
+  .recent-list--single .recent-item {
+    width: 100%;
+  }
+
+  .recent-item__mark {
+    width: 44rpx;
+    height: 44rpx;
   }
 
   .feature-section + .feature-section {

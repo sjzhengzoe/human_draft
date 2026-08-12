@@ -2,31 +2,6 @@
   "pages": [
     "pages/create/index",
     "pages/login/index",
-    "pages/menu/index",
-    "pages/menu/edit/index",
-    "pages/menu/place/index",
-    "pages/menu/place-edit/index",
-    "pages/menu/day-plan/index",
-    "pages/menu/ranking/index",
-    "pages/menu/favorites/index",
-    "pages/menu/print/index",
-    "pages/media/index",
-    "pages/media/edit/index",
-    "pages/media/detail/index",
-    "pages/media/episode-edit/index",
-    "pages/media/categories/index",
-    "pages/media/category-edit/index",
-    "pages/key-moments/index",
-    "pages/key-moments/settings/index",
-    "pages/footprint/index",
-    "pages/chat-topics/index",
-    "pages/activities/index",
-    "pages/luggage/index",
-    "pages/luggage/scenes/index",
-    "pages/wardrobe/index",
-    "pages/wardrobe/categories/index",
-    "pages/wardrobe/category-edit/index",
-    "pages/wardrobe/item-edit/index",
     "pages/xiaohongshu/index",
     "pages/douyin2/index",
     "pages/douyin3/index",
@@ -35,6 +10,71 @@
     "pages/settings/index"
   ],
   "subPackages": [
+    {
+      "root": "pages/menu",
+      "pages": [
+        "index",
+        "edit/index",
+        "place/index",
+        "place-edit/index",
+        "day-plan/index",
+        "ranking/index",
+        "favorites/index",
+        "print/index"
+      ]
+    },
+    {
+      "root": "pages/media",
+      "pages": [
+        "index",
+        "edit/index",
+        "detail/index",
+        "episode-edit/index",
+        "categories/index",
+        "category-edit/index"
+      ]
+    },
+    {
+      "root": "pages/key-moments",
+      "pages": [
+        "index",
+        "settings/index"
+      ]
+    },
+    {
+      "root": "pages/footprint",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "pages/chat-topics",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "pages/activities",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "pages/luggage",
+      "pages": [
+        "index",
+        "scenes/index"
+      ]
+    },
+    {
+      "root": "pages/wardrobe",
+      "pages": [
+        "index",
+        "categories/index",
+        "category-edit/index",
+        "item-edit/index"
+      ]
+    },
     {
       "root": "exercise",
       "pages": [

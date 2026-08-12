@@ -22,8 +22,14 @@ test("footprint page is registered and reachable from the home modules", async (
     readProjectFile("src/utils/home-modules.js")
   ])
   const app = JSON.parse(appSource)
+  const registeredPages = [
+    ...app.pages,
+    ...app.subPackages.flatMap((subPackage) =>
+      subPackage.pages.map((page) => `${subPackage.root}/${page}`)
+    )
+  ]
 
-  assert.ok(app.pages.includes("pages/footprint/index"))
+  assert.ok(registeredPages.includes("pages/footprint/index"))
   assert.match(homeModules, /key: "footprint"/)
   assert.match(homeModules, /path: "\/pages\/footprint\/index"/)
   assert.match(homeModules, /icon: "map-pinned"/)

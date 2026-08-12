@@ -1,4 +1,6 @@
 const HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY = "HIDDEN_HOME_MODULE_KEYS_V1"
+const RECENT_HOME_MODULE_KEYS_STORAGE_KEY = "RECENT_HOME_MODULE_KEYS_V1"
+const MAX_RECENT_HOME_MODULES = 2
 
 const HOME_FEATURE_GROUPS = [
   {
@@ -120,6 +122,18 @@ function getAllModuleKeys() {
   return HOME_FEATURE_GROUPS.flatMap((group) => group.items.map((item) => item.key))
 }
 
+function getHomeModuleByKey(key) {
+  for (const group of HOME_FEATURE_GROUPS) {
+    const item = group.items.find((candidate) => candidate.key === key)
+    if (item) return item
+  }
+  return null
+}
+
+function getHomeModulePath(key) {
+  return getHomeModuleByKey(key)?.path || ""
+}
+
 function getHiddenModuleKeys() {
   const stored = wx.getStorageSync(HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY)
   if (!Array.isArray(stored)) return new Set()
@@ -151,6 +165,32 @@ function getVisibleHomeFeatureGroups() {
         .map((item) => ({ ...item }))
     }))
     .filter((group) => group.items.length > 0)
+}
+
+function getRecentHomeFeatureItems() {
+  const stored = wx.getStorageSync(RECENT_HOME_MODULE_KEYS_STORAGE_KEY)
+  if (!Array.isArray(stored)) return []
+
+  const hiddenKeys = getHiddenModuleKeys()
+  return stored
+    .filter((key, index) => typeof key === "string" && stored.indexOf(key) === index)
+    .map((key) => getHomeModuleByKey(key))
+    .filter((item) => item && !hiddenKeys.has(item.key))
+    .slice(0, MAX_RECENT_HOME_MODULES)
+    .map((item) => ({ ...item }))
+}
+
+function recordHomeModuleUsed(key) {
+  if (!getHomeModuleByKey(key)) return
+
+  const stored = wx.getStorageSync(RECENT_HOME_MODULE_KEYS_STORAGE_KEY)
+  const existingKeys = Array.isArray(stored)
+    ? stored.filter((storedKey) => typeof storedKey === "string")
+    : []
+  const nextKeys = [key, ...existingKeys.filter((storedKey) => storedKey !== key)]
+    .slice(0, MAX_RECENT_HOME_MODULES)
+
+  wx.setStorageSync(RECENT_HOME_MODULE_KEYS_STORAGE_KEY, nextKeys)
 }
 
 function getHomeModuleSettingGroups() {
@@ -187,6 +227,9 @@ function setHomeModuleVisible(key, visible) {
 module.exports = {
   HOME_FEATURE_GROUPS,
   getHomeModuleSettingGroups,
+  getHomeModulePath,
+  getRecentHomeFeatureItems,
   getVisibleHomeFeatureGroups,
+  recordHomeModuleUsed,
   setHomeModuleVisible
 }

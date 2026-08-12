@@ -138,7 +138,14 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
   assert.match(settingsLogic, /setKeyMomentDisplayLayout\(this\.data\.userId, layout\)/);
   assert.match(storage, /KEY_MOMENT_DISPLAY_LAYOUT_V1/);
   assert.match(storage, /storageKey\(userId\)/);
-  assert.match(appConfig, /"pages\/key-moments\/settings\/index"/);
+  const parsedAppConfig = JSON.parse(appConfig);
+  const registeredPages = [
+    ...parsedAppConfig.pages,
+    ...parsedAppConfig.subPackages.flatMap((subPackage) =>
+      subPackage.pages.map((registeredPage) => `${subPackage.root}/${registeredPage}`),
+    ),
+  ];
+  assert.ok(registeredPages.includes("pages/key-moments/settings/index"));
 });
 
 test("key moments reuse cached periods and update cached lists after writes", async () => {
