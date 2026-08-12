@@ -10,13 +10,13 @@
     <scroll-view class="side-tabs__list" scroll-y enhanced show-scrollbar="{{false}}">
       <view wx:for="{{scenes}}" wx:key="id" class="side-tab {{activeSceneId === item.id ? 'side-tab--active' : ''}}" data-id="{{item.id}}" bindtap="handleSceneTap">{{item.name}}</view>
     </scroll-view>
-    <view wx:if="{{canWrite}}" class="side-tabs__edit" role="button" aria-label="编辑场景" bindtap="handleManageScenes"><view class="side-tabs__edit-button"><app-icon name="pencil" size="26" /></view></view>
+    <view wx:if="{{canWrite}}" class="side-tabs__edit" role="button" aria-label="编辑场景" bindtap="handleManageScenes"><view class="side-tabs__edit-button"><app-icon name="pencil" size="27" /></view></view>
   </view>
   <view class="content">
   <view class="app-overview dining-overview">
     <view class="app-overview__topline">
       <view class="app-overview__title">{{activeSceneName}}</view>
-      <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAdd"><app-icon name="plus-white" size="22" /><text>新增</text></button>
+      <button wx:if="{{canWrite}}" class="app-overview__action" bindtap="handleAdd"><app-icon name="plus-white" size="24" /><text>新增</text></button>
     </view>
     <view class="app-overview__stats">
       <view class="app-overview__stat">

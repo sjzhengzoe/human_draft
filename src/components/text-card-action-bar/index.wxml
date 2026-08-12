@@ -15,7 +15,7 @@
     aria-disabled="{{item.disabled}}"
     bindtap="handleActionTap"
   >
-    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="25" inverse="{{item.primary && !item.disabled}}" /></view>
+    <view class="action-bar__icon"><app-icon name="{{item.icon}}" size="24" inverse="{{item.primary && !item.disabled}}" /></view>
     <view class="action-bar__label">{{item.label}}</view>
   </view>
 </view>

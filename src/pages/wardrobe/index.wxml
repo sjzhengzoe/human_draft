@@ -35,7 +35,7 @@
         role="button"
         aria-label="新增衣物"
         bindtap="handleAddItem"
-      ><app-icon name="plus-white" size="22" /></view>
+      ><app-icon name="plus-white" size="24" /></view>
     </view>
   </view>
 

@@ -9,7 +9,7 @@
   <view class="overview">
     <view class="overview__topline">
       <view class="overview__title">管理影视分类</view>
-      <button class="overview__add" bindtap="handleAdd"><app-icon name="plus-white" size="22" /><text>新增</text></button>
+      <button class="overview__add" bindtap="handleAdd"><app-icon name="plus-white" size="24" /><text>新增</text></button>
     </view>
     <view class="overview__stats">
       <view class="overview-stat">
@@ -21,7 +21,7 @@
 
   <view wx:if="{{categories.length > 1}}" class="sort-toolbar">
     <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
-      <app-icon name="settings-2" size="22" />
+      <app-icon name="settings-2" size="24" />
       <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
     </view>
   </view>
@@ -41,7 +41,7 @@
         <view class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
         <view class="sort-control {{index === categories.length - 1 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
       </view>
-      <view class="category-card__arrow"><app-icon name="chevron-right" size="28" /></view>
+      <view class="category-card__arrow"><app-icon name="chevron-right" size="27" /></view>
     </view>
   </view>
   <operation-loading visible="{{moving}}" text="正在保存排序…" />

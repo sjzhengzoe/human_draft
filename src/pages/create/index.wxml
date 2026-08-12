@@ -37,13 +37,13 @@
           bindtap="handleFeatureTap"
         >
           <image wx:if="{{item.image}}" class="feature-item__image" src="{{item.image}}" mode="aspectFill" />
-          <view wx:else class="feature-item__mark"><app-icon name="{{item.icon}}" size="32" inverse="{{true}}" /></view>
+          <view wx:else class="feature-item__mark"><app-icon name="{{item.icon}}" size="30" inverse="{{true}}" /></view>
           <view
             wx:if="{{!loggedIn && item.requiresLogin}}"
             class="feature-item__login-overlay"
             aria-hidden="{{true}}"
           >
-            <view class="feature-item__login-lock"><app-icon name="lock-keyhole" size="26" /></view>
+            <view class="feature-item__login-lock"><app-icon name="lock-keyhole" size="27" /></view>
           </view>
           <image
             wx:if="{{item.decoration}}"

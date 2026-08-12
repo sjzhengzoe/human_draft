@@ -35,9 +35,9 @@
       <view class="preset-section">
         <view class="field__label">快速添加属性</view>
         <view class="preset-row">
-          <view class="preset-button" data-preset="upper" bindtap="handlePreset"><app-icon name="plus" size="20" /><text>上装预设</text></view>
-          <view class="preset-button" data-preset="lower" bindtap="handlePreset"><app-icon name="plus" size="20" /><text>下装预设</text></view>
-          <view class="preset-button preset-button--muted" bindtap="handleClearFields"><app-icon name="eraser" size="20" /><text>清空</text></view>
+          <view class="preset-button" data-preset="upper" bindtap="handlePreset"><app-icon name="plus" size="24" /><text>上装预设</text></view>
+          <view class="preset-button" data-preset="lower" bindtap="handlePreset"><app-icon name="plus" size="24" /><text>下装预设</text></view>
+          <view class="preset-button preset-button--muted" bindtap="handleClearFields"><app-icon name="eraser" size="24" /><text>清空</text></view>
         </view>
       </view>
     </view>
@@ -48,7 +48,7 @@
           <view class="section-title">填写属性</view>
           <view class="section-desc">衣物选择该分类后，会自动显示这些输入项。</view>
         </view>
-        <view class="section-add" bindtap="handleAddField"><app-icon name="plus-white" size="20" /><text>属性</text></view>
+        <view class="section-add" bindtap="handleAddField"><app-icon name="plus-white" size="24" /><text>属性</text></view>
       </view>
 
       <view wx:if="{{fields.length === 0}}" class="attribute-empty">暂无属性，也可以保存为空白分类。</view>
@@ -68,14 +68,14 @@
               data-index="{{index}}"
               data-direction="-1"
               bindtap="handleMoveField"
-            ><app-icon name="arrow-up" size="22" /></view>
+            ><app-icon name="arrow-up" size="24" /></view>
             <view
               class="tool {{index === fields.length - 1 ? 'tool--disabled' : ''}}"
               data-index="{{index}}"
               data-direction="1"
               bindtap="handleMoveField"
-            ><app-icon name="arrow-down" size="22" /></view>
-            <view class="tool tool--danger" role="button" aria-label="删除属性" data-index="{{index}}" bindtap="handleRemoveField"><app-icon name="x-danger" size="22" /></view>
+            ><app-icon name="arrow-down" size="24" /></view>
+            <view class="tool tool--danger" role="button" aria-label="删除属性" data-index="{{index}}" bindtap="handleRemoveField"><app-icon name="x-danger" size="24" /></view>
           </view>
         </view>
       </view>
@@ -83,6 +83,6 @@
 
     <view class="footer-actions">
       <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存分类</button>
-      <button wx:if="{{categoryId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除分类</text></button>
+      <button wx:if="{{categoryId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="24" /><text>删除分类</text></button>
     </view>
 </view>

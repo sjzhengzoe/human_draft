@@ -14,7 +14,7 @@
     <view class="field">
       <view class="field-label">分类</view>
       <picker mode="selector" range="{{mediaTypes}}" value="{{mediaTypeIndex}}" bindchange="handleTypeChange">
-        <view class="picker-value"><text>{{mediaTypes[mediaTypeIndex]}}</text><app-icon name="chevron-right" size="28" /></view>
+        <view class="picker-value"><text>{{mediaTypes[mediaTypeIndex]}}</text><app-icon name="chevron-right" size="27" /></view>
       </picker>
     </view>
     <view class="field">
@@ -45,7 +45,7 @@
       <view class="cover-editor" bindtap="handleChooseImage">
         <image wx:if="{{selectedImagePath}}" class="cover-editor__preview" src="{{selectedImagePath}}" mode="aspectFill" />
         <view wx:else class="cover-editor__empty">
-          <app-icon name="image-plus" size="42" />
+          <app-icon name="image-plus" size="30" />
           <view>选择封面</view>
         </view>
         <view class="cover-editor__action">{{selectedImagePath ? '更换封面' : '选择封面'}}</view>

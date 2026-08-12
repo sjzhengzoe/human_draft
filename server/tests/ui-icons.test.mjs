@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
+
+async function listWxmlFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map((entry) => {
+      const path = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
+      if (entry.isDirectory()) return listWxmlFiles(path);
+      return entry.name.endsWith(".wxml") ? [path] : [];
+    }),
+  );
+  return files.flat();
+}
 
 test("icon-only controls are documented as accessible shared components", async () => {
   const [guidance, documentation] = await Promise.all([
@@ -18,4 +30,28 @@ test("icon-only controls are documented as accessible shared components", async 
   assert.match(documentation, /必须提供准确的 `aria-label`/);
   assert.match(documentation, /不得小于 `56rpx × 56rpx`/);
   assert.match(documentation, /全局 `app-icon`/);
+  assert.match(documentation, /大号 `30rpx`、中号 `27rpx`、小号 `24rpx`/);
+});
+
+test("shared icons use only the 24rpx, 27rpx, and 30rpx size tiers", async () => {
+  const sourceRoot = new URL("../../src/", import.meta.url);
+  const [files, component] = await Promise.all([
+    listWxmlFiles(sourceRoot),
+    readFile(new URL("../../src/components/app-icon/index.ts", import.meta.url), "utf8"),
+  ]);
+  const allowedSizes = new Set(["24", "27", "30"]);
+  const violations = [];
+
+  for (const file of files) {
+    const source = await readFile(file, "utf8");
+    for (const match of source.matchAll(/<app-icon\b[^>]*\/>/g)) {
+      const size = match[0].match(/\bsize="([^"]+)"/);
+      if (size && !allowedSizes.has(size[1])) {
+        violations.push(`${file.pathname}: ${size[1]}`);
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
+  assert.match(component, /size:\s*\{[\s\S]*?value:\s*27/);
 });

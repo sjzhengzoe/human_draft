@@ -21,7 +21,7 @@
         aria-disabled="{{savingOrder}}"
         bindtap="handleSortEditingToggle"
       >
-        <app-icon name="{{sortEditing ? 'check-white' : 'settings-2'}}" size="23" />
+        <app-icon name="{{sortEditing ? 'check-white' : 'settings-2'}}" size="24" />
       </view>
       <view
         wx:if="{{!sortEditing}}"
@@ -30,7 +30,7 @@
         aria-label="新增行李场景"
         bindtap="handleAdd"
       >
-        <app-icon name="plus-white" size="21" />
+        <app-icon name="plus-white" size="24" />
       </view>
     </view>
   </view>
@@ -65,7 +65,7 @@
             data-index="{{index}}"
             data-direction="-1"
             catchtap="handleSceneMove"
-          ><app-icon name="arrow-up" size="23" /></view>
+          ><app-icon name="arrow-up" size="24" /></view>
           <view
             class="sort-control {{index === scenes.length - 1 ? 'sort-control--disabled' : ''}}"
             role="button"
@@ -74,9 +74,9 @@
             data-index="{{index}}"
             data-direction="1"
             catchtap="handleSceneMove"
-          ><app-icon name="arrow-down" size="23" /></view>
+          ><app-icon name="arrow-down" size="24" /></view>
         </view>
-        <view wx:else class="scene-card__arrow"><app-icon name="chevron-right" size="26" /></view>
+        <view wx:else class="scene-card__arrow"><app-icon name="chevron-right" size="27" /></view>
       </view>
     </view>
   </scroll-view>

@@ -18,12 +18,12 @@
     </view>
 
     <view class="period-bar">
-      <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="26" /></view>
+      <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="27" /></view>
       <view class="period-copy" bindtap="handleToday">
         <view class="period-label">{{periodLabel}}</view>
         <view class="period-today">点击回到当前日期</view>
       </view>
-      <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="26" /></view>
+      <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="27" /></view>
     </view>
   </view>
 
@@ -58,7 +58,7 @@
             <view class="meal-section__tools">
               <view class="meal-tool" role="button" aria-label="选择{{meal.label}}" data-period="{{meal.key}}" data-date="{{selectedDate}}" bindtap="handleMealEdit"><app-icon name="pencil" size="24" /></view>
               <view class="meal-tool" role="button" aria-label="增加一个档位" data-meal-index="{{mealIndex}}" bindtap="handleAddSlot"><app-icon name="plus" size="24" /></view>
-              <view class="meal-tool {{meal.slotCount <= 1 ? 'meal-tool--disabled' : ''}}" role="button" aria-label="删除最后一个档位" data-meal-index="{{mealIndex}}" bindtap="handleRemoveSlotRequest"><app-icon name="x-muted" size="22" /></view>
+              <view class="meal-tool {{meal.slotCount <= 1 ? 'meal-tool--disabled' : ''}}" role="button" aria-label="删除最后一个档位" data-meal-index="{{mealIndex}}" bindtap="handleRemoveSlotRequest"><app-icon name="x-muted" size="24" /></view>
             </view>
           </view>
 
@@ -67,7 +67,7 @@
               <view wx:for="{{meal.slots}}" wx:key="key" wx:for-item="slot" wx:for-index="slotIndex" class="meal-slot {{slot.locked ? 'meal-slot--locked' : ''}} {{!slot.item ? 'meal-slot--empty' : ''}}" data-meal-index="{{mealIndex}}" data-slot-index="{{slotIndex}}" bindtap="handleSlotTap">
                 <view class="meal-slot__image-wrap">
                   <image wx:if="{{slot.item && slot.item.image_url}}" class="meal-slot__image" src="{{slot.item.image_url}}" mode="aspectFill" lazy-load />
-                  <view wx:else class="meal-slot__placeholder"><app-icon name="plus" size="26" /><view>{{slot.item ? '暂无图片' : '选择菜品'}}</view></view>
+                  <view wx:else class="meal-slot__placeholder"><app-icon name="plus" size="27" /><view>{{slot.item ? '暂无图片' : '选择菜品'}}</view></view>
                   <view wx:if="{{slot.item}}" class="meal-slot__type">{{slot.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
                   <view wx:if="{{slot.locked}}" class="meal-slot__lock">已锁</view>
                 </view>

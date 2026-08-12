@@ -768,6 +768,114 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
   );
 });
 
+test("menu schedule falls back to an archived snapshot after its source is deleted", async (t) => {
+  const mealId = "42000000-0000-4000-8000-000000000001";
+  const deletedDishId = "42000000-0000-4000-8000-000000000002";
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        menu_schedule_meals: [
+          { id: mealId, user_id: USER_ID, meal_date: "2026-08-05", meal_period: "lunch", slot_count: 1 },
+        ],
+        menu_schedule_items: [
+          { id: "42000000-0000-4000-8000-000000000003", user_id: USER_ID, meal_id: mealId, source_kind: "dish", record_type: "home", dish_id: deletedDishId, place_id: null, snapshot_name: "已经删除的菜", snapshot_place_name: "", snapshot_image_path: "users/archive/history.webp", snapshot_place_image_path: "", position: 0 },
+        ],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/menu-schedule?start=2026-08-05&end=2026-08-05",
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  const item = response.json().data.meals[0].items[0];
+  assert.equal(item.name, "已经删除的菜");
+  assert.equal(item.image_url, "https://example.test/dish-images/users/archive/history.webp");
+  assert.equal(item.dish_id, null);
+  assert.equal(item.archived, true);
+});
+
+test("deleting a referenced dish copies history images before the atomic database delete", async (t) => {
+  const dishId = "43000000-0000-4000-8000-000000000001";
+  const placeId = "43000000-0000-4000-8000-000000000002";
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      dishes: [
+        { id: dishId, user_id: USER_ID, name: "旧菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
+      ],
+      menu_places: [
+        { id: placeId, user_id: USER_ID, name: "旧店", place_type: "outside", image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
+      ],
+      menu_schedule_items: [
+        { id: "43000000-0000-4000-8000-000000000003", user_id: USER_ID, source_kind: "dish", dish_id: dishId },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "DELETE",
+    url: `/api/dishes/${dishId}`,
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(
+    supabase.storageCopies.map((copy) => copy.sourcePath),
+    ["dishes/thumb.webp", "places/thumb.webp"],
+  );
+  const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_dish");
+  assert.ok(deleteCall);
+  assert.equal(deleteCall.params.p_dish_id, dishId);
+  assert.match(deleteCall.params.p_archive_image_path, /menu-schedule-archives/);
+  assert.match(deleteCall.params.p_archive_place_image_path, /menu-schedule-archives/);
+});
+
+test("deleting a referenced store archives both store and child-dish images", async (t) => {
+  const placeId = "44000000-0000-4000-8000-000000000001";
+  const sourceDishId = "44000000-0000-4000-8000-000000000002";
+  const childDishId = "44000000-0000-4000-8000-000000000003";
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      menu_places: [
+        { id: placeId, user_id: USER_ID, name: "旧店", place_type: "outside", outside_category_id: SOURCE_ID, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp", source_dish_id: sourceDishId },
+      ],
+      dishes: [
+        { id: sourceDishId, user_id: USER_ID, name: "旧店", record_type: "outside", place_id: null, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
+        { id: childDishId, user_id: USER_ID, name: "店内菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
+      ],
+      menu_schedule_items: [
+        { id: "44000000-0000-4000-8000-000000000004", user_id: USER_ID, source_kind: "dish", dish_id: childDishId, place_id: placeId },
+        { id: "44000000-0000-4000-8000-000000000005", user_id: USER_ID, source_kind: "place", dish_id: null, place_id: placeId },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "DELETE",
+    url: `/api/menu-places/${placeId}`,
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(
+    supabase.storageCopies.map((copy) => copy.sourcePath),
+    ["places/thumb.webp", "dishes/thumb.webp"],
+  );
+  const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_place");
+  assert.ok(deleteCall);
+  assert.equal(deleteCall.params.p_place_id, placeId);
+  assert.deepEqual(
+    deleteCall.params.p_dish_archives.map((archive) => archive.dish_id),
+    [childDishId],
+  );
+});
+
 test("menu schedule migration adds isolated history tables without rewriting legacy menu rows", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608100001_menu_schedule.sql", import.meta.url),
@@ -780,6 +888,19 @@ test("menu schedule migration adds isolated history tables without rewriting leg
   assert.match(migration, /replace_menu_schedule_meal\(/i);
   assert.match(migration, /alter table public\.menu_schedule_meals enable row level security/i);
   assert.doesNotMatch(migration, /delete from public\.dishes|drop table public\.dishes/i);
+});
+
+test("live-reference migration archives menu sources transactionally on deletion", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/202608120001_menu_schedule_live_references.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists archived_at timestamptz/i);
+  assert.match(migration, /archive_and_delete_menu_dish\(/i);
+  assert.match(migration, /archive_and_delete_menu_place\(/i);
+  assert.match(migration, /snapshot_image_path = coalesce\(p_archive_image_path/i);
+  assert.match(migration, /dish_id = null[\s\S]*?place_id = null[\s\S]*?archived_at = now\(\)/i);
+  assert.match(migration, /source_item \? 'archived_item_id'/i);
 });
 
 test("menu places expose stores first and their linked dishes separately", async (t) => {

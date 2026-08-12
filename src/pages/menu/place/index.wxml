@@ -31,7 +31,7 @@
           </view>
         </view>
         <button wx:if="{{canWrite}}" class="store-action store-action--secondary outline-action" bindtap="handleEditPlace">
-          <app-icon name="pencil" size="19" />
+          <app-icon name="pencil" size="24" />
           <text>编辑店铺</text>
         </button>
       </view>
@@ -44,7 +44,7 @@
           <view class="dish-section__hint">这里的菜品和居家菜共用相同属性</view>
         </view>
         <button wx:if="{{canWrite}}" class="store-action store-action--primary add-dish-button" bindtap="handleAddDish">
-          <app-icon name="plus-white" size="19" />
+          <app-icon name="plus-white" size="24" />
           <text>新增菜品</text>
         </button>
       </view>
@@ -73,7 +73,7 @@
       <view wx:else class="empty-dishes">
         <view>这家店还没有记录菜品</view>
         <button wx:if="{{canWrite}}" class="store-action store-action--primary empty-dishes__button" bindtap="handleAddDish">
-          <app-icon name="plus-white" size="19" />
+          <app-icon name="plus-white" size="24" />
           <text>添加第一道菜</text>
         </button>
       </view>

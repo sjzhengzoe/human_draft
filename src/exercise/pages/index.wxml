@@ -31,7 +31,7 @@
           role="button"
           aria-label="上个月"
           bindtap="handlePreviousMonth"
-        ><app-icon name="arrow-left" size="28" /></view>
+        ><app-icon name="arrow-left" size="27" /></view>
         <picker
           mode="date"
           fields="month"
@@ -51,7 +51,7 @@
           role="button"
           aria-label="下个月"
           bindtap="handleNextMonth"
-        ><app-icon name="arrow-right" size="28" /></view>
+        ><app-icon name="arrow-right" size="27" /></view>
       </view>
       <view class="mini-calendar__weekdays">
         <text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text><text>日</text>

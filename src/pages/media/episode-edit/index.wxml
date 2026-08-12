@@ -47,7 +47,7 @@
               bindtap="handleTimelineTypeChange"
             >{{typeOption.label}}</view>
           </view>
-          <view class="timeline-remove" role="button" aria-label="删除时间点" data-index="{{noteIndex}}" bindtap="handleRemoveTimelineNote"><app-icon name="trash-2-danger" size="25" /></view>
+          <view class="timeline-remove" role="button" aria-label="删除时间点" data-index="{{noteIndex}}" bindtap="handleRemoveTimelineNote"><app-icon name="trash-2-danger" size="24" /></view>
         </view>
         <view class="timeline-row__body {{item.type === 'quote' ? 'timeline-row__body--quote' : ''}}">
           <view class="timeline-row__time-group">
@@ -113,7 +113,7 @@
                   data-note-index="{{noteIndex}}"
                   data-dialogue-index="{{dialogueIndex}}"
                   bindtap="handleRemoveDialogue"
-                ><app-icon name="x-danger" size="20" /></view>
+                ><app-icon name="x-danger" size="24" /></view>
               </view>
               <view class="timeline-dialogue-add" data-index="{{noteIndex}}" bindtap="handleAddDialogue">＋ 添加一句对话</view>
             </view>

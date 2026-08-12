@@ -10,7 +10,7 @@
     <view class="overview__topline">
       <view class="overview__title">管理用餐场景</view>
       <button class="overview__add" bindtap="handleAdd">
-        <app-icon name="plus-white" size="22" />
+        <app-icon name="plus-white" size="24" />
         <text>新增</text>
       </button>
     </view>
@@ -24,7 +24,7 @@
 
   <view wx:if="{{scenes.length > 1}}" class="sort-toolbar">
     <view class="sort-toolbar__action {{sortEditing ? 'sort-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle">
-      <app-icon name="settings-2" size="22" />
+      <app-icon name="settings-2" size="24" />
       <text>{{sortEditing ? '完成排序' : '编辑排序'}}</text>
     </view>
   </view>
@@ -51,7 +51,7 @@
           <app-icon name="arrow-down" size="24" />
         </view>
       </view>
-      <view class="category-card__arrow"><app-icon name="chevron-right" size="28" /></view>
+      <view class="category-card__arrow"><app-icon name="chevron-right" size="27" /></view>
     </view>
   </view>
 

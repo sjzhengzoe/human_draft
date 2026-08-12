@@ -6,7 +6,7 @@ Component({
     },
     size: {
       type: Number,
-      value: 32
+      value: 27
     },
     inverse: {
       type: Boolean,

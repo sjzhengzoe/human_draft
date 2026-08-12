@@ -62,7 +62,7 @@
         class="crop-toolbar__tool crop-toolbar__tool--active"
         role="button"
         aria-label="裁剪工具，已启用"
-      ><app-icon name="crop-white" size="42" /></view>
+      ><app-icon name="crop-white" size="30" /></view>
       <view wx:if="{{!ratioLocked}}" class="crop-toolbar__ratios" aria-label="裁剪比例">
         <view
           wx:for="{{ratioOptions}}"

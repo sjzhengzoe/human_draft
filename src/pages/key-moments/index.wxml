@@ -23,7 +23,7 @@
     <picker mode="date" value="{{anchorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleAnchorDateChange">
       <view class="period-picker">
         <text>{{periodLabel}}</text>
-        <app-icon name="chevron-down" size="26" />
+        <app-icon name="chevron-down" size="27" />
       </view>
     </picker>
     <view
@@ -31,13 +31,13 @@
       role="button"
       aria-label="人生节点设置"
       bindtap="handleSettings"
-    ><app-icon name="settings-2" size="28" /></view>
+    ><app-icon name="settings-2" size="27" /></view>
     <button
       wx:if="{{canWrite}}"
       class="add-button"
       aria-label="新增人生节点"
       bindtap="handleAdd"
-    ><app-icon name="plus-white" size="26" /></button>
+    ><app-icon name="plus-white" size="27" /></button>
   </view>
 
   <scroll-view
@@ -137,7 +137,7 @@
             bindtap="handleChooseImage"
           />
           <view wx:else class="image-editor__empty" bindtap="handleChooseImage">
-            <app-icon name="image-plus" size="36" />
+            <app-icon name="image-plus" size="30" />
             <text>{{selectingImage ? '选择中…' : '上传图片'}}</text>
           </view>
           <view
@@ -145,7 +145,7 @@
             class="image-editor__remove-button"
             aria-label="移除图片"
             catchtap="handleRemoveEditorImage"
-          ><app-icon name="x-muted" size="20" inverse="{{true}}" /></view>
+          ><app-icon name="x-muted" size="24" inverse="{{true}}" /></view>
         </view>
 
         <view class="editor-text">

@@ -30,11 +30,11 @@
         <view class="detail-cover-wrap" bindtap="handleEntryCoverTap">
           <image wx:if="{{selectedEntryImagePath || coverUrl}}" class="detail-cover" src="{{editingEntry && selectedEntryImagePath ? selectedEntryImagePath : coverUrl}}" mode="aspectFill" />
           <view wx:else class="detail-cover detail-cover--empty">
-            <app-icon name="clapperboard" size="42" />
+            <app-icon name="clapperboard" size="30" />
             <text>暂无封面</text>
           </view>
           <view wx:if="{{editingEntry}}" class="detail-cover-action">
-            <app-icon name="image-plus" size="23" />
+            <app-icon name="image-plus" size="24" />
             <text>{{selectedEntryImagePath || coverUrl ? '更换封面' : '选择封面'}}</text>
           </view>
         </view>
@@ -54,13 +54,13 @@
                 role="button"
                 aria-label="取消编辑"
                 bindtap="handleEntryEditCancel"
-              ><app-icon name="x-muted" size="23" /></view>
+              ><app-icon name="x-muted" size="24" /></view>
               <view
                 class="detail-icon-button detail-icon-button--save {{savingEntry || selectingEntryImage || showEntryImageCropper ? 'detail-icon-button--disabled' : ''}}"
                 role="button"
                 aria-label="完成编辑"
                 bindtap="handleCompleteEntryEdit"
-              ><app-icon name="check" size="23" inverse="{{true}}" /></view>
+              ><app-icon name="check" size="24" inverse="{{true}}" /></view>
             </block>
           </view>
         </view>
@@ -136,7 +136,7 @@
             <picker wx:if="{{editingEntry}}" mode="selector" range="{{mediaTypes}}" value="{{entryDraftMediaTypeIndex}}" bindchange="handleEntryTypeChange">
               <view class="detail-attribute__picker">
                 <text>{{mediaTypes[entryDraftMediaTypeIndex]}}</text>
-                <app-icon name="chevron-right" size="23" />
+                <app-icon name="chevron-right" size="24" />
               </view>
             </picker>
             <view wx:else class="detail-attribute__value">{{entry.media_type}}</view>
@@ -189,7 +189,7 @@
             role="button"
             aria-label="新增季"
             bindtap="handleAddSeason"
-          ><app-icon name="plus" size="23" /></view>
+          ><app-icon name="plus" size="24" /></view>
         </view>
       </view>
 
@@ -219,7 +219,7 @@
       <view wx:if="{{activeSeason}}" class="active-season-bar">
         <image wx:if="{{activeSeason.cover_url}}" class="active-season-bar__cover" src="{{activeSeason.cover_url}}" mode="aspectFill" />
         <view wx:else class="active-season-bar__cover active-season-bar__cover--empty">
-          <app-icon name="clapperboard" size="28" />
+          <app-icon name="clapperboard" size="27" />
           <text>暂无图片</text>
         </view>
         <view class="active-season-bar__main">
@@ -232,13 +232,13 @@
             role="button"
             aria-label="{{coverUrl === activeSeason.cover_url && activeSeason.cover_url ? '当前已是作品封面' : '设为作品封面'}}"
             bindtap="handleSetSeasonCover"
-          ><app-icon name="image-plus" size="23" /></view>
+          ><app-icon name="image-plus" size="24" /></view>
           <view
             class="records-icon-button"
             role="button"
             aria-label="管理当前季"
             bindtap="handleSeasonManage"
-          ><app-icon name="pencil" size="23" /></view>
+          ><app-icon name="pencil" size="24" /></view>
         </view>
       </view>
 
@@ -278,7 +278,7 @@
                   aria-label="编辑本集"
                   data-id="{{item.id}}"
                   catchtap="handleEpisodeEdit"
-                ><app-icon name="pencil" size="23" /></view>
+                ><app-icon name="pencil" size="24" /></view>
               </view>
             </view>
             <view wx:if="{{editingEpisodeId === item.id}}" class="episode-editor">
@@ -319,7 +319,7 @@
                   <view class="episode-editor__timeline-help">类型、时间和内容分别编辑</view>
                 </view>
                 <view class="episode-editor__add" bindtap="handleEpisodeAddTimelineNote">
-                  <app-icon name="plus" size="23" />
+                  <app-icon name="plus" size="24" />
                   <text>新增</text>
                 </view>
               </view>
@@ -340,7 +340,7 @@
                       aria-label="删除时间点"
                       data-index="{{noteIndex}}"
                       bindtap="handleEpisodeRemoveTimelineNote"
-                    ><app-icon name="trash-2-danger" size="23" /></view>
+                    ><app-icon name="trash-2-danger" size="24" /></view>
                   </view>
                   <view class="episode-editor__property">
                     <view class="episode-editor__label">记录类型</view>
@@ -487,7 +487,7 @@
 <view wx:if="{{editingEpisodeId}}" class="episode-edit-save-bar">
   <view class="episode-edit-save-bar__cancel" bindtap="handleEpisodeEditCancel">取消</view>
   <button class="episode-edit-save-bar__save" loading="{{savingEpisode}}" disabled="{{savingEpisode}}" bindtap="handleEpisodeStickySave">
-    <app-icon name="check" size="22" inverse="{{true}}" />
+    <app-icon name="check" size="24" inverse="{{true}}" />
     <text>保存</text>
   </button>
 </view>

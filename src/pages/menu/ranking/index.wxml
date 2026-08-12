@@ -7,9 +7,9 @@
   </view>
 
   <view class="period-bar">
-    <view class="period-arrow" role="button" aria-label="上一个统计范围" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-left" size="26" /></view>
+    <view class="period-arrow" role="button" aria-label="上一个统计范围" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-left" size="27" /></view>
     <view class="period-copy"><view class="period-label">{{periodLabel}}</view><view class="period-effective">{{effectiveLabel}}</view></view>
-    <view class="period-arrow" role="button" aria-label="下一个统计范围" data-direction="1" bindtap="handleMove"><app-icon name="arrow-right" size="26" /></view>
+    <view class="period-arrow" role="button" aria-label="下一个统计范围" data-direction="1" bindtap="handleMove"><app-icon name="arrow-right" size="27" /></view>
   </view>
 
   <view wx:if="{{loading}}" class="state">正在统计…</view>

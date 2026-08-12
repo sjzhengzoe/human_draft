@@ -52,7 +52,7 @@
             lazy-load
           />
           <view wx:else class="activity-card__image-empty">
-            <app-icon name="image-plus" size="28" />
+            <app-icon name="image-plus" size="27" />
             <text>暂无封面</text>
           </view>
         </view>
@@ -84,7 +84,7 @@
             data-index="{{index}}"
             data-direction="-1"
             bindtap="handleManagerMove"
-          ><app-icon name="arrow-up" size="23" /></view>
+          ><app-icon name="arrow-up" size="24" /></view>
           <view
             class="manager-icon-button {{index === items.length - 1 ? 'manager-icon-button--disabled' : ''}}"
             role="button"
@@ -92,21 +92,21 @@
             data-index="{{index}}"
             data-direction="1"
             bindtap="handleManagerMove"
-          ><app-icon name="arrow-down" size="23" /></view>
+          ><app-icon name="arrow-down" size="24" /></view>
           <view
             class="manager-icon-button"
             role="button"
             aria-label="编辑{{item.name}}"
             data-id="{{item.id}}"
             bindtap="handleManagerEdit"
-          ><app-icon name="pencil" size="23" /></view>
+          ><app-icon name="pencil" size="24" /></view>
           <view
             class="manager-icon-button"
             role="button"
             aria-label="删除{{item.name}}"
             data-id="{{item.id}}"
             bindtap="handleDeleteRequest"
-          ><app-icon name="trash-2-danger" size="23" /></view>
+          ><app-icon name="trash-2-danger" size="24" /></view>
         </view>
       </view>
     </view>
@@ -156,7 +156,7 @@
             mode="aspectFill"
           />
           <view wx:else class="activity-editor__image-empty">
-            <app-icon name="image-plus" size="28" />
+            <app-icon name="image-plus" size="27" />
             <text>添加封面</text>
           </view>
           <view wx:if="{{selectedImagePath || currentImageUrl}}" class="activity-editor__image-action">更换封面</view>

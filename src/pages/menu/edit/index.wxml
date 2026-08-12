@@ -23,7 +23,7 @@
           mode="aspectFill"
         />
         <view wx:else class="image-field__empty">
-          <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
+          <view class="image-field__plus"><app-icon name="image-plus" size="30" /></view>
           <view>拍照或从相册选择菜品图片</view>
           <view wx:if="{{recordType === 'outside'}}" class="image-field__optional">外食菜品可暂不添加</view>
         </view>
@@ -107,7 +107,7 @@
             <view wx:for="{{mainIngredients}}" wx:key="*this" class="item-chip">
               <text class="item-chip__label">{{item}}</text>
               <view class="item-chip__remove" data-index="{{index}}" catchtap="handleRemoveMainIngredient" role="button" aria-label="删除{{item}}">
-                <app-icon name="x-muted" size="18" />
+                <app-icon name="x-muted" size="24" />
               </view>
             </view>
           </view>
@@ -163,7 +163,7 @@
             <view wx:for="{{flavorOptions}}" wx:key="*this" class="item-chip">
               <text class="item-chip__label">{{item}}</text>
               <view class="item-chip__remove" data-index="{{index}}" catchtap="handleRemoveFlavorOption" role="button" aria-label="删除{{item}}">
-                <app-icon name="x-muted" size="18" />
+                <app-icon name="x-muted" size="24" />
               </view>
             </view>
           </view>
@@ -188,7 +188,7 @@
         保存菜品
       </button>
       <button wx:if="{{dishId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete">
-        <app-icon name="trash-2-danger" size="25" /><text>删除菜品</text>
+        <app-icon name="trash-2-danger" size="24" /><text>删除菜品</text>
       </button>
     </view>
   </view>

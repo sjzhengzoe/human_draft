@@ -23,6 +23,6 @@
   </view>
   <view class="footer-actions">
     <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存分类</button>
-    <button wx:if="{{categoryId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除分类</text></button>
+    <button wx:if="{{categoryId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="24" /><text>删除分类</text></button>
   </view>
 </view>

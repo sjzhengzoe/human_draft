@@ -68,7 +68,7 @@
               mode="aspectFill"
             />
             <view wx:else class="circle-image-picker__placeholder">
-              <app-icon name="image-plus" size="32" />
+              <app-icon name="image-plus" size="30" />
             </view>
             <view wx:if="{{selectingImage && selectingImageIndex === index}}" class="circle-image-picker__mask">处理中</view>
           </view>

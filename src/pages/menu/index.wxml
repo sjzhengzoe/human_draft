@@ -22,7 +22,7 @@
         </view>
       </view>
       <button wx:if="{{canWrite && !selectionMode}}" class="add-button" bindtap="handleAddTap">
-        <app-icon name="plus-white" size="20" />
+        <app-icon name="plus-white" size="24" />
         <text>新增</text>
       </button>
     </view>
@@ -66,9 +66,9 @@
     </view>
 
     <view wx:if="{{displayMode === 'quick' && !selectionMode}}" class="menu-toolbar">
-      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="22" /><text>本周菜单</text></view>
-      <view wx:if="{{activeRecordType === 'home'}}" class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="22" /><text>打印</text></view>
-      <view wx:if="{{canReorder}}" class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle"><app-icon name="settings-2" size="22" /><text>{{sortEditing ? '完成排序' : '编辑排序'}}</text></view>
+      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="24" /><text>本周菜单</text></view>
+      <view wx:if="{{activeRecordType === 'home'}}" class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="24" /><text>打印</text></view>
+      <view wx:if="{{canReorder}}" class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle"><app-icon name="settings-2" size="24" /><text>{{sortEditing ? '完成排序' : '编辑排序'}}</text></view>
     </view>
   </view>
 
@@ -109,8 +109,8 @@
             </view>
           </view>
           <view wx:if="{{canReorder && sortEditing}}" class="sort-actions">
-            <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="23" /></view>
-            <view class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="23" /></view>
+            <view class="sort-action {{index === 0 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
+            <view class="sort-action {{index === dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
           </view>
         </view>
       </view>
@@ -128,8 +128,8 @@
           </view>
           <view wx:if="{{selectionMode && place.selected}}" class="selection-inline-badge">已选</view>
           <view wx:if="{{canReorder && sortEditing}}" class="outside-store__place-sort-actions">
-            <view class="sort-action {{placeIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="-1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-up" size="23" /></view>
-            <view class="sort-action {{placeIndex === outsidePlaces.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-down" size="23" /></view>
+            <view class="sort-action {{placeIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="-1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-up" size="24" /></view>
+            <view class="sort-action {{placeIndex === outsidePlaces.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-direction="1" catchtap="handleOutsidePlaceMove"><app-icon name="arrow-down" size="24" /></view>
           </view>
           <app-icon wx:else name="chevron-right" size="30" />
         </view>
@@ -160,8 +160,8 @@
                   </view>
                 </view>
                 <view wx:if="{{canReorder && sortEditing}}" class="sort-actions outside-store__sort-actions">
-                  <view class="sort-action {{dishIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="-1" catchtap="handleOutsideMove"><app-icon name="arrow-left" size="23" /></view>
-                  <view class="sort-action {{dishIndex === place.dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="1" catchtap="handleOutsideMove"><app-icon name="arrow-right" size="23" /></view>
+                  <view class="sort-action {{dishIndex === 0 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="-1" catchtap="handleOutsideMove"><app-icon name="arrow-left" size="24" /></view>
+                  <view class="sort-action {{dishIndex === place.dishes.length - 1 ? 'sort-action--disabled' : ''}}" data-place-index="{{placeIndex}}" data-dish-index="{{dishIndex}}" data-direction="1" catchtap="handleOutsideMove"><app-icon name="arrow-right" size="24" /></view>
                 </view>
               </view>
             </view>
@@ -241,7 +241,7 @@
 
 <view wx:if="{{selectionMode}}" class="selection-basket" bindtap="handleBasketOpen">
   <text>已选 {{selectedItems.length}} 个</text>
-  <app-icon name="chevron-right" size="23" inverse />
+  <app-icon name="chevron-right" size="24" inverse />
 </view>
 
 <app-dialog visible="{{showBasketDialog}}" title="{{selectionPurpose === 'favorites' ? '常吃清单' : '本餐已选择'}}" customBody customActions bind:cancel="handleBasketCancel">
@@ -249,7 +249,7 @@
     <view wx:for="{{selectedItems}}" wx:key="key" class="basket-item">
       <image wx:if="{{item.image_url}}" class="basket-item__image" src="{{item.image_url}}" mode="aspectFill" />
       <view wx:else class="basket-item__image basket-item__image--empty">暂无图片</view>
-      <view class="basket-item__delete" role="button" aria-label="删除{{item.name}}" data-key="{{item.key}}" bindtap="handleBasketRemove"><app-icon name="trash-2-danger" size="22" /></view>
+      <view class="basket-item__delete" role="button" aria-label="删除{{item.name}}" data-key="{{item.key}}" bindtap="handleBasketRemove"><app-icon name="trash-2-danger" size="24" /></view>
       <view class="basket-item__name">{{item.name}}</view>
     </view>
     <view wx:if="{{selectedItems.length === 0}}" class="basket-empty">还没有选择菜品或店铺</view>

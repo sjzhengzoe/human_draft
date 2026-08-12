@@ -24,21 +24,21 @@
       aria-label="{{sceneTabsExpanded ? '收起部分行李场景' : '展开全部行李场景'}}"
       aria-expanded="{{sceneTabsExpanded}}"
       bindtap="handleSceneTabsToggle"
-    ><app-icon name="{{sceneTabsExpanded ? 'arrow-up' : 'chevron-down'}}" size="23" /></view>
+    ><app-icon name="{{sceneTabsExpanded ? 'arrow-up' : 'chevron-down'}}" size="24" /></view>
     <view
       wx:if="{{canWrite}}"
       class="scene-tool"
       role="button"
       aria-label="新增行李场景"
       bindtap="handleAddScene"
-    ><app-icon name="plus" size="23" inverse="{{false}}" /></view>
+    ><app-icon name="plus" size="24" inverse="{{false}}" /></view>
     <view
       wx:if="{{canWrite}}"
       class="scene-tool"
       role="button"
       aria-label="管理行李场景"
       bindtap="handleManageScenes"
-    ><app-icon name="pencil" size="23" /></view>
+    ><app-icon name="pencil" size="24" /></view>
   </view>
 
   <view wx:if="{{errorMessage && !activeScene}}" class="state">{{errorMessage}}</view>
@@ -57,7 +57,7 @@
           role="button"
           aria-label="重新开始当前场景"
           bindtap="openPackingResetConfirm"
-        ><app-icon name="rotate-ccw-white" size="25" /></view>
+        ><app-icon name="rotate-ccw-white" size="24" /></view>
       </view>
       <view class="packing-overview__summary">
         <view class="packing-overview__title">{{activeItemCount === 0 ? '清单还没有物品' : activeUnpackedCount ? '还剩 ' + activeUnpackedCount + ' 件未装' : '已经全部装好'}}</view>
@@ -95,14 +95,14 @@
           role="button"
           aria-label="新增携带层级"
           bindtap="handleAddGroup"
-        ><app-icon name="plus" size="23" /></view>
+        ><app-icon name="plus" size="24" /></view>
         <view
           wx:if="{{activeScene.groups.length}}"
           class="packing-tool {{sortEditing ? 'packing-tool--active' : ''}}"
           role="button"
           aria-label="{{sortEditing ? '完成行李清单排序' : '调整行李清单顺序'}}"
           bindtap="handleSortEditingToggle"
-        ><app-icon name="{{sortEditing ? 'settings-2-white' : 'settings-2'}}" size="23" /></view>
+        ><app-icon name="{{sortEditing ? 'settings-2-white' : 'settings-2'}}" size="24" /></view>
       </view>
     </view>
 
@@ -159,7 +159,7 @@
                 data-index="{{groupIndex}}"
                 data-direction="-1"
                 catchtap="handleGroupMove"
-              ><app-icon name="arrow-up" size="23" /></view>
+              ><app-icon name="arrow-up" size="24" /></view>
               <view
                 class="sort-icon {{groupIndex === packingGroups.length - 1 ? 'sort-icon--disabled' : ''}}"
                 role="button"
@@ -168,7 +168,7 @@
                 data-index="{{groupIndex}}"
                 data-direction="1"
                 catchtap="handleGroupMove"
-              ><app-icon name="arrow-down" size="23" /></view>
+              ><app-icon name="arrow-down" size="24" /></view>
             </view>
             <view
               wx:elif="{{canWrite}}"
@@ -179,7 +179,7 @@
               data-name="{{group.name}}"
               data-required="{{group.is_required}}"
               catchtap="openGroupEditor"
-            ><app-icon name="pencil" size="22" /></view>
+            ><app-icon name="pencil" size="24" /></view>
           </view>
 
           <view class="luggage-items">
@@ -200,7 +200,7 @@
                 catchtap="handlePackingItemToggle"
               >
                 <view class="packing-checkbox {{luggageItem.is_packed ? 'packing-checkbox--checked' : ''}}">
-                  <app-icon wx:if="{{luggageItem.is_packed}}" name="check-white" size="22" />
+                  <app-icon wx:if="{{luggageItem.is_packed}}" name="check-white" size="24" />
                 </view>
               </view>
               <view
@@ -223,7 +223,7 @@
                     data-index="{{itemIndex}}"
                     data-direction="-1"
                     catchtap="handleItemMove"
-                  ><app-icon name="arrow-up" size="22" /></view>
+                  ><app-icon name="arrow-up" size="24" /></view>
                   <view
                     class="sort-icon {{itemIndex === group.visible_items.length - 1 ? 'sort-icon--disabled' : ''}}"
                     role="button"
@@ -233,7 +233,7 @@
                     data-index="{{itemIndex}}"
                     data-direction="1"
                     catchtap="handleItemMove"
-                  ><app-icon name="arrow-down" size="22" /></view>
+                  ><app-icon name="arrow-down" size="24" /></view>
                 </view>
               </view>
             </view>
@@ -247,7 +247,7 @@
               data-group-name="{{group.name}}"
               bindtap="handleAddItem"
             >
-              <app-icon name="plus" size="21" />
+              <app-icon name="plus" size="24" />
               <text>{{group.items.length ? '添加物品' : '这个层级还没有物品，点击添加'}}</text>
             </view>
           </view>
@@ -278,7 +278,7 @@
     </view>
     <view slot="actions" class="editor-actions">
       <view wx:if="{{editorId && !editorRequired}}" class="editor-delete" role="button" bindtap="handleEditorDelete">
-        <app-icon name="trash-2-danger" size="22" />
+        <app-icon name="trash-2-danger" size="24" />
         <text>{{editorKind === 'group' ? '删除层级' : '删除物品'}}</text>
       </view>
       <view class="editor-main-actions">
@@ -315,7 +315,7 @@
         bindtap="handleGroupPickerSelect"
       >
         <text>{{item.name}}</text>
-        <app-icon name="chevron-right" size="23" />
+        <app-icon name="chevron-right" size="24" />
       </view>
     </scroll-view>
     <view slot="actions" class="group-picker__actions">

@@ -2,7 +2,7 @@
 <view class="page page--with-navigation">
   <view class="favorites-header">
     <view><view class="favorites-title">常吃清单</view><view class="favorites-hint">添加后会显示在菜单选择页面顶部</view></view>
-    <button class="add-favorite" bindtap="handleAdd"><app-icon name="plus-white" size="20" /><text>添加常吃</text></button>
+    <button class="add-favorite" bindtap="handleAdd"><app-icon name="plus-white" size="24" /><text>添加常吃</text></button>
   </view>
 
   <view wx:if="{{loading}}" class="state">正在加载…</view>
@@ -14,9 +14,9 @@
       <view wx:else class="favorite-image favorite-image--empty">无图</view>
       <view class="favorite-copy"><view class="favorite-name">{{item.name}}</view><view class="favorite-type">{{item.source_kind === 'place' ? '店铺' : '菜品'}}</view></view>
       <view class="favorite-actions">
-        <view class="favorite-action {{index === 0 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="上移{{item.name}}" data-index="{{index}}" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-up" size="23" /></view>
-        <view class="favorite-action {{index === items.length - 1 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="下移{{item.name}}" data-index="{{index}}" data-direction="1" bindtap="handleMove"><app-icon name="arrow-down" size="23" /></view>
-        <view class="favorite-action" role="button" aria-label="删除{{item.name}}" data-id="{{item.id}}" bindtap="handleRemove"><app-icon name="trash-2-danger" size="23" /></view>
+        <view class="favorite-action {{index === 0 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="上移{{item.name}}" data-index="{{index}}" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
+        <view class="favorite-action {{index === items.length - 1 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="下移{{item.name}}" data-index="{{index}}" data-direction="1" bindtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
+        <view class="favorite-action" role="button" aria-label="删除{{item.name}}" data-id="{{item.id}}" bindtap="handleRemove"><app-icon name="trash-2-danger" size="24" /></view>
       </view>
     </view>
   </view>

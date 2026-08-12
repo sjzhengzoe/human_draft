@@ -29,7 +29,7 @@
           mode="aspectFill"
         />
         <view wx:else class="image-field__empty">
-          <view class="image-field__plus"><app-icon name="image-plus" size="42" /></view>
+          <view class="image-field__plus"><app-icon name="image-plus" size="30" /></view>
           <view>选择衣物图片</view>
         </view>
         <view class="image-field__hint">点击{{selectedImagePath || currentImageUrl ? '更换' : '选择'}}图片</view>
@@ -51,7 +51,7 @@
         <picker mode="selector" range="{{categoryNames}}" value="{{categoryIndex}}" bindchange="handleCategoryChange">
           <view class="field__picker">
             <text>{{categoryNames[categoryIndex] || '请选择分类'}}</text>
-            <view class="field__arrow"><app-icon name="chevron-right" size="28" /></view>
+            <view class="field__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>
         </picker>
       </view>
@@ -78,7 +78,7 @@
 
     <view class="footer-actions">
       <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleSave">保存衣物</button>
-      <button wx:if="{{itemId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="25" /><text>删除衣物</text></button>
+      <button wx:if="{{itemId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting || selectingImage}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="24" /><text>删除衣物</text></button>
     </view>
 </view>
 
