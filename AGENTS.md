@@ -2,7 +2,7 @@
 
 ## UI Component Rules
 
-- All business dialogs, confirmations, and modal forms must use the global `app-dialog` component. Do not create page-local fixed masks, modal panels, or duplicate dialog CSS.
+- All business dialogs, confirmations, and modal forms must use the global `app-dialog` component. Simple platform-level account session confirmations, such as login or logout, and native system permission prompts may use the corresponding WeChat native API. Do not create page-local fixed masks, modal panels, or duplicate dialog CSS.
 - Dialog content and action spacing must be defined by `app-dialog`, with custom body and custom action content sharing the component's horizontal alignment. Do not compensate with page-specific dialog padding.
 - Image selection that requires cropping must use the shared `image-cropper` component. Do not implement page-local crop overlays or canvases; `image-cropper` owns the common `app-dialog` presentation and crop workflow.
 - Reuse existing shared modal components before adding new dialog behavior. Native image preview and system pickers are exempt because they are platform controls rather than business dialogs.

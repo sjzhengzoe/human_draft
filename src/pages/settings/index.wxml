@@ -54,37 +54,37 @@
       </view>
       <view
         wx:if="{{!loggedIn}}"
-        class="profile-auth-button"
+        class="profile-login-button"
         role="button"
         aria-label="登录"
-        hover-class="profile-auth-button--hover"
+        hover-class="profile-login-button--hover"
         hover-stay-time="80"
         bindtap="handleLoginTap"
-      ><app-icon name="log-in" size="30" /></view>
-      <view
-        wx:else
-        class="profile-auth-button"
-        role="button"
-        aria-label="退出登录"
-        hover-class="profile-auth-button--hover"
-        hover-stay-time="80"
-        bindtap="handleLogoutTap"
-      ><app-icon name="log-out" size="30" /></view>
+      ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
     </view>
 
     <view wx:if="{{loggedIn}}" class="settings-section">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
-        <view class="settings-item">
-          <view class="settings-item__label-group"><app-icon name="user-round-muted" size="27" /><text class="settings-item__label">账号 ID</text></view>
-          <view
-            class="settings-item__copy"
-            role="button"
-            aria-label="复制账号 ID"
-            hover-class="settings-item__copy--hover"
-            hover-stay-time="80"
-            bindtap="handleCopyOpenIdTap"
-          ><app-icon name="copy" size="27" /></view>
+        <view
+          class="settings-item"
+          role="button"
+          aria-label="复制账号 ID"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
+          bindtap="handleCopyOpenIdTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="copy" size="27" /><text class="settings-item__label">复制账号 ID</text></view>
+        </view>
+        <view
+          class="settings-item"
+          role="button"
+          aria-label="退出登录"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
+          bindtap="handleLogoutTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="log-out" size="27" /><text class="settings-item__label">退出登录</text></view>
         </view>
       </view>
     </view>

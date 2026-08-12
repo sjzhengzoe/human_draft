@@ -15,18 +15,25 @@
   width: 100%;
 }
 
-.profile-auth-button {
+.profile-login-button {
   display: flex;
-  width: 60rpx;
   height: 60rpx;
   box-sizing: border-box;
-  flex: 0 0 60rpx;
+  flex: none;
   align-items: center;
   justify-content: center;
+  gap: 8rpx;
+  padding: 0 24rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: 1;
 }
 
-.profile-auth-button--hover {
-  opacity: 0.72;
+.profile-login-button--hover {
+  background: var(--ui-color-action-primary-pressed);
 }
 
 .profile-card {
@@ -144,20 +151,6 @@
 .settings-item__arrow {
   color: var(--ui-color-text-placeholder);
   line-height: 1;
-}
-
-.settings-item__copy {
-  display: flex;
-  width: 56rpx;
-  height: 56rpx;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  margin-right: -14rpx;
-}
-
-.settings-item__copy--hover {
-  opacity: 0.72;
 }
 
 .module-settings-page {

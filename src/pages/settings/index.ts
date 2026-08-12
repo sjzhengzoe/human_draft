@@ -68,7 +68,7 @@ Component({
         title: "退出登录",
         content: "退出后需要重新点击微信账号登录。",
         confirmText: "退出",
-        confirmColor: UI_COLORS.danger,
+        confirmColor: UI_COLORS.actionPrimary,
         success: async (result) => {
           if (!result.confirm) return
           wx.showLoading({ title: "正在退出" })
