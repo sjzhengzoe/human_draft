@@ -10,12 +10,14 @@ Component({
       {
         pagePath: "/pages/create/index",
         text: "首页",
-        icon: "house"
+        icon: "house",
+        mutedIcon: "house-muted"
       },
       {
         pagePath: "/pages/settings/index",
         text: "我的",
-        icon: "user-round"
+        icon: "user-round",
+        mutedIcon: "user-round-muted"
       }
     ]
   },

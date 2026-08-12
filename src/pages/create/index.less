@@ -22,6 +22,20 @@
   background: var(--ui-page-background);
 }
 
+.home-banner {
+  width: 100%;
+  height: 248rpx;
+  box-sizing: border-box;
+  margin-bottom: 32rpx;
+  overflow: hidden;
+}
+
+.home-banner__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .feature-section {
   position: relative;
   z-index: 1;
@@ -182,6 +196,11 @@
 @media (max-height: 700px) {
   .page {
     padding-top: 20rpx;
+  }
+
+  .home-banner {
+    height: 224rpx;
+    margin-bottom: 26rpx;
   }
 
   .feature-section + .feature-section {

@@ -8,8 +8,10 @@
   height: calc(98rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   padding: 12rpx 72rpx calc(8rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
   border-top: 0;
-  background: #ffffff;
+  border-radius: var(--ui-radius-modal) var(--ui-radius-modal) 0 0;
+  background: var(--ui-color-background-surface);
   font-family: var(--ui-font-family, "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif);
 }
 
@@ -20,25 +22,20 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  color: #888888;
+  color: var(--ui-color-text-muted);
 }
 
 .tabbar__item--active {
-  color: #111111;
+  color: var(--ui-color-text-primary);
 }
 
 .tabbar__icon {
   display: flex;
-  width: 38rpx;
-  height: 36rpx;
+  width: 34rpx;
+  height: 30rpx;
   align-items: center;
   justify-content: center;
-  margin-bottom: 7rpx;
-  opacity: 0.56;
-}
-
-.tabbar__item--active .tabbar__icon {
-  opacity: 1;
+  margin-bottom: 11rpx;
 }
 
 .tabbar__text {
@@ -50,5 +47,5 @@
   position: absolute;
   z-index: 10;
   inset: 0;
-  background: rgba(0, 0, 0, 0.48);
+  background: var(--ui-color-overlay);
 }

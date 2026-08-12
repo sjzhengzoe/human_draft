@@ -4,6 +4,14 @@
   </view>
 
   <view class="page">
+    <view class="home-banner" aria-hidden="{{true}}">
+      <image
+        class="home-banner__image"
+        src="/assets/home-modules/home-banner-sleeping-cat-sofa-v2.webp"
+        mode="aspectFill"
+      />
+    </view>
+
     <view
       wx:for="{{featureGroups}}"
       wx:key="key"

@@ -22,7 +22,7 @@ test("business UI consumes the centralized color tokens", async () => {
     "/src/styles/colors.less",
     "/src/styles/colors.ts"
   ])
-  const checkedExtensions = new Set([".less", ".ts", ".wxml"])
+  const checkedExtensions = new Set([".less", ".ts", ".wxml", ".wxss"])
   const violations = []
 
   for (const file of files) {
@@ -32,7 +32,7 @@ test("business UI consumes the centralized color tokens", async () => {
     const source = await readFile(file, "utf8")
     const literals = source.match(colorLiteralPattern)
     if (literals?.length) violations.push(`${relativePath}: ${literals.join(", ")}`)
-    if (extension === ".less" && source.includes("var(--color-")) {
+    if ((extension === ".less" || extension === ".wxss") && source.includes("var(--color-")) {
       violations.push(`${relativePath}: business styles must use semantic variables`)
     }
   }
