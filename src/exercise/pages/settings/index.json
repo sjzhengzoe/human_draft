@@ -1,3 +1,7 @@
 {
-  "navigationBarTitleText": "运动设置"
+  "navigationBarTitleText": "运动设置",
+  "usingComponents": {
+    "app-dialog": "/components/app-dialog/index",
+    "app-input": "/components/app-input/index"
+  }
 }

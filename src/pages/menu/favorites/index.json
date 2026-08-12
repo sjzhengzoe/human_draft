@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "常吃清单"
+  "navigationBarTitleText": "常吃清单",
+  "usingComponents": {
+    "operation-loading": "/components/operation-loading/index"
+  }
 }

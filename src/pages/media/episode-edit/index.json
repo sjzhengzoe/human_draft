@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "单集记录"
+  "navigationBarTitleText": "单集记录",
+  "usingComponents": {
+    "app-input": "/components/app-input/index"
+  }
 }

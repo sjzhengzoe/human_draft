@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "衣物分类"
+  "navigationBarTitleText": "衣物分类",
+  "usingComponents": {
+    "app-input": "/components/app-input/index"
+  }
 }

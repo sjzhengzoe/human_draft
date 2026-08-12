@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "影视片单",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "app-input": "/components/app-input/index"
+  }
 }

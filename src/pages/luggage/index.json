@@ -2,6 +2,9 @@
   "navigationBarTitleText": "行李清单",
   "disableScroll": true,
   "usingComponents": {
-    "luggage-scene-dialog": "/components/luggage-scene-dialog/index"
+    "app-dialog": "/components/app-dialog/index",
+    "app-input": "/components/app-input/index",
+    "luggage-scene-dialog": "/components/luggage-scene-dialog/index",
+    "operation-loading": "/components/operation-loading/index"
   }
 }

@@ -95,10 +95,7 @@
   },
   "usingComponents": {
     "app-icon": "/components/app-icon/index",
-    "app-input": "/components/app-input/index",
-    "app-dialog": "/components/app-dialog/index",
-    "custom-navigation": "/components/custom-navigation/index",
-    "operation-loading": "/components/operation-loading/index"
+    "custom-navigation": "/components/custom-navigation/index"
   },
   "tabBar": {
     "custom": true,

@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "用餐场景",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "operation-loading": "/components/operation-loading/index"
+  }
 }

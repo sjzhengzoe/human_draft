@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "衣物",
   "usingComponents": {
+    "app-input": "/components/app-input/index",
     "image-cropper": "/components/image-cropper/index"
   }
 }

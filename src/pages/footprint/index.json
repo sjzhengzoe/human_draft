@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "全国足迹",
-  "disableScroll": false
+  "disableScroll": false,
+  "usingComponents": {
+    "operation-loading": "/components/operation-loading/index"
+  }
 }

@@ -1,5 +1,9 @@
 {
   "navigationBarTitleText": "运动养宠",
   "enablePullDownRefresh": false,
-  "backgroundTextStyle": "dark"
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "app-dialog": "/components/app-dialog/index",
+    "app-input": "/components/app-input/index"
+  }
 }
