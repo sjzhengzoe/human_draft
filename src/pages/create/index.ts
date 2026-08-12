@@ -4,6 +4,7 @@ import {
   getHomeModulePath,
   getVisibleHomeFeatureGroups
 } from "../../utils/home-modules"
+import { updateAppTabBarState } from "../../utils/tab-bar"
 
 type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
@@ -24,7 +25,7 @@ function getTimeGreeting(date = new Date()) {
 
 function setCreateTabBarMasked(page: CreatePageInstance, masked: boolean) {
   const tabBar = page.getTabBar && page.getTabBar()
-  if (tabBar) tabBar.setData({ masked })
+  updateAppTabBarState(tabBar, { masked })
 }
 
 function getItemKeySignature(items: Array<{ key?: string }>) {
@@ -60,13 +61,11 @@ Component({
       page.navigationLocked = false
       const tabBar = page.getTabBar && page.getTabBar()
 
-      if (tabBar) {
-        tabBar.setData({
-          selected: 0,
-          hidden: false,
-          masked: false
-        })
-      }
+      updateAppTabBarState(tabBar, {
+        selected: 0,
+        hidden: false,
+        masked: false
+      })
 
       const nextFeatureGroups = getVisibleHomeFeatureGroups()
       const nextGreetingText = getTimeGreeting()
@@ -153,7 +152,15 @@ Component({
       const query = getHomeModulePath(moduleKey)
         ? `?module=${encodeURIComponent(moduleKey)}`
         : ""
-      wx.navigateTo({ url: `/pages/login/index${query}` })
+      if (page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: `/pages/login/index${query}`,
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
+      })
     }
   }
 })

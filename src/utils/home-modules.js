@@ -116,6 +116,9 @@ const HOME_FEATURE_GROUPS = [
   }
 ]
 
+let visibleHomeFeatureGroupsCache = null
+let visibleHomeFeatureGroupsSignature = ""
+
 function getAllModuleKeys() {
   return HOME_FEATURE_GROUPS.flatMap((group) => group.items.map((item) => item.key))
 }
@@ -155,7 +158,18 @@ function saveHiddenModuleKeys(hiddenKeys) {
 
 function getVisibleHomeFeatureGroups() {
   const hiddenKeys = getHiddenModuleKeys()
-  return HOME_FEATURE_GROUPS
+  const signature = getAllModuleKeys()
+    .filter((key) => hiddenKeys.has(key))
+    .join("|")
+  if (
+    visibleHomeFeatureGroupsCache &&
+    signature === visibleHomeFeatureGroupsSignature
+  ) {
+    return visibleHomeFeatureGroupsCache
+  }
+
+  visibleHomeFeatureGroupsSignature = signature
+  visibleHomeFeatureGroupsCache = HOME_FEATURE_GROUPS
     .map((group) => ({
       ...group,
       items: group.items
@@ -163,6 +177,7 @@ function getVisibleHomeFeatureGroups() {
         .map((item) => ({ ...item }))
     }))
     .filter((group) => group.items.length > 0)
+  return visibleHomeFeatureGroupsCache
 }
 
 function getHomeModuleSettingGroups() {

@@ -1,76 +1,122 @@
 import { getCurrentUser, logout } from "../../services/auth"
 import { UI_COLORS } from "../../styles/colors"
+import { updateAppTabBarState } from "../../utils/tab-bar"
 
 type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
+  navigationLocked?: boolean
+  logoutPending?: boolean
+  failedAvatarSignature?: string
+}
+
+function getSettingsAccountState(failedAvatarSignature = "") {
+  const user = getCurrentUser()
+  if (!user) {
+    return {
+      loggedIn: false,
+      displayName: "未登录",
+      avatarUrl: "",
+      avatarInitial: "E",
+      isAdmin: false
+    }
+  }
+
+  const avatarSignature = `${user.id}|${user.avatar_url}`
+  return {
+    loggedIn: true,
+    displayName: user.display_name,
+    avatarUrl: avatarSignature === failedAvatarSignature ? "" : user.avatar_url,
+    avatarInitial: user.display_name.trim().slice(0, 1) || "E",
+    isAdmin: user.is_admin
+  }
 }
 
 Component({
   data: {
-    ready: false,
-    loggedIn: false,
-    displayName: "",
-    avatarUrl: "",
-    avatarInitial: "E",
-    isAdmin: false,
+    ...getSettingsAccountState(),
     themeColors: UI_COLORS
   },
   pageLifetimes: {
     show() {
       const page = this as SettingsPageInstance
+      page.navigationLocked = false
       const tabBar = page.getTabBar && page.getTabBar()
-      if (tabBar) tabBar.setData({ selected: 1, hidden: false })
+      updateAppTabBarState(tabBar, { selected: 1, hidden: false })
 
-      const user = getCurrentUser()
-      if (!user) {
-        this.setData({
-          ready: true,
-          loggedIn: false,
-          displayName: "游客",
-          avatarUrl: "",
-          avatarInitial: "E",
-          isAdmin: false
-        })
-        return
-      }
-
-      this.setData({
-        ready: true,
-        loggedIn: true,
-        displayName: user.display_name,
-        avatarUrl: user.avatar_url,
-        avatarInitial: user.display_name.trim().slice(0, 1) || "E",
-        isAdmin: user.is_admin
-      })
+      const nextAccountState = getSettingsAccountState(page.failedAvatarSignature)
+      const accountChanged =
+        nextAccountState.loggedIn !== this.data.loggedIn ||
+        nextAccountState.displayName !== this.data.displayName ||
+        nextAccountState.avatarUrl !== this.data.avatarUrl ||
+        nextAccountState.avatarInitial !== this.data.avatarInitial ||
+        nextAccountState.isAdmin !== this.data.isAdmin
+      if (accountChanged) this.setData(nextAccountState)
     }
   },
   methods: {
+    handleAvatarError() {
+      const user = getCurrentUser()
+      if (!user || !this.data.avatarUrl) return
+      const page = this as SettingsPageInstance
+      page.failedAvatarSignature = `${user.id}|${this.data.avatarUrl}`
+      this.setData({ avatarUrl: "" })
+    },
     handleLoginTap() {
-      wx.navigateTo({ url: "/pages/login/index" })
+      const page = this as SettingsPageInstance
+      if (page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: "/pages/login/index",
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
+      })
     },
     handleLogoutTap() {
+      const page = this as SettingsPageInstance
+      if (page.logoutPending) return
+      page.logoutPending = true
       wx.showModal({
         title: "退出登录",
         content: "退出后需要重新点击微信账号登录。",
         confirmText: "退出",
         confirmColor: UI_COLORS.actionPrimary,
         success: async (result) => {
-          if (!result.confirm) return
+          if (!result.confirm) {
+            page.logoutPending = false
+            return
+          }
           wx.showLoading({ title: "正在退出" })
           try {
             await logout()
           } finally {
             wx.hideLoading()
-            this.setData({ ready: false })
-            wx.switchTab({ url: "/pages/create/index" })
+            wx.switchTab({
+              url: "/pages/create/index",
+              fail: () => wx.showToast({ title: "暂时无法返回首页", icon: "none" }),
+              complete: () => {
+                page.logoutPending = false
+              }
+            })
           }
+        },
+        fail: () => {
+          page.logoutPending = false
+          wx.showToast({ title: "暂时无法退出，请重试", icon: "none" })
         }
       })
     },
     handleModuleSettingsTap() {
+      const page = this as SettingsPageInstance
+      if (page.navigationLocked) return
+      page.navigationLocked = true
       wx.navigateTo({
         url: "/pages/settings/home-modules/index",
-        fail: () => wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
       })
     }
   }

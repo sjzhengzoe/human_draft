@@ -46,14 +46,42 @@ test("home navigation ignores repeated taps and only refreshes changed state", a
   assert.match(homePage, /if \(Object\.keys\(updates\)\.length > 0\) this\.setData\(updates\)/)
 })
 
-test("signed-out home cards keep their artwork visible behind a compact lock", async () => {
-  const styles = await readFile(
-    new URL("src/pages/create/index.less", projectRoot),
+test("login dialog navigation unlocks and reports a navigation failure", async () => {
+  const homePage = await readFile(
+    new URL("src/pages/create/index.ts", projectRoot),
     "utf8"
   )
-  const overlayBlock = styles.match(/\.feature-item__login-overlay\s*\{([\s\S]*?)\}/)?.[1] || ""
+  const confirmHandler = homePage.match(
+    /handleLoginDialogConfirm\(\) \{([\s\S]*?)\n    \}\n  \}/
+  )?.[1] || ""
 
-  assert.match(overlayBlock, /top: 12rpx/)
-  assert.match(overlayBlock, /right: 12rpx/)
-  assert.doesNotMatch(overlayBlock, /inset: 0|background:/)
+  assert.match(confirmHandler, /if \(page\.navigationLocked\) return/)
+  assert.match(confirmHandler, /page\.navigationLocked = true/)
+  assert.match(confirmHandler, /fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/)
+  assert.match(confirmHandler, /wx\.showToast\(\{ title: "暂时无法打开，请重试", icon: "none" \}\)/)
+})
+
+test("visible home module groups are reused while module visibility is unchanged", async () => {
+  const homeModules = await readFile(
+    new URL("src/utils/home-modules.js", projectRoot),
+    "utf8"
+  )
+
+  assert.match(homeModules, /let visibleHomeFeatureGroupsCache = null/)
+  assert.match(homeModules, /signature === visibleHomeFeatureGroupsSignature/)
+  assert.match(homeModules, /return visibleHomeFeatureGroupsCache/)
+  assert.match(homeModules, /visibleHomeFeatureGroupsCache = HOME_FEATURE_GROUPS/)
+})
+
+test("signed-out home cards defer login guidance until a protected module is tapped", async () => {
+  const [markup, styles, logic] = await Promise.all([
+    readFile(new URL("src/pages/create/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/create/index.less", projectRoot), "utf8"),
+    readFile(new URL("src/pages/create/index.ts", projectRoot), "utf8")
+  ])
+
+  assert.doesNotMatch(markup, /feature-item__login-overlay|lock-keyhole/)
+  assert.doesNotMatch(styles, /feature-item__login-(?:overlay|lock)/)
+  assert.match(logic, /if \(needsLogin && !getCurrentUser\(\)\)/)
+  assert.match(logic, /loginDialogVisible: true/)
 })
