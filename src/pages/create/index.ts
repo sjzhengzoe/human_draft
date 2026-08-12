@@ -2,9 +2,7 @@ import { getCurrentUser } from "../../services/auth"
 import { hideGlobalLoading } from "../../services/loading"
 import {
   getHomeModulePath,
-  getRecentHomeFeatureItems,
-  getVisibleHomeFeatureGroups,
-  recordHomeModuleUsed
+  getVisibleHomeFeatureGroups
 } from "../../utils/home-modules"
 
 type CreatePageInstance = WechatMiniprogram.Component.TrivialInstance & {
@@ -44,7 +42,6 @@ function getGroupKeySignature(
 Component({
   data: {
     featureGroups: getVisibleHomeFeatureGroups(),
-    recentItems: getRecentHomeFeatureItems(),
     greetingText: getTimeGreeting(),
     loggedIn: Boolean(getCurrentUser()),
     loginDialogVisible: false,
@@ -72,7 +69,6 @@ Component({
       }
 
       const nextFeatureGroups = getVisibleHomeFeatureGroups()
-      const nextRecentItems = getRecentHomeFeatureItems()
       const nextGreetingText = getTimeGreeting()
       const nextLoggedIn = Boolean(getCurrentUser())
       const updates: WechatMiniprogram.IAnyObject = {}
@@ -82,12 +78,6 @@ Component({
         getGroupKeySignature(this.data.featureGroups)
       ) {
         updates.featureGroups = nextFeatureGroups
-      }
-      if (
-        getItemKeySignature(nextRecentItems) !==
-        getItemKeySignature(this.data.recentItems)
-      ) {
-        updates.recentItems = nextRecentItems
       }
       if (nextGreetingText !== this.data.greetingText) {
         updates.greetingText = nextGreetingText
@@ -142,7 +132,6 @@ Component({
 
       wx.navigateTo({
         url: nextPath,
-        success: () => recordHomeModuleUsed(String(key)),
         fail: () => {
           page.navigationLocked = false
           wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })

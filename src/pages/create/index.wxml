@@ -14,34 +14,6 @@
       <view class="home-banner__greeting">{{greetingText}}</view>
     </view>
 
-    <view wx:if="{{recentItems.length > 0}}" class="recent-section">
-      <view class="feature-section__title">最近使用</view>
-      <view class="recent-list {{recentItems.length == 1 ? 'recent-list--single' : ''}}">
-        <view
-          wx:for="{{recentItems}}"
-          wx:key="key"
-          class="recent-item"
-          hover-class="recent-item--hover"
-          hover-start-time="20"
-          hover-stay-time="80"
-          role="button"
-          aria-label="{{item.title}}{{!loggedIn && item.requiresLogin ? '，需要登录' : ''}}"
-          data-key="{{item.key}}"
-          data-title="{{item.title}}"
-          data-path="{{item.path}}"
-          data-available="{{item.available}}"
-          data-requires-login="{{item.requiresLogin}}"
-          bindtap="handleFeatureTap"
-        >
-          <view class="recent-item__mark"><app-icon name="{{item.icon}}" size="27" inverse="{{true}}" /></view>
-          <view class="recent-item__title">{{item.title}}</view>
-          <view wx:if="{{!loggedIn && item.requiresLogin}}" class="recent-item__lock" aria-hidden="{{true}}">
-            <app-icon name="lock-keyhole" size="24" />
-          </view>
-        </view>
-      </view>
-    </view>
-
     <view
       wx:for="{{featureGroups}}"
       wx:key="key"

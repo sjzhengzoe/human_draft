@@ -15,8 +15,23 @@ test("locked home modules resume their validated destination after login", async
   assert.match(homePage, /module=\$\{encodeURIComponent\(moduleKey\)\}/)
   assert.match(loginPage, /getHomeModulePath\(moduleKey\)/)
   assert.match(loginPage, /wx\.redirectTo\(\{[\s\S]*?url: targetPath/)
-  assert.match(loginPage, /recordHomeModuleUsed\(homeModuleKey\)/)
   assert.match(homeModules, /function getHomeModulePath\(key\)/)
+})
+
+test("home page does not render or record recently used modules", async () => {
+  const [homePage, homeMarkup, homeStyles, homeModules] = await Promise.all([
+    readFile(new URL("src/pages/create/index.ts", projectRoot), "utf8"),
+    readFile(new URL("src/pages/create/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/create/index.less", projectRoot), "utf8"),
+    readFile(new URL("src/utils/home-modules.js", projectRoot), "utf8")
+  ])
+
+  for (const source of [homePage, homeMarkup, homeStyles, homeModules]) {
+    assert.doesNotMatch(
+      source,
+      /recentItems|recent-section|recordHomeModuleUsed|RECENT_HOME_MODULE_KEYS/
+    )
+  }
 })
 
 test("home navigation ignores repeated taps and only refreshes changed state", async () => {

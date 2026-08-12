@@ -1,7 +1,7 @@
 import { getCurrentUser, loginExistingUser } from "../../services/auth"
 import { hideGlobalLoading, showGlobalLoading } from "../../services/loading"
 import type { AppUser } from "../../types/api"
-import { getHomeModulePath, recordHomeModuleUsed } from "../../utils/home-modules"
+import { getHomeModulePath } from "../../utils/home-modules"
 
 function enterApp(user: AppUser, homeModuleKey = ""): Promise<void> {
   getApp<IAppOption>().globalData.currentUser = user
@@ -13,7 +13,6 @@ function enterApp(user: AppUser, homeModuleKey = ""): Promise<void> {
       wx.redirectTo({
         url: targetPath,
         success: () => {
-          recordHomeModuleUsed(homeModuleKey)
           hideGlobalLoading()
           resolve()
         },
