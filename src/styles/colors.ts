@@ -4,6 +4,7 @@ export const UI_COLORS = {
   textPrimary: "#111111",
   textMuted: "#777772",
   actionPrimary: "#111111",
+  shadow: "rgba(0, 0, 0, 0.08)",
   danger: "#c9342f",
   overlaySoft: "rgba(0, 0, 0, 0.18)"
 } as const

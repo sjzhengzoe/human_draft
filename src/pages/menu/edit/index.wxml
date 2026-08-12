@@ -197,7 +197,7 @@
 <app-dialog
   visible="{{showDeleteDialog}}"
   title="删除菜品"
-  content="删除后图片也会从云端移除，无法恢复。"
+  content="菜品将从菜单库删除；本周菜单中已有的记录会保留当时的名称和图片。"
   confirmText="删除"
   bind:cancel="handleDeleteCancel"
   bind:confirm="handleDeleteConfirm"

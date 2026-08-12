@@ -209,11 +209,11 @@ export async function replaceMenuScheduleMeal(input: {
   mealDate: string
   mealPeriod: MealPeriod
   slotCount: number
-  items: Array<{
-    source_kind: MenuScheduleSourceKind
-    dish_id?: string
-    place_id?: string
-  }>
+  items: Array<
+    | { source_kind: "dish"; dish_id: string }
+    | { source_kind: "place"; place_id: string }
+    | { archived_item_id: string }
+  >
 }): Promise<MenuScheduleMeal> {
   const data = await request<{ meal: MenuScheduleMeal }>({
     path: "/api/menu-schedule/meal",

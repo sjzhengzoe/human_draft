@@ -94,6 +94,7 @@ type SelectionItem = {
   name: string
   place_name: string
   image_url: string
+  archived_item_id: string | null
 }
 
 type SelectableFavorite = MenuFavorite & {
@@ -296,7 +297,8 @@ function selectionFromDish(dish: Dish | MenuPlaceDishPreview, placeId: string | 
     place_id: resolvedPlaceId,
     name: dish.name,
     place_name: "",
-    image_url: dish.thumbnail_url || dish.image_url || ""
+    image_url: dish.thumbnail_url || dish.image_url || "",
+    archived_item_id: null
   }
 }
 
@@ -309,20 +311,24 @@ function selectionFromPlace(place: QuickMenuPlace): SelectionItem {
     place_id: place.id,
     name: place.name,
     place_name: place.name,
-    image_url: place.thumbnail_url || place.image_url || ""
+    image_url: place.thumbnail_url || place.image_url || "",
+    archived_item_id: null
   }
 }
 
 function selectionFromScheduleItem(item: MenuScheduleItem): SelectionItem {
   return {
-    key: selectionKey(item.source_kind, item.source_kind === "dish" ? item.dish_id : item.place_id),
+    key: item.archived
+      ? `archived:${item.id}`
+      : selectionKey(item.source_kind, item.source_kind === "dish" ? item.dish_id : item.place_id),
     source_kind: item.source_kind,
     record_type: item.record_type,
     dish_id: item.dish_id,
     place_id: item.place_id,
     name: item.name,
     place_name: item.place_name,
-    image_url: item.image_url
+    image_url: item.image_url,
+    archived_item_id: item.archived ? item.id : null
   }
 }
 
@@ -335,7 +341,8 @@ function selectionFromFavorite(item: MenuFavorite): SelectionItem {
     place_id: item.place_id,
     name: item.name,
     place_name: item.source_kind === "place" ? item.name : "",
-    image_url: item.image_url
+    image_url: item.image_url,
+    archived_item_id: null
   }
 }
 
@@ -741,18 +748,41 @@ Page({
   async handleSelectionSave() {
     if (this.data.savingSelection) return
     this.setData({ savingSelection: true })
-    const items = this.data.selectedItems.map((item) => item.source_kind === "dish"
-      ? { source_kind: "dish" as const, dish_id: item.dish_id || undefined }
-      : { source_kind: "place" as const, place_id: item.place_id || undefined })
     try {
       if (this.data.selectionPurpose === "favorites") {
-        await replaceMenuFavorites(items)
+        const favoriteItems: Array<{
+          source_kind: MenuScheduleSourceKind
+          dish_id?: string
+          place_id?: string
+        }> = []
+        this.data.selectedItems.forEach((item) => {
+          if (item.source_kind === "dish" && item.dish_id) {
+            favoriteItems.push({ source_kind: "dish", dish_id: item.dish_id })
+          } else if (item.source_kind === "place" && item.place_id) {
+            favoriteItems.push({ source_kind: "place", place_id: item.place_id })
+          }
+        })
+        await replaceMenuFavorites(favoriteItems)
       } else {
+        const scheduleItems: Array<
+          | { source_kind: "dish"; dish_id: string }
+          | { source_kind: "place"; place_id: string }
+          | { archived_item_id: string }
+        > = []
+        this.data.selectedItems.forEach((item) => {
+          if (item.archived_item_id) {
+            scheduleItems.push({ archived_item_id: item.archived_item_id })
+          } else if (item.source_kind === "dish" && item.dish_id) {
+            scheduleItems.push({ source_kind: "dish", dish_id: item.dish_id })
+          } else if (item.source_kind === "place" && item.place_id) {
+            scheduleItems.push({ source_kind: "place", place_id: item.place_id })
+          }
+        })
         await replaceMenuScheduleMeal({
           mealDate: this.data.selectionDate,
           mealPeriod: this.data.selectionPeriod,
-          slotCount: Math.max(1, this.data.selectionSlotCount, items.length),
-          items
+          slotCount: Math.max(1, this.data.selectionSlotCount, scheduleItems.length),
+          items: scheduleItems
         })
       }
       if (!isAsyncPageActive(this)) return

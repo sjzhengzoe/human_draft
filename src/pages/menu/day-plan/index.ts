@@ -72,6 +72,7 @@ type YearMonth = {
 type ScheduleInputItem =
   | { source_kind: "dish"; dish_id: string }
   | { source_kind: "place"; place_id: string }
+  | { archived_item_id: string }
 
 const DEFAULT_SLOT_COUNT = 3
 const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
@@ -266,14 +267,17 @@ function temporaryScheduleItem(dish: Dish, position: number): MenuScheduleItem {
     place_name: "",
     image_url: dish.thumbnail_url || dish.image_url,
     place_image_url: "",
-    position
+    position,
+    archived: false
   }
 }
 
 function scheduleInputsFromSlots(slots: PlanSlot[]): ScheduleInputItem[] {
   const items: ScheduleInputItem[] = []
   slots.forEach((slot) => {
-    if (slot.item?.source_kind === "dish" && slot.item.dish_id) {
+    if (slot.item?.archived) {
+      items.push({ archived_item_id: slot.item.id })
+    } else if (slot.item?.source_kind === "dish" && slot.item.dish_id) {
       items.push({ source_kind: "dish", dish_id: slot.item.dish_id })
     } else if (slot.item?.source_kind === "place" && slot.item.place_id) {
       items.push({ source_kind: "place", place_id: slot.item.place_id })

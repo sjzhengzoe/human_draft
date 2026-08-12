@@ -16,9 +16,9 @@
   min-height: 0;
   box-sizing: border-box;
   flex: 1;
-  padding: 28rpx var(--ui-page-gutter) calc(112rpx + env(safe-area-inset-bottom));
+  padding: 22rpx var(--ui-page-gutter) calc(102rpx + env(safe-area-inset-bottom));
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   background: var(--ui-page-background);
 }
 
@@ -26,7 +26,8 @@
   width: 100%;
   height: 248rpx;
   box-sizing: border-box;
-  margin-bottom: 32rpx;
+  margin-bottom: 24rpx;
+  border-radius: 24rpx;
   overflow: hidden;
 }
 
@@ -42,11 +43,11 @@
 }
 
 .feature-section + .feature-section {
-  margin-top: 38rpx;
+  margin-top: 30rpx;
 }
 
 .feature-section__title {
-  margin: 0 8rpx 16rpx;
+  margin: 0 8rpx 12rpx;
   color: var(--ui-color-text-secondary);
   font-size: var(--ui-font-size-large);
   font-weight: 600;
@@ -57,14 +58,14 @@
 .feature-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 18rpx;
+  gap: 14rpx;
 }
 
 .feature-item {
   position: relative;
   display: flex;
-  width: calc((100% - 18rpx) / 2);
-  min-height: 128rpx;
+  width: calc((100% - 14rpx) / 2);
+  min-height: 124rpx;
   box-sizing: border-box;
   align-items: center;
   gap: 16rpx;
@@ -77,7 +78,7 @@
 }
 
 .feature-item--illustrated {
-  min-height: 156rpx;
+  min-height: 148rpx;
   gap: 0;
   padding: 0;
 }
@@ -153,7 +154,7 @@
   align-items: flex-start;
   justify-content: center;
   width: 60%;
-  padding: 20rpx 0 20rpx 22rpx;
+  padding: 16rpx 0 16rpx 20rpx;
 }
 
 .feature-item__title {
@@ -181,10 +182,10 @@
 .feature-item__decoration {
   position: absolute;
   z-index: 1;
-  left: 18rpx;
-  bottom: 8rpx;
-  width: 84rpx;
-  height: 30rpx;
+  left: 16rpx;
+  bottom: 6rpx;
+  width: 76rpx;
+  height: 26rpx;
   transform: rotate(-2deg);
 }
 
@@ -195,36 +196,48 @@
 // 较矮屏幕收紧纵向尺寸，默认模块无需滚动也能完整展示。
 @media (max-height: 700px) {
   .page {
-    padding-top: 20rpx;
+    padding-top: 16rpx;
+    padding-bottom: calc(88rpx + env(safe-area-inset-bottom));
   }
 
   .home-banner {
-    height: 224rpx;
-    margin-bottom: 26rpx;
+    height: 188rpx;
+    margin-bottom: 16rpx;
   }
 
   .feature-section + .feature-section {
-    margin-top: 28rpx;
+    margin-top: 14rpx;
+  }
+
+  .feature-section__title {
+    margin-bottom: 6rpx;
   }
 
   .feature-list {
-    gap: 14rpx;
+    gap: 8rpx;
   }
 
   .feature-item {
-    width: calc((100% - 14rpx) / 2);
-    min-height: 110rpx;
-    padding: 18rpx;
+    width: calc((100% - 8rpx) / 2);
+    min-height: 108rpx;
+    padding: 16rpx;
   }
 
   .feature-item--illustrated {
-    min-height: 144rpx;
+    min-height: 116rpx;
   }
 
   .feature-item--illustrated .feature-item__content {
-    padding-top: 16rpx;
-    padding-bottom: 16rpx;
-    padding-left: 18rpx;
+    padding-top: 12rpx;
+    padding-bottom: 12rpx;
+    padding-left: 16rpx;
+  }
+
+  .feature-item__decoration {
+    left: 14rpx;
+    bottom: 4rpx;
+    width: 66rpx;
+    height: 22rpx;
   }
 
   .feature-item__mark {

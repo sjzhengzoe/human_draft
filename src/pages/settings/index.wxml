@@ -52,24 +52,39 @@
         <view class="profile-name">{{displayName}}</view>
         <view wx:if="{{loggedIn}}" class="profile-role">{{isAdmin ? '管理员' : '普通用户'}}</view>
       </view>
-      <view wx:if="{{!loggedIn}}" class="profile-login-button" role="button" bindtap="handleLoginTap">登录</view>
-      <view wx:else class="profile-login-button profile-login-button--logout" role="button" bindtap="handleLogoutTap">退出</view>
+      <view
+        wx:if="{{!loggedIn}}"
+        class="profile-auth-button"
+        role="button"
+        aria-label="登录"
+        hover-class="profile-auth-button--hover"
+        hover-stay-time="80"
+        bindtap="handleLoginTap"
+      ><app-icon name="log-in" size="36" /></view>
+      <view
+        wx:else
+        class="profile-auth-button"
+        role="button"
+        aria-label="退出登录"
+        hover-class="profile-auth-button--hover"
+        hover-stay-time="80"
+        bindtap="handleLogoutTap"
+      ><app-icon name="log-out" size="36" /></view>
     </view>
 
     <view wx:if="{{loggedIn}}" class="settings-section">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
-        <view
-          class="settings-item"
-          hover-class="settings-item--hover"
-          hover-stay-time="80"
-          bindtap="handleCopyOpenIdTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="copy" size="25" /><text class="settings-item__label">我的 OpenID</text></view>
-          <view class="settings-item__right">
-            <text class="settings-item__value">{{openidLabel}}</text>
-            <view class="settings-item__arrow"><app-icon name="chevron-right" size="26" /></view>
-          </view>
+        <view class="settings-item">
+          <view class="settings-item__label-group"><app-icon name="user-round" size="25" /><text class="settings-item__label">账号 ID</text></view>
+          <view
+            class="settings-item__copy"
+            role="button"
+            aria-label="复制账号 ID"
+            hover-class="settings-item__copy--hover"
+            hover-stay-time="80"
+            bindtap="handleCopyOpenIdTap"
+          ><app-icon name="copy" size="27" /></view>
         </view>
       </view>
     </view>

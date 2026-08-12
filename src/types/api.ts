@@ -119,6 +119,7 @@ export type MenuScheduleItem = {
   image_url: string
   place_image_url: string
   position: number
+  archived: boolean
 }
 
 export type MenuScheduleMeal = {

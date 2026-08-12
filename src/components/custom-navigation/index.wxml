@@ -1,6 +1,6 @@
 <view
   class="custom-navigation"
-  style="height: {{totalNavigationHeight}}px; background: {{background}};"
+  style="height: {{totalNavigationHeight}}px;"
 >
   <view
     class="custom-navigation__bar"

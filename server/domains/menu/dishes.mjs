@@ -19,6 +19,7 @@ import {
   normalizeTaste,
 } from "./dish-fields.mjs";
 import {
+  copyDishImageToScheduleArchive,
   dishImagePublicUrl,
   removeDishImages,
   uploadDishImage,
@@ -450,12 +451,59 @@ export async function replaceDishImage(supabase, userId, dishId, image) {
 
 export async function deleteDish(supabase, userId, dishId) {
   const dish = await getDish(supabase, userId, dishId);
-  const { error } = await supabase
-    .from("dishes")
-    .delete()
-    .eq("id", dishId)
-    .eq("user_id", userId);
-  throwSupabaseError(error, "删除菜品失败。" );
+  const { data: scheduleReferences, error: referenceError } = await supabase
+    .from("menu_schedule_items")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source_kind", "dish")
+    .eq("dish_id", dishId)
+    .limit(1);
+  throwSupabaseError(referenceError, "检查菜单引用失败。" );
+
+  let place = null;
+  if (scheduleReferences?.length && dish.place_id) {
+    const { data, error } = await supabase
+      .from("menu_places")
+      .select("id, image_path, thumbnail_path")
+      .eq("id", dish.place_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    throwSupabaseError(error, "读取菜品地点失败。" );
+    place = data;
+  }
+
+  const archivedPaths = [];
+  try {
+    const archiveImagePath = scheduleReferences?.length
+      ? await copyDishImageToScheduleArchive(
+        supabase,
+        userId,
+        dish.id,
+        dish.thumbnail_path || dish.image_path,
+      )
+      : "";
+    if (archiveImagePath) archivedPaths.push(archiveImagePath);
+    const archivePlaceImagePath = scheduleReferences?.length && place
+      ? await copyDishImageToScheduleArchive(
+        supabase,
+        userId,
+        place.id,
+        place.thumbnail_path || place.image_path,
+      )
+      : "";
+    if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);
+
+    const { error } = await supabase.rpc("archive_and_delete_menu_dish", {
+      p_user_id: userId,
+      p_dish_id: dishId,
+      p_archive_image_path: archiveImagePath,
+      p_archive_place_image_path: archivePlaceImagePath,
+    });
+    throwSupabaseError(error, "删除菜品失败。" );
+  } catch (error) {
+    await removeDishImages(supabase, archivedPaths);
+    throw error;
+  }
   await removeDishImages(supabase, [dish.image_path, dish.thumbnail_path]);
 }
 

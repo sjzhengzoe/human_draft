@@ -44,6 +44,21 @@ export async function uploadDishImage(supabase, userId, dishId, buffer) {
   return { imagePath, thumbnailPath: null };
 }
 
+export async function copyDishImageToScheduleArchive(supabase, userId, sourceId, path) {
+  if (!path) return "";
+  const extension = path.match(/(\.[a-z0-9]+)$/i)?.[1] || ".webp";
+  const archivePath = `users/${userId}/menu-schedule-archives/${sourceId}/${randomUUID()}${extension}`;
+  const { error } = await supabase.storage
+    .from(config.dishBucket)
+    .copy(path, archivePath);
+  if (error) {
+    const wrapped = new HttpError(500, "MENU_ARCHIVE_IMAGE_FAILED", "保存菜单历史图片失败。" );
+    wrapped.cause = error;
+    throw wrapped;
+  }
+  return archivePath;
+}
+
 export async function removeDishImages(supabase, paths) {
   const validPaths = paths.filter(Boolean);
   if (validPaths.length === 0) return;

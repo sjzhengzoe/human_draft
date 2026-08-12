@@ -38,19 +38,57 @@ function normalizeRange(query, maxDays = 370) {
   return { start, end };
 }
 
-function toScheduleItem(supabase, item) {
+function toScheduleItem(supabase, item, dishesById, placesById) {
+  const liveDish = item.source_kind === "dish" && item.dish_id
+    ? dishesById.get(item.dish_id)
+    : null;
+  const livePlaceId = item.source_kind === "dish" ? liveDish?.place_id : item.place_id;
+  const livePlace = livePlaceId ? placesById.get(livePlaceId) : null;
+  const liveSource = item.source_kind === "dish" ? liveDish : livePlace;
+  const recordType = liveDish?.record_type || livePlace?.place_type || item.record_type;
+  const name = liveDish?.name || livePlace?.name || item.snapshot_name;
+  const placeName = recordType === "outside"
+    ? livePlace?.name || item.snapshot_place_name || ""
+    : "";
+  const imagePath = liveDish
+    ? liveDish.thumbnail_path || liveDish.image_path || ""
+    : livePlace
+      ? livePlace.thumbnail_path || livePlace.image_path || ""
+      : item.snapshot_image_path;
+  const placeImagePath = recordType === "outside"
+    ? livePlace?.thumbnail_path || livePlace?.image_path || item.snapshot_place_image_path
+    : "";
   return {
     id: item.id,
     source_kind: item.source_kind,
-    record_type: item.record_type,
-    dish_id: item.dish_id || null,
-    place_id: item.place_id || null,
-    name: item.snapshot_name,
-    place_name: item.snapshot_place_name || "",
-    image_url: dishImagePublicUrl(supabase, item.snapshot_image_path),
-    place_image_url: dishImagePublicUrl(supabase, item.snapshot_place_image_path),
+    record_type: recordType,
+    dish_id: liveDish?.id || null,
+    place_id: livePlace?.id || null,
+    name,
+    place_name: placeName,
+    image_url: dishImagePublicUrl(supabase, imagePath),
+    place_image_url: dishImagePublicUrl(supabase, placeImagePath),
     position: Number(item.position || 0),
+    archived: !liveSource,
   };
+}
+
+async function selectSourcesByIds(supabase, table, userId, ids, columns, errorMessage) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return [];
+  const chunks = [];
+  for (let index = 0; index < uniqueIds.length; index += 200) {
+    chunks.push(uniqueIds.slice(index, index + 200));
+  }
+  const results = await Promise.all(chunks.map((chunk) =>
+    supabase
+      .from(table)
+      .select(columns)
+      .eq("user_id", userId)
+      .in("id", chunk)
+  ));
+  for (const result of results) throwSupabaseError(result.error, errorMessage);
+  return results.flatMap((result) => result.data || []);
 }
 
 export async function listMenuSchedule(supabase, userId, query = {}) {
@@ -75,10 +113,32 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
     .order("position", { ascending: true });
   throwSupabaseError(itemError, "读取菜单内容失败。" );
 
+  const liveDishes = await selectSourcesByIds(
+    supabase,
+    "dishes",
+    userId,
+    (items || []).map((item) => item.dish_id),
+    "id, name, record_type, place_id, image_path, thumbnail_path",
+    "读取菜单菜品失败。",
+  );
+  const livePlaces = await selectSourcesByIds(
+    supabase,
+    "menu_places",
+    userId,
+    [
+      ...(items || []).map((item) => item.place_id),
+      ...liveDishes.map((dish) => dish.place_id),
+    ],
+    "id, name, place_type, image_path, thumbnail_path",
+    "读取菜单地点失败。",
+  );
+  const dishesById = new Map(liveDishes.map((dish) => [dish.id, dish]));
+  const placesById = new Map(livePlaces.map((place) => [place.id, place]));
+
   const itemsByMeal = new Map();
   for (const item of items || []) {
     const values = itemsByMeal.get(item.meal_id) || [];
-    values.push(toScheduleItem(supabase, item));
+    values.push(toScheduleItem(supabase, item, dishesById, placesById));
     itemsByMeal.set(item.meal_id, values);
   }
   return {
@@ -100,6 +160,19 @@ function normalizeScheduleItems(items, slotCount) {
   assertCondition(Array.isArray(items) && items.length <= slotCount, 400, "INVALID_MEAL_ITEMS", "所选菜品数量超过当前档位。" );
   const seen = new Set();
   return items.map((item) => {
+    if (item?.archived_item_id !== undefined) {
+      const archivedItemId = item.archived_item_id;
+      assertCondition(
+        typeof archivedItemId === "string" && UUID_PATTERN.test(archivedItemId),
+        400,
+        "INVALID_ARCHIVED_ITEM",
+        "归档菜单项无效。",
+      );
+      const key = `archived:${archivedItemId}`;
+      assertCondition(!seen.has(key), 400, "DUPLICATE_MENU_ITEM", "同一个菜单项不能重复选择。" );
+      seen.add(key);
+      return { archived_item_id: archivedItemId };
+    }
     const sourceKind = item?.source_kind;
     assertCondition(SOURCE_KINDS.has(sourceKind), 400, "INVALID_SOURCE_KIND", "菜单选项类型无效。" );
     const id = sourceKind === "dish" ? item.dish_id : item.place_id;

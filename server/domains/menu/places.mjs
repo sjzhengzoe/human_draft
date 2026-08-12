@@ -1,12 +1,15 @@
 import { assertCondition } from "../../lib/errors.mjs";
 import {
   createDish,
-  deleteDish,
   replaceDishImage,
   toDishResponse,
   updateDish,
 } from "./dishes.mjs";
-import { dishImagePublicUrl } from "./dish-images.mjs";
+import {
+  copyDishImageToScheduleArchive,
+  dishImagePublicUrl,
+  removeDishImages,
+} from "./dish-images.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import { UUID_PATTERN } from "../shared/records.mjs";
 
@@ -219,16 +222,77 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
   assertCondition(place.place_type === "outside", 400, "HOME_PLACE_READ_ONLY", "默认家庭地点不能删除。" );
   const { data: dishes, error } = await supabase
     .from("dishes")
-    .select("id")
+    .select("id, image_path, thumbnail_path")
     .eq("user_id", userId)
     .eq("place_id", placeId);
   throwSupabaseError(error, "读取店铺菜品失败。" );
-  for (const dish of dishes || []) await deleteDish(supabase, userId, dish.id);
-  if (place.source_dish_id) await deleteDish(supabase, userId, place.source_dish_id);
-  const { error: placeError } = await supabase
-    .from("menu_places")
-    .delete()
-    .eq("id", placeId)
-    .eq("user_id", userId);
-  throwSupabaseError(placeError, "删除店铺失败。" );
+
+  const sourceDishIds = [
+    ...(dishes || []).map((dish) => dish.id),
+    place.source_dish_id,
+  ].filter(Boolean);
+  const dishReferenceResult = sourceDishIds.length
+    ? await supabase
+      .from("menu_schedule_items")
+      .select("dish_id")
+      .eq("user_id", userId)
+      .eq("source_kind", "dish")
+      .in("dish_id", sourceDishIds)
+    : { data: [], error: null };
+  throwSupabaseError(dishReferenceResult.error, "检查店铺菜品引用失败。" );
+  const { data: placeReferences, error: placeReferenceError } = await supabase
+    .from("menu_schedule_items")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source_kind", "place")
+    .eq("place_id", placeId)
+    .limit(1);
+  throwSupabaseError(placeReferenceError, "检查店铺引用失败。" );
+
+  const referencedDishIds = new Set(
+    (dishReferenceResult.data || []).map((item) => item.dish_id),
+  );
+  const hasScheduleReferences = referencedDishIds.size > 0 || placeReferences?.length;
+  const archivedPaths = [];
+  try {
+    const archivePlaceImagePath = hasScheduleReferences
+      ? await copyDishImageToScheduleArchive(
+        supabase,
+        userId,
+        place.id,
+        place.thumbnail_path || place.image_path,
+      )
+      : "";
+    if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);
+
+    const dishArchives = [];
+    for (const dish of dishes || []) {
+      if (!referencedDishIds.has(dish.id)) continue;
+      const archiveImagePath = await copyDishImageToScheduleArchive(
+        supabase,
+        userId,
+        dish.id,
+        dish.thumbnail_path || dish.image_path,
+      );
+      if (archiveImagePath) archivedPaths.push(archiveImagePath);
+      dishArchives.push({ dish_id: dish.id, archive_image_path: archiveImagePath });
+    }
+
+    const { error: deleteError } = await supabase.rpc("archive_and_delete_menu_place", {
+      p_user_id: userId,
+      p_place_id: placeId,
+      p_dish_archives: dishArchives,
+      p_place_archive_image_path: archivePlaceImagePath,
+    });
+    throwSupabaseError(deleteError, "删除店铺失败。" );
+  } catch (deleteError) {
+    await removeDishImages(supabase, archivedPaths);
+    throw deleteError;
+  }
+
+  await removeDishImages(supabase, [
+    place.image_path,
+    place.thumbnail_path,
+    ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+  ]);
 }

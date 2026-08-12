@@ -1,4 +1,8 @@
-<view wx:if="{{!hidden}}" class="tabbar">
+<view
+  wx:if="{{!hidden}}"
+  class="tabbar"
+  style="background: {{surfaceColor}}; box-shadow: 0 -10rpx 32rpx {{shadowColor}};"
+>
   <view
     wx:for="{{tabs}}"
     wx:key="pagePath"

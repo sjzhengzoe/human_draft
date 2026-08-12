@@ -15,8 +15,19 @@
   width: 100%;
 }
 
-.profile-login-button { display: flex; width: 96rpx; height: 52rpx; box-sizing: border-box; flex: 0 0 96rpx; align-items: center; justify-content: center; padding: 0; border-radius: 26rpx; background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); font-size: var(--ui-font-size-base); font-weight: 600; line-height: normal; }
-.profile-login-button--logout { border: 1rpx solid var(--ui-border); background: var(--ui-surface); color: var(--ui-color-text-muted); }
+.profile-auth-button {
+  display: flex;
+  width: 60rpx;
+  height: 60rpx;
+  box-sizing: border-box;
+  flex: 0 0 60rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-auth-button--hover {
+  opacity: 0.72;
+}
 
 .profile-card {
   display: flex;
@@ -130,19 +141,22 @@
   margin-left: 24rpx;
 }
 
-.settings-item__value {
-  max-width: 380rpx;
-  overflow: hidden;
-  color: var(--ui-color-text-muted);
-  font-size: var(--ui-font-size-base);
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .settings-item__arrow {
   color: var(--ui-color-text-placeholder);
   line-height: 1;
+}
+
+.settings-item__copy {
+  display: flex;
+  width: 60rpx;
+  height: 60rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-item__copy--hover {
+  opacity: 0.72;
 }
 
 .module-settings-page {

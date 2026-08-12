@@ -15,11 +15,6 @@ function setTabBarHidden(instance: WechatMiniprogram.Component.TrivialInstance, 
   if (tabBar) tabBar.setData({ hidden })
 }
 
-function shortOpenId(openid: string): string {
-  if (openid.length <= 14) return openid
-  return `${openid.slice(0, 7)}…${openid.slice(-5)}`
-}
-
 Component({
   data: {
     ready: false,
@@ -31,7 +26,6 @@ Component({
     avatarInitial: "E",
     isAdmin: false,
     openid: "",
-    openidLabel: "",
     themeColors: UI_COLORS
   },
   pageLifetimes: {
@@ -49,8 +43,7 @@ Component({
           avatarUrl: "",
           avatarInitial: "E",
           isAdmin: false,
-          openid: "",
-          openidLabel: ""
+          openid: ""
         })
         return
       }
@@ -62,8 +55,7 @@ Component({
         avatarUrl: user.avatar_url,
         avatarInitial: user.display_name.trim().slice(0, 1) || "E",
         isAdmin: user.is_admin,
-        openid: user.openid,
-        openidLabel: shortOpenId(user.openid)
+        openid: user.openid
       })
     }
   },
@@ -94,7 +86,7 @@ Component({
       if (!this.data.openid) return
       wx.setClipboardData({
         data: this.data.openid,
-        success: () => wx.showToast({ title: "OpenID 已复制", icon: "success" })
+        success: () => wx.showToast({ title: "账号 ID 已复制", icon: "success" })
       })
     },
     handleModuleSettingsTap() {

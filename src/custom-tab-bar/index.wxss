@@ -10,7 +10,7 @@
   padding: 12rpx 72rpx calc(8rpx + env(safe-area-inset-bottom));
   overflow: hidden;
   border-top: 0;
-  border-radius: var(--ui-radius-modal) var(--ui-radius-modal) 0 0;
+  border-radius: var(--ui-radius-modal, 32rpx) var(--ui-radius-modal, 32rpx) 0 0;
   background: var(--ui-color-background-surface);
   font-family: var(--ui-font-family, "HumanDraftUI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif);
 }

@@ -81,6 +81,7 @@ test("runtime UI constants stay aligned with the CSS palette", async () => {
     ["--color-neutral-50", "pageBackground"],
     ["--color-neutral-950", "textPrimary"],
     ["--color-neutral-500", "textMuted"],
+    ["--ui-color-shadow", "shadow"],
     ["--ui-color-danger", "danger"],
     ["--ui-color-overlay-soft", "overlaySoft"]
   ]

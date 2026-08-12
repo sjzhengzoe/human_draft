@@ -1,4 +1,5 @@
 import { UI_FONT_SIZES } from "../styles/typography"
+import { UI_COLORS } from "../styles/colors"
 
 Component({
   data: {
@@ -6,6 +7,8 @@ Component({
     hidden: false,
     masked: false,
     fontSize: UI_FONT_SIZES.base,
+    surfaceColor: UI_COLORS.surface,
+    shadowColor: UI_COLORS.shadow,
     tabs: [
       {
         pagePath: "/pages/create/index",

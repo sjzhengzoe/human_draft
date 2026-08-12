@@ -23,6 +23,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const rpcCalls = [];
   const orderCalls = [];
   const storageUploads = [];
+  const storageCopies = [];
   const storageRemovals = [];
 
   class Query {
@@ -142,6 +143,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
     rpcCalls,
     orderCalls,
     storageUploads,
+    storageCopies,
     storageRemovals,
     storage: {
       from(bucket) {
@@ -153,6 +155,10 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
           async remove(paths) {
             storageRemovals.push({ bucket, paths });
             return { data: paths, error: null };
+          },
+          async copy(sourcePath, destinationPath) {
+            storageCopies.push({ bucket, sourcePath, destinationPath });
+            return { data: { path: destinationPath }, error: null };
           },
           getPublicUrl(path) {
             return { data: { publicUrl: `https://example.test/${bucket}/${path || ""}` } };
@@ -721,6 +727,14 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
           { id: "41000000-0000-4000-8000-000000000003", user_id: USER_ID, meal_id: firstMealId, source_kind: "place", record_type: "outside", dish_id: null, place_id: storeId, snapshot_name: "街角面馆", snapshot_place_name: "街角面馆", snapshot_image_path: "store.webp", position: 2 },
           { id: "41000000-0000-4000-8000-000000000004", user_id: USER_ID, meal_id: secondMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
         ],
+        dishes: [
+          { id: homeDishId, user_id: USER_ID, name: "番茄炒蛋（新版）", record_type: "home", place_id: DINING_ID, image_path: "home-current.webp", thumbnail_path: null },
+          { id: outsideDishId, user_id: USER_ID, name: "红烧牛肉面", record_type: "outside", place_id: storeId, image_path: "noodle-current.webp", thumbnail_path: null },
+        ],
+        menu_places: [
+          { id: DINING_ID, user_id: USER_ID, name: "家里", place_type: "home", image_path: "", thumbnail_path: null },
+          { id: storeId, user_id: USER_ID, name: "街角新面馆", place_type: "outside", image_path: "store-current.webp", thumbnail_path: null },
+        ],
       }),
     }),
   });
@@ -734,6 +748,10 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
   assert.equal(scheduleResponse.statusCode, 200);
   assert.equal(scheduleResponse.json().data.meals.length, 2);
   assert.equal(scheduleResponse.json().data.meals[0].items.length, 3);
+  assert.equal(scheduleResponse.json().data.meals[0].items[0].name, "番茄炒蛋（新版）");
+  assert.equal(scheduleResponse.json().data.meals[0].items[0].image_url, "https://example.test/dish-images/home-current.webp");
+  assert.equal(scheduleResponse.json().data.meals[0].items[0].archived, false);
+  assert.equal(scheduleResponse.json().data.meals[0].items[1].place_name, "街角新面馆");
 
   const rankingResponse = await app.inject({
     method: "GET",
@@ -744,8 +762,8 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
   assert.deepEqual(
     rankingResponse.json().data.items.map((item) => ({ name: item.name, type: item.type, count: item.count })),
     [
-      { name: "番茄炒鸡蛋", type: "dish", count: 2 },
-      { name: "街角面馆", type: "place", count: 1 },
+      { name: "番茄炒蛋（新版）", type: "dish", count: 2 },
+      { name: "街角新面馆", type: "place", count: 1 },
     ],
   );
 });
