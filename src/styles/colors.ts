@@ -1,9 +1,9 @@
 export const UI_COLORS = {
-  surface: "#ffffff",
-  pageBackground: "#f5f5f5",
+  surface: "#fbfcf8",
+  pageBackground: "#f6f7f1",
   textPrimary: "#111111",
   textMuted: "#777772",
-  actionPrimary: "#111111",
+  actionPrimary: "#000000",
   shadow: "rgba(0, 0, 0, 0.08)",
   danger: "#c9342f",
   overlaySoft: "rgba(0, 0, 0, 0.18)"
@@ -28,7 +28,7 @@ export const MENU_PRINT_COLORS = {
   ink: "#302720",
   mutedInk: "rgba(48, 39, 32, 0.46)",
   border: "rgba(48, 39, 32, 0.18)",
-  paper: UI_COLORS.surface
+  paper: "#ffffff"
 } as const
 
 export const TEXT_CARD_RENDER_COLORS = {

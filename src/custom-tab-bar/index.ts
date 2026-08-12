@@ -7,8 +7,7 @@ Component({
     hidden: false,
     masked: false,
     fontSize: UI_FONT_SIZES.base,
-    surfaceColor: UI_COLORS.surface,
-    shadowColor: UI_COLORS.shadow,
+    themeColors: UI_COLORS,
     tabs: [
       {
         pagePath: "/pages/create/index",

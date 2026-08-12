@@ -1,7 +1,7 @@
 <view wx:if="{{showModuleSettings}}" class="module-settings-page">
   <custom-navigation
     title="首页模块显示设置"
-    background="{{themeColors.surface}}"
+    background="{{themeColors.pageBackground}}"
     custom-back="{{true}}"
     bind:back="handleModuleSettingsBack"
   />
@@ -34,7 +34,7 @@
 </view>
 
 <block wx:else>
-  <custom-navigation title="我的" show-back="{{false}}" background="{{themeColors.surface}}" />
+  <custom-navigation title="我的" show-back="{{false}}" background="{{themeColors.pageBackground}}" />
 
   <view class="page">
     <view class="settings-content">

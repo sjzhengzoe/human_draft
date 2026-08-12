@@ -1,12 +1,13 @@
 <view
   wx:if="{{!hidden}}"
   class="tabbar"
-  style="background: {{surfaceColor}}; box-shadow: 0 -10rpx 32rpx {{shadowColor}};"
+  style="background: {{themeColors.surface}}; box-shadow: 0 -10rpx 32rpx {{themeColors.shadow}};"
 >
   <view
     wx:for="{{tabs}}"
     wx:key="pagePath"
     class="tabbar__item {{selected == index ? 'tabbar__item--active' : ''}}"
+    style="color: {{selected == index ? themeColors.actionPrimary : themeColors.textMuted}};"
     data-index="{{index}}"
     bindtap="handleSwitch"
   >

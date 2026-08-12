@@ -77,10 +77,11 @@ test("runtime UI constants stay aligned with the CSS palette", async () => {
       .map((match) => [match[1], match[2]])
   )
   const sharedTokens = [
-    ["--color-white", "surface"],
+    ["--color-neutral-25", "surface"],
     ["--color-neutral-50", "pageBackground"],
     ["--color-neutral-950", "textPrimary"],
     ["--color-neutral-500", "textMuted"],
+    ["--color-black", "actionPrimary"],
     ["--ui-color-shadow", "shadow"],
     ["--ui-color-danger", "danger"],
     ["--ui-color-overlay-soft", "overlaySoft"]
@@ -89,7 +90,17 @@ test("runtime UI constants stay aligned with the CSS palette", async () => {
   for (const [cssToken, runtimeKey] of sharedTokens) {
     assert.equal(runtimeValues.get(runtimeKey), cssValues.get(cssToken), `${runtimeKey} must match ${cssToken}`)
   }
-  assert.equal(runtimeValues.get("actionPrimary"), runtimeValues.get("textPrimary"))
+
+  assert.deepEqual(
+    Object.fromEntries(
+      ["pageBackground", "surface", "actionPrimary"].map((key) => [key, runtimeValues.get(key)])
+    ),
+    {
+      pageBackground: "#f6f7f1",
+      surface: "#fbfcf8",
+      actionPrimary: "#000000"
+    }
+  )
 })
 
 test("mini program JSON colors stay within the documented configuration exceptions", async () => {

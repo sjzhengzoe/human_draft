@@ -41,7 +41,7 @@ Component({
     },
     background: {
       type: String,
-      value: UI_COLORS.surface
+      value: UI_COLORS.pageBackground
     },
     showBack: {
       type: Boolean,

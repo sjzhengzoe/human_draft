@@ -9,6 +9,9 @@ const allowedFontSizes = new Set([
   "var(--ui-font-size-base)",
   "var(--ui-font-size-large)"
 ])
+const specialFontSizesByFile = new Map([
+  ["src/pages/create/index.less", new Set(["var(--ui-font-size-home-greeting)"])]
+])
 
 async function listFiles(directoryUrl) {
   const entries = await readdir(directoryUrl, { withFileTypes: true })
@@ -28,11 +31,13 @@ test("all UI styles use only the shared small, base, and large font variables", 
 
   for (const file of files) {
     const source = await readFile(file, "utf8")
+    const filePath = projectPath(file)
+    const specialFontSizes = specialFontSizesByFile.get(filePath) || new Set()
     const declarations = [...source.matchAll(/font-size\s*:\s*([^;}\n]+)/g)]
     for (const declaration of declarations) {
       assert.ok(
-        allowedFontSizes.has(declaration[1].trim()),
-        `${projectPath(file)} contains an unshared font size: ${declaration[1].trim()}`
+        allowedFontSizes.has(declaration[1].trim()) || specialFontSizes.has(declaration[1].trim()),
+        `${filePath} contains an unshared font size: ${declaration[1].trim()}`
       )
     }
 
@@ -44,6 +49,19 @@ test("all UI styles use only the shared small, base, and large font variables", 
       )
     }
   }
+})
+
+test("home greeting uses the dedicated 40rpx display size", async () => {
+  const [appStyles, homeStyles] = await Promise.all([
+    readFile(new URL("../../src/app.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/create/index.less", import.meta.url), "utf8")
+  ])
+
+  assert.match(appStyles, /--ui-font-size-home-greeting:\s*40rpx/)
+  assert.match(
+    homeStyles,
+    /\.home-banner__greeting\s*\{[^}]*font-size:\s*var\(--ui-font-size-home-greeting\)/s
+  )
 })
 
 test("ordinary tabs, filters, and mutually exclusive options use the base size", async () => {

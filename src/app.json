@@ -87,10 +87,10 @@
     "navigationBarTitleText": "Earth",
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f5f5f5",
-    "backgroundColorTop": "#f5f5f5",
-    "backgroundColorBottom": "#f5f5f5",
+    "navigationBarBackgroundColor": "#f6f7f1",
+    "backgroundColor": "#f6f7f1",
+    "backgroundColorTop": "#f6f7f1",
+    "backgroundColorBottom": "#f6f7f1",
     "backgroundTextStyle": "dark"
   },
   "usingComponents": {
@@ -103,8 +103,8 @@
   "tabBar": {
     "custom": true,
     "color": "#777772",
-    "selectedColor": "#111111",
-    "backgroundColor": "#ffffff",
+    "selectedColor": "#000000",
+    "backgroundColor": "#fbfcf8",
     "borderStyle": "black",
     "list": [
       {
