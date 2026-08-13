@@ -1,13 +1,12 @@
 import {
   createDish,
   deleteDish,
-  getDish,
+  getDishResponse,
   listCategories,
   listDishes,
   reorderDishes,
   replaceDishImage,
   swapDishSortOrders,
-  toDishResponse,
   updateDish,
   updatePrintStatus
 } from "../domains/menu/dishes.mjs"
@@ -181,9 +180,10 @@ export function registerMenuRoutes(app, context) {
     return {
       ok: true,
       data: {
-        dish: toDishResponse(
+        dish: await getDishResponse(
           supabase,
-          await getDish(supabase, request.auth.user.id, request.params.id)
+          request.auth.user.id,
+          request.params.id
         )
       }
     }

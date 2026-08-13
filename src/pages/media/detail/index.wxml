@@ -228,9 +228,9 @@
         </view>
         <view wx:if="{{canWrite}}" class="active-season-bar__actions">
           <view
-            class="records-icon-button {{coverUrl === activeSeason.cover_url && activeSeason.cover_url ? 'records-icon-button--active' : ''}}"
+            class="records-icon-button {{activeSeasonIsEntryCover ? 'records-icon-button--active' : ''}}"
             role="button"
-            aria-label="{{coverUrl === activeSeason.cover_url && activeSeason.cover_url ? '当前已是作品封面' : '设为作品封面'}}"
+            aria-label="{{activeSeasonIsEntryCover ? '当前已是作品封面' : '设为作品封面'}}"
             bindtap="handleSetSeasonCover"
           ><app-icon name="image-plus" size="24" /></view>
           <view

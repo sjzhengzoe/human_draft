@@ -1,11 +1,55 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 const migrationUrl = new URL(
   "../../supabase/migrations/202607280002_all_modules_user_isolation.sql",
   import.meta.url,
 );
+
+const userOwnedTables = new Set([
+  "activity_items",
+  "categories",
+  "dining_places",
+  "dining_scenes",
+  "dishes",
+  "exercise_completion_events",
+  "exercise_daily_goal_changes",
+  "exercise_daily_rest_days",
+  "exercise_profiles",
+  "exercise_rest_credit_events",
+  "key_moments",
+  "luggage_groups",
+  "luggage_items",
+  "luggage_scenes",
+  "media_categories",
+  "media_entries",
+  "media_episodes",
+  "media_seasons",
+  "menu_favorites",
+  "menu_places",
+  "menu_schedule_items",
+  "menu_schedule_meals",
+  "user_chat_topics",
+  "user_footprint_cities",
+  "user_hidden_official_chat_topics",
+  "wardrobe_categories",
+  "wardrobe_items",
+]);
+
+async function readSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return readSourceFiles(path);
+    if (!entry.isFile() || !entry.name.endsWith(".mjs")) return [];
+    return [{ path, source: await readFile(path, "utf8") }];
+  }));
+  return files.flat();
+}
 
 test("all personal modules are migrated to user-owned rows", async () => {
   const migration = await readFile(migrationUrl, "utf8");
@@ -42,4 +86,85 @@ test("all personal modules are migrated to user-owned rows", async () => {
   assert.match(migration, /create or replace function public\.reorder_dishes\(p_user_id uuid/i);
   assert.match(migration, /create or replace function public\.move_luggage_item\(\s*p_user_id uuid/i);
   assert.match(migration, /create or replace function public\.search_favorite_media_episodes\(\s*p_user_id uuid/i);
+});
+
+test("every business API route requires an authenticated session", async () => {
+  const routeFiles = await readSourceFiles(join(projectRoot, "server/routes"));
+  const publicRoutes = new Set([
+    "GET /api/health",
+    "POST /api/auth/wechat",
+  ]);
+  let routeCount = 0;
+
+  for (const { path, source } of routeFiles) {
+    const compactSource = source.replace(/\s+/g, " ");
+    const routePattern = /app\.(get|post|put|patch|delete)\(\s*["']([^"']+)["']/gi;
+    for (const match of compactSource.matchAll(routePattern)) {
+      routeCount += 1;
+      const route = `${match[1].toUpperCase()} ${match[2]}`;
+      if (publicRoutes.has(route)) continue;
+      const declaration = compactSource.slice(match.index, match.index + 360);
+      assert.match(
+        declaration,
+        /\{\s*preHandler:\s*(?:authenticated|adminAuthenticated|profileCompletionAuthenticated)\s*\}/,
+        `${route} in ${path} must require authentication`,
+      );
+    }
+  }
+
+  assert.ok(routeCount >= 80, "the route audit should cover the complete business API");
+});
+
+test("service-role table access always carries authenticated user ownership", async () => {
+  const domainFiles = await readSourceFiles(join(projectRoot, "server/domains"));
+  let checkedQueries = 0;
+
+  for (const { path, source } of domainFiles) {
+    const queryPattern = /\.from\(\s*["']([^"']+)["']\s*\)/g;
+    for (const match of source.matchAll(queryPattern)) {
+      if (!userOwnedTables.has(match[1])) continue;
+      checkedQueries += 1;
+      const statementStart = Math.max(
+        source.lastIndexOf(";", match.index) + 1,
+        source.lastIndexOf("\n\n", match.index) + 2,
+      );
+      const statementEnd = source.indexOf(";", match.index);
+      const statement = source.slice(
+        statementStart,
+        statementEnd === -1 ? match.index + 800 : statementEnd + 1,
+      );
+      assert.match(
+        statement,
+        /(?:\.eq\(\s*["']user_id["']\s*,\s*userId\s*\)|user_id\s*:\s*userId)/,
+        `${match[1]} access in ${path} must be scoped to userId`,
+      );
+    }
+  }
+
+  assert.ok(checkedQueries >= 100, "the ownership audit should cover all personal queries");
+});
+
+test("all personal RPC calls receive the authenticated user id", async () => {
+  const domainFiles = await readSourceFiles(join(projectRoot, "server/domains"));
+  let checkedCalls = 0;
+
+  for (const { path, source } of domainFiles) {
+    const rpcPattern = /\.rpc\(\s*["']([^"']+)["']/g;
+    for (const match of source.matchAll(rpcPattern)) {
+      checkedCalls += 1;
+      const call = source.slice(match.index, match.index + 1200);
+      assert.match(
+        call,
+        /p_user_id\s*:\s*(?:userId|user\.id)/,
+        `${match[1]} in ${path} must receive the authenticated user id`,
+      );
+    }
+  }
+
+  const dishSource = await readFile(
+    join(projectRoot, "server/domains/menu/dishes.mjs"),
+    "utf8",
+  );
+  assert.match(dishSource, /const rpcPayload\s*=\s*place[\s\S]*?p_user_id:\s*userId/);
+  assert.ok(checkedCalls >= 30, "the RPC audit should cover all personal database functions");
 });

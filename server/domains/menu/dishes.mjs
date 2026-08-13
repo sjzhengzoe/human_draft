@@ -20,12 +20,13 @@ import {
 } from "./dish-fields.mjs";
 import {
   copyDishImageToScheduleArchive,
-  dishImagePublicUrl,
+  createDishImageUrlMap,
+  dishImageUrl,
   removeDishImages,
   uploadDishImage,
 } from "./dish-images.mjs";
 
-export function toDishResponse(supabase, dish) {
+export function toDishResponse(dish, imageUrls = new Map()) {
   return {
     id: dish.id,
     name: dish.name,
@@ -44,8 +45,8 @@ export function toDishResponse(supabase, dish) {
     place_sort_order: dish.place_sort_order ?? dish.sort_order ?? 0,
     image_path: dish.image_path,
     thumbnail_path: dish.thumbnail_path,
-    image_url: dishImagePublicUrl(supabase, dish.image_path),
-    thumbnail_url: dishImagePublicUrl(supabase, dish.thumbnail_path || dish.image_path),
+    image_url: dishImageUrl(imageUrls, dish.image_path),
+    thumbnail_url: dishImageUrl(imageUrls, dish.thumbnail_path || dish.image_path),
     meal_periods: Array.isArray(dish.meal_periods)
       ? dish.meal_periods
       : [...DEFAULT_MEAL_PERIODS],
@@ -54,6 +55,14 @@ export function toDishResponse(supabase, dish) {
     created_at: dish.created_at,
     updated_at: dish.updated_at,
   };
+}
+
+async function toSignedDishResponse(supabase, dish) {
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    [dish.image_path, dish.thumbnail_path],
+  );
+  return toDishResponse(dish, imageUrls);
 }
 
 async function assertCategoryExists(supabase, userId, categoryId) {
@@ -167,9 +176,13 @@ export async function listDishes(supabase, userId, query) {
   }
   const { data, error, count } = result;
   throwSupabaseError(error, "读取菜品列表失败。" );
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    data.flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+  );
 
   return {
-    items: data.map((dish) => toDishResponse(supabase, dish)),
+    items: data.map((dish) => toDishResponse(dish, imageUrls)),
     pagination: {
       page,
       page_size: pageSize,
@@ -188,6 +201,10 @@ export async function getDish(supabase, userId, dishId) {
   throwSupabaseError(error, "读取菜品失败。" );
   assertCondition(data, 404, "DISH_NOT_FOUND", "菜品不存在。" );
   return data;
+}
+
+export async function getDishResponse(supabase, userId, dishId) {
+  return toSignedDishResponse(supabase, await getDish(supabase, userId, dishId));
 }
 
 export async function createDish(supabase, userId, fields, image) {
@@ -290,7 +307,7 @@ export async function createDish(supabase, userId, fields, image) {
     throwSupabaseError(error, "创建菜品失败。" );
   }
 
-  return toDishResponse(supabase, {
+  return toSignedDishResponse(supabase, {
     ...data,
     categories: category,
     outside_category: outsideCategory,
@@ -365,7 +382,7 @@ export async function updateDish(supabase, userId, dishId, body) {
       .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
       .single();
     throwSupabaseError(error, "更新菜品失败。" );
-    return toDishResponse(supabase, data);
+    return toSignedDishResponse(supabase, data);
   }
   if (recordType === "home") {
     const categoryId = body.category_id === undefined ? existing.category_id : body.category_id;
@@ -425,7 +442,7 @@ export async function updateDish(supabase, userId, dishId, body) {
     .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
     .single();
   throwSupabaseError(error, "更新菜品失败。" );
-  return toDishResponse(supabase, data);
+  return toSignedDishResponse(supabase, data);
 }
 
 export async function replaceDishImage(supabase, userId, dishId, image) {
@@ -446,7 +463,7 @@ export async function replaceDishImage(supabase, userId, dishId, image) {
   }
 
   await removeDishImages(supabase, [dish.image_path, dish.thumbnail_path]);
-  return toDishResponse(supabase, data);
+  return toSignedDishResponse(supabase, data);
 }
 
 export async function deleteDish(supabase, userId, dishId) {

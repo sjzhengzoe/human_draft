@@ -1,6 +1,8 @@
 import { HttpError } from "../../lib/errors.mjs";
 import { optimizeImage, optimizedImagePaths } from "../../lib/image-processing.mjs";
 
+export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
+
 export async function uploadOptimizedImagePair(
   supabase,
   {
@@ -58,20 +60,26 @@ export async function createSignedUrlMap(
   const uniquePaths = [...new Set(paths.filter(Boolean))];
   if (!uniquePaths.length) return new Map();
 
-  const { data, error } = await supabase.storage
-    .from(bucketName)
-    .createSignedUrls(uniquePaths, expiresIn);
-  if (error) {
-    const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
-    wrapped.cause = error;
-    throw wrapped;
+  const chunks = [];
+  for (let index = 0; index < uniquePaths.length; index += 100) {
+    chunks.push(uniquePaths.slice(index, index + 100));
   }
-  return new Map(
-    (data || []).map((item, index) => [
-      item.path || uniquePaths[index],
-      item.signedUrl || "",
-    ]),
-  );
+  const results = await Promise.all(chunks.map((chunk) =>
+    supabase.storage.from(bucketName).createSignedUrls(chunk, expiresIn)
+  ));
+  const urls = new Map();
+  results.forEach(({ data, error }, chunkIndex) => {
+    if (error) {
+      const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
+      wrapped.cause = error;
+      throw wrapped;
+    }
+    (data || []).forEach((item, itemIndex) => {
+      const path = item.path || chunks[chunkIndex][itemIndex];
+      urls.set(path, item.signedUrl || "");
+    });
+  });
+  return urls;
 }
 
 export async function removeStorageImages(

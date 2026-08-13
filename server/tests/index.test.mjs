@@ -25,6 +25,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const storageUploads = [];
   const storageCopies = [];
   const storageRemovals = [];
+  const storageSignedUrlRequests = [];
 
   class Query {
     constructor(table) {
@@ -145,6 +146,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
     storageUploads,
     storageCopies,
     storageRemovals,
+    storageSignedUrlRequests,
     storage: {
       from(bucket) {
         return {
@@ -161,7 +163,30 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
             return { data: { path: destinationPath }, error: null };
           },
           getPublicUrl(path) {
-            return { data: { publicUrl: `https://example.test/${bucket}/${path || ""}` } };
+            return {
+              data: {
+                publicUrl: `https://example.test/storage/v1/object/public/${bucket}/${path || ""}`,
+              },
+            };
+          },
+          async createSignedUrl(path, expiresIn) {
+            storageSignedUrlRequests.push({ bucket, paths: [path], expiresIn });
+            return {
+              data: {
+                signedUrl: `https://example.test/${bucket}/signed/${path}?expires=${expiresIn}`,
+              },
+              error: null,
+            };
+          },
+          async createSignedUrls(paths, expiresIn) {
+            storageSignedUrlRequests.push({ bucket, paths, expiresIn });
+            return {
+              data: paths.map((path) => ({
+                path,
+                signedUrl: `https://example.test/${bucket}/signed/${path}?expires=${expiresIn}`,
+              })),
+              error: null,
+            };
           },
         };
       },
@@ -749,7 +774,10 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
   assert.equal(scheduleResponse.json().data.meals.length, 2);
   assert.equal(scheduleResponse.json().data.meals[0].items.length, 3);
   assert.equal(scheduleResponse.json().data.meals[0].items[0].name, "番茄炒蛋（新版）");
-  assert.equal(scheduleResponse.json().data.meals[0].items[0].image_url, "https://example.test/dish-images/home-current.webp");
+  assert.equal(
+    scheduleResponse.json().data.meals[0].items[0].image_url,
+    "https://example.test/dish-images/signed/home-current.webp?expires=21600",
+  );
   assert.equal(scheduleResponse.json().data.meals[0].items[0].archived, false);
   assert.equal(scheduleResponse.json().data.meals[0].items[1].place_name, "街角新面馆");
 
@@ -794,7 +822,10 @@ test("menu schedule falls back to an archived snapshot after its source is delet
   assert.equal(response.statusCode, 200);
   const item = response.json().data.meals[0].items[0];
   assert.equal(item.name, "已经删除的菜");
-  assert.equal(item.image_url, "https://example.test/dish-images/users/archive/history.webp");
+  assert.equal(
+    item.image_url,
+    "https://example.test/dish-images/signed/users/archive/history.webp?expires=21600",
+  );
   assert.equal(item.dish_id, null);
   assert.equal(item.archived, true);
 });
@@ -1638,6 +1669,11 @@ test("media cover upload stores a WebP image and updates the existing entry", as
     { format: "webp", width: 240, height: 320 },
   );
   assert.equal(response.json().data.item.cover_url.includes(upload.path), true);
+  assert.equal(
+    response.json().data.item.cover_url,
+    `https://example.test/media-covers/signed/${upload.path}?expires=21600`,
+  );
+  assert.equal(response.json().data.item.cover_path, upload.path);
 });
 
 test("activity cards expose introductions and replace optimized 4:3 covers", async (t) => {
@@ -1683,7 +1719,7 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
   assert.equal(listResponse.json().data.items[0].introduction, "沿着湖岸慢慢骑。");
   assert.equal(
     listResponse.json().data.items[0].thumbnail_url,
-    "https://example.test/activity-images/users/old/activity-thumbnail.webp",
+    "https://example.test/activity-images/signed/users/old/activity-thumbnail.webp?expires=21600",
   );
 
   const allTypesResponse = await app.inject({

@@ -7,7 +7,11 @@ import {
   IMAGE_STORAGE_VERSION,
 } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
-import { uploadOptimizedImagePair } from "../shared/image-storage.mjs";
+import {
+  createSignedUrlMap,
+  uploadOptimizedImagePair,
+  USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+} from "../shared/image-storage.mjs";
 import {
   booleanValue,
   enumValue,
@@ -33,19 +37,53 @@ export const MEDIA_PLATFORMS = [
 export const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"];
 export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
 
-function managedMediaCoverPath(url, userId, mediaEntryId) {
+function mediaCoverStoragePath(url) {
   if (typeof url !== "string" || !url.trim()) return "";
   try {
     const pathname = decodeURIComponent(new URL(url).pathname);
-    const marker = `/${config.mediaCoverBucket}/`;
-    const markerIndex = pathname.lastIndexOf(marker);
-    if (markerIndex < 0) return "";
-    const path = pathname.slice(markerIndex + marker.length);
-    const expectedPrefix = `users/${userId}/entries/${mediaEntryId}/`;
-    return path.startsWith(expectedPrefix) ? path : "";
+    const markers = [
+      `/storage/v1/object/public/${config.mediaCoverBucket}/`,
+      `/storage/v1/object/sign/${config.mediaCoverBucket}/`,
+    ];
+    for (const marker of markers) {
+      const markerIndex = pathname.lastIndexOf(marker);
+      if (markerIndex >= 0) return pathname.slice(markerIndex + marker.length);
+    }
+    return "";
   } catch (_error) {
     return "";
   }
+}
+
+function managedMediaCoverPath(url, userId, mediaEntryId) {
+  const path = mediaCoverStoragePath(url);
+  const expectedPrefix = `users/${userId}/entries/${mediaEntryId}/`;
+  return path.startsWith(expectedPrefix) ? path : "";
+}
+
+async function createMediaCoverUrlMap(supabase, records) {
+  const paths = records.map((record) => mediaCoverStoragePath(record?.cover_url));
+  return createSignedUrlMap(supabase, {
+    bucketName: config.mediaCoverBucket,
+    paths,
+    expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+    errorMessage: "读取影视封面失败。",
+  });
+}
+
+function toMediaCoverResponse(record, coverUrls) {
+  if (!record || !("cover_url" in record)) return { ...record };
+  const path = mediaCoverStoragePath(record?.cover_url);
+  return {
+    ...record,
+    cover_path: path,
+    cover_url: path ? coverUrls.get(path) || "" : record?.cover_url || "",
+  };
+}
+
+async function toSignedMediaCoverResponse(supabase, record) {
+  const coverUrls = await createMediaCoverUrlMap(supabase, [record]);
+  return toMediaCoverResponse(record, coverUrls);
 }
 
 async function removeManagedMediaCover(supabase, path) {
@@ -222,8 +260,9 @@ export async function listMediaEntries(supabase, userId, query) {
 
   const { data, error, count } = await request.range(from, to);
   throwSupabaseError(error, "读取影视记录失败。");
+  const coverUrls = await createMediaCoverUrlMap(supabase, data || []);
   return {
-    items: data,
+    items: (data || []).map((entry) => toMediaCoverResponse(entry, coverUrls)),
     pagination: {
       page,
       page_size: pageSize,
@@ -235,7 +274,10 @@ export async function listMediaEntries(supabase, userId, query) {
 
 export async function getMediaEntry(supabase, userId, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
-  return requireRecord(supabase, userId, "media_entries", id);
+  return toSignedMediaCoverResponse(
+    supabase,
+    await requireRecord(supabase, userId, "media_entries", id),
+  );
 }
 
 export async function createMediaEntry(supabase, userId, body) {
@@ -296,7 +338,7 @@ export async function createMediaEntry(supabase, userId, body) {
     throwSupabaseError(result.error, "更新我的评分失败。");
     data = result.data;
   }
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function updateMediaEntry(supabase, userId, id, body) {
@@ -385,7 +427,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
       throwSupabaseError(result.error, "更新我的评分失败。");
       data = result.data;
     }
-    return data;
+    return toSignedMediaCoverResponse(supabase, data);
   }
 
   const { data, error } = await supabase
@@ -396,7 +438,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "更新影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function deleteMediaEntry(supabase, userId, id) {
@@ -445,7 +487,7 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
     supabase,
     managedMediaCoverPath(current.cover_url, userId, id),
   );
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function replaceMediaEntryCover(supabase, userId, id, image) {
@@ -484,7 +526,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     supabase,
     managedMediaCoverPath(current.cover_url, userId, id),
   );
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function reorderMediaEntries(supabase, userId, body) {
@@ -522,8 +564,9 @@ export async function listMediaSeasons(supabase, userId, mediaEntryId) {
     .eq("media_entry_id", mediaEntryId)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取分季和单集失败。");
+  const coverUrls = await createMediaCoverUrlMap(supabase, data || []);
   return (data || []).map((season) => ({
-    ...season,
+    ...toMediaCoverResponse(season, coverUrls),
     episodes: [...(season.media_episodes || [])].sort(
       (left, right) => left.episode_number - right.episode_number,
     ),
@@ -548,7 +591,7 @@ export async function createMediaSeason(supabase, userId, mediaEntryId, body) {
     22023: { statusCode: 400, code: "MEDIA_TYPE_NOT_EPISODIC", message: "该影视分类不支持分季和单集。" },
     P0002: { statusCode: 404, code: "MEDIA_ENTRY_NOT_FOUND", message: "影视条目不存在。" },
   });
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function updateMediaSeason(supabase, userId, id, body) {
@@ -564,7 +607,7 @@ export async function updateMediaSeason(supabase, userId, id, body) {
   throwSupabaseError(error, "更新季失败。", {
     23505: { statusCode: 409, code: "MEDIA_SEASON_EXISTS", message: "这部作品中已存在同名的季。" },
   });
-  return data;
+  return toSignedMediaCoverResponse(supabase, data);
 }
 
 export async function deleteMediaSeason(supabase, userId, id) {

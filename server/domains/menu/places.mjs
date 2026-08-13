@@ -7,14 +7,15 @@ import {
 } from "./dishes.mjs";
 import {
   copyDishImageToScheduleArchive,
-  dishImagePublicUrl,
+  createDishImageUrlMap,
+  dishImageUrl,
   removeDishImages,
 } from "./dish-images.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import { UUID_PATTERN } from "../shared/records.mjs";
 
-function toPreviewDish(supabase, dish) {
-  const normalizedDish = toDishResponse(supabase, dish);
+function toPreviewDish(dish, imageUrls) {
+  const normalizedDish = toDishResponse(dish, imageUrls);
   return {
     id: normalizedDish.id,
     name: normalizedDish.name,
@@ -27,8 +28,8 @@ function toPreviewDish(supabase, dish) {
   };
 }
 
-export function toMenuPlaceResponse(supabase, place, dishes = []) {
-  const menuDishes = dishes.map((dish) => toPreviewDish(supabase, dish));
+export function toMenuPlaceResponse(place, dishes = [], imageUrls = new Map()) {
+  const menuDishes = dishes.map((dish) => toPreviewDish(dish, imageUrls));
   return {
     id: place.id,
     name: place.name,
@@ -37,8 +38,8 @@ export function toMenuPlaceResponse(supabase, place, dishes = []) {
     outside_category: place.outside_category || null,
     image_path: place.image_path || "",
     thumbnail_path: place.thumbnail_path || null,
-    image_url: dishImagePublicUrl(supabase, place.image_path),
-    thumbnail_url: dishImagePublicUrl(supabase, place.thumbnail_path || place.image_path),
+    image_url: dishImageUrl(imageUrls, place.image_path),
+    thumbnail_url: dishImageUrl(imageUrls, place.thumbnail_path || place.image_path),
     sort_order: place.sort_order ?? 0,
     source_dish_id: place.source_dish_id || null,
     dish_count: dishes.length,
@@ -87,7 +88,11 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   throwSupabaseError(error, "读取用餐地点失败。" );
   if (!places?.length) return [];
   if (!includeDishes) {
-    return places.map((place) => toMenuPlaceResponse(supabase, place));
+    const imageUrls = await createDishImageUrlMap(
+      supabase,
+      places.flatMap((place) => [place.image_path, place.thumbnail_path]),
+    );
+    return places.map((place) => toMenuPlaceResponse(place, [], imageUrls));
   }
 
   const placeIds = places.map((place) => place.id);
@@ -99,6 +104,13 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
     .order("place_sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(dishError, "读取地点菜品失败。" );
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    [
+      ...places.flatMap((place) => [place.image_path, place.thumbnail_path]),
+      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+    ],
+  );
 
   const dishesByPlace = new Map();
   for (const dish of dishes || []) {
@@ -107,7 +119,7 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
     dishesByPlace.set(dish.place_id, values);
   }
   return places.map((place) =>
-    toMenuPlaceResponse(supabase, place, dishesByPlace.get(place.id) || [])
+    toMenuPlaceResponse(place, dishesByPlace.get(place.id) || [], imageUrls)
   );
 }
 
@@ -129,7 +141,15 @@ export async function getMenuPlace(supabase, userId, placeId) {
     .order("place_sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(dishError, "读取地点菜品失败。" );
-  return toMenuPlaceResponse(supabase, data, dishes || []);
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    [
+      data.image_path,
+      data.thumbnail_path,
+      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+    ],
+  );
+  return toMenuPlaceResponse(data, dishes || [], imageUrls);
 }
 
 export async function reorderMenuPlaces(supabase, userId, body) {

@@ -1,6 +1,6 @@
 import { assertCondition } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
-import { dishImagePublicUrl } from "./dish-images.mjs";
+import { createDishImageUrlMap, dishImageUrl } from "./dish-images.mjs";
 import { UUID_PATTERN } from "../shared/records.mjs";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -38,7 +38,7 @@ function normalizeRange(query, maxDays = 370) {
   return { start, end };
 }
 
-function toScheduleItem(supabase, item, dishesById, placesById) {
+function toScheduleItem(item, dishesById, placesById, imageUrls) {
   const liveDish = item.source_kind === "dish" && item.dish_id
     ? dishesById.get(item.dish_id)
     : null;
@@ -66,8 +66,8 @@ function toScheduleItem(supabase, item, dishesById, placesById) {
     place_id: livePlace?.id || null,
     name,
     place_name: placeName,
-    image_url: dishImagePublicUrl(supabase, imagePath),
-    place_image_url: dishImagePublicUrl(supabase, placeImagePath),
+    image_url: dishImageUrl(imageUrls, imagePath),
+    place_image_url: dishImageUrl(imageUrls, placeImagePath),
     position: Number(item.position || 0),
     archived: !liveSource,
   };
@@ -134,11 +134,22 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
   );
   const dishesById = new Map(liveDishes.map((dish) => [dish.id, dish]));
   const placesById = new Map(livePlaces.map((place) => [place.id, place]));
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    [
+      ...liveDishes.flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+      ...livePlaces.flatMap((place) => [place.image_path, place.thumbnail_path]),
+      ...(items || []).flatMap((item) => [
+        item.snapshot_image_path,
+        item.snapshot_place_image_path,
+      ]),
+    ],
+  );
 
   const itemsByMeal = new Map();
   for (const item of items || []) {
     const values = itemsByMeal.get(item.meal_id) || [];
-    values.push(toScheduleItem(supabase, item, dishesById, placesById));
+    values.push(toScheduleItem(item, dishesById, placesById, imageUrls));
     itemsByMeal.set(item.meal_id, values);
   }
   return {
@@ -277,6 +288,13 @@ export async function listMenuFavorites(supabase, userId) {
   throwSupabaseError(placeError, "读取常吃店铺失败。" );
   const dishMap = new Map((dishes || []).map((dish) => [dish.id, dish]));
   const placeMap = new Map((places || []).map((place) => [place.id, place]));
+  const imageUrls = await createDishImageUrlMap(
+    supabase,
+    [
+      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+      ...(places || []).flatMap((place) => [place.image_path, place.thumbnail_path]),
+    ],
+  );
 
   return favorites.flatMap((favorite) => {
     const source = favorite.source_kind === "dish"
@@ -290,7 +308,7 @@ export async function listMenuFavorites(supabase, userId) {
       place_id: favorite.place_id || null,
       name: source.name,
       record_type: source.record_type || source.place_type,
-      image_url: dishImagePublicUrl(supabase, source.thumbnail_path || source.image_path),
+      image_url: dishImageUrl(imageUrls, source.thumbnail_path || source.image_path),
       sort_order: Number(favorite.sort_order || 0),
     }];
   });

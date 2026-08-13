@@ -5,10 +5,23 @@ import {
   optimizeOriginalImage,
   optimizedImagePaths,
 } from "../../lib/image-processing.mjs";
+import {
+  createSignedUrlMap,
+  USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+} from "../shared/image-storage.mjs";
 
-export function dishImagePublicUrl(supabase, path) {
+export function dishImageUrl(urls, path) {
   if (!path) return "";
-  return supabase.storage.from(config.dishBucket).getPublicUrl(path).data.publicUrl;
+  return urls.get(path) || "";
+}
+
+export function createDishImageUrlMap(supabase, paths) {
+  return createSignedUrlMap(supabase, {
+    bucketName: config.dishBucket,
+    paths,
+    expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+    errorMessage: "读取菜单图片失败。",
+  });
 }
 
 async function normalizeDishImage(buffer) {

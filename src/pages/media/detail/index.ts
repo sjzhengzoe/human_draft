@@ -243,6 +243,12 @@ function filterTimelineEpisodes(
     }))
 }
 
+function mediaCoversMatch(entry: MediaEntry | null, season: MediaSeason | null) {
+  if (!entry?.cover_url || !season?.cover_url) return false
+  if (entry.cover_path && season.cover_path) return entry.cover_path === season.cover_path
+  return entry.cover_url === season.cover_url
+}
+
 Page({
   data: {
     id: "",
@@ -254,6 +260,7 @@ Page({
     visibleEpisodeCount: EPISODE_RENDER_BATCH,
     activeSeasonIndex: 0,
     activeSeasonFavoriteCount: 0,
+    activeSeasonIsEntryCover: false,
     timelineFilterOptions,
     timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
     favoriteEpisodesOnly: false,
@@ -411,6 +418,7 @@ Page({
       seasons: normalizedSeasons,
       activeSeasonIndex,
       activeSeason,
+      activeSeasonIsEntryCover: mediaCoversMatch(entry, activeSeason),
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: Math.max(EPISODE_RENDER_BATCH, this.data.visibleEpisodeCount),
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
@@ -479,6 +487,7 @@ Page({
     this.setData({
       activeSeasonIndex: index,
       activeSeason,
+      activeSeasonIsEntryCover: mediaCoversMatch(this.data.entry, activeSeason),
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: EPISODE_RENDER_BATCH,
       activeSeasonFavoriteCount: favoriteCount(activeSeason)
@@ -570,7 +579,7 @@ Page({
       wx.showToast({ title: "这一季还没有图片", icon: "none" })
       return
     }
-    if (entry.cover_url === season.cover_url) {
+    if (mediaCoversMatch(entry, season)) {
       wx.showToast({ title: "当前已是作品封面", icon: "none" })
       return
     }
@@ -583,6 +592,7 @@ Page({
       this.setData({
         entry: updatedEntry,
         coverUrl: updatedEntry.cover_url,
+        activeSeasonIsEntryCover: mediaCoversMatch(updatedEntry, season),
         mediaRevision
       })
       wx.showToast({ title: "已设为封面", icon: "success" })
@@ -754,6 +764,7 @@ Page({
       this.setData({
         entry: persistedEntry,
         coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
+        activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
         platformText: platformText(persistedEntry.platforms),
         isAudio: persistedEntry.media_type === "广播剧",
         isEpisodic,
@@ -776,6 +787,7 @@ Page({
         this.setData({
           entry: persistedEntry,
           coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
+          activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
           platformText: platformText(persistedEntry.platforms),
           isAudio: persistedEntry.media_type === "广播剧",
           isEpisodic: this.data.seasons.length > 0

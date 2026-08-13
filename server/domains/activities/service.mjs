@@ -8,7 +8,9 @@ import {
   STANDARD_IMAGE_TYPES,
 } from "../../http/multipart-image.mjs";
 import {
+  createSignedUrlMap,
   removeStorageImages,
+  USER_IMAGE_SIGNED_URL_TTL_SECONDS,
   uploadOptimizedImagePair,
 } from "../shared/image-storage.mjs";
 import {
@@ -39,21 +41,31 @@ function introductionValue(value) {
   return introduction;
 }
 
-function activityImagePublicUrl(supabase, path) {
+function activityImageUrl(urls, path) {
   if (!path) return "";
-  return supabase.storage.from(config.activityBucket).getPublicUrl(path).data.publicUrl || "";
+  return urls.get(path) || "";
 }
 
-function toActivityResponse(supabase, item) {
+function toActivityResponse(item, imageUrls = new Map()) {
   return {
     ...item,
     introduction: activityIntroductionText(item.introduction),
-    image_url: activityImagePublicUrl(supabase, item.image_path),
-    thumbnail_url: activityImagePublicUrl(
-      supabase,
+    image_url: activityImageUrl(imageUrls, item.image_path),
+    thumbnail_url: activityImageUrl(
+      imageUrls,
       item.thumbnail_path || item.image_path,
     ),
   };
+}
+
+async function toSignedActivityResponse(supabase, item) {
+  const imageUrls = await createSignedUrlMap(supabase, {
+    bucketName: config.activityBucket,
+    paths: [item.image_path, item.thumbnail_path],
+    expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+    errorMessage: "读取活动封面失败。",
+  });
+  return toActivityResponse(item, imageUrls);
 }
 
 function assertActivityImage(image) {
@@ -107,7 +119,13 @@ export async function listActivityItems(supabase, userId, query) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(error, "读取活动清单失败。");
-  return (data || []).map((item) => toActivityResponse(supabase, item));
+  const imageUrls = await createSignedUrlMap(supabase, {
+    bucketName: config.activityBucket,
+    paths: (data || []).flatMap((item) => [item.image_path, item.thumbnail_path]),
+    expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
+    errorMessage: "读取活动封面失败。",
+  });
+  return (data || []).map((item) => toActivityResponse(item, imageUrls));
 }
 
 export async function createActivityItem(supabase, userId, body, image) {
@@ -139,7 +157,7 @@ export async function createActivityItem(supabase, userId, body, image) {
     await removeActivityImages(supabase, [paths.imagePath, paths.thumbnailPath]);
     throwSupabaseError(error, "新增活动失败。");
   }
-  return toActivityResponse(supabase, data);
+  return toSignedActivityResponse(supabase, data);
 }
 
 export async function updateActivityItem(supabase, userId, id, body) {
@@ -177,7 +195,7 @@ export async function updateActivityItem(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "更新活动失败。");
-  return toActivityResponse(supabase, data);
+  return toSignedActivityResponse(supabase, data);
 }
 
 export async function replaceActivityItemImage(supabase, userId, id, image) {
@@ -202,7 +220,7 @@ export async function replaceActivityItemImage(supabase, userId, id, image) {
     throwSupabaseError(error, "更新活动封面失败。");
   }
   await removeActivityImages(supabase, previousPaths);
-  return toActivityResponse(supabase, data);
+  return toSignedActivityResponse(supabase, data);
 }
 
 export async function deleteActivityItem(supabase, userId, id) {

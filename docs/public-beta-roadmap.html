@@ -591,6 +591,10 @@
       border-radius: 18px;
     }
 
+    details.stage-audit {
+      margin-top: 16px;
+    }
+
     details.reference[open] {
       box-shadow: var(--shadow);
     }
@@ -822,7 +826,7 @@
 
       <div class="priority-grid">
         <label class="check-card">
-          <input type="checkbox" data-check-id="data-isolation" />
+          <input type="checkbox" data-check-id="data-isolation" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 数据</span>
             <span class="check-card-title">验证线上迁移与用户隔离</span>
@@ -835,7 +839,7 @@
           <span>
             <span class="priority-tag">P0 · 隐私</span>
             <span class="check-card-title">个人图片改为受控访问</span>
-            <span class="check-card-copy">菜品、活动和影视封面等用户图片不再公开暴露；官方素材和用户个人素材分开存储。</span>
+            <span class="check-card-copy">菜品、活动和账号影视记录所用封面改为私有存储和短时授权链接；公开头像与静态官方素材继续单独公开。代码已完成，待按下方顺序发布并做线上验收。</span>
           </span>
         </label>
 
@@ -902,6 +906,93 @@
           </span>
         </label>
       </div>
+
+      <details class="reference stage-audit" open>
+        <summary>第 1 项核验记录 · 已通过（2026-08-13）</summary>
+        <div class="reference-body">
+          <p class="plan-note"><strong>完成结论：</strong>线上个人业务数据已经按 <code>app_users.id</code> 隔离，本轮没有发现串读、跨用户关联或缺少归属的数据。可以进入下一项“个人图片改为受控访问”。本轮只进行了线上只读核验，没有修改、补写或删除任何真实用户数据。</p>
+
+          <h3>线上迁移与存量数据</h3>
+          <ul>
+            <li>线上实际存在 12 个账号；已核验 27 张个人业务表、共 8,269 行业务记录。所有表都存在 <code>user_id</code>，线上接口定义均要求该字段，空归属记录为 0。</li>
+            <li>已核验菜品与分类／地点、影视季与条目、影视集与季、行李层级、衣橱分类、菜单日程等 12 组父子关系，共覆盖 7,821 条有效关联；缺失父记录为 0，父子归属不同用户为 0。</li>
+            <li>实际数据已经分布在多个用户名下：12 个用户分别拥有默认分类和默认地点，运动与话题偏好等模块也存在多个真实数据所有者；历史主体数据仍归原确认账号，没有被复制给新用户。</li>
+            <li>当前线上 34 个业务数据库函数全部存在，并且调用定义都把 <code>p_user_id</code> 设为必填参数；旧版不带用户参数的高风险函数签名未对当前服务角色暴露。</li>
+          </ul>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>模块</th><th>本次只读核验的线上记录</th><th>结果</th></tr></thead>
+              <tbody>
+                <tr><td>菜单与用餐计划</td><td>分类 92、菜品 126、地点 34、计划餐次 19、计划项目 30、收藏 5</td><td>全部有归属；关联无跨用户</td></tr>
+                <tr><td>影视记录</td><td>分类 72、条目 229、季 395、集 7,061</td><td>全部有归属；季、集关联无跨用户</td></tr>
+                <tr><td>活动、行李与外食</td><td>活动 27、行李场景 4、层级 7、物品 29、外食分类 15、旧外食记录 15</td><td>全部有归属；父子关联无跨用户</td></tr>
+                <tr><td>关键节点与衣橱</td><td>关键节点 25、衣橱分类 2、衣物 7</td><td>全部有归属；衣物分类关联无跨用户</td></tr>
+                <tr><td>运动、足迹与聊天话题</td><td>运动配置及事件 37、足迹城市 25、个人话题与隐藏偏好 13</td><td>全部有归属；已存在多用户真实数据</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>接口与写入保护</h3>
+          <ul>
+            <li>除健康检查和微信登录外，所有业务接口都要求有效登录会话；用户编号只从服务端验证后的会话取得，不接受客户端通过请求参数指定归属。</li>
+            <li>服务端使用高权限数据库密钥，因此不能只依赖数据库 RLS。已经逐项核对个人表的读取、更新和删除：直接查询均带 <code>user_id</code> 条件，新增记录由服务端写入当前用户编号，数据库函数均接收当前登录用户编号。</li>
+            <li>个人表已启用 RLS，迁移同时撤销匿名和普通认证角色的直接权限；小程序只能经过服务端业务接口访问数据。</li>
+            <li>新增回归检查会持续扫描业务路由、个人表查询和数据库函数调用，防止以后新增功能时漏掉登录保护或用户条件。</li>
+          </ul>
+
+          <h3>验证方式与边界</h3>
+          <ul>
+            <li>线上使用真实数据库结构、真实账号归属和真实存量记录做只读核验；没有为了测试而改动真实记录。</li>
+            <li>跨用户读取及写入路径同时通过本地双用户模拟测试验证：用户 A 的列表不会出现用户 B 的记录，使用用户 B 的记录编号读取或修改时会被归属条件拦截。</li>
+            <li>本次验证覆盖数据库业务记录，不包含图片文件能否被公开地址访问；图片隐私是紧接着要处理的第 2 项，不能因为本项通过而认为图片已经安全。</li>
+          </ul>
+
+          <h3>兼容性与后续动作</h3>
+          <p>现有用户读取方式和历史数据归属不变；本轮不需要数据库迁移或回填，没有删除旧表、字段或记录，也不需要用户手工操作。后续只要新增个人表、数据库函数或业务接口，就必须同时补齐 <code>user_id</code>、父子同用户约束、接口归属条件和对应回归测试，然后重新执行本项核验。</p>
+        </div>
+      </details>
+
+      <details class="reference stage-audit" open>
+        <summary>第 2 项实施记录 · 代码已完成，待发布与线上验收（2026-08-13）</summary>
+        <div class="reference-body">
+          <p class="plan-note"><strong>当前结论：</strong>菜品、活动以及账号影视记录使用的图片已经在代码中改为登录后按需签发的短时访问链接，不再把永久公开地址返回给小程序。为了不让当前线上版本在迁移瞬间丢图，数据库迁移文件已经准备好，但尚未直接把线上图片桶改为私有；本项只有在“先发布服务端代码、再执行迁移、最后完成线上验收”后才能勾选完成。</p>
+
+          <h3>现状审计与处理范围</h3>
+          <ul>
+            <li>线上 <code>dish-images</code>、<code>activity-images</code>、<code>media-covers</code> 当前仍是公开桶；<code>wardrobe-images</code> 和 <code>key-moment-images</code> 已经是私有桶，本轮保持原有受控访问方式。</li>
+            <li>菜品表现有 126 条图片路径引用，其中 9 条同时有缩略图；活动表有 27 条记录，其中 20 条有原图和缩略图；影视条目与分季共存在 624 条封面引用。历史引用都能从现有路径生成授权链接，不需要搬运文件或重写这些数据库记录。</li>
+            <li><code>media-covers</code> 中既有用户上传，也有为个人影视记录保存的抓取封面。只要它被某个账号的影视记录使用，本方案就按账号关联素材处理并设为私有；真正的静态官方素材继续放在公开静态资源目录，不与个人记录图片混用。</li>
+            <li>头像仍使用 <code>user-avatars</code> 公开桶，方便身份展示；头像公开是明确保留的产品边界，不属于本项漏改。衣橱、关键节点、菜品、活动和影视记录图片则必须受控访问。</li>
+          </ul>
+
+          <h3>访问方式与用户体验</h3>
+          <ul>
+            <li>用户必须先通过小程序登录并调用自己的业务接口，服务端才会为该次返回中的图片路径生成授权链接。拿到数据库记录编号或猜到文件路径，都不能直接匿名读取私有桶中的原图。</li>
+            <li>授权链接有效期为 6 小时。小程序影视数据缓存目前只有 3 分钟，低于链接有效期；正常列表、详情、编辑、打印和图片预览流程不需要用户额外操作。</li>
+            <li>同一列表中的重复路径只签发一次；超过 100 张图片时自动分批请求，避免影视分季或较长菜单计划因为一次签发数量过多而失败。</li>
+            <li>影视作品封面与分季封面可能指向同一个文件。接口额外返回稳定的 <code>cover_path</code> 用于判断二者是否相同，避免仅比较带时效签名的链接而误判“当前封面”。数据库结构和原有 <code>cover_url</code> 字段不变。</li>
+          </ul>
+
+          <h3>历史数据兼容与迁移</h3>
+          <ul>
+            <li>新增迁移 <code>202608130001_private_user_images.sql</code> 只把三个桶的 <code>public</code> 状态改为 <code>false</code>，不更新业务表、不移动或删除 <code>storage.objects</code>，可以重复执行。</li>
+            <li>服务端在桶公开或私有时都能生成授权链接，因此安全发布顺序是：先部署本次服务端代码；确认接口已经返回授权链接；再执行私有桶迁移。不能反过来先改桶，否则尚未升级的线上服务仍返回公开地址，图片会暂时无法显示。</li>
+            <li>本轮没有删除旧图片、数据库字段、表或历史记录，也没有进行图片压缩和冗余文件清理。后两项属于紧接着的“图片成本优化”，不能和本隐私项混为已经完成。</li>
+          </ul>
+
+          <h3>发布后验收与完成标准</h3>
+          <ol>
+            <li>发布服务端代码，使用测试账号分别打开菜单、用餐计划、活动、影视列表、影视详情和分季页面，确认原图与缩略图都能正常显示。</li>
+            <li>执行私有桶迁移，并确认三个桶都显示为非公开；<code>user-avatars</code> 仍为公开，<code>wardrobe-images</code> 与 <code>key-moment-images</code> 仍为私有。</li>
+            <li>复制一个旧的永久公开图片地址，在未登录状态访问应失败；从已登录接口取得的新授权地址，在有效期内访问应成功。</li>
+            <li>再验证上传、更换和删除菜品／活动／影视封面，确保新图片正常显示，旧记录无丢图；验收通过后才锁定勾选本项。</li>
+          </ol>
+
+          <h3>已完成的本地验证</h3>
+          <p>图片隐私、历史用户隔离和主要业务接口共 72 项聚焦回归测试全部通过，TypeScript 类型检查通过。新增的防回退检查会持续确认这三个个人图片域使用授权链接、迁移没有误改头像桶或删除存量对象，并验证大量路径可以安全分批签发。</p>
+        </div>
+      </details>
 
       <div class="publish-gate" id="publish-gate" aria-live="polite">
         <span class="gate-icon">!</span>
@@ -1561,7 +1652,14 @@
 
       const savedChecks = readSavedChecks();
       checkboxes.forEach((checkbox) => {
-        checkbox.checked = savedChecks[checkbox.dataset.checkId] === true;
+        const checkId = checkbox.dataset.checkId;
+        const isVerified = checkbox.dataset.verified === "true";
+        checkbox.checked = isVerified || (
+          Object.prototype.hasOwnProperty.call(savedChecks, checkId)
+            ? savedChecks[checkId] === true
+            : checkbox.defaultChecked
+        );
+        checkbox.disabled = isVerified;
         checkbox.addEventListener("change", () => {
           saveChecks();
           updateProgress();
@@ -1596,7 +1694,7 @@
 
       resetButton.addEventListener("click", () => {
         checkboxes.forEach((checkbox) => {
-          checkbox.checked = false;
+          checkbox.checked = checkbox.dataset.verified === "true";
         });
         saveChecks();
         updateProgress();
