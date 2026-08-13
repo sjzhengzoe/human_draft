@@ -87,7 +87,7 @@ async function downloadOptionalBuffer(bucket, path) {
 
 async function uploadOptimizedPair(bucket, paths, optimized) {
   const { error: imageError } = await bucket.upload(paths.imagePath, optimized.original, {
-    cacheControl: "31536000",
+    cacheControl: "3600",
     contentType: optimized.originalContentType,
     upsert: true,
   });
@@ -99,7 +99,7 @@ async function uploadOptimizedPair(bucket, paths, optimized) {
     paths.thumbnailPath,
     optimized.thumbnail,
     {
-      cacheControl: "31536000",
+      cacheControl: "3600",
       contentType: optimized.thumbnailContentType,
       upsert: true,
     },

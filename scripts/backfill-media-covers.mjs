@@ -1212,7 +1212,7 @@ async function main() {
     if (APPLY) {
       const path = `entries/${entry.id}.webp`;
       const upload = await client.storage.from(MEDIA_COVER_BUCKET).upload(path, downloaded.image, {
-        cacheControl: "31536000",
+        cacheControl: "3600",
         contentType: "image/webp",
         upsert: true,
       });

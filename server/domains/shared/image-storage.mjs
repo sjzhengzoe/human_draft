@@ -2,6 +2,7 @@ import { HttpError } from "../../lib/errors.mjs";
 import { optimizeImage, optimizedImagePaths } from "../../lib/image-processing.mjs";
 
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
+export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "3600";
 
 export async function uploadOptimizedImagePair(
   supabase,
@@ -28,12 +29,12 @@ export async function uploadOptimizedImagePair(
   const bucket = supabase.storage.from(bucketName);
   const [imageResult, thumbnailResult] = await Promise.all([
     bucket.upload(imagePath, optimized.original, {
-      cacheControl: "31536000",
+      cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: optimized.originalContentType,
       upsert: false,
     }),
     bucket.upload(thumbnailPath, optimized.thumbnail, {
-      cacheControl: "31536000",
+      cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: optimized.thumbnailContentType,
       upsert: false,
     }),

@@ -32,12 +32,33 @@ test("personal image responses use signed URLs while avatars remain public", asy
   ]);
 
   assert.match(dishImages, /createSignedUrlMap/);
+  assert.match(dishImages, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS/);
   assert.doesNotMatch(dishImages, /getPublicUrl/);
   assert.match(activities, /createSignedUrlMap/);
   assert.doesNotMatch(activities, /getPublicUrl/);
   assert.match(media, /createMediaCoverUrlMap/);
   assert.match(media, /toMediaCoverResponse/);
   assert.match(profile, /avatarBucket\)\.getPublicUrl/);
+});
+
+test("private image uploads do not outlive their signed access window in caches", async () => {
+  const sharedStorage = await readProjectFile("server/domains/shared/image-storage.mjs");
+  assert.match(sharedStorage, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS\s*=\s*"3600"/);
+  assert.doesNotMatch(sharedStorage, /cacheControl:\s*"31536000"/);
+});
+
+test("private bucket rebuild keeps a verified backup until every object is restored", async () => {
+  const rebuild = await readProjectFile(
+    "server/scripts/rebuild-private-image-buckets.mjs",
+  );
+  assert.match(rebuild, /process\.argv\.includes\("--apply"\)/);
+  assert.match(rebuild, /sha256/);
+  assert.match(rebuild, /emptyBucket/);
+  assert.match(rebuild, /deleteBucket/);
+  assert.match(rebuild, /public:\s*false/);
+  assert.match(rebuild, /after\.count !== before\.count \|\| after\.bytes !== before\.bytes/);
+  assert.match(rebuild, /publicResponse\.status < 400 \|\| !signedResponse\.ok/);
+  assert.match(rebuild, /await rm\(backupRoot/);
 });
 
 test("signed image URL batches stay below the storage API limit", async () => {

@@ -318,7 +318,7 @@ async function uploadSeasonCover(client, seasonId, sourceUrl) {
     .toBuffer();
   const path = `seasons/${seasonId}.webp`;
   const upload = await client.storage.from(MEDIA_COVER_BUCKET).upload(path, image, {
-    cacheControl: "31536000",
+    cacheControl: "3600",
     contentType: "image/webp",
     upsert: true,
   });

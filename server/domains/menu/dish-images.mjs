@@ -7,6 +7,7 @@ import {
 } from "../../lib/image-processing.mjs";
 import {
   createSignedUrlMap,
+  PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
 
@@ -44,7 +45,7 @@ export async function uploadDishImage(supabase, userId, dishId, buffer) {
   const { error } = await supabase.storage
     .from(config.dishBucket)
     .upload(imagePath, original, {
-      cacheControl: "31536000",
+      cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: originalContentType,
       upsert: false,
     });

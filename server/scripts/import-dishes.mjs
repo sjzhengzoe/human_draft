@@ -108,7 +108,7 @@ async function main() {
     const { error: imageError } = await supabase.storage
       .from(config.dishBucket)
       .upload(imagePath, original, {
-        cacheControl: "31536000",
+        cacheControl: "3600",
         contentType: originalContentType,
         upsert: false,
       });
