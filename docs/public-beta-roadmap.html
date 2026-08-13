@@ -1,0 +1,1610 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>人类草稿｜公开测试与收费路线图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f4f1e9;
+      --surface: #fffdf8;
+      --surface-strong: #ffffff;
+      --text: #24231f;
+      --muted: #6f6b60;
+      --border: #d9d3c7;
+      --dark: #24231f;
+      --dark-text: #fffdf8;
+      --danger: #9e3f32;
+      --danger-soft: #f7e4df;
+      --warning: #9a6b00;
+      --warning-soft: #fff0c7;
+      --info: #336c8e;
+      --info-soft: #e5f2f8;
+      --success: #3e754d;
+      --success-soft: #e5f2e8;
+      --shadow: 0 18px 50px rgba(49, 43, 31, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 3%, rgba(189, 171, 128, 0.2), transparent 28rem),
+        var(--page);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    summary:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(51, 108, 142, 0.32);
+      outline-offset: 3px;
+    }
+
+    .page-shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 80px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+      gap: 28px;
+      align-items: end;
+      padding: 34px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 700px;
+      margin-bottom: 16px;
+      font-size: clamp(34px, 6vw, 62px);
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-copy {
+      max-width: 720px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .decision {
+      padding: 22px;
+      background: var(--dark);
+      color: var(--dark-text);
+      border-radius: 20px;
+    }
+
+    .decision-label {
+      margin-bottom: 8px;
+      color: rgba(255, 253, 248, 0.68);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .decision strong {
+      display: block;
+      font-size: 21px;
+      line-height: 1.45;
+    }
+
+    .progress-area {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: center;
+      margin-top: 24px;
+      padding: 24px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+    }
+
+    .progress-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .progress-track {
+      height: 12px;
+      overflow: hidden;
+      background: #e6e0d5;
+      border-radius: 999px;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      background: var(--danger);
+      border-radius: inherit;
+      transition: width 180ms ease;
+    }
+
+    .progress-hint {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toolbar button,
+    .stage-nav button {
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .toolbar button {
+      min-height: 42px;
+      padding: 8px 14px;
+      border-radius: 12px;
+    }
+
+    .toolbar button:hover,
+    .stage-nav button:hover {
+      border-color: #aaa294;
+      background: #faf6ee;
+    }
+
+    .stage-nav {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 26px 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .stage-nav button {
+      min-height: 72px;
+      padding: 12px;
+      border-radius: 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .stage-nav span,
+    .stage-nav strong {
+      display: block;
+    }
+
+    .stage-nav span {
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stage-nav button:first-child {
+      background: var(--dark);
+      color: var(--dark-text);
+      border-color: var(--dark);
+    }
+
+    .stage-nav button:first-child span {
+      color: rgba(255, 253, 248, 0.66);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 38px 0 18px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 27px;
+    }
+
+    .number {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      flex: 0 0 auto;
+      background: var(--dark);
+      color: var(--dark-text);
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .priority-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .check-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 12px;
+      min-height: 142px;
+      padding: 21px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    .check-card:has(input:checked) {
+      background: var(--success-soft);
+      border-color: #9abfa4;
+    }
+
+    .check-card input {
+      width: 22px;
+      height: 22px;
+      margin: 3px 0 0;
+      accent-color: var(--success);
+      cursor: pointer;
+    }
+
+    .check-card-title {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .check-card-copy {
+      display: block;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .priority-tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .publish-gate {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+      margin-top: 16px;
+      padding: 18px 20px;
+      background: var(--warning-soft);
+      border-left: 5px solid var(--warning);
+      border-radius: 14px;
+    }
+
+    .gate-icon {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      background: var(--surface-strong);
+      border-radius: 50%;
+      font-weight: 800;
+    }
+
+    .publish-gate strong,
+    .publish-gate span {
+      display: block;
+    }
+
+    .publish-gate span {
+      color: #64542d;
+      font-size: 14px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .list-panel {
+      padding: 22px;
+      border-radius: 20px;
+    }
+
+    .list-panel.must {
+      background: var(--danger-soft);
+      border: 1px solid #e7b6ad;
+    }
+
+    .list-panel.later {
+      background: var(--info-soft);
+      border: 1px solid #acd0e3;
+    }
+
+    .list-panel h3 {
+      margin-bottom: 10px;
+    }
+
+    ul,
+    ol {
+      padding-left: 1.35em;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .stage-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    details.stage {
+      overflow: hidden;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      scroll-margin-top: 18px;
+    }
+
+    details.stage[open] {
+      box-shadow: var(--shadow);
+    }
+
+    details.stage summary {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 20px 22px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    details.stage summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .stage-index {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--info-soft);
+      color: var(--info);
+      font-weight: 800;
+    }
+
+    .stage-title strong,
+    .stage-title span {
+      display: block;
+    }
+
+    .stage-title strong {
+      font-size: 19px;
+    }
+
+    .stage-title span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stage-status {
+      padding: 5px 10px;
+      background: var(--success-soft);
+      color: var(--success);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stage-body {
+      padding: 0 22px 24px 84px;
+      border-top: 1px solid var(--border);
+    }
+
+    .stage-columns {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.45fr);
+      gap: 26px;
+      padding-top: 20px;
+    }
+
+    .stage-body h3 {
+      margin-bottom: 9px;
+      font-size: 16px;
+    }
+
+    .stage-body ul {
+      margin: 0;
+    }
+
+    .exit-box {
+      align-self: start;
+      padding: 16px;
+      background: var(--success-soft);
+      border-radius: 15px;
+    }
+
+    .exit-box p {
+      margin: 0;
+      color: #315b3c;
+      font-size: 14px;
+    }
+
+    .price-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .price {
+      padding: 16px;
+      background: #f8f5ee;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+    }
+
+    .price span,
+    .price strong,
+    .price small {
+      display: block;
+    }
+
+    .price span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .price strong {
+      margin: 4px 0;
+      font-size: 25px;
+    }
+
+    .price small {
+      color: var(--muted);
+    }
+
+    .commercial-summary {
+      margin: 26px 0;
+      padding: 24px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .commercial-summary h2 {
+      margin-bottom: 6px;
+      font-size: 24px;
+    }
+
+    .commercial-summary > p {
+      margin-bottom: 16px;
+      color: var(--muted);
+    }
+
+    .plan-note {
+      margin: 14px 0 0;
+      padding: 13px 15px;
+      background: var(--info-soft);
+      border-radius: 13px;
+      color: #284f67;
+      font-size: 14px;
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .rule-card {
+      padding: 16px;
+      background: #f8f5ee;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+    }
+
+    .rule-card h3 {
+      margin-bottom: 6px;
+    }
+
+    .rule-card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    code {
+      padding: 0.12em 0.35em;
+      background: #eee8dc;
+      border-radius: 5px;
+      font-size: 0.9em;
+    }
+
+    .footer {
+      margin-top: 30px;
+      padding: 24px 4px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer a {
+      color: var(--info);
+    }
+
+    .detail-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    details.reference {
+      overflow: hidden;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+
+    details.reference[open] {
+      box-shadow: var(--shadow);
+    }
+
+    details.reference summary {
+      padding: 18px 20px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .reference-body {
+      padding: 2px 20px 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .reference-body h3 {
+      margin: 22px 0 8px;
+      font-size: 17px;
+    }
+
+    .reference-body p,
+    .reference-body li {
+      font-size: 15px;
+    }
+
+    .table-wrap {
+      margin: 14px 0;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 620px;
+      border-collapse: collapse;
+      background: var(--surface-strong);
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f3eee5;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .formula {
+      padding: 14px 16px;
+      overflow-x: auto;
+      background: #eee8dc;
+      border-radius: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .source-list a {
+      color: var(--info);
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 820px) {
+      .page-shell {
+        width: min(100% - 22px, 720px);
+        padding-top: 22px;
+      }
+
+      .hero,
+      .progress-area,
+      .stage-columns {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .priority-grid,
+      .split,
+      .rule-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stage-nav {
+        grid-template-columns: repeat(6, 150px);
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .stage-body {
+        padding: 0 18px 20px;
+      }
+
+      details.stage summary {
+        grid-template-columns: auto minmax(0, 1fr);
+        padding: 18px;
+      }
+
+      .stage-status {
+        grid-column: 2;
+        justify-self: start;
+      }
+    }
+
+    @media (max-width: 520px) {
+      h1 {
+        font-size: 38px;
+      }
+
+      .hero-copy {
+        font-size: 16px;
+      }
+
+      .progress-area {
+        padding: 20px;
+      }
+
+      .check-card {
+        padding: 18px;
+      }
+
+      .price-row {
+        grid-template-columns: 1fr;
+      }
+
+      .publish-gate {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">人类草稿 · 公开测试路线</p>
+        <h1>先把底座做稳，再边推广边迭代</h1>
+        <p class="hero-copy">先完成数据、隐私、成本和故障止损底座，再发布研发手记。用户通过图片、搜索或咨询找到小程序后可以正常注册使用，直接成为早期测试用户。</p>
+      </div>
+      <aside class="decision" aria-label="当前决策">
+        <div class="decision-label">当前应该做什么</div>
+        <strong>先完成阶段 0。通过后开始发研发笔记，并保持开放注册，边积累早期用户边继续优化。</strong>
+      </aside>
+    </header>
+
+    <p class="plan-note"><strong>文档用途：</strong>这是内部运营、收费和待办决策记录，供后续与 Agent 继续讨论，不是面向公测用户的宣传页。候选价格、成本模型和未定权益不得直接链接到小程序或公开笔记；对外只使用本文明确标注的公测说明与售后文案。</p>
+
+    <section class="progress-area" aria-labelledby="progress-heading">
+      <div>
+        <div class="progress-title">
+          <span id="progress-heading">公开测试前完成度</span>
+          <span id="progress-text">0 / 9</span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-label="阶段 0 完成进度">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-hint" id="progress-hint">阶段 0 尚未完成，先不要发布可能带来真实用户的笔记。</p>
+      </div>
+      <div class="toolbar" aria-label="清单操作">
+        <button type="button" id="expand-all">展开全部阶段</button>
+        <button type="button" id="reset-checks">清除勾选</button>
+      </div>
+    </section>
+
+    <section class="commercial-summary" aria-labelledby="commercial-heading">
+      <h2 id="commercial-heading">收费框架已确定，具体价格仍待验证</h2>
+      <p>已经确定正式运营后一定推出年度付费会员，并长期采用“可正常使用的免费基础版＋用户可自主选择的付费会员”。暂不做月费、永久会员或逐模块购买。公开测试期统一免费且不对外公布具体金额；尚未确定的是记录数量、空间额度、会员功能、收费时间和长期价格。</p>
+      <div class="price-row">
+        <div class="price">
+          <span>当前公开测试</span>
+          <strong>暂时免费</strong>
+          <small>所有公测用户使用统一公测权益，不启动个人 30 天倒计时；页面持续标明“公开测试”，避免形成永久免费预期</small>
+        </div>
+        <div class="price">
+          <span>正式基础版</span>
+          <strong>0 元基础版</strong>
+          <small>正式运营后保留可正常使用的基础能力；这是当前商业框架，不使用“永久免费”作不可变承诺，具体记录上限、空间和受限高级功能根据公测数据决定</small>
+        </div>
+        <div class="price">
+          <span>年度会员内部假设</span>
+          <strong>49 元 / 365 天候选</strong>
+          <small>只作为未来接入官方支付后的首期真实付款候选价和成本模型输入，不对公测用户提前展示，也不承诺续费或长期维持此价格</small>
+        </div>
+      </div>
+      <h3>截至 2026-08-13 的最终执行结论</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>事项</th><th>已经决定</th><th>当前不做</th></tr></thead>
+          <tbody>
+            <tr><td>公开测试</td><td>所有公测用户统一免费，不启动个人 30 天倒计时</td><td>不收会员费、不收订金、不用真实交易测试价格</td></tr>
+            <tr><td>用户预期</td><td>现在就说明“公测期免费；正式运营后保留免费基础版，并一定会推出付费会员”</td><td>不承诺所有功能永久免费，不公布候选价格、收费日期和未验证额度</td></tr>
+            <tr><td>支付路径</td><td>取得足够真实数据后，选择合适主体、启动办理并接入小程序官方虚拟支付</td><td>不通过淘宝、小红书、闲鱼、个人转账或外部兑换码出售本小程序会员</td></tr>
+            <tr><td>系统建设</td><td>公测期间提前建设会员、订单、权益流水、退款、服务条款和停服善后底座</td><td>系统建成不等于立即启用收费，公测账号仍保持 <code>public_beta</code></td></tr>
+            <tr><td>收费启动</td><td>留存、价值和成本成立，主体与官方支付能力确认，退款与条款可执行；具体方案定案后默认提前 7 天公告</td><td>不因少量口头付费意向跳过上述条件，也不对外承诺固定通知天数</td></tr>
+            <tr><td>跨端权益</td><td>只有未来确实存在可独立使用的 App／网站服务且获得微信书面确认时，才单独评估已有权益同步</td><td>不把外部店铺作为小程序会员的替代收银台，也不把它包装成跨端同步</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="plan-note"><strong>已经确定的不变原则：</strong>当前只做免费公测，不发生会员交易。未来收费只影响新增额度、更多容量和部分进阶能力，不把用户已有数据作为付费筹码。不删除、不隐藏已有数据；超出免费额度时暂停新增或上传，但仍允许查看、导出和删除。具体价格至少在有一轮真实留存与成本数据后再决定。</p>
+    </section>
+
+    <nav class="stage-nav" aria-label="路线阶段">
+      <button type="button" data-target="stage-0"><span>当前</span><strong>0 · 公开测试前</strong></button>
+      <button type="button" data-target="stage-1"><span>开始获客</span><strong>1 · 发笔记并开放</strong></button>
+      <button type="button" data-target="stage-2"><span>30～45 天</span><strong>2 · 边用边优化</strong></button>
+      <button type="button" data-target="stage-3"><span>形成数据</span><strong>3 · 会员底座</strong></button>
+      <button type="button" data-target="stage-4"><span>暂不收款</span><strong>4 · 收费前定案</strong></button>
+      <button type="button" data-target="stage-5"><span>主体完成后</span><strong>5 · 官方虚拟支付</strong></button>
+    </nav>
+
+    <section id="stage-0" aria-labelledby="stage-0-heading">
+      <div class="section-heading">
+        <span class="number">0</span>
+        <h2 id="stage-0-heading">发布研发笔记前，必须完成</h2>
+      </div>
+
+      <div class="priority-grid">
+        <label class="check-card">
+          <input type="checkbox" data-check-id="data-isolation" />
+          <span>
+            <span class="priority-tag">P0 · 数据</span>
+            <span class="check-card-title">验证线上迁移与用户隔离</span>
+            <span class="check-card-copy">确认所有必要迁移已上线，并用代表性账号验证用户只能读取和修改自己的记录。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="private-images" />
+          <span>
+            <span class="priority-tag">P0 · 隐私</span>
+            <span class="check-card-title">个人图片改为受控访问</span>
+            <span class="check-card-copy">菜品、活动和影视封面等用户图片不再公开暴露；官方素材和用户个人素材分开存储。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="image-cost" />
+          <span>
+            <span class="priority-tag">P0 · 成本</span>
+            <span class="check-card-title">完成图片成本优化</span>
+            <span class="check-card-copy">限制尺寸和像素，改为合理的有损 WebP，列表只用缩略图，更换和删除时清理旧文件。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="abuse-control" />
+          <span>
+            <span class="priority-tag">P0 · 风控</span>
+            <span class="check-card-title">设置资源硬上限与限流</span>
+            <span class="check-card-copy">限制单文件、每日上传量和接口频率；提供注册总开关、紧急只读开关和异常使用告警。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="open-registration" />
+          <span>
+            <span class="priority-tag">P0 · 准入</span>
+            <span class="check-card-title">确认开放注册与紧急止损</span>
+            <span class="check-card-copy">用户可以正常创建账号并开始使用；同时保留注册总开关、紧急只读开关和异常使用告警，便于出现问题时及时止损。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="analytics" />
+          <span>
+            <span class="priority-tag">P0 · 观测</span>
+            <span class="check-card-title">上线最小埋点与成本统计</span>
+            <span class="check-card-copy">记录注册、登录、模块打开、创建成功、上传字节数、错误和来源，不采集用户私人内容。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="backup-security" />
+          <span>
+            <span class="priority-tag">P0 · 安全</span>
+            <span class="check-card-title">验证备份、恢复与内容安全</span>
+            <span class="check-card-copy">确认备份可以恢复，审计文字和图片写入是否经过内容安全检查，并准备严重故障处理方式。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="privacy-delete" />
+          <span>
+            <span class="priority-tag">P0 · 用户权利</span>
+            <span class="check-card-title">补齐隐私说明与账号注销</span>
+            <span class="check-card-copy">用户能够了解数据用途，并可以注销账号、删除自己的数据；正式收费前再完成基础导出。</span>
+          </span>
+        </label>
+
+        <label class="check-card">
+          <input type="checkbox" data-check-id="beta-message" />
+          <span>
+            <span class="priority-tag">P0 · 预期</span>
+            <span class="check-card-title">明确公测全量免费不等于正式运营全量免费</span>
+            <span class="check-card-copy">在“我的 / 关于”持续说明当前免费是公开测试状态，正式运营后保留免费基础版并一定会推出付费会员；暂不展示具体金额，同时承诺提前通知和不删除已有数据。</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="publish-gate" id="publish-gate" aria-live="polite">
+        <span class="gate-icon">!</span>
+        <span>
+          <strong>发布门槛：9 项全部完成</strong>
+          <span>达到这条线后即可开始发笔记并开放自然用户使用，不需要等待自动支付和所有新功能。</span>
+        </span>
+      </div>
+
+      <div class="split">
+        <section class="list-panel must">
+          <h3>必须先做</h3>
+          <ul>
+            <li>数据隔离、个人图片隐私和备份恢复</li>
+            <li>图片压缩、资源上限和异常使用止损</li>
+            <li>开放注册开关、异常告警和紧急止损</li>
+            <li>基础埋点、错误监控和成本统计</li>
+            <li>小程序内说明体验状态与未来收费预期</li>
+          </ul>
+        </section>
+        <section class="list-panel later">
+          <h3>可以边测试边做</h3>
+          <ul>
+            <li>各模块最终免费记录数量</li>
+            <li>微信内部支付和自动支付回调</li>
+            <li>空间扩容包与广告接入</li>
+            <li>高级报表、普通体验优化和新模块</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <div class="section-heading">
+      <span class="number">→</span>
+      <h2>达到发布门槛后的阶段路线</h2>
+    </div>
+
+    <section class="stage-stack" aria-label="后续阶段">
+      <details class="stage" id="stage-1" open>
+        <summary>
+          <span class="stage-index">1</span>
+          <span class="stage-title">
+            <strong>发研发笔记，开放自然用户</strong>
+            <span>不必在笔记里主动公开小程序入口，但搜索到或前来咨询的用户可以正常注册使用。</span>
+          </span>
+          <span class="stage-status">小范围获客</span>
+        </summary>
+        <div class="stage-body">
+          <div class="stage-columns">
+            <div>
+              <h3>这一阶段做什么</h3>
+              <ul>
+                <li>开始发布小红书研发手记，记录产品思考、解决的问题和研发过程。</li>
+                <li>用户通过图片、微信搜索、朋友分享或主动咨询找到小程序后，可以直接注册使用。</li>
+                <li>公测期所有新用户获得统一的 <code>public_beta</code> 权益，不给注册用户启动个人 30 天体验倒计时，也不在会员底座建成前手工发放正式体验权益。</li>
+                <li>公测权益可以开放计划中的核心功能，但仍受单文件、每日上传、总空间和异常使用等安全硬上限保护。</li>
+                <li>记录注册来源、公测批次和首次产生有效记录的时间，不采集用户私人内容。</li>
+                <li>在“我的 / 关于”持续显示公测说明；不展示具体价格，不使用“永久免费”描述，也不把收费提示做成首次打开时的强制弹窗。</li>
+                <li>每天查看激活、留存、错误、异常流量、文件空间和数据库增长。</li>
+              </ul>
+            </div>
+            <aside class="exit-box">
+              <h3>进入下一阶段</h3>
+              <p>出现一批完成注册并产生真实记录的早期用户，系统没有数据隔离、保存失败或成本失控问题。</p>
+            </aside>
+          </div>
+        </div>
+      </details>
+
+      <details class="stage" id="stage-2">
+        <summary>
+          <span class="stage-index">2</span>
+          <span class="stage-title">
+            <strong>边使用边优化 30～45 天</strong>
+            <span>优先解决真实问题，同时观察留存和资源成本。</span>
+          </span>
+          <span class="stage-status">产品验证</span>
+        </summary>
+        <div class="stage-body">
+          <div class="stage-columns">
+            <div>
+              <h3>优先级顺序</h3>
+              <ol>
+                <li>保存失败、数据错误、隐私和性能问题。</li>
+                <li>阻碍用户完成核心流程的体验问题。</li>
+                <li>高频用户真实提出的功能改进。</li>
+                <li>新的模块灵感和低优先级美化。</li>
+              </ol>
+              <h3>必须观察</h3>
+              <ul>
+                <li>D7、D30 留存，以及用户回来使用的频率。</li>
+                <li>单模块用户和跨模块用户的比例。</li>
+                <li>每个模块主要记录数的 P50 / P80 / P90，用来制定免费数量限制。</li>
+                <li>每用户图片数、处理后实际字节数、数据库容量、下载流量和月成本。</li>
+                <li>用户在哪些高级能力上真正感受到价值。</li>
+                <li>重度与异常用户是否触发单文件、每日上传、接口频率和总空间保护。</li>
+              </ul>
+              <h3>同期完成的成本保护</h3>
+              <ul>
+                <li>图片限制最大边长和总像素，使用有损 WebP / AVIF；列表只加载缩略图，打印另设高质量规格。</li>
+                <li>替换和删除文件时正确释放额度，定期对账孤儿文件，并为历史图片安排兼容迁移。</li>
+                <li>按用户和模块核算文件空间，查询分页并补齐 <code>user_id</code> 索引；私有文件使用受控访问。</li>
+              </ul>
+            </div>
+            <aside class="exit-box">
+              <h3>进入下一阶段</h3>
+              <p>至少取得一轮 30～45 天真实使用数据，能够识别核心用户和主要成本来源。</p>
+            </aside>
+          </div>
+        </div>
+      </details>
+
+      <details class="stage" id="stage-3">
+        <summary>
+          <span class="stage-index">3</span>
+          <span class="stage-title">
+            <strong>落地免费版、体验版与会员底座</strong>
+            <span>商业框架已经确定，用真实数据补齐各模块的具体免费数量。</span>
+          </span>
+          <span class="stage-status">权益工程</span>
+        </summary>
+        <div class="stage-body">
+          <div class="stage-columns">
+            <div>
+              <div class="rule-grid">
+                <article class="rule-card">
+                  <h3>身份与用户 ID</h3>
+                  <p>以稳定的内部用户 ID 作为主身份、权益和未来订单的关联依据。不要使用昵称或 OpenID 人工匹配；OpenID 仅在对应 AppID 下稳定，未来由 <code>auth_identities</code> 完成身份映射。</p>
+                </article>
+                <article class="rule-card">
+                  <h3>权益数据</h3>
+                  <p>建立 <code>membership_products</code>、<code>user_memberships</code>、<code>membership_orders</code> 和 <code>membership_grants</code>。权益只需免费、体验和年费，暂不加入月费和永久会员。</p>
+                </article>
+                <article class="rule-card">
+                  <h3>管理员工具</h3>
+                  <p>分成“官方订单查询／售后”和“测试、赠送、补偿发放”两个入口。公测期只启用后者；查询用户后展示昵称、用户 ID、状态、到期时间和空间用量，再预览变更并用全局 <code>app-dialog</code> 确认。</p>
+                </article>
+                <article class="rule-card">
+                  <h3>用户可见信息</h3>
+                  <p>“我的”页面展示可复制的用户 ID、当前方案、到期时间、空间已用 / 总额和权益说明；另设简明收费说明，不等到收费当天才通知。</p>
+                </article>
+                <article class="rule-card">
+                  <h3>条款与退款</h3>
+                  <p>建立可追溯的服务条款版本、订单权益快照和独立退款记录。付款前展示期限、退款边界与停服处理；退款不能靠删除订单或负数加天实现。</p>
+                </article>
+              </div>
+              <h3>服务端规则清单</h3>
+              <ul>
+                <li>按真实数据确定每个模块的“主要记录”免费上限；不是每使用一次扣费，也不拆成逐模块购买。</li>
+                <li>为未来官方虚拟支付预留订单金额、商品、支付渠道和平台交易号；金额统一以整数最小货币单位存储，状态至少覆盖待支付、已支付、已履约、已关闭和已退款。</li>
+                <li>订单保存购买时的商品名称、权益、期限、价格和服务条款版本，并记录用户付款前确认条款的时间。</li>
+                <li>统一实现 <code>grant_membership_days</code>：加天从当前时间与原到期时间中较晚者计算，所有入口共用。</li>
+                <li>管理员可快捷发放 30 / 365 天，也可填自定义天数或目标日期；目标日期按 Asia/Shanghai 当日结束保存。</li>
+                <li>发放类型区分体验、赠送、补偿、测试和纠错；原因必填，请求 ID 唯一，防止重复点击多加天。</li>
+                <li>不允许用负数天数撤销；退款、撤销和纠错走独立流程，记录应退、实退、剩余权益、理由和完整审计。</li>
+                <li>服务端校验管理员权限，不允许前端直接修改数据库；每次变更记录操作者、对象、前后值、来源和时间。</li>
+                <li>资源计费按处理后的实际字节；上传、替换和删除都更新额度，并设置不依赖会员承诺的安全硬上限。</li>
+              </ul>
+            </div>
+            <aside class="exit-box">
+              <h3>进入下一阶段</h3>
+              <p>免费 / 体验 / 年费权益可由服务端可靠执行，管理员能安全发放，用户能看到状态和用量；商品权益快照、条款确认、退款及停服善后也已可执行。</p>
+            </aside>
+          </div>
+        </div>
+      </details>
+
+      <details class="stage" id="stage-4">
+        <summary>
+          <span class="stage-index">4</span>
+          <span class="stage-title">
+            <strong>用留存、访谈与候补名单完成会员方案定案</strong>
+            <span>本阶段仍不收钱；确定何时具备办理主体和接入官方虚拟支付的条件。</span>
+          </span>
+          <span class="stage-status">非付费商业验证</span>
+        </summary>
+        <div class="stage-body">
+          <div class="stage-columns">
+            <div>
+              <h3>内部形成收费方案，但暂不开放购买</h3>
+              <ul>
+                <li>公测至少运行 30～45 天，并出现约 15～20 名跨周重复完成核心记录的用户后，才开始深入讨论会员方案。</li>
+                <li>先根据真实记录量、文件空间、流量和高价值功能确定基础版与会员版边界，不能为了收费人为破坏基础版。</li>
+                <li>访谈高留存用户目前如何解决问题、最舍不得失去什么、替代方案花费多少时间或金钱，以及停止使用的原因。</li>
+                <li>可以邀请用户加入“首批会员方案访谈／候补名单”，记录是否愿意继续了解；不收订金、不生成支付订单、不承诺最终价格。</li>
+                <li>只有用户已经获得核心价值后，才在一对一研究中讨论 49、69～79 或其他内部价格假设；不在小程序、公测笔记或公开页面展示候选金额。</li>
+                <li>汇总留存、候补意愿、拒绝原因、资源成本和预计维护时间；条件不足就继续公测补充数据，条件达到后启动个体工商户／其他合适主体的办理，未来推出付费会员的决定不变。</li>
+                <li>当前不通过淘宝、小红书、闲鱼、个人转账或兑换码出售本小程序 VIP，也不把人工加 365 天作为真实付款验证。</li>
+              </ul>
+              <p class="plan-note">意向和候补名单只能证明用户愿意继续了解，不能替代真实付款证据。49 元仍只是未来接入官方支付后的候选验证价，不是当前报价、长期价或终身价。</p>
+            </div>
+            <aside class="exit-box">
+              <h3>进入下一阶段</h3>
+              <p>免费版边界、会员价值、候选价格和成本已能解释，并达到启动主体与官方支付准备的门槛；若尚未达到，就停留在本阶段继续公测，不改变未来收费方向。</p>
+            </aside>
+          </div>
+        </div>
+      </details>
+
+      <details class="stage" id="stage-5">
+        <summary>
+          <span class="stage-index">5</span>
+          <span class="stage-title">
+            <strong>完成主体与官方虚拟支付后，启动首批真实付费</strong>
+            <span>第一笔会员费也在合适主体和小程序官方虚拟支付能力准备完成后发生。</span>
+          </span>
+          <span class="stage-status">正式付费验证</span>
+        </summary>
+        <div class="stage-body">
+          <div class="stage-columns">
+            <div>
+              <h3>官方虚拟支付接入与首批订单</h3>
+              <ul>
+                <li>完成个体工商户或其他合适主体、小程序认证、服务类目和虚拟支付开通条件核对；优先保留现有 AppID 和用户体系。</li>
+                <li>按届时官方接入指引使用小程序虚拟支付，不用普通小程序支付、外部店铺、个人收款或兑换码替代 VIP 购买链路。</li>
+                <li>服务端创建 <code>wechat_virtual_pay</code> 待支付订单。前端成功提示不能直接增加会员，必须依据可信的平台订单结果履约。</li>
+                <li>履约前核对 AppID、平台订单号、商品、金额／代币、支付状态和签名；主动查单与回调重复到达时仍只增加一次权益。</li>
+                <li>公测期持续说明未来一定会收费；具体方案定案后，内部默认至少提前 7 天公布基础版边界、会员权益、价格、期限、不自动续费、退款规则、已有数据和停服处理。</li>
+                <li>首期只开放一个年度商品，同一公开批次使用相同价格；49 元可以作为候选，但必须在接入时按实际虚拟支付费率重新计算。</li>
+                <li>先积累约 20～50 笔真实官方订单，记录“已获得核心价值且看过报价的用户 → 购买”的转化、拒绝、退款、成本和客服时间。</li>
+                <li>若不得不更换 AppID，通过登录校验后的身份绑定迁移用户，不把新旧 OpenID 当成同一个值。</li>
+              </ul>
+              <h3>规模化与盈利观察</h3>
+              <ul>
+                <li>逐步增加公开推广力度；免费用户未来可展示流量主广告，会员始终无广告。</li>
+                <li>广告只放在列表底部、结果页等自然停顿处，不放在编辑、上传、弹窗和私人数据详情中。</li>
+                <li>年固定基础设施目标按约 2700～3000 元控制，压力预算不超过约 4000 元。</li>
+                <li>按付费用户平均资源成本约 8 元 / 年、免费用户约 1 元 / 年持续复算；广告收入只作免费成本抵扣，不提前计入定价成立条件。</li>
+                <li>真实空间成本出现后再上线按年扩容包；AI、音视频和第三方付费服务使用独立额度。</li>
+                <li>固定成本收入覆盖参考：不计单用户资源成本时，约 60～85 名年费等价用户可覆盖 2700～4000 元固定预算；真实盈亏仍须结合付费与免费用户资源成本复算。</li>
+                <li>根据留存、转化、续费和成本决定是否调整价格；月费和永久会员继续保留为未来选项，不预先承诺。</li>
+              </ul>
+            </div>
+            <aside class="exit-box">
+              <h3>长期原则</h3>
+              <p>先保证免费用户真正能用，再用数量、空间和高级功能形成付费价值；只通过已经确认可用的官方路径收费，所有用户都受安全硬上限保护。</p>
+            </aside>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <div class="section-heading">
+      <span class="number">详</span>
+      <h2>会员、成本与技术规则完整版</h2>
+    </div>
+
+    <section class="detail-stack" aria-label="会员、成本与技术规则完整版">
+      <details class="reference" open>
+        <summary>零、公测预期管理与价格披露边界</summary>
+        <div class="reference-body">
+          <p>本节用于避免两个相反风险：一是用户把公测免费理解成产品永久免费，正式收费时产生被背叛或被数据绑架的感觉；二是在产品价值尚未被验证时过早公布具体价格，让不了解产品的用户因为一个没有上下文的金额直接放弃体验。</p>
+
+          <h3>截至 2026-08-13 的决策状态</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>事项</th><th>当前决定</th><th>以后如何改变</th></tr></thead>
+              <tbody>
+                <tr><td>公测期间</td><td>统一免费，不按注册时间启动 30 天倒计时</td><td>只有在正式免费版和会员边界明确后，才启用单独的 30 天体验</td></tr>
+                <tr><td>商业框架</td><td>正式运营后保留可正常使用的免费基础版，并确定推出年度付费会员；更多容量和部分进阶能力构成会员价值</td><td>是否收费已经确定；月费、永久会员和逐模块收费暂不考虑</td></tr>
+                <tr><td>具体价格</td><td>不对公测用户展示；49 元 / 365 天只是未来官方支付阶段的首期验证价候选</td><td>先根据留存、价值和成本形成方案，再由官方订单验证，不承诺终身价或续费价</td></tr>
+                <tr><td>当前收款</td><td>不收会员费、订金或兑换码费用，不在外部店铺出售本小程序 VIP</td><td>合适主体、官方虚拟支付、条款和退款流程准备完成后才启动真实付费</td></tr>
+                <tr><td>需求验证</td><td>用留存、真实用量、深度访谈和无订金候补名单判断</td><td>口头意愿不是实际购买，正式接入后仍需用真实官方订单复核</td></tr>
+                <tr><td>免费与付费额度</td><td>100 MB、300 MB、2 GB 及各模块记录数都只是初始假设</td><td>以实际字节和用户 P50 / P80 / P90 使用量复算</td></tr>
+                <tr><td>已有数据</td><td>不因未付费而删除或隐藏，允许查看、导出和删除</td><td>超出免费额度时只限制继续新增资源</td></tr>
+                <tr><td>首次收费通知</td><td>用户从公测开始就知道正式运营后一定有付费会员</td><td>具体方案定案后内部默认提前 7 天公告；对外只承诺提前告知，不承诺固定天数</td></tr>
+                <tr><td>付费后变更</td><td>购买期内不单方涨价或缩减已购买权益</td><td>续费新价格在再次购买前显著展示；计划停运按单独善后规则处理</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>对外固定说明</h3>
+          <p class="plan-note">“人类草稿目前处于公开测试阶段，现阶段可免费使用。正式运营后，我们会保留可正常使用的免费基础版，并推出付费会员；会员将提供更多容量或部分进阶能力。具体权益、价格和收费时间将根据公测期间的真实使用情况确定，并在开始收费前提前告知。无论是否购买会员，已有数据都不会因会员规则被删除，并可继续查看、导出和删除。”</p>
+          <ul>
+            <li>常驻位置放在“我的 / 关于”，页面可使用简短“公开测试”标识；用户查看空间用量或开始大量上传时，再展示完整说明。</li>
+            <li>首次进入不使用强制弹窗，不把未来收费计划变成进入产品前的主要信息；先让用户理解产品价值。</li>
+            <li>不得使用“永久免费”“所有功能永远免费”等承诺，也不在公测笔记中提前展示 49 元或其他候选金额。</li>
+            <li>正式公布收费时，同时公布免费版仍能做什么、会员增加什么、已有数据如何处理、过渡期和售后规则，避免只公布一个价格。</li>
+            <li>可以向老用户提供首期验证价或额外过渡权益，但不承诺“创始用户终身 49 元”，避免把尚未验证的价格永久锁死。</li>
+          </ul>
+
+          <h3>通知周期为什么不再固定为 30 天</h3>
+          <ul>
+            <li>用户从进入公测开始就能看到“现阶段免费、正式运营后一定推出付费会员”，因此首次收费不是毫无预告的临时变更。</li>
+            <li>首次收费仍会新增具体价格、免费版边界和会员权益，内部默认在生效前至少 7 天完整公告，给活跃用户阅读和处理已有数据的时间；这是运营缓冲，不是对外固定承诺或统一法定期限。</li>
+            <li>若本次调整会显著影响大量活跃用户，可以主动把过渡期延长到 14 天或更久，不必写死在长期对外文案中。</li>
+            <li>国家层面的 30 天明确要求主要对应经营者决定停业或迁移服务场所。计划停运和已付费用户善后仍保留 30 天规则，不能与首次推出会员混为一谈。</li>
+          </ul>
+
+          <h3>进入收费准备前的最低条件</h3>
+          <ul>
+            <li>至少完成一轮 30～45 天真实使用观察，而不是只看注册人数。</li>
+            <li>出现约 15～20 名在多个自然周重复完成核心记录的用户，能够说明他们最舍不得失去的能力和现有替代方式。</li>
+            <li>已经得到主要记录数、图片字节、空间和流量的分布，能解释免费版与会员版的边界，而不是人为制造限制。</li>
+            <li>先访谈用户解决了什么问题、替代什么工具、停止使用会怎样，并通过无订金候补名单观察继续了解意愿。</li>
+            <li>上述信号足以支持办理合适主体和接入官方虚拟支付的成本；若不成立，继续免费公测。</li>
+          </ul>
+
+          <h3>启动真实收费前的额外门槛</h3>
+          <ul>
+            <li>会员、订单、权益快照、服务条款、退款处理和停服善后已经实现并验证。</li>
+            <li>主体、小程序认证、服务类目和官方虚拟支付能力均满足届时要求，并按实际技术服务费重新计算价格。</li>
+            <li>基础版边界、会员权益、价格和过渡规则已经定案；内部默认至少提前 7 天向现有用户公告，若变化影响较大可主动延长。</li>
+            <li>不把口头意愿当作成交；接入后仍需以首期约 20～50 笔真实官方订单复核价格和模式。</li>
+          </ul>
+
+          <p>心理依据：价格为零会产生超出普通降价的“零价格效应”，免费用户数量不能直接外推成付费需求；在没有事先说明和免费退路时突然从免费强制转收费，会损害公平感、信任和购买意愿。当前策略不是隐藏商业计划，而是先披露收费方向和用户保障，暂缓披露尚未验证的具体金额。</p>
+        </div>
+      </details>
+
+      <details class="reference">
+        <summary>一、会员权益、体验与空间扩容</summary>
+        <div class="reference-body">
+          <p>商业框架固定为“基础版免费＋可选 30 天体验＋年度付费会员＋后续视成本决定是否按年扩容”。正式运营后一定会推出付费会员，但具体价格、额度、会员功能和收费时间尚未定案。公开测试期先统一免费，不把注册本身变成 30 天倒计时，也不发生任何会员交易；正式权益系统落地后，测试体验才作为可选运营工具。49 元 / 365 天目前只是未来接入官方虚拟支付后的首期真实付款候选价，不是已经向用户作出的价格承诺。第一阶段不提供月度会员、永久会员或逐模块购买。</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>权益</th><th>基础版</th><th>30 天体验</th><th>年度会员</th></tr></thead>
+              <tbody>
+                <tr><td>标准模块</td><td>均可真实体验</td><td>全部开放</td><td>全部开放</td></tr>
+                <tr><td>主要记录数量</td><td>各模块设置体验级上限</td><td>正常个人使用范围内不限量</td><td>正常个人使用范围内不限量</td></tr>
+                <tr><td>标准高级功能</td><td>部分限制</td><td>全部开放</td><td>全部开放</td></tr>
+                <tr><td>账户共享文件空间</td><td>初始建议 100 MB</td><td>初始建议 300 MB</td><td>初始建议 2 GB</td></tr>
+                <tr><td>已有数据</td><td>可查看、编辑、删除和导出</td><td>可查看、编辑、删除和导出</td><td>可查看、编辑、删除和导出</td></tr>
+                <tr><td>AI、音视频、第三方服务</td><td>不承诺包含</td><td>不承诺包含</td><td>可赠送少量额度，超出后独立计费</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>表中的 100 MB、300 MB 和 2 GB 是正式运营方案的内部初始假设，不在公测期提前承诺。若图片压缩并计入缩略图后平均约 250 KB，三档分别约可容纳 400、1200 和 8000 张图片。正式额度应根据处理后实际字节复盘：免费额度覆盖约 80% 免费用户三个月的正常使用，体验额度覆盖约 95% 用户 30 天的使用量，会员额度覆盖约 95% 付费用户一年的使用量并保留安全余量。</p>
+
+          <p>“记录不限量”只面向正常个人使用，不允许自动化批量写入、公共图床、存放与个人生活记录无关的大量文件或绕过技术限制。免费上限按用户理解的主要对象计算，不按数据库内部关联行数计算。</p>
+
+          <h3>体验和到期规则</h3>
+          <ul>
+            <li>公开测试与 30 天测试体验是两个状态。公测期所有用户使用统一公测权益；30 天体验只在会员底座、正式免费版边界和到期降级流程完成后启用。</li>
+            <li>测试体验不是注册门槛；正式启用后如需发放，由管理员按用户 ID 手工增加 30 天权益，并记录发放人、原因、时间和完整审计日志。</li>
+            <li>体验到期自动转为基础版，已有数据不删除。若空间超额，只暂停新增文件，仍可查看、下载、导出、删除，并可编辑不增加资源占用的文字。</li>
+            <li>年度会员按单次购买处理，当前不自动续费。提前续费从 <code>max（当前时间，原到期时间）</code> 再增加 365 天。</li>
+          </ul>
+
+          <h3>退款与售后边界（收费前必须实现）</h3>
+          <p>运营目标是防止用户在权益已经正常开通后，仅因个人偏好、长期闲置或忘记使用而随意要求退款；但不能写成“购买后任何情况一律不退”。年度会员需要持续提供 365 天服务，按预付式服务设计合同、订单和善后流程更稳妥。</p>
+          <ul>
+            <li><strong>原则上不支持的情形：</strong>只有在用户付款前确实获得过与所购会员实质相同的服务、权益已正常开通，并且法律和交易平台规则允许时，才对仅因个人偏好变化、使用频率低、忘记使用或找到其他工具提出的无理由退款进行限制。</li>
+            <li><strong>必须受理的情形：</strong>重复支付、付款后未开通、开通对象错误且尚未使用、实际权益与商品描述明显不符、长期无法使用、开发者无法继续按约提供服务，以及法律法规或交易平台判定应退款。</li>
+            <li><strong>短时故障：</strong>优先恢复服务并按影响范围延长权益或给予补偿；不能用补偿替代用户依法享有的退款权。</li>
+            <li><strong>付费期内变更：</strong>年度会员有效期内不单方涨价或缩减用户购买时的权益；如确实无法继续履行，应提供继续履行、合理补偿或退款方案。</li>
+            <li><strong>计划停运：</strong>至少提前 30 天公告并停止继续收取可能无法履行的预付款；无法继续履行时，按尚未履行的剩余期限和实际成交金额计算应退余额，并保留用户导出数据的合理时间。</li>
+            <li><strong>内部退款基线：</strong>重复付款、未开通或未履约的订单全额退；已开始履约但因开发者原因终止时，建议退款基线为“实际成交金额 × 未履行自然日 ÷ 365”。法律或平台要求的金额更高时，以其规则为准。</li>
+            <li><strong>退款执行：</strong>由独立退款流程处理订单状态、剩余权益、退款金额和权益流水，不允许直接删除订单、修改历史成交金额或用负数天数掩盖退款。</li>
+            <li><strong>证据记录：</strong>保存商品权益快照、服务条款版本、用户确认时间、订单号、成交金额、开通时间、到期时间、实际使用状态、退款原因、处理结果和平台争议编号。</li>
+          </ul>
+          <p class="plan-note"><strong>满足“付款前已获得实质相同服务”且交易平台规则允许时，才可采用的对外售后文案：</strong>“本商品为即时开通的年度数字服务。购买前可体验与本商品实质相同的核心服务。权益开通后，原则上不支持因个人偏好、闲置或忘记使用提出的无理由退款；重复支付、未开通、无法按约提供服务、实际权益与商品描述明显不符，以及法律法规或交易平台要求退款的情形除外。”</p>
+          <p>按 2026-08-13 的规则记录：预付式服务应在付款前明确服务内容、价格、期限、退费方式和违约责任。最高人民法院关于预付式消费的司法解释原则上支持消费者付款后七日内请求返还预付款，但购买前已经从经营者或其他经营者获得过相同商品或服务的除外。公测期的完整体验可能有助于证明用户了解相同核心服务，但若付费会员增加了未体验过的容量或功能，就不能当然认为属于完全相同服务；卖家自定文案也不能对抗法律或平台调处。</p>
+
+          <h3>退款仍待讨论的问题</h3>
+          <ul>
+            <li>公测权益与首期付费权益是否实质相同？如果会员增加了更多容量或新功能，是否应默认保留付款后七日的退款入口？</li>
+            <li>用户已经消耗大量新增容量、第三方付费额度或一次性服务时，退款金额如何计算并在付款前清楚说明？</li>
+            <li>退款申请入口、客服联系方式、响应时限和微信官方支付争议处理由谁负责？1～2 人维护时，什么承诺是长期做得到的？</li>
+            <li>若项目停运、主体变化或支付渠道迁移，用户剩余期限、导出窗口和退款资金如何预留？</li>
+          </ul>
+
+          <h3>空间扩容内部假设</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>扩容包</th><th>价格</th><th>有效期</th><th>作用</th></tr></thead>
+              <tbody>
+                <tr><td>额外 5 GB</td><td>19 元候选</td><td>365 天</td><td>只增加共享文件空间，不解锁会员功能</td></tr>
+                <tr><td>额外 20 GB</td><td>49 元候选</td><td>365 天</td><td>只增加共享文件空间，不解锁会员功能</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>所有模块的图片、音频、视频和附件共用账户空间。扩容到期后不删除文件；超额时暂停上传，直到释放空间、续费或再次扩容。扩容包及其价格均不急于首发，也不在公测期对外展示，先用真实数据验证 2 GB 是否足够。</p>
+        </div>
+      </details>
+
+      <details class="reference">
+        <summary>二、订单履约、管理员发放与身份迁移</summary>
+        <div class="reference-body">
+          <p class="plan-note"><strong>当前启用范围：</strong>公测期不创建付费订单，不导入淘宝、小红书、闲鱼或个人转账订单。系统可以提前建好，但只使用 <code>public_beta</code>、测试、赠送和故障补偿等非交易权益。</p>
+
+          <h3>最小数据结构</h3>
+          <ul>
+            <li><code>membership_products</code> 保存商品与购买时的名称、天数、价格、权益快照；后续调价不改变历史订单。</li>
+            <li><code>user_memberships</code> 每个用户一行，保存当前方案、体验开始时间和权益到期时间。</li>
+            <li><code>membership_orders</code> 保存内部订单号、用户、商品、支付渠道、整数最小货币单位金额、状态、平台交易号、权益快照、服务条款版本、用户确认时间和支付／履约／退款时间。</li>
+            <li><code>membership_grants</code> 是只追加的权益流水，记录购买、体验、赠送、补偿、撤销、退款和纠错。</li>
+            <li><code>membership_refunds</code> 保存退款请求、关联订单、申请来源、原因、应退与实退金额、剩余权益处理、平台争议编号、操作者和状态；退款请求 ID 必须唯一。</li>
+            <li><code>membership_terms</code> 保存可追溯的服务条款版本、生效时间和正文摘要。订单只引用购买当时版本，后续修改不能覆盖历史记录。</li>
+            <li>会员、订单、退款和权益流水都通过稳定的 <code>app_users.id</code> 关联用户，不使用昵称、头像或 OpenID 人工匹配。</li>
+          </ul>
+
+          <h3>管理员工具</h3>
+          <ul>
+            <li>“官方订单查询／售后”和“测试、赠送、补偿发放”必须是两个入口；非交易发放不能伪装成订单或收入。</li>
+            <li>公测期只开放非交易发放。查询用户后先展示昵称、用户 ID、当前身份、到期时间和已用空间，避免发错账号。</li>
+            <li>自定义发放可选 30／365 天、自定义天数或目标日期，类型和原因必填；付费订单只能由可信支付结果触发固定商品权益。</li>
+            <li>目标日期按 Asia/Shanghai 当日结束保存；不允许负数。缩短、撤销、退款走独立操作。</li>
+            <li>提交前用全局 <code>app-dialog</code> 展示目标用户、原因和调整前后时间。服务端再次校验管理员、用户和参数。</li>
+            <li>每次操作使用唯一请求 ID；重复点击、网络重试、重复订单回调不能重复加天。成功后返回可查询的流水编号。</li>
+            <li>退款入口必须先展示原订单、成交金额、已使用期限、建议退款金额、退款后权益和数据影响，再确认提交；不能把“退款”混入普通的赠送或纠错入口。</li>
+          </ul>
+
+          <h3>统一订单履约</h3>
+          <ol>
+            <li>公测期没有付费订单；所有公测用户统一使用 <code>public_beta</code>，测试或补偿权益通过独立发放流水处理。</li>
+            <li>未来由服务端创建 <code>wechat_virtual_pay</code> 待支付订单，小程序前端只发起官方流程，不凭前端成功提示直接增加会员。</li>
+            <li>服务端依据可信的平台回调或主动查单结果，核对 AppID、平台订单号、商品、金额／代币、状态和签名。</li>
+            <li>核对成功后原子地把订单更新为已支付，并调用统一的 <code>fulfill_membership_order</code>；履约函数增加 365 天并写入权益流水。</li>
+            <li>订单 ID、平台订单号和请求 ID都必须幂等；回调、查单和网络重试重复发生时直接返回原结果。</li>
+          </ol>
+          <p>外部店铺订单、个人转账和付费兑换码不进入当前履约方案。只有未来确实存在可独立使用的 App／网站服务，并就已有账号权益同步取得微信书面确认后，才另行设计跨端权益来源；不能复用普通管理员发放把它伪装成赠送。</p>
+
+          <h3>主体或 AppID 变化</h3>
+          <p>所有会员、订单和个人记录继续关联稳定的内部 <code>app_users.id</code>，不直接依赖 OpenID。逐步建立 <code>auth_identities</code>，用 <code>provider＋app_id＋openid</code> 唯一映射内部用户，并保存可取得的 UnionID。若以后必须更换 AppID，应通过旧账号登录确认、一次性迁移凭证或人工核验用户 ID 与历史订单安全绑定，不能仅凭昵称自动合并。</p>
+          <p>按 2026-08-13 的官方接入条件，虚拟支付要求已认证小程序，主体为企业、事业单位或个体工商户，个人主体不在当前可开通范围内。虚拟支付技术服务费不能套用普通小程序支付的常见费率；办理主体和接入时必须以当时后台展示的终端、类目和优惠费率重新计算。</p>
+        </div>
+      </details>
+
+      <details class="reference">
+        <summary>三、成本模型与盈利判断</summary>
+        <div class="reference-body">
+          <p>以下是缺少真实账单和真实用户数据时的保守模型，不代表已经发生的账单。汇率暂按 1 美元约 7.2 元人民币作为内部压力测试假设，正式复盘时应替换为实际账单汇率。</p>
+
+          <h3>价格决策状态：49 元合理，但只适合作为验证起点</h3>
+          <p>产品由个人开发、预计只有 1～2 人长期维护，确实能降低固定工资和管理开销，但不能把维护时间当成零成本。用户是否愿意付费，主要取决于产品替代了什么、记录和习惯有多重要、数据是否可信及能否安全迁移，而不是维护团队人数。当前对 49 元的判断需要按经营目标拆开：</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>内部价格假设</th><th>适合验证什么</th><th>当前判断</th></tr></thead>
+              <tbody>
+                <tr><td>49 元 / 365 天</td><td>官方虚拟支付接入后，用户是否愿意进行一笔低风险真实付款；能否覆盖基础设施</td><td>可作为首期 20～50 笔官方订单的候选价；若目标是可持续副业收入，单价偏低，不能直接定成长期价</td></tr>
+                <tr><td>69～79 元 / 365 天</td><td>在价值与信任已形成后，较可持续的个人工具价格带</td><td>仅作后续内部研究区间；需用高留存用户访谈、真实转化、续费和成本支持，不在公测期展示</td></tr>
+                <tr><td>99 元 / 365 天或更高</td><td>高频使用、数据沉淀或明显替代其他付费工具的用户价值</td><td>现在没有证据；只有核心价值、持续运营信任和导出保障都成立后才讨论</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>以上不是同时上线三个价格，也不是预设将来一定涨价。公测期不成交；未来完成主体和官方虚拟支付后，同一公开批次使用同一商品和价格，不对条件相同的用户暗中随机报价。若以后测试不同价格，应采用时间或公开批次清晰分隔，并完整保留当时的商品、权益和价格快照。</p>
+
+          <h3>49 元候选价的贡献空间</h3>
+          <ul>
+            <li>按普通付费用户每年约 8 元资源成本粗算，每名 49 元会员在扣除资源后最多剩约 41 元；再扣官方虚拟支付技术服务费、税费、退款、客服和维护时间后会更少。虚拟支付费率不能按普通支付费率估算。</li>
+            <li>100 名付费用户最多形成约 4100 元资源后贡献，主要只能覆盖当前固定基础设施；500 名约 20500 元，仍未计免费用户成本和 1～2 人的维护劳动。</li>
+            <li>因此，如果目标只是让自己长期使用并覆盖服务器，49 元可能成立；如果目标是稳定副业收入，49 元更适合首期验证价，长期价格要结合规模、转化、续费和实际工时重新决定。</li>
+          </ul>
+
+          <h3>价格验证顺序</h3>
+          <ol>
+            <li>先看用户是否在 30～45 天内反复使用、最常使用哪个模块、保存了多少真实记录，以及哪里产生了持续价值。</li>
+            <li>访谈高留存用户时，先问目前怎么解决、替代方案花多少钱／时间、最舍不得失去哪项能力、为什么继续使用；不要一上来只问“49 元你愿不愿意”。</li>
+            <li>权益边界形成后，可邀请高留存用户参加会员方案访谈或无订金候补名单；候补和口头价格意愿只用于判断何时启动主体办理，不能当作成交。</li>
+            <li>完成合适主体、官方虚拟支付、退款与条款后，再向已经获得核心价值的用户展示完整报价，收集“看过报价 → 官方购买”的转化和拒绝原因。</li>
+            <li>首期积累约 20～50 笔真实官方订单后，联合复盘获客来源、激活、留存、转化、退款、客服时间、虚拟支付费率、单用户成本和续费意向，再决定 49 元是否保留、上调或重新设计权益。</li>
+          </ol>
+
+          <h3>仍待讨论的问题</h3>
+          <ul>
+            <li>正式基础版最小可用范围是什么，哪些容量或进阶能力放入会员后不会让免费用户感觉数据被扣住？</li>
+            <li>首期验证的核心目标是覆盖固定成本、验证付款意愿，还是追求可持续副业收入？目标不同，49 元是否合理的结论也不同。</li>
+            <li>开发、客服、内容审核和故障处理每月实际投入多少小时？应把多少维护时间计入长期价格，而不是只看现金账单？</li>
+            <li>用户最在意的是容量、效率、跨模块整合、无广告、数据安全还是长期运营承诺？这个答案将决定会员卖点，而不只是决定数字大小。</li>
+          </ul>
+
+          <h3>当前 Supabase Pro 配额参考</h3>
+          <p>截至 2026-08-13，公开方案包含 100 GB 文件存储、250 GB 普通流量、250 GB 缓存流量和每项目 8 GB 数据库磁盘。超额后文件存储约 0.0213 美元／GB／月、普通流量约 0.09 美元／GB、缓存流量约 0.03 美元／GB、数据库磁盘约 0.125 美元／GB／月。长期成本还包括计算、备份、日志、内容安全、客服和持续开发。</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>固定项目</th><th>年成本估算</th><th>说明</th></tr></thead>
+              <tbody>
+                <tr><td>Supabase Pro</td><td>约 2160 元</td><td>25 美元／月，按 7.2 汇率估算</td></tr>
+                <tr><td>腾讯云轻量服务器</td><td>约 459 元</td><td>当前 2 核 2 GB、3 Mbps 官方年付刊例参考</td></tr>
+                <tr><td>域名、备份及其他</td><td>约 100～400 元</td><td>按实际发生计算</td></tr>
+                <tr><td>基础设施合计</td><td>约 2700～3000 元／年</td><td>不含研发、客服、税费和未来扩容；压力情景约 4000 元</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>49 元候选价下的固定成本收入覆盖线（不是整体盈亏平衡）</h3>
+          <p>按 49 元候选价且暂不考虑退款、税费和单用户资源成本，会员收入覆盖 2700 元固定成本约需 56 名持续付费会员；预留 10% 风险后约 62 名；4000 元压力情景约 82 名。因此 60～85 名“年度会员等价收入”只能作为固定成本收入覆盖参考，不能视为整体盈亏平衡。真实盈亏必须继续扣除下方模型中的付费用户和免费活跃用户资源成本。</p>
+
+          <h3>单用户资源成本压力测试</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>用户类型</th><th>假设</th><th>年资源成本估算</th></tr></thead>
+              <tbody>
+                <tr><td>普通会员</td><td>平均 0.3 GB 文件、每月 2 GB 缓存访问、约 50 MB 数据库</td><td>约 6～10 元</td></tr>
+                <tr><td>重度会员</td><td>接近 2 GB 文件、每月 10 GB 缓存访问、约 200 MB 数据库</td><td>约 30～40 元</td></tr>
+                <tr><td>异常或滥用账户</td><td>高频非缓存下载、自动化批量写入</td><td>可能超过 49 元候选年费，必须由限额和风控阻断</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>只有先完成图片压缩、缩略图、分页、流量告警和反滥用，49 元候选年费对正常用户才可能有足够资源毛利。下式只是乐观的基础设施压力测试，尚未扣除渠道、税费、退款、客服和 1～2 人的维护劳动，不能直接当成经营利润。</p>
+          <div class="formula">年度结果 ≈ 49 × 付费用户数 − 8 × 付费用户数 − 1 × 免费活跃用户数 − 3000</div>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>年活跃用户</th><th>付费率</th><th>付费用户</th><th>估算年度结果</th></tr></thead>
+              <tbody>
+                <tr><td>500</td><td>10%</td><td>50</td><td>约亏 1400 元</td></tr>
+                <tr><td>1000</td><td>10%</td><td>100</td><td>约盈利 200 元，接近盈亏平衡</td></tr>
+                <tr><td>3000</td><td>10%</td><td>300</td><td>约盈利 6600 元</td></tr>
+                <tr><td>1000</td><td>5%</td><td>50</td><td>约亏 1900 元</td></tr>
+                <tr><td>3000</td><td>5%</td><td>150</td><td>约盈利 300 元，接近盈亏平衡</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>付费率约 10% 时，约 900～1000 名活跃用户达到基础设施盈亏平衡；付费率约 5% 时约需 2700～3000 名。若广告覆盖免费用户自身资源成本，门槛可降至约 750 名和 1500 名。广告只作为免费层成本补充，会员始终无广告，并避开编辑、上传、弹窗和私人详情等高专注或敏感场景。</p>
+        </div>
+      </details>
+
+      <details class="reference">
+        <summary>四、推广前保护、监控与首轮验证指标</summary>
+        <div class="reference-body">
+          <h3>统一资源计量</h3>
+          <ul>
+            <li>按用户统计文件总字节和文件数，并可按模块拆分；上传前按处理后的真实大小检查额度。</li>
+            <li>替换只计算新旧差值，删除同步释放额度；定期核对数据库、额度计数器和 Storage 对象，处理孤儿文件与错误计数。</li>
+            <li>后台观察总量与单用户 P50、P90、P99、最高占用量。</li>
+          </ul>
+
+          <h3>图片与访问保护</h3>
+          <ul>
+            <li>限制最长边、总像素和单文件大小；普通图片建议不超过 5 MB，使用有损 WebP／AVIF，列表只加载缩略图，打印另设高清规格。</li>
+            <li>个人图片使用私有 Bucket 或受控短期地址，官方公共素材与用户素材分离；替换、删除记录时清理所有派生文件。</li>
+            <li>历史图片迁移必须可重复执行，迁移后核对对象数、总字节和页面显示；限制输入像素，防止超大图片或解压炸弹。</li>
+          </ul>
+
+          <h3>反滥用与安全</h3>
+          <ul>
+            <li>按免费／体验／会员设置每日上传文件数、上传总字节、接口频率与安全硬上限；所有列表分页并限制返回条数，高频查询补齐以 <code>user_id</code> 为首列的索引。</li>
+            <li>禁止自动化写入、共享链接或外链托管；异常上传、下载和写入触发告警与临时冻结。</li>
+            <li>关键文字和图片写入经过内容安全检查；验证数据库备份与恢复，准备严重故障处理方式。</li>
+            <li>提供隐私说明、账号注销、个人数据删除和基础导出；正式收费前补齐会员服务、退款、合理使用和隐私规则。</li>
+          </ul>
+
+          <h3>每月成本与盈利监控</h3>
+          <ul>
+            <li>记录活跃用户、付费用户、各方案收入、退款、数据库大小、存储、缓存／非缓存流量、计算规格和真实账单。</li>
+            <li>分开观察体验、免费和年费用户，计算每个付费活跃用户的月均基础设施成本和毛利。</li>
+            <li>年度会员达到 10、25、50、100 人时复盘；免费空间、会员空间和价格只在取得 30～60 天真实数据后调整。</li>
+          </ul>
+
+          <h3>首轮验证指标</h3>
+          <ul>
+            <li>D7、D30 活跃与留存，单模块／跨模块比例，每位活跃用户的主要记录数。</li>
+            <li>每用户图片数、存储字节、月访问流量，以及免费用户遇到记录或高级功能限制的位置。</li>
+            <li>已经获得核心价值的用户真实看到首期候选价格后的购买选择、拒绝原因、年度会员续费率和提前续费比例。</li>
+            <li>体验、免费、年费用户的真实资源成本差异。公开测试阶段不以总注册人数作为核心指标。</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="reference">
+        <summary>五、数据来源与版本说明</summary>
+        <div class="reference-body">
+          <p>本页已合并“公开测试与收费路线图”和“会员定价与成本控制方案”的有效内容。当前采用自然用户开放注册、统一免费公测方案；个人主体阶段不实际出售小程序会员。取得足够真实留存和成本数据后，选择合适主体、启动办理并接入小程序官方虚拟支付；正式运营后推出付费会员的方向已经确定。</p>
+          <p>成本和支付信息记录日期：2026-08-13。上线或调价前应使用实际账单及当时官方规则重新核对。</p>
+
+          <h3>微信支付边界的最终记录</h3>
+          <ul>
+            <li>微信官方把付费开通 VIP、购买特权和工具类付费功能解锁列为虚拟支付场景，并要求小程序内虚拟商品的购买和支付接入小程序虚拟支付。</li>
+            <li>小程序内不得引导用户去 App、公众号、H5、个人号或网站完成这类支付；因此淘宝、小红书、闲鱼、个人转账和付费兑换码不作为当前会员销售路径。</li>
+            <li>公开规则没有逐一点名“外部独立成交后人工开通”或“真正跨端已有权益同步”一律禁止，但外部店铺若专门出售只能在本小程序使用的 VIP，实质仍符合付费开通小程序会员，平台风险较高。</li>
+            <li>真正跨端同步必须存在可独立使用的 App／网站服务和统一账号体系；它既没有公开的明确禁令，也没有官方安全港。未来如出现该场景，应把完整流程提交微信并保存书面答复，不能自行假定允许。</li>
+            <li>截至记录日，官方虚拟支付要求已认证小程序，支持企业、事业单位和个体工商户主体，个人主体不在当前可开通范围内。这是当前先免费验证、以后再办理主体的直接原因。</li>
+          </ul>
+
+          <ul class="source-list">
+            <li><a href="https://pubsonline.informs.org/doi/10.1287/mksc.1060.0254">零价格效应研究（Marketing Science）</a></li>
+            <li><a href="https://www.sciencedirect.com/science/article/pii/S0148296319302334">免费转收费、公平感与 Freemium 研究（Journal of Business Research）</a></li>
+            <li><a href="https://www.sciencedirect.com/science/article/pii/S0268401224000355">Freemium 付费意愿综合研究（International Journal of Information Management）</a></li>
+            <li><a href="https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2024/art_0aea188276a44f0baf940ab95ee00e0a.html">《中华人民共和国消费者权益保护法实施条例》</a></li>
+            <li><a href="https://gongbao.court.gov.cn/Details/415add6e9c15736f2fbd871bdb1538.html">最高人民法院预付式消费民事纠纷司法解释</a></li>
+            <li><a href="https://www.samr.gov.cn/zfjcj/tzgg/art/2023/art_615af9ed6bcd4974bf853dd2e02bc663.html">《中华人民共和国消费者权益保护法》</a></li>
+            <li><a href="https://supabase.com/pricing">Supabase Pricing</a></li>
+            <li><a href="https://supabase.com/docs/guides/platform/manage-your-usage/storage-size">Supabase Storage Size</a></li>
+            <li><a href="https://supabase.com/docs/guides/platform/manage-your-usage/egress">Supabase Egress</a></li>
+            <li><a href="https://supabase.com/docs/guides/platform/manage-your-usage/disk-size">Supabase Disk Size</a></li>
+            <li><a href="https://cloud.tencent.com/product/lighthouse">腾讯云轻量应用服务器价格</a></li>
+            <li><a href="https://mp.weixin.qq.com/cgi-bin/announce?action=getannouncement&amp;announce_id=11772091560sL6TW&amp;version=&amp;lang=zh_CN&amp;token=">微信《小程序虚拟支付业务管理规范更新公告》</a></li>
+            <li><a href="https://developers.weixin.qq.com/miniprogram/product/#_5-13-虚拟支付行为">《微信小程序平台运营规范》5.13 虚拟支付行为</a></li>
+            <li><a href="https://developers.weixin.qq.com/community/minihome/doc/00002cf077cd4810fee42f4b865c01">微信《虚拟支付业务运营指南》</a></li>
+            <li><a href="https://developers.weixin.qq.com/miniprogram/dev/platform-capabilities/business-capabilities/virtual-payment.html">微信《小程序虚拟支付接入指引》</a></li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <footer class="footer">
+      <p>当前执行顺序：完成阶段 0 → 免费公测与观测 → 建设会员底座 → 非付费会员方案定案 → 主体与官方虚拟支付完成后才启动真实付费。阶段 0 的勾选状态仅保存在当前浏览器。</p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const storageKey = "human-draft-public-beta-roadmap-v1";
+      const checkboxes = Array.from(document.querySelectorAll("[data-check-id]"));
+      const progressText = document.getElementById("progress-text");
+      const progressFill = document.getElementById("progress-fill");
+      const progressTrack = document.querySelector("[role='progressbar']");
+      const progressHint = document.getElementById("progress-hint");
+      const publishGate = document.getElementById("publish-gate");
+      const expandAllButton = document.getElementById("expand-all");
+      const resetButton = document.getElementById("reset-checks");
+      const stageDetails = Array.from(document.querySelectorAll("details.stage"));
+      let storageAvailable = true;
+
+      function readSavedChecks() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+          return saved && typeof saved === "object" ? saved : {};
+        } catch (_error) {
+          storageAvailable = false;
+          return {};
+        }
+      }
+
+      function saveChecks() {
+        const state = Object.fromEntries(
+          checkboxes.map((checkbox) => [checkbox.dataset.checkId, checkbox.checked])
+        );
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(state));
+          storageAvailable = true;
+        } catch (_error) {
+          storageAvailable = false;
+        }
+      }
+
+      function updateProgress() {
+        const completed = checkboxes.filter((checkbox) => checkbox.checked).length;
+        const total = checkboxes.length;
+        const percentage = total ? Math.round((completed / total) * 100) : 0;
+        progressText.textContent = `${completed} / ${total}`;
+        progressFill.style.width = `${percentage}%`;
+        progressTrack.setAttribute("aria-valuemax", String(total));
+        progressTrack.setAttribute("aria-valuenow", String(completed));
+
+        if (completed === total) {
+          progressHint.textContent = "公开测试发布门槛已满足，可以开始发研发笔记并开放自然用户使用。";
+          publishGate.querySelector(".gate-icon").textContent = "✓";
+          publishGate.querySelector("strong").textContent = "发布门槛已满足";
+        } else {
+          progressHint.textContent = `还剩 ${total - completed} 项。阶段 0 完成前，先不要发布可能带来真实用户的笔记。`;
+          publishGate.querySelector(".gate-icon").textContent = "!";
+          publishGate.querySelector("strong").textContent = `发布门槛：${total} 项全部完成`;
+        }
+
+        if (!storageAvailable) {
+          progressHint.textContent += " 当前浏览器无法保存勾选状态，刷新页面后会重置。";
+        }
+      }
+
+      const savedChecks = readSavedChecks();
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = savedChecks[checkbox.dataset.checkId] === true;
+        checkbox.addEventListener("change", () => {
+          saveChecks();
+          updateProgress();
+        });
+      });
+
+      document.querySelectorAll("[data-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = document.getElementById(button.dataset.target);
+          if (!target) return;
+          if (target instanceof HTMLDetailsElement) target.open = true;
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+
+      function syncExpandAllButton() {
+        const allExpanded = stageDetails.every((detail) => detail.open);
+        expandAllButton.textContent = allExpanded ? "收起全部阶段" : "展开全部阶段";
+      }
+
+      stageDetails.forEach((detail) => {
+        detail.addEventListener("toggle", syncExpandAllButton);
+      });
+
+      expandAllButton.addEventListener("click", () => {
+        const shouldExpand = !stageDetails.every((detail) => detail.open);
+        stageDetails.forEach((detail) => {
+          detail.open = shouldExpand;
+        });
+        syncExpandAllButton();
+      });
+
+      resetButton.addEventListener("click", () => {
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = false;
+        });
+        saveChecks();
+        updateProgress();
+      });
+
+      updateProgress();
+      syncExpandAllButton();
+    })();
+  </script>
+</body>
+</html>
