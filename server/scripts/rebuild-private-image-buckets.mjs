@@ -19,7 +19,9 @@ const TARGET_BUCKETS = [
 ];
 const CACHE_CONTROL = "3600";
 const APPLY = process.argv.includes("--apply");
-const MANIFEST_RPC = "private_image_migration_manifest";
+const MANIFEST_RPC = "private_image_storage_inventory";
+const onlyArgument = process.argv.find((argument) => argument.startsWith("--only="));
+const onlyBucket = onlyArgument ? onlyArgument.slice("--only=".length) : "";
 
 function hash(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -58,10 +60,11 @@ async function runPool(items, concurrency, worker) {
 }
 
 async function loadManifest(supabase) {
-  const { data, error } = await supabase.rpc(MANIFEST_RPC);
+  const { data, error } = await supabase.rpc(MANIFEST_RPC, {
+    p_bucket_ids: TARGET_BUCKETS,
+  });
   if (error) throw error;
   return (data || [])
-    .filter((item) => TARGET_BUCKETS.includes(item.bucket_id))
     .map((item) => ({
       bucketId: item.bucket_id,
       path: item.object_name,
@@ -121,17 +124,35 @@ async function rebuildBucket(supabase, bucketId, allItems, backupRoot) {
   await mkdir(bucketBackupRoot, { recursive: false });
   const { data: bucketConfig, error: bucketError } = await supabase.storage.getBucket(bucketId);
   if (bucketError || !bucketConfig) throw bucketError || new Error(`Bucket ${bucketId} missing`);
+  await writeFile(
+    join(bucketBackupRoot, "manifest.json"),
+    `${JSON.stringify({ bucketId, bucketConfig, items }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600, flag: "wx" },
+  );
 
   console.log(JSON.stringify({ stage: "backup-start", bucketId, ...before }));
   await downloadBucket(supabase, bucketId, items, bucketBackupRoot);
+  await writeFile(
+    join(bucketBackupRoot, "manifest.json"),
+    `${JSON.stringify({ bucketId, bucketConfig, items }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
   console.log(JSON.stringify({ stage: "backup-complete", bucketId, ...before }));
 
-  const { error: emptyError } = await supabase.storage.emptyBucket(bucketId);
-  if (emptyError) throw emptyError;
+  const bucket = supabase.storage.from(bucketId);
+  for (let index = 0; index < items.length; index += 1000) {
+    const { error: removeError } = await bucket.remove(
+      items.slice(index, index + 1000).map((item) => item.path),
+    );
+    if (removeError) throw removeError;
+  }
+  const afterRemoveManifest = await loadManifest(supabase);
+  const remaining = afterRemoveManifest.filter((item) => item.bucketId === bucketId);
+  if (remaining.length !== 0) {
+    throw new Error(`Bucket ${bucketId} still contains ${remaining.length} objects after removal`);
+  }
   const { error: deleteError } = await supabase.storage.deleteBucket(bucketId);
   if (deleteError) throw deleteError;
-  await sleep(5_000);
-
   const { error: createError } = await supabase.storage.createBucket(bucketId, {
     allowedMimeTypes: bucketConfig.allowed_mime_types || undefined,
     fileSizeLimit: bucketConfig.file_size_limit || undefined,
@@ -182,8 +203,12 @@ async function main() {
   }
   const supabase = getSupabaseAdmin();
   const manifest = await loadManifest(supabase);
+  const selectedBuckets = onlyBucket
+    ? TARGET_BUCKETS.filter((bucketId) => bucketId === onlyBucket)
+    : TARGET_BUCKETS;
+  if (selectedBuckets.length === 0) throw new Error(`Unknown bucket: ${onlyBucket}`);
   const inventory = Object.fromEntries(
-    TARGET_BUCKETS.map((bucketId) => [
+    selectedBuckets.map((bucketId) => [
       bucketId,
       summary(manifest.filter((item) => item.bucketId === bucketId)),
     ]),
@@ -193,7 +218,7 @@ async function main() {
 
   const backupRoot = await mkdtemp(join(tmpdir(), "human-draft-private-images-"));
   try {
-    for (const bucketId of TARGET_BUCKETS) {
+    for (const bucketId of selectedBuckets) {
       await rebuildBucket(supabase, bucketId, manifest, backupRoot);
     }
     await rm(backupRoot, { recursive: true, force: true });

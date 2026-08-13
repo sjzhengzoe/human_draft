@@ -23,6 +23,17 @@ test("personal image migration makes only account-associated buckets private", a
   assert.doesNotMatch(migration, /delete\s+from|truncate|drop\s+table|storage\.objects/i);
 });
 
+test("private image inventory is restricted to the service role", async () => {
+  const migration = await readProjectFile(
+    "supabase/migrations/202608130002_private_image_inventory.sql",
+  );
+  assert.match(migration, /private_image_storage_inventory/);
+  assert.match(migration, /from\s+storage\.objects/i);
+  assert.match(migration, /objects\.bucket_id\s*=\s*any\(p_bucket_ids\)/i);
+  assert.match(migration, /revoke all[\s\S]*from public, anon, authenticated/i);
+  assert.match(migration, /grant execute[\s\S]*to service_role/i);
+});
+
 test("personal image responses use signed URLs while avatars remain public", async () => {
   const [dishImages, activities, media, profile] = await Promise.all([
     readProjectFile("server/domains/menu/dish-images.mjs"),
@@ -53,9 +64,12 @@ test("private bucket rebuild keeps a verified backup until every object is resto
   );
   assert.match(rebuild, /process\.argv\.includes\("--apply"\)/);
   assert.match(rebuild, /sha256/);
-  assert.match(rebuild, /emptyBucket/);
+  assert.match(rebuild, /manifest\.json/);
+  assert.match(rebuild, /\.remove\(/);
   assert.match(rebuild, /deleteBucket/);
+  assert.match(rebuild, /createBucket/);
   assert.match(rebuild, /public:\s*false/);
+  assert.doesNotMatch(rebuild, /emptyBucket/);
   assert.match(rebuild, /after\.count !== before\.count \|\| after\.bytes !== before\.bytes/);
   assert.match(rebuild, /publicResponse\.status < 400 \|\| !signedResponse\.ok/);
   assert.match(rebuild, /await rm\(backupRoot/);

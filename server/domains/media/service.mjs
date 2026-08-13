@@ -39,8 +39,10 @@ export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
 
 function mediaCoverStoragePath(url) {
   if (typeof url !== "string" || !url.trim()) return "";
+  const value = url.trim();
+  if (!value.includes("://")) return value.replace(/^\/+/, "");
   try {
-    const pathname = decodeURIComponent(new URL(url).pathname);
+    const pathname = decodeURIComponent(new URL(value).pathname);
     const markers = [
       `/storage/v1/object/public/${config.mediaCoverBucket}/`,
       `/storage/v1/object/sign/${config.mediaCoverBucket}/`,
@@ -509,10 +511,9 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     thumbnailErrorMessage: "生成影视封面缩略图失败。",
   });
   const bucket = supabase.storage.from(config.mediaCoverBucket);
-  const coverUrl = bucket.getPublicUrl(imagePath).data.publicUrl;
   const { data, error } = await supabase
     .from("media_entries")
-    .update({ cover_url: coverUrl })
+    .update({ cover_url: imagePath })
     .eq("id", id)
     .eq("user_id", userId)
     .select("*")
