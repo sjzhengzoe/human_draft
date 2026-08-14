@@ -1092,6 +1092,47 @@ test("media list supports server-side pagination and fuzzy title search", async 
   });
 });
 
+test("media list signs private originals and thumbnails independently", async (t) => {
+  const coverPath = `users/${USER_ID}/entries/${MEDIA_ID}/cover-cost-v4.webp`;
+  const thumbnailPath = coverPath.replace(".webp", "-thumbnail.webp");
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [{
+        id: MEDIA_ID,
+        title: "测试电影",
+        media_type: "电影",
+        watch_status: "in_progress",
+        platforms: [],
+        cover_url: coverPath,
+        sort_order: 1000,
+      }],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/media?media_type=%E7%94%B5%E5%BD%B1",
+    headers: authHeaders,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(
+    response.json().data.items[0].cover_url,
+    `https://example.test/media-covers/signed/${coverPath}?expires=21600`,
+  );
+  assert.equal(
+    response.json().data.items[0].cover_thumbnail_url,
+    `https://example.test/media-covers/signed/${thumbnailPath}?expires=21600`,
+  );
+  assert.deepEqual(supabase.storageSignedUrlRequests, [{
+    bucket: "media-covers",
+    paths: [coverPath, thumbnailPath],
+    expiresIn: 21_600,
+  }]);
+});
+
 test("media records can request personal-rating priority", async (t) => {
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
@@ -1679,6 +1720,10 @@ test("media cover upload stores a WebP image and updates the existing entry", as
     `https://example.test/media-covers/signed/${upload.path}?expires=21600`,
   );
   assert.equal(response.json().data.item.cover_path, upload.path);
+  assert.equal(
+    response.json().data.item.cover_thumbnail_url,
+    `https://example.test/media-covers/signed/${thumbnailUpload.path}?expires=21600`,
+  );
 });
 
 test("activity cards expose introductions and replace optimized 4:3 covers", async (t) => {

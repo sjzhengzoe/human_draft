@@ -72,14 +72,6 @@ function mediaPlaceholderIcon(mediaType: MediaType): string {
   return "clapperboard"
 }
 
-function mediaCoverThumbnailUrl(url: string): string {
-  if (!url.includes("/media-covers/")) return url
-  return url.replace(
-    /-(normalized-v3|cost-v4)\.webp(?=($|\?))/,
-    "-$1-thumbnail.webp"
-  )
-}
-
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
   const personalRating = entry.watch_status === "completed" && Number.isInteger(entry.personal_rating)
     ? Math.min(5, Math.max(1, Number(entry.personal_rating)))
@@ -88,7 +80,7 @@ function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
     ...entry,
     personal_rating: personalRating,
     placeholderIcon: mediaPlaceholderIcon(entry.media_type),
-    coverThumbnailUrl: mediaCoverThumbnailUrl(entry.cover_url || ""),
+    coverThumbnailUrl: entry.cover_thumbnail_url || entry.cover_url || "",
     ratingStars: [1, 2, 3, 4, 5].map((position) => ({
       position,
       filled: personalRating !== null && position <= personalRating

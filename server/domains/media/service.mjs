@@ -64,7 +64,10 @@ function managedMediaCoverPath(url, userId, mediaEntryId) {
 }
 
 async function createMediaCoverUrlMap(supabase, records) {
-  const paths = records.map((record) => mediaCoverStoragePath(record?.cover_url));
+  const paths = records.flatMap((record) => {
+    const path = mediaCoverStoragePath(record?.cover_url);
+    return [path, optimizedThumbnailPath(path)];
+  });
   return createSignedUrlMap(supabase, {
     bucketName: config.mediaCoverBucket,
     paths,
@@ -76,10 +79,15 @@ async function createMediaCoverUrlMap(supabase, records) {
 function toMediaCoverResponse(record, coverUrls) {
   if (!record || !("cover_url" in record)) return { ...record };
   const path = mediaCoverStoragePath(record?.cover_url);
+  const signedCoverUrl = path ? coverUrls.get(path) || "" : record?.cover_url || "";
+  const thumbnailPath = optimizedThumbnailPath(path);
   return {
     ...record,
     cover_path: path,
-    cover_url: path ? coverUrls.get(path) || "" : record?.cover_url || "",
+    cover_url: signedCoverUrl,
+    cover_thumbnail_url: thumbnailPath
+      ? coverUrls.get(thumbnailPath) || signedCoverUrl
+      : signedCoverUrl,
   };
 }
 
