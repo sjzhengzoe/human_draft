@@ -191,6 +191,8 @@ test("dashboard reads the current month and builds daily calendar states", async
   assert.deepEqual(dashboard.today, {
     date: "2026-08-03",
     completed: false,
+    pending_minutes: 12,
+    extra_pending_minutes: 0,
     daily_minutes: 20,
     daily_completed_minutes: 8,
     daily_pending_minutes: 12,
@@ -203,11 +205,17 @@ test("dashboard reads the current month and builds daily calendar states", async
     balance: 3,
     monthly_grant: 3,
     used_today: false,
+    used: 1,
+    total: 4,
+    remaining: 3,
   });
   assert.deepEqual(dashboard.year, { incomplete_days: 1 });
   assert.equal(dashboard.month.year, 2026);
   assert.equal(dashboard.month.month, 8);
   assert.equal(dashboard.month.value, "2026-08");
+  assert.equal(dashboard.month.month_start, "2026-08-01");
+  assert.equal(dashboard.month.claimed, true);
+  assert.equal(dashboard.month.remainingMinutes, 12);
   assert.equal(dashboard.month.is_current, true);
   assert.equal(dashboard.month.min_month, "2026-08");
   assert.equal(dashboard.month.max_month, "2026-08");
@@ -241,6 +249,12 @@ test("dashboard reads the current month and builds daily calendar states", async
     },
   ]);
   assert.equal(dashboard.cat.bowl_level, "low");
+  assert.deepEqual(dashboard.claim_preview, {
+    minutes: 0,
+    calendar_days: 0,
+    exercise_days: 0,
+    rest_days: 3,
+  });
   assert.equal(supabase.reads.length, 4);
   for (const read of supabase.reads) {
     assert.ok(
@@ -283,6 +297,9 @@ test("dashboard can display a historical month without changing today's progress
     balance: 3,
     monthly_grant: 3,
     used_today: false,
+    used: 0,
+    total: 3,
+    remaining: 3,
   });
   assert.equal(dashboard.month.value, "2026-07");
   assert.equal(dashboard.month.is_current, false);

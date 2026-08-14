@@ -18,6 +18,10 @@ const keyMomentQualityUpgrade = await readFile(
   new URL("../scripts/upgrade-key-moment-image-quality.mjs", import.meta.url),
   "utf8",
 );
+const mediaCoverRecovery = await readFile(
+  new URL("../scripts/restore-missing-media-covers.mjs", import.meta.url),
+  "utf8",
+);
 
 test("historical image migration covers every database-backed image module", () => {
   for (const table of [
@@ -90,4 +94,14 @@ test("key moment quality upgrade uses retained source images and keeps a conditi
   assert.match(keyMomentQualityUpgrade, /mode: 0o600/);
   assert.doesNotMatch(keyMomentQualityUpgrade, /\.remove\(/);
   assert.doesNotMatch(keyMomentQualityUpgrade, /upsert: true/);
+});
+
+test("media cover recovery is dry-run by default and only fills missing COS objects", () => {
+  assert.match(mediaCoverRecovery, /process\.argv\.includes\("--apply"\)/);
+  assert.match(mediaCoverRecovery, /!existingKeys\.has\(cosObjectKey/);
+  assert.match(mediaCoverRecovery, /status = "skipped-existing"/);
+  assert.match(mediaCoverRecovery, /uploaded\.equals\(optimized\.original\)/);
+  assert.match(mediaCoverRecovery, /originalsRetained: apply/);
+  assert.match(mediaCoverRecovery, /mode: 0o600/);
+  assert.doesNotMatch(mediaCoverRecovery, /deleteCosObject|\.remove\(/);
 });

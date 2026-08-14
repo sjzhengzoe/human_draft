@@ -381,6 +381,7 @@ export async function getExerciseDashboard(
     };
   });
   const completedDays = calendarDays.filter((item) => item.state === "completed").length;
+  const legacyRestDaysUsed = currentRestDays.length;
   const currentYearIncompleteDays = countIncompleteDays({
     startDate: currentYearStart,
     endDate: currentContext.today,
@@ -396,6 +397,8 @@ export async function getExerciseDashboard(
     today: {
       date: currentContext.today,
       completed: progress.dailyPendingMinutes === 0,
+      pending_minutes: progress.dailyPendingMinutes,
+      extra_pending_minutes: 0,
       daily_minutes: progress.dailyMinutes,
       daily_completed_minutes: progress.dailyCompletedMinutes,
       daily_pending_minutes: progress.dailyPendingMinutes,
@@ -408,12 +411,18 @@ export async function getExerciseDashboard(
       balance: restCreditBalance,
       monthly_grant: currentMonthGrant,
       used_today: restDayUsedToday,
+      // Keep released clients from before the calendar redesign readable while
+      // they age out. The current client uses balance/monthly_grant instead.
+      used: legacyRestDaysUsed,
+      total: legacyRestDaysUsed + restCreditBalance,
+      remaining: restCreditBalance,
     },
     year: {
       incomplete_days: currentYearIncompleteDays,
     },
     month: {
       value: calendarContext.value,
+      month_start: calendarContext.monthStart,
       year: calendarContext.year,
       month: calendarContext.month,
       days_in_month: calendarContext.daysInMonth,
@@ -422,10 +431,24 @@ export async function getExerciseDashboard(
       min_month: trackingStartDate.slice(0, 7),
       max_month: currentContext.today.slice(0, 7),
       completed_days: completedDays,
+      // Monthly claiming no longer exists; current tracking starts from the
+      // first effective daily goal. Mark it claimed so old clients disable the
+      // removed action, and expose today's remaining work in their summary.
+      claimed: true,
+      claimed_at: null,
+      remainingMinutes: progress.dailyPendingMinutes,
       rest_days: {
         used: calendarRestDays.length,
       },
       days: calendarDays,
+    },
+    // Compatibility aliases for clients released before the calendar model.
+    // They are derived from current records and do not revive legacy tables.
+    claim_preview: {
+      minutes: 0,
+      calendar_days: 0,
+      exercise_days: 0,
+      rest_days: restCreditBalance,
     },
     cat: {
       food_ratio: Number(progress.foodRatio.toFixed(3)),
