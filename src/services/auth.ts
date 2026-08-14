@@ -6,6 +6,7 @@ import { clearMediaDataCache } from "../utils/media-data-cache"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
 
 let pendingLogin: Promise<AuthSession> | null = null
+let pendingRefresh: Promise<AuthSession> | null = null
 let redirectingToLogin = false
 
 function callbackError(result: WechatMiniprogram.GeneralCallbackResult, fallback: string): Error {
@@ -46,6 +47,26 @@ function requestWechatSession(code: string): Promise<AuthSession> {
   })
 }
 
+function requestRefreshedSession(refreshToken: string): Promise<AuthSession> {
+  return new Promise((resolve, reject) => {
+    wx.request<ApiEnvelope<AuthSession>>({
+      url: `${API_BASE_URL}/api/auth/refresh`,
+      method: "POST",
+      data: { refresh_token: refreshToken },
+      success(response) {
+        if (response.statusCode >= 200 && response.statusCode < 300 && response.data.data) {
+          resolve(response.data.data)
+          return
+        }
+        reject(new Error(response.data.error?.message || "登录已过期，请重新登录。"))
+      },
+      fail(result) {
+        reject(callbackError(result, "无法刷新登录状态。"))
+      }
+    })
+  })
+}
+
 async function runLogin(): Promise<AuthSession> {
   if (pendingLogin) return pendingLogin
 
@@ -66,6 +87,29 @@ async function runLogin(): Promise<AuthSession> {
 
 export function loginExistingUser(): Promise<AuthSession> {
   return runLogin()
+}
+
+export async function refreshLoginSession(expectedRefreshToken?: string): Promise<AuthSession> {
+  if (pendingRefresh) return pendingRefresh
+  const stored = getStoredSession()
+  if (!stored) throw new Error("登录已过期，请重新登录。")
+  if (expectedRefreshToken !== undefined && stored.refresh_token !== expectedRefreshToken) {
+    return stored
+  }
+  pendingRefresh = requestRefreshedSession(stored.refresh_token)
+    .then((session) => {
+      setStoredSession(session)
+      getApp<IAppOption>().globalData.currentUser = session.user
+      return session
+    })
+  try {
+    return await pendingRefresh
+  } catch (error) {
+    redirectToLogin(stored.token)
+    throw error
+  } finally {
+    pendingRefresh = null
+  }
 }
 
 export function redirectToLogin(expectedToken?: string): void {
@@ -93,7 +137,8 @@ export function redirectToLogin(expectedToken?: string): void {
 
 export async function ensureLogin(): Promise<AuthSession> {
   const stored = getStoredSession()
-  if (stored) return stored
+  if (stored && Date.parse(stored.expires_at) > Date.now() + 60_000) return stored
+  if (stored) return refreshLoginSession(stored.refresh_token)
   redirectToLogin()
   throw new Error("请先登录。")
 }
@@ -109,7 +154,7 @@ export async function logout(): Promise<void> {
       wx.request({
         url: `${API_BASE_URL}/api/auth/logout`,
         method: "POST",
-        header: { Authorization: `Bearer ${session.token}` },
+        data: { refresh_token: session.refresh_token },
         complete: () => resolve()
       })
     })

@@ -4,6 +4,7 @@ import test from "node:test";
 process.env.NODE_ENV = "test";
 process.env.WECHAT_APP_ID = "test-app-id";
 process.env.WECHAT_APP_SECRET = "test-app-secret";
+process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-bytes";
 
 const { loginWithWechatCode, requireAuth } = await import("../domains/auth/service.mjs");
 const { updateUserAvatar } = await import("../domains/auth/profile.mjs");
@@ -51,11 +52,12 @@ class FakeQuery {
 
   async execute() {
     if (this.table === "app_sessions" && this.operation === "insert") {
-      this.state.sessions.push({
+      const session = {
         id: `session-${this.state.sessions.length + 1}`,
         ...this.values,
-      });
-      return { data: null, error: null };
+      };
+      this.state.sessions.push(session);
+      return { data: session, error: null };
     }
 
     if (this.table === "app_sessions") {

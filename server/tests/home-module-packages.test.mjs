@@ -36,4 +36,10 @@ test("home feature pages stay reachable while loading outside the main package",
   for (const homePath of homePaths) {
     assert.ok(registeredPages.includes(homePath), `${homePath} should remain registered`)
   }
+
+  const preloadedPackages = app.preloadRule?.["pages/create/index"]?.packages || []
+  assert.equal(app.preloadRule?.["pages/create/index"]?.network, "all")
+  for (const root of [...expectedRoots, "exercise"]) {
+    assert.ok(preloadedPackages.includes(root), `${root} should preload from home`)
+  }
 })

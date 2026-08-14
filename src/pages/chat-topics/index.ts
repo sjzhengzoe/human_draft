@@ -594,7 +594,6 @@ Page({
         myItems,
         officialItems
       })
-      await this.loadOfficialPage(this.data.officialPage)
       wx.showToast({ title: "已删除", icon: "success" })
     } catch (error) {
       if (isAsyncPageActive(this)) {

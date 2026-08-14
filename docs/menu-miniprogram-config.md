@@ -81,9 +81,22 @@ SUPABASE_SECRET_KEY=你的服务端 Secret key
 WECHAT_APP_ID=你的小程序 AppID
 WECHAT_APP_SECRET=你的小程序 AppSecret
 WECHAT_ALLOWED_OPENIDS=管理员openid，多个用逗号分隔
+ACCESS_TOKEN_SECRET=至少32字节的随机服务端密钥
+ACCESS_TOKEN_TTL_MINUTES=60
 ```
 
-`SUPABASE_SECRET_KEY` 和 `WECHAT_APP_SECRET` 只能存在服务器上。systemd unit 已通过 `EnvironmentFile=/etc/human-draft.env` 读取它们。
+可以使用 `openssl rand -base64 48` 生成 `ACCESS_TOKEN_SECRET`。它与
+`SUPABASE_SECRET_KEY`、`WECHAT_APP_SECRET` 一样只能存在服务器上，不能提交到 Git
+或发送给小程序。systemd unit 已通过 `EnvironmentFile=/etc/human-draft.env` 读取它们。
+
+小程序登录采用短期 access token 和可撤销 refresh token。普通业务接口只在 Node
+本地验证 access token；刷新和退出登录时才读取 `app_sessions`。修改
+`ACCESS_TOKEN_SECRET` 会让现有 access token 立即失效，但 refresh token 可在客户端
+下次请求时自动换取新 access token。
+
+从旧版透明会话 token 切换到本方案时不做兼容：已登录用户需要重新登录
+一次。旧 `app_sessions` 记录不再被当作 access token 使用，可按原有的过期
+清理策略自然清理。
 
 TLS 证书和私钥也不要放进 Git。将腾讯云下载的 Nginx 完整证书链与私钥单独安装到服务器：
 

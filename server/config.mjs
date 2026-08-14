@@ -56,6 +56,8 @@ export const config = {
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",
   allowedOpenIds: new Set(splitCsv(process.env.WECHAT_ALLOWED_OPENIDS)),
   sessionTtlDays: toPositiveInteger(process.env.SESSION_TTL_DAYS, 30),
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || "",
+  accessTokenTtlMinutes: toPositiveInteger(process.env.ACCESS_TOKEN_TTL_MINUTES, 60),
   maxUploadSizeMb: Math.min(toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 5), 5),
 };
 
@@ -65,6 +67,7 @@ export function getMissingRuntimeConfig() {
     ["SUPABASE_SECRET_KEY", config.supabaseSecretKey],
     ["WECHAT_APP_ID", config.wechatAppId],
     ["WECHAT_APP_SECRET", config.wechatAppSecret],
+    ["ACCESS_TOKEN_SECRET", config.accessTokenSecret],
   ];
   if (config.imageStorageProvider === "cos") {
     required.push(

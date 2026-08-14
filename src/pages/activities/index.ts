@@ -289,7 +289,6 @@ Page({
         selectedImagePath: "",
         currentImageUrl: ""
       })
-      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -332,7 +331,6 @@ Page({
         [this.data.activeType]: items
       }
       this.setData({ itemsByType, items })
-      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -381,7 +379,6 @@ Page({
         pendingDeleteName: ""
       })
       this.removeActivityItemFromCache(id)
-      void this.loadItems(true)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

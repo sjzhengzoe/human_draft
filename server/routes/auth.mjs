@@ -1,4 +1,9 @@
-import { loginWithWechatCode, logoutSession } from "../domains/auth/service.mjs"
+import {
+  getAuthenticatedUser,
+  loginWithWechatCode,
+  logoutSession,
+  refreshSession
+} from "../domains/auth/service.mjs"
 import { readAvatarImage, updateUserAvatar } from "../domains/auth/profile.mjs"
 
 export function registerAuthRoutes(app, context) {
@@ -6,7 +11,8 @@ export function registerAuthRoutes(app, context) {
     authenticated,
     contentSecurity,
     getSupabaseAdmin,
-    profileCompletionAuthenticated
+    profileCompletionAuthenticated,
+    refreshAuthenticated
   } = context
 
   app.post("/api/auth/wechat", async (request) => ({
@@ -16,6 +22,15 @@ export function registerAuthRoutes(app, context) {
       avatarUrl: request.body?.avatar_url
     })
   }))
+
+  app.post(
+    "/api/auth/refresh",
+    { preHandler: refreshAuthenticated },
+    async (request) => ({
+      ok: true,
+      data: await refreshSession(getSupabaseAdmin(), request.refreshAuth)
+    })
+  )
 
   app.post(
     "/api/auth/avatar",
@@ -28,23 +43,24 @@ export function registerAuthRoutes(app, context) {
         request.auth.user.id,
         avatar
       )
+      const user = await getAuthenticatedUser(getSupabaseAdmin(), request.auth)
       return {
         ok: true,
-        data: { user: { ...request.auth.user, avatar_url: avatarUrl } }
+        data: { user: { ...user, avatar_url: avatarUrl } }
       }
     }
   )
 
   app.get("/api/auth/me", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { user: request.auth.user }
+    data: { user: await getAuthenticatedUser(getSupabaseAdmin(), request.auth) }
   }))
 
   app.post(
     "/api/auth/logout",
-    { preHandler: profileCompletionAuthenticated },
+    { preHandler: refreshAuthenticated },
     async (request) => {
-      await logoutSession(getSupabaseAdmin(), request)
+      await logoutSession(getSupabaseAdmin(), request.refreshAuth)
       return { ok: true }
     }
   )

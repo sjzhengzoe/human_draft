@@ -913,7 +913,6 @@ Page({
         outsidePlaceOriginalIds = []
         this.setData({ sortEditing: false })
         wx.showToast({ title: "排序已保存", icon: "success" })
-        await this.refreshData(false)
       } catch (error) {
         if (isAsyncPageActive(this)) {
           wx.showToast({
@@ -941,7 +940,6 @@ Page({
       sortOriginalIds = []
       this.setData({ sortEditing: false })
       wx.showToast({ title: "排序已保存", icon: "success" })
-      await this.refreshData(false)
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({

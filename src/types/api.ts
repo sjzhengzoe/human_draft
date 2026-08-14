@@ -23,6 +23,8 @@ export type AppUser = {
 export type AuthSession = {
   token: string
   expires_at: string
+  refresh_token: string
+  refresh_expires_at: string
   user: AppUser
 }
 

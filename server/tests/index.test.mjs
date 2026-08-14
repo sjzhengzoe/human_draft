@@ -6,9 +6,10 @@ import sharp from "sharp";
 
 process.env.NODE_ENV = "test";
 process.env.WECHAT_ALLOWED_OPENIDS = "test-openid";
+process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-bytes";
 const { buildServer } = await import("../index.mjs");
+const { issueAccessToken } = await import("../domains/auth/access-token.mjs");
 
-const TEST_TOKEN = "test-token";
 const SESSION_ID = "10000000-0000-4000-8000-000000000001";
 const USER_ID = "10000000-0000-4000-8000-000000000002";
 const MEDIA_ID = "10000000-0000-4000-8000-000000000003";
@@ -18,8 +19,14 @@ const TARGET_ID = "10000000-0000-4000-8000-000000000006";
 const SEASON_ID = "10000000-0000-4000-8000-000000000007";
 const EPISODE_ID = "10000000-0000-4000-8000-000000000008";
 const OTHER_USER_ID = "10000000-0000-4000-8000-000000000009";
+const TEST_REFRESH_TOKEN = "r1.test-refresh-token-that-is-long-enough-for-tests";
+const TEST_TOKEN = (await issueAccessToken({
+  sessionId: SESSION_ID,
+  user: { id: USER_ID, wechat_openid: "test-openid" },
+})).token;
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
+  const fromCalls = [];
   const rpcCalls = [];
   const orderCalls = [];
   const storageUploads = [];
@@ -32,9 +39,11 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       this.table = table;
       this.rows = [...(tables[table] || [])];
       this.changes = null;
+      this.selection = "";
     }
 
-    select() {
+    select(selection = "") {
+      this.selection = selection;
       return this;
     }
 
@@ -129,6 +138,12 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     materialize() {
       if (this.changes) this.rows.forEach((row) => Object.assign(row, this.changes));
+      if (this.table === "app_sessions" && this.selection.includes("app_users")) {
+        return this.rows.map((row) => ({
+          ...row,
+          user: (tables.app_users || []).find((user) => user.id === row.user_id) || null,
+        }));
+      }
       return this.rows;
     }
 
@@ -146,6 +161,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   }
 
   const supabase = {
+    fromCalls,
     rpcCalls,
     orderCalls,
     storageUploads,
@@ -197,6 +213,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       },
     },
     from(table) {
+      fromCalls.push(table);
       return new Query(table);
     },
     rpc(name, params) {
@@ -223,7 +240,7 @@ function authenticatedTables(extra = {}) {
       {
         id: SESSION_ID,
         user_id: USER_ID,
-        token_hash: createHash("sha256").update(TEST_TOKEN).digest("hex"),
+        token_hash: createHash("sha256").update(TEST_REFRESH_TOKEN).digest("hex"),
         expires_at: "2999-01-01T00:00:00.000Z",
       },
     ],
@@ -268,6 +285,70 @@ test("unknown API path returns a JSON 404", async () => {
     error: { code: "NOT_FOUND", message: "Not Found" },
   });
   await app.close();
+});
+
+test("refresh rotates the database-backed token while business auth stays local", async (t) => {
+  const tables = authenticatedTables();
+  const supabase = createFakeSupabase({ tables });
+  const app = buildServer({
+    logger: false,
+    supabase,
+  });
+  t.after(() => app.close());
+
+  const refreshResponse = await app.inject({
+    method: "POST",
+    url: "/api/auth/refresh",
+    payload: { refresh_token: TEST_REFRESH_TOKEN },
+  });
+  assert.equal(refreshResponse.statusCode, 200);
+  const refreshed = refreshResponse.json().data;
+  assert.match(refreshed.token, /^[^.]+\.[^.]+\.[^.]+$/);
+  assert.match(refreshed.refresh_token, /^r1\./);
+  assert.notEqual(refreshed.refresh_token, TEST_REFRESH_TOKEN);
+  assert.equal(
+    tables.app_sessions[0].token_hash,
+    createHash("sha256").update(refreshed.refresh_token).digest("hex"),
+  );
+
+  const reusedResponse = await app.inject({
+    method: "POST",
+    url: "/api/auth/refresh",
+    payload: { refresh_token: TEST_REFRESH_TOKEN },
+  });
+  assert.equal(reusedResponse.statusCode, 401);
+
+  const databaseCallsBeforeBusinessAuth = supabase.fromCalls.length;
+  const businessResponse = await app.inject({
+    method: "POST",
+    url: "/api/content-security/text",
+    headers: { authorization: `Bearer ${refreshed.token}` },
+    payload: { content: "本地验签" },
+  });
+  assert.equal(businessResponse.statusCode, 200);
+  assert.equal(supabase.fromCalls.length, databaseCallsBeforeBusinessAuth);
+});
+
+test("legacy opaque tokens are not accepted as access or refresh tokens", async (t) => {
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({ tables: authenticatedTables() }),
+  });
+  t.after(() => app.close());
+
+  const accessResponse = await app.inject({
+    method: "GET",
+    url: "/api/categories",
+    headers: { authorization: "Bearer legacy-opaque-token" },
+  });
+  assert.equal(accessResponse.statusCode, 401);
+
+  const refreshResponse = await app.inject({
+    method: "POST",
+    url: "/api/auth/refresh",
+    payload: { refresh_token: "legacy-opaque-token" },
+  });
+  assert.equal(refreshResponse.statusCode, 401);
 });
 
 test("authenticated template text is checked before use", async () => {

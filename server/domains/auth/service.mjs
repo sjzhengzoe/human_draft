@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition, HttpError } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
+import { issueAccessToken, verifyAccessToken } from "./access-token.mjs";
 import { resolveUserAvatarUrl } from "./profile.mjs";
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
@@ -104,20 +105,46 @@ async function exchangeWechatCode(code) {
   return result.openid;
 }
 
-async function createSession(supabase, userId) {
-  const token = randomBytes(32).toString("base64url");
+function createRefreshToken() {
+  return `r1.${randomBytes(32).toString("base64url")}`;
+}
+
+function toAuthUser(user, avatarUrl = "") {
+  return {
+    id: user.id,
+    display_name: user.display_name || "",
+    avatar_url: avatarUrl,
+    openid: user.wechat_openid,
+    can_write: true,
+    is_admin: canOpenIdWrite(user.wechat_openid),
+    created_at: user.created_at || "",
+  };
+}
+
+async function createSession(supabase, user) {
+  const refreshToken = createRefreshToken();
   const expiresAt = new Date(
     Date.now() + config.sessionTtlDays * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  const { error } = await supabase.from("app_sessions").insert({
-    user_id: userId,
-    token_hash: hashToken(token),
-    expires_at: expiresAt,
-  });
+  const { data: session, error } = await supabase
+    .from("app_sessions")
+    .insert({
+      user_id: user.id,
+      token_hash: hashToken(refreshToken),
+      expires_at: expiresAt,
+    })
+    .select("id")
+    .single();
   throwSupabaseError(error, "创建登录会话失败。");
 
-  return { token, expiresAt };
+  const access = await issueAccessToken({ sessionId: session.id, user });
+  return {
+    token: access.token,
+    expiresAt: access.expiresAt,
+    refreshToken,
+    refreshExpiresAt: expiresAt,
+  };
 }
 
 export async function loginWithWechatCode(supabase, code, profile = {}) {
@@ -181,61 +208,75 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
   });
   throwSupabaseError(defaultsError, "初始化个人数据失败。");
 
-  const session = await createSession(supabase, user.id);
+  const sessionUser = { ...user, wechat_openid: openId };
+  const session = await createSession(supabase, sessionUser);
   const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
 
   return {
     token: session.token,
     expires_at: session.expiresAt,
-    user: {
-      id: user.id,
-      display_name: user.display_name,
-      avatar_url: avatarUrl,
-      openid: openId,
-      can_write: true,
-      is_admin: canOpenIdWrite(openId),
-      created_at: user.created_at,
-    },
+    refresh_token: session.refreshToken,
+    refresh_expires_at: session.refreshExpiresAt,
+    user: toAuthUser(sessionUser, avatarUrl),
   };
 }
 
-export async function requireAuth(supabase, request, options = {}) {
+export async function requireAuth(_supabase, request) {
   const token = getBearerToken(request);
   assertCondition(token, 401, "UNAUTHORIZED", "请先登录。" );
+  const claims = await verifyAccessToken(token);
+  request.auth = {
+    sessionId: claims.sessionId,
+    user: {
+      id: claims.userId,
+      display_name: "",
+      avatar_url: "",
+      openid: claims.openId,
+      can_write: true,
+      is_admin: canOpenIdWrite(claims.openId),
+      created_at: "",
+    },
+  };
+  return request.auth;
+}
 
-  const tokenHash = hashToken(token);
+export async function requireRefreshAuth(supabase, request) {
+  const refreshToken = String(request.body?.refresh_token || "");
+  assertCondition(
+    refreshToken.startsWith("r1.") && refreshToken.length > 20,
+    401,
+    "INVALID_REFRESH_TOKEN",
+    "登录已过期，请重新登录。",
+  );
+  const tokenHash = hashToken(refreshToken);
   const { data: session, error: sessionError } = await supabase
     .from("app_sessions")
-    .select("id, user_id, expires_at")
+    .select(`
+      id,
+      user_id,
+      expires_at,
+      user:app_users!app_sessions_user_id_fkey(
+        id,
+        wechat_openid,
+        display_name,
+        avatar_url,
+        profile_completed,
+        created_at
+      )
+    `)
     .eq("token_hash", tokenHash)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   throwSupabaseError(sessionError, "读取登录会话失败。");
   assertCondition(session, 401, "SESSION_EXPIRED", "登录已过期，请重新登录。" );
-
-  const { data: user, error: userError } = await supabase
-    .from("app_users")
-    .select("id, wechat_openid, display_name, avatar_url, profile_completed, created_at")
-    .eq("id", session.user_id)
-    .maybeSingle();
-  throwSupabaseError(userError, "读取账号信息失败。");
+  const user = Array.isArray(session.user) ? session.user[0] : session.user;
   assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );
-  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
-  request.auth = {
-    sessionId: session.id,
+  request.refreshAuth = {
+    session,
     tokenHash,
-    user: {
-      id: user.id,
-      display_name: user.display_name,
-      avatar_url: avatarUrl,
-      openid: user.wechat_openid,
-      can_write: true,
-      is_admin: canOpenIdWrite(user.wechat_openid),
-      created_at: user.created_at,
-    },
+    user,
   };
-
-  return request.auth;
+  return request.refreshAuth;
 }
 
 export function requireWriteAccess(request) {
@@ -247,11 +288,48 @@ export function requireWriteAccess(request) {
   );
 }
 
-export async function logoutSession(supabase, request) {
-  if (!request.auth?.tokenHash) return;
+export async function refreshSession(supabase, refreshAuth) {
+  const nextRefreshToken = createRefreshToken();
+  const access = await issueAccessToken({
+    sessionId: refreshAuth.session.id,
+    user: refreshAuth.user,
+  });
+  const { data, error } = await supabase
+    .from("app_sessions")
+    .update({ token_hash: hashToken(nextRefreshToken) })
+    .eq("id", refreshAuth.session.id)
+    .eq("token_hash", refreshAuth.tokenHash)
+    .select("id")
+    .maybeSingle();
+  throwSupabaseError(error, "刷新登录会话失败。");
+  assertCondition(data, 401, "REFRESH_TOKEN_REUSED", "登录已过期，请重新登录。" );
+  const avatarUrl = await resolveUserAvatarUrl(supabase, refreshAuth.user.avatar_url);
+  return {
+    token: access.token,
+    expires_at: access.expiresAt,
+    refresh_token: nextRefreshToken,
+    refresh_expires_at: refreshAuth.session.expires_at,
+    user: toAuthUser(refreshAuth.user, avatarUrl),
+  };
+}
+
+export async function logoutSession(supabase, refreshAuth) {
   const { error } = await supabase
     .from("app_sessions")
     .delete()
-    .eq("token_hash", request.auth.tokenHash);
+    .eq("id", refreshAuth.session.id)
+    .eq("token_hash", refreshAuth.tokenHash);
   throwSupabaseError(error, "退出登录失败。");
+}
+
+export async function getAuthenticatedUser(supabase, auth) {
+  const { data: user, error } = await supabase
+    .from("app_users")
+    .select("id, wechat_openid, display_name, avatar_url, profile_completed, created_at")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+  throwSupabaseError(error, "读取账号信息失败。");
+  assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );
+  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
+  return toAuthUser(user, avatarUrl);
 }

@@ -1,5 +1,5 @@
 import { assertCondition } from "../lib/errors.mjs"
-import { requireAuth } from "../domains/auth/service.mjs"
+import { requireAuth, requireRefreshAuth } from "../domains/auth/service.mjs"
 
 export function createAuthGuards(getSupabaseAdmin) {
   const authenticated = async (request) => {
@@ -17,12 +17,17 @@ export function createAuthGuards(getSupabaseAdmin) {
   }
 
   const profileCompletionAuthenticated = async (request) => {
-    await requireAuth(getSupabaseAdmin(), request, { allowIncompleteProfile: true })
+    await requireAuth(getSupabaseAdmin(), request)
+  }
+
+  const refreshAuthenticated = async (request) => {
+    await requireRefreshAuth(getSupabaseAdmin(), request)
   }
 
   return {
     adminAuthenticated,
     authenticated,
-    profileCompletionAuthenticated
+    profileCompletionAuthenticated,
+    refreshAuthenticated
   }
 }

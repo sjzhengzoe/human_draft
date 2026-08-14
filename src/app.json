@@ -84,6 +84,22 @@
       ]
     }
   ],
+  "preloadRule": {
+    "pages/create/index": {
+      "network": "all",
+      "packages": [
+        "pages/menu",
+        "pages/media",
+        "pages/key-moments",
+        "pages/footprint",
+        "pages/chat-topics",
+        "pages/activities",
+        "pages/luggage",
+        "pages/wardrobe",
+        "exercise"
+      ]
+    }
+  },
   "window": {
     "navigationBarTitleText": "Earth",
     "navigationStyle": "custom",

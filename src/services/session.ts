@@ -4,7 +4,17 @@ const SESSION_STORAGE_KEY = "EARTH_AUTH_SESSION"
 
 export function getStoredSession(): AuthSession | null {
   const stored = wx.getStorageSync(SESSION_STORAGE_KEY) as AuthSession | undefined
-  if (!stored || typeof stored.token !== "string" || !stored.user) return null
+  if (
+    !stored
+    || typeof stored.token !== "string"
+    || typeof stored.refresh_token !== "string"
+    || !stored.refresh_token.startsWith("r1.")
+    || typeof stored.refresh_expires_at !== "string"
+    || !stored.user
+  ) {
+    clearStoredSession()
+    return null
+  }
   if (
     typeof stored.user.display_name !== "string" ||
     !stored.user.display_name.trim()
@@ -17,7 +27,7 @@ export function getStoredSession(): AuthSession | null {
     stored.user.is_admin = stored.user.can_write === true
   }
   stored.user.can_write = true
-  if (Date.parse(stored.expires_at) <= Date.now() + 60_000) {
+  if (Date.parse(stored.refresh_expires_at) <= Date.now() + 60_000) {
     clearStoredSession()
     return null
   }

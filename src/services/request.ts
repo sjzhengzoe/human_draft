@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope } from "../types/api"
-import { ensureLogin, redirectToLogin } from "./auth"
+import { ensureLogin, redirectToLogin, refreshLoginSession } from "./auth"
 
 export class ApiRequestError extends Error {
   readonly code: string
@@ -27,7 +27,7 @@ function toApiEnvelope<T>(value: unknown): ApiEnvelope<T> {
   return { ok: false }
 }
 
-async function sendRequest<T>(options: RequestOptions): Promise<T> {
+async function sendRequest<T>(options: RequestOptions, canRefresh = true): Promise<T> {
   const session = await ensureLogin()
   const response = await new Promise<WechatMiniprogram.RequestSuccessCallbackResult<ApiEnvelope<T>>>(
     (resolve, reject) => {
@@ -47,6 +47,14 @@ async function sendRequest<T>(options: RequestOptions): Promise<T> {
   const body = toApiEnvelope<T>(response.data)
 
   if (response.statusCode === 401) {
+    if (canRefresh) {
+      try {
+        await refreshLoginSession(session.refresh_token)
+        return sendRequest<T>(options, false)
+      } catch (_error) {
+        // 统一执行下面的登录失效处理。
+      }
+    }
     redirectToLogin(session.token)
     throw new ApiRequestError(
       body.error?.message || "登录已过期，请重新登录。",
@@ -75,7 +83,7 @@ type UploadOptions = {
   formData?: Record<string, string>
 }
 
-async function sendUpload<T>(options: UploadOptions): Promise<T> {
+async function sendUpload<T>(options: UploadOptions, canRefresh = true): Promise<T> {
   const session = await ensureLogin()
   const response = await new Promise<WechatMiniprogram.UploadFileSuccessCallbackResult>(
     (resolve, reject) => {
@@ -98,6 +106,14 @@ async function sendUpload<T>(options: UploadOptions): Promise<T> {
   }
 
   if (response.statusCode === 401) {
+    if (canRefresh) {
+      try {
+        await refreshLoginSession(session.refresh_token)
+        return sendUpload<T>(options, false)
+      } catch (_error) {
+        // 统一执行下面的登录失效处理。
+      }
+    }
     redirectToLogin(session.token)
     throw new ApiRequestError(
       body.error?.message || "登录已过期，请重新登录。",

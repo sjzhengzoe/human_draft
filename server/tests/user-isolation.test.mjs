@@ -106,7 +106,7 @@ test("every business API route requires an authenticated session", async () => {
       const declaration = compactSource.slice(match.index, match.index + 360);
       assert.match(
         declaration,
-        /\{\s*preHandler:\s*(?:authenticated|adminAuthenticated|profileCompletionAuthenticated)\s*\}/,
+        /\{\s*preHandler:\s*(?:authenticated|adminAuthenticated|profileCompletionAuthenticated|refreshAuthenticated)\s*\}/,
         `${route} in ${path} must require authentication`,
       );
     }
