@@ -136,7 +136,7 @@ async function optimizeTarget(supabase, target, manifest, totals) {
         downloadOptionalBuffer(bucket, row.thumbnail_path),
       ]);
       const optimized = target.createThumbnail === false
-        ? await optimizeOriginalImage(source)
+        ? await optimizeOriginalImage(source, target.profile.original)
         : await optimizeImage(source, target.profile);
       const oldBytes = source.length + (oldThumbnail?.length || 0);
       const newBytes = optimized.original.length + (optimized.thumbnail?.length || 0);

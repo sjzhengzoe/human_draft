@@ -4,6 +4,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 import { config } from "../server/config.mjs";
 import {
+  IMAGE_PROFILES,
   optimizeOriginalImage,
   optimizedImagePaths,
 } from "../server/lib/image-processing.mjs";
@@ -103,7 +104,10 @@ async function main() {
     const dishId = randomUUID();
     const { imagePath } = optimizedImagePaths(`dishes/${dishId}/import`);
     const input = await readFile(file.path);
-    const { original, originalContentType } = await optimizeOriginalImage(input);
+    const { original, originalContentType } = await optimizeOriginalImage(
+      input,
+      IMAGE_PROFILES.dish.original,
+    );
 
     const { error: imageError } = await supabase.storage
       .from(config.dishBucket)

@@ -38,7 +38,7 @@ export const config = {
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",
   allowedOpenIds: new Set(splitCsv(process.env.WECHAT_ALLOWED_OPENIDS)),
   sessionTtlDays: toPositiveInteger(process.env.SESSION_TTL_DAYS, 30),
-  maxUploadSizeMb: toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 10),
+  maxUploadSizeMb: Math.min(toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 5), 5),
 };
 
 export function getMissingRuntimeConfig() {

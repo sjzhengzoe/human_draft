@@ -102,6 +102,57 @@ async function removeManagedMediaCover(supabase, path) {
   if (error) console.error("删除旧影视封面失败:", error);
 }
 
+async function removeManagedMediaCovers(supabase, paths) {
+  const uniquePaths = [...new Set(paths.filter(Boolean))];
+  await Promise.all(uniquePaths.map((path) => removeManagedMediaCover(supabase, path)));
+}
+
+async function removeMediaCoverIfUnreferenced(
+  supabase,
+  userId,
+  mediaEntryId,
+  coverUrl,
+  excludedSeasonId = "",
+) {
+  const path = managedMediaCoverPath(
+    coverUrl,
+    userId,
+    mediaEntryId,
+  );
+  if (!path) return;
+
+  let seasonsQuery = supabase
+    .from("media_seasons")
+    .select("cover_url")
+    .eq("media_entry_id", mediaEntryId)
+    .eq("user_id", userId);
+  if (excludedSeasonId) seasonsQuery = seasonsQuery.neq("id", excludedSeasonId);
+  const [entryResult, seasonsResult] = await Promise.all([
+    supabase
+      .from("media_entries")
+      .select("cover_url")
+      .eq("id", mediaEntryId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    seasonsQuery,
+  ]);
+  if (entryResult.error || seasonsResult.error) {
+    console.error(
+      "检查影视封面剩余引用失败，已保留文件:",
+      entryResult.error || seasonsResult.error,
+    );
+    return;
+  }
+  const remainingCoverUrls = [
+    entryResult.data?.cover_url,
+    ...(seasonsResult.data || []).map((item) => item.cover_url),
+  ];
+  const stillReferenced = remainingCoverUrls.some(
+    (coverUrl) => mediaCoverStoragePath(coverUrl) === path,
+  );
+  if (!stillReferenced) await removeManagedMediaCover(supabase, path);
+}
+
 function mediaPlatforms(value) {
   const platforms = textArray(value, "平台", MEDIA_PLATFORMS.length);
   assertCondition(
@@ -444,13 +495,31 @@ export async function updateMediaEntry(supabase, userId, id, body) {
 }
 
 export async function deleteMediaEntry(supabase, userId, id) {
-  await requireRecord(supabase, userId, "media_entries", id, "id");
+  const entry = await requireRecord(
+    supabase,
+    userId,
+    "media_entries",
+    id,
+    "id,cover_url",
+  );
+  const { data: seasons, error: seasonsError } = await supabase
+    .from("media_seasons")
+    .select("cover_url")
+    .eq("media_entry_id", id)
+    .eq("user_id", userId);
+  throwSupabaseError(seasonsError, "读取影视分季封面失败。");
   const { error } = await supabase
     .from("media_entries")
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除影视条目失败。");
+  await removeManagedMediaCovers(supabase, [
+    managedMediaCoverPath(entry.cover_url, userId, id),
+    ...(seasons || []).map((season) =>
+      managedMediaCoverPath(season.cover_url, userId, id)
+    ),
+  ]);
 }
 
 export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
@@ -485,9 +554,11 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "设置作品封面失败。");
-  await removeManagedMediaCover(
+  await removeMediaCoverIfUnreferenced(
     supabase,
-    managedMediaCoverPath(current.cover_url, userId, id),
+    userId,
+    id,
+    current.cover_url,
   );
   return toSignedMediaCoverResponse(supabase, data);
 }
@@ -523,9 +594,11 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     throwSupabaseError(error, "更新影视封面失败。");
   }
 
-  await removeManagedMediaCover(
+  await removeMediaCoverIfUnreferenced(
     supabase,
-    managedMediaCoverPath(current.cover_url, userId, id),
+    userId,
+    id,
+    current.cover_url,
   );
   return toSignedMediaCoverResponse(supabase, data);
 }
@@ -613,13 +686,26 @@ export async function updateMediaSeason(supabase, userId, id, body) {
 
 export async function deleteMediaSeason(supabase, userId, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "季编号无效。");
-  await requireRecord(supabase, userId, "media_seasons", id, "id");
+  const season = await requireRecord(
+    supabase,
+    userId,
+    "media_seasons",
+    id,
+    "id,media_entry_id,cover_url",
+  );
   const { error } = await supabase
     .from("media_seasons")
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除季失败。");
+  await removeMediaCoverIfUnreferenced(
+    supabase,
+    userId,
+    season.media_entry_id,
+    season.cover_url,
+    season.id,
+  );
 }
 
 export async function addNextMediaEpisode(supabase, userId, seasonId) {

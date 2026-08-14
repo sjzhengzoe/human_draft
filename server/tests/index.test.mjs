@@ -61,6 +61,11 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    neq(field, value) {
+      this.rows = this.rows.filter((row) => row[field] !== value);
+      return this;
+    }
+
     in(field, values) {
       this.rows = this.rows.filter((row) => values.includes(row[field]));
       return this;
@@ -1888,6 +1893,119 @@ test("delete routes return a JSON success envelope", async (t) => {
     assert.equal(response.statusCode, 200);
     assert.deepEqual(response.json(), { ok: true, data: { deleted: true } });
   }
+});
+
+test("deleting a media entry removes each managed original and thumbnail once", async (t) => {
+  const sharedCover = `users/${USER_ID}/entries/${MEDIA_ID}/shared-normalized-v3.webp`;
+  const seasonCover = `users/${USER_ID}/entries/${MEDIA_ID}/season-normalized-v3.webp`;
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [{
+        id: MEDIA_ID,
+        title: "待删除影视",
+        media_type: "电视剧",
+        cover_url: sharedCover,
+      }],
+      media_seasons: [
+        { id: SEASON_ID, media_entry_id: MEDIA_ID, cover_url: sharedCover },
+        { id: TARGET_ID, media_entry_id: MEDIA_ID, cover_url: seasonCover },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "DELETE",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(supabase.storageRemovals, [
+    {
+      bucket: "media-covers",
+      paths: [
+        sharedCover,
+        sharedCover.replace(".webp", "-thumbnail.webp"),
+      ],
+    },
+    {
+      bucket: "media-covers",
+      paths: [
+        seasonCover,
+        seasonCover.replace(".webp", "-thumbnail.webp"),
+      ],
+    },
+  ]);
+});
+
+test("deleting a media season removes its managed cover only when no reference remains", async (t) => {
+  const retainedCover = `users/${USER_ID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
+  const removedCover = `users/${USER_ID}/entries/${MEDIA_ID}/removed-normalized-v3.webp`;
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [{
+        id: MEDIA_ID,
+        title: "测试影视",
+        media_type: "电视剧",
+        cover_url: retainedCover,
+      }],
+      media_seasons: [
+        { id: SEASON_ID, media_entry_id: MEDIA_ID, cover_url: removedCover },
+        { id: TARGET_ID, media_entry_id: MEDIA_ID, cover_url: retainedCover },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "DELETE",
+    url: `/api/media-seasons/${SEASON_ID}`,
+    headers: authHeaders,
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(supabase.storageRemovals, [{
+    bucket: "media-covers",
+    paths: [
+      removedCover,
+      removedCover.replace(".webp", "-thumbnail.webp"),
+    ],
+  }]);
+});
+
+test("switching a media entry cover keeps the old file while a season still uses it", async (t) => {
+  const retainedCover = `users/${USER_ID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
+  const selectedCover = `users/${USER_ID}/entries/${MEDIA_ID}/selected-normalized-v3.webp`;
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [{
+        id: MEDIA_ID,
+        title: "测试影视",
+        media_type: "电视剧",
+        cover_url: retainedCover,
+      }],
+      media_seasons: [
+        { id: SEASON_ID, media_entry_id: MEDIA_ID, cover_url: retainedCover },
+        { id: TARGET_ID, media_entry_id: MEDIA_ID, cover_url: selectedCover },
+      ],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/cover`,
+    headers: authHeaders,
+    payload: { season_id: TARGET_ID },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.item.cover_path, selectedCover);
+  assert.deepEqual(supabase.storageRemovals, []);
 });
 
 test("luggage reorder accepts one final snapshot and applies only the required moves", async (t) => {

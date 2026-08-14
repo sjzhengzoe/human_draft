@@ -1,28 +1,28 @@
 import sharp from "sharp";
+import { HttpError } from "./errors.mjs";
 
 export const IMAGE_STORAGE_VERSION = "normalized-v3";
-export const IMAGE_COMPRESSION_PERCENT = 0;
+export const MAX_IMAGE_PIXELS = 50_000_000;
 
 export const IMAGE_PROFILES = Object.freeze({
   dish: Object.freeze({
-    original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 720, height: 540 }),
+    original: Object.freeze({ width: 1_536, height: 1_536, quality: 84 }),
   }),
   activity: Object.freeze({
-    original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 720, height: 540 }),
+    original: Object.freeze({ width: 1_536, height: 1_536, quality: 84 }),
+    thumbnail: Object.freeze({ width: 720, height: 720, quality: 76 }),
   }),
   wardrobe: Object.freeze({
-    original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 480, height: 480 }),
+    original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
+    thumbnail: Object.freeze({ width: 480, height: 480, quality: 76 }),
   }),
   keyMoment: Object.freeze({
-    original: Object.freeze({ width: 1_920, height: 1_920, quality: 88 }),
-    thumbnail: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
+    original: Object.freeze({ width: 1_920, height: 1_920, quality: 84 }),
+    thumbnail: Object.freeze({ width: 720, height: 720, quality: 76 }),
   }),
   mediaCover: Object.freeze({
-    original: Object.freeze({}),
-    thumbnail: Object.freeze({ width: 240, height: 320 }),
+    original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
+    thumbnail: Object.freeze({ width: 240, height: 320, quality: 76 }),
   }),
 });
 
@@ -37,36 +37,42 @@ function toWebp(source, options) {
     });
   }
 
-  if (options.quality) {
-    return output.webp({
-      quality: options.quality,
-      alphaQuality: options.quality,
-      effort: 4,
-      smartSubsample: true,
-    }).toBuffer();
-  }
-
-  if (IMAGE_COMPRESSION_PERCENT === 0) {
-    return output.webp({ lossless: true, effort: 4 }).toBuffer();
-  }
-
-  const quality = Math.max(1, Math.min(100, 100 - IMAGE_COMPRESSION_PERCENT));
+  const quality = Math.max(1, Math.min(100, options.quality));
   return output
     .webp({
       quality,
-      alphaQuality: quality,
+      alphaQuality: Math.max(quality, 90),
       effort: 4,
       smartSubsample: true,
     })
     .toBuffer();
 }
 
-export async function optimizeImage(buffer, profile) {
-  const source = sharp(buffer, { failOn: "error" }).rotate();
-  const metadata = await source.metadata();
-  if (!metadata.width || !metadata.height) {
-    throw new Error("IMAGE_DIMENSIONS_UNAVAILABLE");
+async function imageSource(buffer) {
+  const source = sharp(buffer, {
+    failOn: "error",
+    limitInputPixels: MAX_IMAGE_PIXELS,
+  }).rotate();
+  try {
+    const metadata = await source.metadata();
+    if (!metadata.width || !metadata.height) throw new Error("IMAGE_DIMENSIONS_UNAVAILABLE");
+    return source;
+  } catch (error) {
+    if (/pixel limit/i.test(error?.message || "")) {
+      const wrapped = new HttpError(
+        413,
+        "IMAGE_PIXELS_TOO_LARGE",
+        "图片像素过高，请缩小图片后重试。",
+      );
+      wrapped.cause = error;
+      throw wrapped;
+    }
+    throw error;
   }
+}
+
+export async function optimizeImage(buffer, profile) {
+  const source = await imageSource(buffer);
 
   const [original, thumbnail] = await Promise.all([
     toWebp(source, profile.original),
@@ -81,15 +87,11 @@ export async function optimizeImage(buffer, profile) {
   };
 }
 
-export async function optimizeOriginalImage(buffer) {
-  const source = sharp(buffer, { failOn: "error" }).rotate();
-  const metadata = await source.metadata();
-  if (!metadata.width || !metadata.height) {
-    throw new Error("IMAGE_DIMENSIONS_UNAVAILABLE");
-  }
+export async function optimizeOriginalImage(buffer, profile = IMAGE_PROFILES.dish.original) {
+  const source = await imageSource(buffer);
 
   return {
-    original: await toWebp(source, {}),
+    original: await toWebp(source, profile),
     originalContentType: "image/webp",
   };
 }

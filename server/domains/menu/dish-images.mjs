@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { HttpError } from "../../lib/errors.mjs";
 import {
+  IMAGE_PROFILES,
   optimizeOriginalImage,
   optimizedImagePaths,
 } from "../../lib/image-processing.mjs";
@@ -27,7 +28,7 @@ export function createDishImageUrlMap(supabase, paths) {
 
 async function normalizeDishImage(buffer) {
   try {
-    return await optimizeOriginalImage(buffer);
+    return await optimizeOriginalImage(buffer, IMAGE_PROFILES.dish.original);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。" );
