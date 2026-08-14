@@ -46,7 +46,7 @@ export function toDishResponse(dish, imageUrls = new Map()) {
     image_path: dish.image_path,
     thumbnail_path: dish.thumbnail_path,
     image_url: dishImageUrl(imageUrls, dish.image_path),
-    thumbnail_url: dishImageUrl(imageUrls, dish.thumbnail_path || dish.image_path),
+    thumbnail_url: dishImageUrl(imageUrls, dish.image_path),
     meal_periods: Array.isArray(dish.meal_periods)
       ? dish.meal_periods
       : [...DEFAULT_MEAL_PERIODS],
@@ -60,7 +60,7 @@ export function toDishResponse(dish, imageUrls = new Map()) {
 async function toSignedDishResponse(supabase, dish) {
   const imageUrls = await createDishImageUrlMap(
     supabase,
-    [dish.image_path, dish.thumbnail_path],
+    [dish.image_path],
   );
   return toDishResponse(dish, imageUrls);
 }
@@ -178,7 +178,7 @@ export async function listDishes(supabase, userId, query) {
   throwSupabaseError(error, "读取菜品列表失败。" );
   const imageUrls = await createDishImageUrlMap(
     supabase,
-    data.flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+    data.map((dish) => dish.image_path),
   );
 
   return {
@@ -496,7 +496,7 @@ export async function deleteDish(supabase, userId, dishId) {
         supabase,
         userId,
         dish.id,
-        dish.thumbnail_path || dish.image_path,
+        dish.image_path,
       )
       : "";
     if (archiveImagePath) archivedPaths.push(archiveImagePath);
@@ -505,7 +505,7 @@ export async function deleteDish(supabase, userId, dishId) {
         supabase,
         userId,
         place.id,
-        place.thumbnail_path || place.image_path,
+        place.image_path,
       )
       : "";
     if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);

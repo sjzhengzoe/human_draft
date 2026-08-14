@@ -93,7 +93,7 @@
         <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
           <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
             <view class="record-card__cover-frame">
-              <image wx:if="{{item.coverThumbnailUrl}}" class="record-card__cover" src="{{item.coverThumbnailUrl}}" mode="aspectFill" lazy-load />
+              <image wx:if="{{item.coverImageUrl}}" class="record-card__cover" src="{{item.coverImageUrl}}" mode="aspectFill" lazy-load />
               <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
               <view class="record-card__overlay">
                 <view class="record-card__title">{{item.title}}</view>
@@ -119,7 +119,7 @@
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
           <view class="record-card__cover-frame">
-            <image wx:if="{{item.coverThumbnailUrl}}" class="record-card__cover" src="{{item.coverThumbnailUrl}}" mode="aspectFill" lazy-load />
+            <image wx:if="{{item.coverImageUrl}}" class="record-card__cover" src="{{item.coverImageUrl}}" mode="aspectFill" lazy-load />
             <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
             <view class="record-card__overlay">
               <view class="record-card__title">{{item.title}}</view>

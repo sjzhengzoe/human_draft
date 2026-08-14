@@ -172,7 +172,7 @@ test("key moments reuse cached periods and update cached lists after writes", as
   assert.match(auth, /clearKeyMomentDataCache\(\)/);
 });
 
-test("key moment image loading and uploads avoid unnecessary serial work", async () => {
+test("key moment image loading uses one stored image", async () => {
   const [page, routes, storage, imageProcessing] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
@@ -181,8 +181,10 @@ test("key moment image loading and uploads avoid unnecessary serial work", async
   ]);
   assert.match(page, /thumbnail_url \|\| item\.image_url[\s\S]*?lazy-load/);
   assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
-  assert.match(storage, /const \[imageResult, thumbnailResult\] = await Promise\.all/);
-  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 1_920[\s\S]*?width: 1_080/);
+  assert.match(storage, /uploadOptimizedOriginalImage/);
+  assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);
+  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 1_920/);
+  assert.doesNotMatch(imageProcessing, /thumbnail:/);
 });
 
 test("key moments migration creates user-owned records and a private image bucket", async () => {

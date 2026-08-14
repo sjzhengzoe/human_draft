@@ -51,12 +51,12 @@ function toScheduleItem(item, dishesById, placesById, imageUrls) {
     ? livePlace?.name || item.snapshot_place_name || ""
     : "";
   const imagePath = liveDish
-    ? liveDish.thumbnail_path || liveDish.image_path || ""
+    ? liveDish.image_path || ""
     : livePlace
-      ? livePlace.thumbnail_path || livePlace.image_path || ""
+      ? livePlace.image_path || ""
       : item.snapshot_image_path;
   const placeImagePath = recordType === "outside"
-    ? livePlace?.thumbnail_path || livePlace?.image_path || item.snapshot_place_image_path
+    ? livePlace?.image_path || item.snapshot_place_image_path
     : "";
   return {
     id: item.id,
@@ -137,8 +137,8 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
   const imageUrls = await createDishImageUrlMap(
     supabase,
     [
-      ...liveDishes.flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
-      ...livePlaces.flatMap((place) => [place.image_path, place.thumbnail_path]),
+      ...liveDishes.map((dish) => dish.image_path),
+      ...livePlaces.map((place) => place.image_path),
       ...(items || []).flatMap((item) => [
         item.snapshot_image_path,
         item.snapshot_place_image_path,
@@ -291,8 +291,8 @@ export async function listMenuFavorites(supabase, userId) {
   const imageUrls = await createDishImageUrlMap(
     supabase,
     [
-      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
-      ...(places || []).flatMap((place) => [place.image_path, place.thumbnail_path]),
+      ...(dishes || []).map((dish) => dish.image_path),
+      ...(places || []).map((place) => place.image_path),
     ],
   );
 
@@ -308,7 +308,7 @@ export async function listMenuFavorites(supabase, userId) {
       place_id: favorite.place_id || null,
       name: source.name,
       record_type: source.record_type || source.place_type,
-      image_url: dishImageUrl(imageUrls, source.thumbnail_path || source.image_path),
+      image_url: dishImageUrl(imageUrls, source.image_path),
       sort_order: Number(favorite.sort_order || 0),
     }];
   });

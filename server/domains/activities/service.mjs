@@ -11,7 +11,7 @@ import {
   createSignedUrlMap,
   removeStorageImages,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
-  uploadOptimizedImagePair,
+  uploadOptimizedOriginalImage,
 } from "../shared/image-storage.mjs";
 import {
   enumValue,
@@ -51,17 +51,14 @@ function toActivityResponse(item, imageUrls = new Map()) {
     ...item,
     introduction: activityIntroductionText(item.introduction),
     image_url: activityImageUrl(imageUrls, item.image_path),
-    thumbnail_url: activityImageUrl(
-      imageUrls,
-      item.thumbnail_path || item.image_path,
-    ),
+    thumbnail_url: activityImageUrl(imageUrls, item.image_path),
   };
 }
 
 async function toSignedActivityResponse(supabase, item) {
   const imageUrls = await createSignedUrlMap(supabase, {
     bucketName: config.activityBucket,
-    paths: [item.image_path, item.thumbnail_path],
+    paths: [item.image_path],
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
     errorMessage: "读取活动封面失败。",
   });
@@ -80,13 +77,12 @@ function assertActivityImage(image) {
 
 async function uploadActivityImage(supabase, userId, itemId, image) {
   assertActivityImage(image);
-  return uploadOptimizedImagePair(supabase, {
+  return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.activityBucket,
     basePath: `users/${userId}/activities/${itemId}/${randomUUID()}`,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.activity,
+    profile: IMAGE_PROFILES.activity.original,
     uploadErrorMessage: "上传活动封面失败。",
-    thumbnailErrorMessage: "生成活动封面缩略图失败。",
   });
 }
 
@@ -121,7 +117,7 @@ export async function listActivityItems(supabase, userId, query) {
   throwSupabaseError(error, "读取活动清单失败。");
   const imageUrls = await createSignedUrlMap(supabase, {
     bucketName: config.activityBucket,
-    paths: (data || []).flatMap((item) => [item.image_path, item.thumbnail_path]),
+    paths: (data || []).map((item) => item.image_path),
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
     errorMessage: "读取活动封面失败。",
   });

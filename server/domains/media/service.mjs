@@ -9,7 +9,7 @@ import {
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   createSignedUrlMap,
-  uploadOptimizedImagePair,
+  uploadOptimizedOriginalImage,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
 import {
@@ -64,10 +64,7 @@ function managedMediaCoverPath(url, userId, mediaEntryId) {
 }
 
 async function createMediaCoverUrlMap(supabase, records) {
-  const paths = records.flatMap((record) => {
-    const path = mediaCoverStoragePath(record?.cover_url);
-    return [path, optimizedThumbnailPath(path)];
-  });
+  const paths = records.map((record) => mediaCoverStoragePath(record?.cover_url));
   return createSignedUrlMap(supabase, {
     bucketName: config.mediaCoverBucket,
     paths,
@@ -80,14 +77,10 @@ function toMediaCoverResponse(record, coverUrls) {
   if (!record || !("cover_url" in record)) return { ...record };
   const path = mediaCoverStoragePath(record?.cover_url);
   const signedCoverUrl = path ? coverUrls.get(path) || "" : record?.cover_url || "";
-  const thumbnailPath = optimizedThumbnailPath(path);
   return {
     ...record,
     cover_path: path,
     cover_url: signedCoverUrl,
-    cover_thumbnail_url: thumbnailPath
-      ? coverUrls.get(thumbnailPath) || signedCoverUrl
-      : signedCoverUrl,
   };
 }
 
@@ -576,13 +569,12 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     "仅支持 PNG、JPEG 或 WebP 图片。",
   );
   const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
-  const { imagePath, thumbnailPath } = await uploadOptimizedImagePair(supabase, {
+  const { imagePath } = await uploadOptimizedOriginalImage(supabase, {
     bucketName: config.mediaCoverBucket,
     basePath: `users/${userId}/entries/${id}/${randomUUID()}`,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.mediaCover,
+    profile: IMAGE_PROFILES.mediaCover.original,
     uploadErrorMessage: "上传影视封面失败。",
-    thumbnailErrorMessage: "生成影视封面缩略图失败。",
   });
   const bucket = supabase.storage.from(config.mediaCoverBucket);
   const { data, error } = await supabase
@@ -593,7 +585,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     .select("*")
     .single();
   if (error) {
-    await bucket.remove([imagePath, thumbnailPath]);
+    await bucket.remove([imagePath]);
     throwSupabaseError(error, "更新影视封面失败。");
   }
 

@@ -7,7 +7,6 @@ import { config } from "../config.mjs";
 import {
   IMAGE_PROFILES,
   isOptimizedImagePath,
-  optimizeImage,
   optimizeOriginalImage,
   optimizedImagePaths,
   optimizedThumbnailPath,
@@ -176,7 +175,7 @@ function migrationBasePath(sourcePath, profile, key) {
   return `${directory}/migration-${profile}-${digest}`;
 }
 
-function registerTransform(transforms, { bucket, sourcePath, oldThumbnailPath = "", profile, pair }) {
+function registerTransform(transforms, { bucket, sourcePath, oldThumbnailPath = "", profile }) {
   const key = `${bucket}\u0000${profile}\u0000${sourcePath}`;
   if (!transforms.has(key)) {
     const paths = optimizedImagePaths(migrationBasePath(sourcePath, profile, key));
@@ -186,9 +185,8 @@ function registerTransform(transforms, { bucket, sourcePath, oldThumbnailPath = 
       sourcePath,
       oldThumbnailPath,
       profile,
-      pair,
       newImagePath: paths.imagePath,
-      newThumbnailPath: pair ? paths.thumbnailPath : null,
+      newThumbnailPath: null,
       status: "planned",
       oldBytes: 0,
       newBytes: 0,
@@ -225,7 +223,6 @@ function buildDatasetPlans(dataset, rows, transforms, plans) {
             bucket: dataset.bucket,
             sourcePath: path,
             profile: dataset.profile,
-            pair: false,
           }),
           output: "image",
         };
@@ -244,7 +241,6 @@ function buildDatasetPlans(dataset, rows, transforms, plans) {
         sourcePath: imagePath,
         oldThumbnailPath: row[dataset.thumbnailColumn] || "",
         profile: dataset.profile,
-        pair: false,
       });
       addPlan(
         plans,
@@ -270,7 +266,6 @@ function buildDatasetPlans(dataset, rows, transforms, plans) {
       sourcePath: imagePath,
       oldThumbnailPath,
       profile: dataset.profile,
-      pair: true,
     });
     if (dataset.kind === "media") {
       addPlan(
@@ -364,12 +359,10 @@ async function prepareTransforms(supabase, transforms) {
       );
     }
     const profile = IMAGE_PROFILES[transform.profile];
-    const optimized = transform.pair
-      ? await optimizeImage(source, profile)
-      : await optimizeOriginalImage(source, profile.original);
+    const optimized = await optimizeOriginalImage(source, profile.original);
     transform.output = optimized;
     transform.oldBytes = source.length + (oldThumbnail?.length || 0);
-    transform.newBytes = optimized.original.length + (optimized.thumbnail?.length || 0);
+    transform.newBytes = optimized.original.length;
     transform.status = "prepared";
     if ((index + 1) % 25 === 0 || index + 1 === transforms.length) {
       console.log(`已分析 ${index + 1}/${transforms.length} 张唯一原图。`);
@@ -417,17 +410,11 @@ async function saveManifest(manifest, path = manifestPath) {
 async function uploadTransforms(supabase, manifest) {
   for (const [index, transform] of manifest.transforms.entries()) {
     const bucket = supabase.storage.from(transform.bucket);
-    const uploads = [
-      [transform.newImagePath, transform.output.original, transform.output.originalContentType],
-    ];
-    if (transform.pair) {
-      uploads.push([
-        transform.newThumbnailPath,
-        transform.output.thumbnail,
-        transform.output.thumbnailContentType,
-      ]);
-    }
-    for (const [path, buffer, contentType] of uploads) {
+    for (const [path, buffer, contentType] of [[
+      transform.newImagePath,
+      transform.output.original,
+      transform.output.originalContentType,
+    ]]) {
       const { error } = await bucket.upload(path, buffer, {
         cacheControl: "3600",
         contentType,

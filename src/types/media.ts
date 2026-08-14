@@ -16,7 +16,6 @@ export type MediaEntry = {
   watch_status: MediaStatus
   platforms: string[]
   cover_url: string
-  cover_thumbnail_url?: string
   cover_path: string
   personal_rating: number | null
   is_revisitable: boolean
@@ -72,7 +71,6 @@ export type MediaSeason = {
   name: string
   sort_order: number
   cover_url: string
-  cover_thumbnail_url?: string
   cover_path: string
   episodes: MediaEpisode[]
   created_at: string

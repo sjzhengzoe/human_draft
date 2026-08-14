@@ -11,19 +11,15 @@ export const IMAGE_PROFILES = Object.freeze({
   }),
   activity: Object.freeze({
     original: Object.freeze({ width: 1_536, height: 1_536, quality: 84 }),
-    thumbnail: Object.freeze({ width: 720, height: 720, quality: 76 }),
   }),
   wardrobe: Object.freeze({
     original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
-    thumbnail: Object.freeze({ width: 480, height: 480, quality: 76 }),
   }),
   keyMoment: Object.freeze({
     original: Object.freeze({ width: 1_920, height: 1_920, quality: 84 }),
-    thumbnail: Object.freeze({ width: 720, height: 720, quality: 76 }),
   }),
   mediaCover: Object.freeze({
     original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
-    thumbnail: Object.freeze({ width: 240, height: 320, quality: 76 }),
   }),
 });
 
@@ -72,22 +68,6 @@ async function imageSource(buffer) {
   }
 }
 
-export async function optimizeImage(buffer, profile) {
-  const source = await imageSource(buffer);
-
-  const [original, thumbnail] = await Promise.all([
-    toWebp(source, profile.original),
-    toWebp(source, profile.thumbnail),
-  ]);
-
-  return {
-    original,
-    thumbnail,
-    originalContentType: "image/webp",
-    thumbnailContentType: "image/webp",
-  };
-}
-
 export async function optimizeOriginalImage(buffer, profile = IMAGE_PROFILES.dish.original) {
   const source = await imageSource(buffer);
 
@@ -100,7 +80,6 @@ export async function optimizeOriginalImage(buffer, profile = IMAGE_PROFILES.dis
 export function optimizedImagePaths(basePath) {
   return {
     imagePath: `${basePath}-${IMAGE_STORAGE_VERSION}.webp`,
-    thumbnailPath: `${basePath}-${IMAGE_STORAGE_VERSION}-thumbnail.webp`,
   };
 }
 

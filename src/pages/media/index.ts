@@ -34,7 +34,7 @@ type LoadCurrentViewOptions = {
 
 type DisplayMediaEntry = MediaEntry & {
   placeholderIcon: string
-  coverThumbnailUrl: string
+  coverImageUrl: string
   ratingStars: Array<{ position: number; filled: boolean }>
 }
 
@@ -80,7 +80,7 @@ function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
     ...entry,
     personal_rating: personalRating,
     placeholderIcon: mediaPlaceholderIcon(entry.media_type),
-    coverThumbnailUrl: entry.cover_thumbnail_url || entry.cover_url || "",
+    coverImageUrl: entry.cover_url || "",
     ratingStars: [1, 2, 3, 4, 5].map((position) => ({
       position,
       filled: personalRating !== null && position <= personalRating

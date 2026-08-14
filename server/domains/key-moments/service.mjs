@@ -11,7 +11,7 @@ import { UUID_PATTERN } from "../shared/records.mjs";
 import {
   createSignedUrlMap,
   removeStorageImages,
-  uploadOptimizedImagePair,
+  uploadOptimizedOriginalImage,
 } from "../shared/image-storage.mjs";
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -93,7 +93,7 @@ async function requireMoment(supabase, userId, momentId) {
 }
 
 async function signedUrlsFor(supabase, moments) {
-  const paths = [...new Set(moments.flatMap((item) => [item.image_path, item.thumbnail_path]).filter(Boolean))];
+  const paths = [...new Set(moments.map((item) => item.image_path).filter(Boolean))];
   return createSignedUrlMap(supabase, {
     bucketName: config.keyMomentBucket,
     paths,
@@ -107,9 +107,7 @@ async function toResponses(supabase, moments) {
   return moments.map((item) => ({
     ...item,
     image_url: item.image_path ? urls.get(item.image_path) || "" : "",
-    thumbnail_url:
-      (item.thumbnail_path ? urls.get(item.thumbnail_path) || "" : "") ||
-      (item.image_path ? urls.get(item.image_path) || "" : ""),
+    thumbnail_url: item.image_path ? urls.get(item.image_path) || "" : "",
   }));
 }
 
@@ -122,13 +120,12 @@ async function uploadImage(supabase, userId, momentId, image) {
   assertImage(image);
   const revision = randomUUID();
   const basePath = `users/${userId}/moments/${momentId}/${revision}`;
-  return uploadOptimizedImagePair(supabase, {
+  return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.keyMomentBucket,
     basePath,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.keyMoment,
+    profile: IMAGE_PROFILES.keyMoment.original,
     uploadErrorMessage: "上传关键节点图片失败。",
-    thumbnailErrorMessage: "生成关键节点缩略图失败。",
   });
 }
 

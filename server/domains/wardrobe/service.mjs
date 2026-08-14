@@ -8,7 +8,7 @@ import { requiredText, UUID_PATTERN } from "../shared/records.mjs";
 import {
   createSignedUrlMap,
   removeStorageImages,
-  uploadOptimizedImagePair,
+  uploadOptimizedOriginalImage,
 } from "../shared/image-storage.mjs";
 
 const SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
@@ -145,13 +145,9 @@ async function signedUrlsFor(supabase, paths) {
 }
 
 async function toItemResponse(supabase, item, category, signedUrls) {
-  const thumbnailPath = item.thumbnail_path || item.image_path;
   const [imageUrl, thumbnailUrl] = signedUrls
-    ? [signedUrls.get(item.image_path) || "", signedUrls.get(thumbnailPath) || ""]
-    : await Promise.all([
-        signedUrlFor(supabase, item.image_path),
-        signedUrlFor(supabase, thumbnailPath),
-      ]);
+    ? [signedUrls.get(item.image_path) || "", signedUrls.get(item.image_path) || ""]
+    : await signedUrlFor(supabase, item.image_path).then((url) => [url, url]);
   return {
     ...item,
     category: category
@@ -162,18 +158,17 @@ async function toItemResponse(supabase, item, category, signedUrls) {
   };
 }
 
-async function uploadImagePair(supabase, userId, itemId, image) {
+async function uploadImage(supabase, userId, itemId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择衣物图片。");
   assertCondition(STANDARD_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
   const revision = randomUUID();
   const basePath = `users/${userId}/items/${itemId}/${revision}`;
-  return uploadOptimizedImagePair(supabase, {
+  return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.wardrobeBucket,
     basePath,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.wardrobe,
+    profile: IMAGE_PROFILES.wardrobe.original,
     uploadErrorMessage: "上传衣物图片失败。",
-    thumbnailErrorMessage: "生成衣物缩略图失败。",
   });
 }
 
@@ -330,7 +325,7 @@ export async function listWardrobeItems(supabase, userId, query) {
   throwSupabaseError(error, "读取衣橱失败。");
   const signedUrls = await signedUrlsFor(
     supabase,
-    data.flatMap((item) => [item.image_path, item.thumbnail_path || item.image_path]),
+    data.map((item) => item.image_path),
   );
   return Promise.all(
     data.map((item) =>
@@ -350,7 +345,7 @@ export async function createWardrobeItem(supabase, userId, fields, image) {
   const name = requiredText(fields.name, "衣物名称", 80);
   const values = normalizeValues(fields.values || {}, category.fields || []);
   const itemId = randomUUID();
-  const paths = await uploadImagePair(supabase, userId, itemId, image);
+  const paths = await uploadImage(supabase, userId, itemId, image);
   const { data, error } = await supabase
     .rpc("create_wardrobe_item_at_end", {
       p_id: itemId,
@@ -397,7 +392,7 @@ export async function updateWardrobeItem(supabase, userId, itemId, body) {
 export async function replaceWardrobeItemImage(supabase, userId, itemId, image) {
   const current = await requireItem(supabase, userId, itemId);
   const category = await requireCategory(supabase, userId, current.category_id);
-  const paths = await uploadImagePair(supabase, userId, itemId, image);
+  const paths = await uploadImage(supabase, userId, itemId, image);
   const { data, error } = await supabase
     .from("wardrobe_items")
     .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })

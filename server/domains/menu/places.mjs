@@ -39,7 +39,7 @@ export function toMenuPlaceResponse(place, dishes = [], imageUrls = new Map()) {
     image_path: place.image_path || "",
     thumbnail_path: place.thumbnail_path || null,
     image_url: dishImageUrl(imageUrls, place.image_path),
-    thumbnail_url: dishImageUrl(imageUrls, place.thumbnail_path || place.image_path),
+    thumbnail_url: dishImageUrl(imageUrls, place.image_path),
     sort_order: place.sort_order ?? 0,
     source_dish_id: place.source_dish_id || null,
     dish_count: dishes.length,
@@ -90,7 +90,7 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   if (!includeDishes) {
     const imageUrls = await createDishImageUrlMap(
       supabase,
-      places.flatMap((place) => [place.image_path, place.thumbnail_path]),
+      places.map((place) => place.image_path),
     );
     return places.map((place) => toMenuPlaceResponse(place, [], imageUrls));
   }
@@ -107,8 +107,8 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   const imageUrls = await createDishImageUrlMap(
     supabase,
     [
-      ...places.flatMap((place) => [place.image_path, place.thumbnail_path]),
-      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+      ...places.map((place) => place.image_path),
+      ...(dishes || []).map((dish) => dish.image_path),
     ],
   );
 
@@ -145,8 +145,7 @@ export async function getMenuPlace(supabase, userId, placeId) {
     supabase,
     [
       data.image_path,
-      data.thumbnail_path,
-      ...(dishes || []).flatMap((dish) => [dish.image_path, dish.thumbnail_path]),
+      ...(dishes || []).map((dish) => dish.image_path),
     ],
   );
   return toMenuPlaceResponse(data, dishes || [], imageUrls);
@@ -280,7 +279,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
         supabase,
         userId,
         place.id,
-        place.thumbnail_path || place.image_path,
+        place.image_path,
       )
       : "";
     if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);
@@ -292,7 +291,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
         supabase,
         userId,
         dish.id,
-        dish.thumbnail_path || dish.image_path,
+        dish.image_path,
       );
       if (archiveImagePath) archivedPaths.push(archiveImagePath);
       dishArchives.push({ dish_id: dish.id, archive_image_path: archiveImagePath });

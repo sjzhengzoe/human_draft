@@ -49,8 +49,7 @@ test("personal image responses use signed URLs while avatars remain public", asy
   assert.doesNotMatch(activities, /getPublicUrl/);
   assert.match(media, /createMediaCoverUrlMap/);
   assert.match(media, /toMediaCoverResponse/);
-  assert.match(media, /cover_thumbnail_url/);
-  assert.match(media, /optimizedThumbnailPath/);
+  assert.doesNotMatch(media, /cover_thumbnail_url/);
   assert.match(profile, /avatarBucket\)\.getPublicUrl/);
 });
 

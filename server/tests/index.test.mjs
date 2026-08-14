@@ -862,7 +862,7 @@ test("deleting a referenced dish copies history images before the atomic databas
   assert.equal(response.statusCode, 200);
   assert.deepEqual(
     supabase.storageCopies.map((copy) => copy.sourcePath),
-    ["dishes/thumb.webp", "places/thumb.webp"],
+    ["dishes/original.webp", "places/original.webp"],
   );
   const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_dish");
   assert.ok(deleteCall);
@@ -901,7 +901,7 @@ test("deleting a referenced store archives both store and child-dish images", as
   assert.equal(response.statusCode, 200);
   assert.deepEqual(
     supabase.storageCopies.map((copy) => copy.sourcePath),
-    ["places/thumb.webp", "dishes/thumb.webp"],
+    ["places/original.webp", "dishes/original.webp"],
   );
   const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_place");
   assert.ok(deleteCall);
@@ -1092,9 +1092,8 @@ test("media list supports server-side pagination and fuzzy title search", async 
   });
 });
 
-test("media list signs private originals and thumbnails independently", async (t) => {
+test("media list uses one independently signed private cover", async (t) => {
   const coverPath = `users/${USER_ID}/entries/${MEDIA_ID}/cover-cost-v4.webp`;
-  const thumbnailPath = coverPath.replace(".webp", "-thumbnail.webp");
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -1122,13 +1121,9 @@ test("media list signs private originals and thumbnails independently", async (t
     response.json().data.items[0].cover_url,
     `https://example.test/media-covers/signed/${coverPath}?expires=21600`,
   );
-  assert.equal(
-    response.json().data.items[0].cover_thumbnail_url,
-    `https://example.test/media-covers/signed/${thumbnailPath}?expires=21600`,
-  );
   assert.deepEqual(supabase.storageSignedUrlRequests, [{
     bucket: "media-covers",
-    paths: [coverPath, thumbnailPath],
+    paths: [coverPath],
     expiresIn: 21_600,
   }]);
 });
@@ -1637,7 +1632,7 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
   assert.equal(invalidQuoteResponse.json().error.code, "TEXT_REQUIRED");
 });
 
-test("media cover upload stores a WebP image and updates the existing entry", async (t) => {
+test("media cover upload stores one WebP image and updates the existing entry", async (t) => {
   const media = {
     id: MEDIA_ID,
     title: "测试电影",
@@ -1690,11 +1685,9 @@ test("media cover upload stores a WebP image and updates the existing entry", as
 
   assert.equal(response.statusCode, 200);
   assert.equal(checkedImages.length, 1);
-  assert.equal(supabase.storageUploads.length, 2);
-  const upload = supabase.storageUploads.find(({ path }) => !path.includes("-thumbnail.webp"));
-  const thumbnailUpload = supabase.storageUploads.find(({ path }) => path.includes("-thumbnail.webp"));
+  assert.equal(supabase.storageUploads.length, 1);
+  const upload = supabase.storageUploads[0];
   assert.ok(upload);
-  assert.ok(thumbnailUpload);
   assert.equal(upload.bucket, "media-covers");
   assert.match(upload.path, new RegExp(`^users/${USER_ID}/entries/${MEDIA_ID}/.+\\.webp$`));
   assert.equal(upload.options.contentType, "image/webp");
@@ -1706,24 +1699,12 @@ test("media cover upload stores a WebP image and updates the existing entry", as
     })),
     { format: "webp", width: 300, height: 400 },
   );
-  assert.deepEqual(
-    await sharp(thumbnailUpload.buffer).metadata().then(({ format, width, height }) => ({
-      format,
-      width,
-      height,
-    })),
-    { format: "webp", width: 240, height: 320 },
-  );
   assert.equal(response.json().data.item.cover_url.includes(upload.path), true);
   assert.equal(
     response.json().data.item.cover_url,
     `https://example.test/media-covers/signed/${upload.path}?expires=21600`,
   );
   assert.equal(response.json().data.item.cover_path, upload.path);
-  assert.equal(
-    response.json().data.item.cover_thumbnail_url,
-    `https://example.test/media-covers/signed/${thumbnailUpload.path}?expires=21600`,
-  );
 });
 
 test("activity cards expose introductions and replace optimized 4:3 covers", async (t) => {
@@ -1769,7 +1750,7 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
   assert.equal(listResponse.json().data.items[0].introduction, "沿着湖岸慢慢骑。");
   assert.equal(
     listResponse.json().data.items[0].thumbnail_url,
-    "https://example.test/activity-images/signed/users/old/activity-thumbnail.webp?expires=21600",
+    "https://example.test/activity-images/signed/users/old/activity.webp?expires=21600",
   );
 
   const allTypesResponse = await app.inject({
@@ -1844,21 +1825,11 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
 
   assert.equal(imageResponse.statusCode, 200);
   assert.equal(checkedImages.length, 1);
-  assert.equal(supabase.storageUploads.length, 2);
-  const upload = supabase.storageUploads.find(({ path }) => !path.includes("-thumbnail.webp"));
-  const thumbnailUpload = supabase.storageUploads.find(({ path }) => path.includes("-thumbnail.webp"));
+  assert.equal(supabase.storageUploads.length, 1);
+  const upload = supabase.storageUploads[0];
   assert.ok(upload);
-  assert.ok(thumbnailUpload);
   assert.equal(upload.bucket, "activity-images");
   assert.match(upload.path, new RegExp(`^users/${USER_ID}/activities/${SOURCE_ID}/.+\\.webp$`));
-  assert.deepEqual(
-    await sharp(thumbnailUpload.buffer).metadata().then(({ format, width, height }) => ({
-      format,
-      width,
-      height,
-    })),
-    { format: "webp", width: 720, height: 540 },
-  );
   assert.deepEqual(supabase.storageRemovals[0], {
     bucket: "activity-images",
     paths: ["users/old/activity.webp", "users/old/activity-thumbnail.webp"],
