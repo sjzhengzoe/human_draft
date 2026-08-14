@@ -844,11 +844,11 @@
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="image-cost" />
+          <input type="checkbox" data-check-id="image-cost" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 成本</span>
             <span class="check-card-title">完成图片成本优化</span>
-            <span class="check-card-copy">未来新上传图片的压缩、尺寸、像素和文件大小限制已部署，菜品不额外生成缩略图。待实际上传一张新图片并核对显示、字节和打印效果后勾选本项。</span>
+            <span class="check-card-copy">未来新上传图片的有损 WebP、尺寸、像素和文件大小限制已部署；菜品不额外生成缩略图。管理员新上传菜品已完成线上对象、私有访问和页面清晰度验收。</span>
           </span>
         </label>
 
@@ -995,7 +995,7 @@
       </details>
 
       <details class="reference stage-audit" open>
-        <summary>第 3 项实施记录 · 已部署，待新图片冒烟验收（2026-08-14）</summary>
+        <summary>第 3 项实施记录 · 已完成线上验收（2026-08-14）</summary>
         <div class="reference-body">
           <p class="plan-note"><strong>当前结论：</strong>未来新上传的个人图片统一使用有尺寸上限的有损 WebP，并增加 5 MB 文件硬上限和 5,000 万解码像素保护。按本阶段的成本取舍，菜品只保存一张可用于打印的 1536 像素图片，不额外生成缩略图。现有公测前测试图片不迁移、不重编码，因此本次会降低未来新增存储和流量，不会立即减少当前已占用的约 298 MB 三类图片空间。</p>
 
@@ -1034,7 +1034,9 @@
             <li>自动测试已覆盖各模块原图／缩略图尺寸、有损编码、透明通道、超像素拒绝，以及影视作品删除时原图和缩略图去重清理。</li>
             <li>使用仓库内两张 4032 × 3024 实拍菜图和一张 1536 × 1024 透明菜图抽样：合计 8.95 MiB 的源文件处理后为 0.92 MiB，约减少 90%。这只是代表性样本，不直接等同于线上旧图片全量可节省比例。</li>
             <li>图片优化代码已由提交 <code>01cf5c9</code> 推送并通过 GitHub Actions 部署，线上健康检查正常；小程序体验版本 <code>2026.08.14</code> 已上传，包大小 1,134,029 字节。</li>
-            <li>发布操作没有擅自创建或替换业务图片。仍需开发者在小程序中实际上传一张新的菜品图片，核对 Storage 对象类型、尺寸、字节、页面显示和打印效果；该线上冒烟验收通过后，才把顶部“完成图片成本优化”勾选为已验证。</li>
+            <li>管理员随后在小程序中实际新增名为 <code>test</code> 的菜品并确认页面显示清晰。数据库保存新版本随机路径，<code>thumbnail_path</code> 为空；对应目录只有 1 个 Storage 对象，没有生成额外缩略图。</li>
+            <li>该对象为 1179 × 884 的有损 WebP，大小 71,386 字节（约 69.7 KiB），没有放大原始图片；Storage 元数据、实际下载字节和 MIME 类型一致。60 秒授权地址读取返回 200，匿名公开地址返回 400，证明压缩与私有访问同时生效。</li>
+            <li>本项线上验收通过并已勾选。现有公测前旧图片继续保持原样；没有数据库结构变化、历史回填、旧表／字段删除或用户手工迁移要求。</li>
           </ul>
         </div>
       </details>
