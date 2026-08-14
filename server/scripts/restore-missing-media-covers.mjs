@@ -82,7 +82,8 @@ function chooseCandidate(title, candidates) {
 
 function trustedSourceImageUrl(value) {
   const url = new URL(String(value || ""));
-  const trustedHost = url.hostname === "lain.bgm.tv"
+  const trustedHost = url.hostname === "bangumi.tv"
+    || url.hostname === "lain.bgm.tv"
     || url.hostname.endsWith(".doubanio.com");
   if (url.protocol !== "https:" || !trustedHost) {
     throw new Error("封面来源不在允许的影视资料域名中");
@@ -196,16 +197,28 @@ async function main() {
         if (Number(error?.statusCode) !== 404 && String(error?.code) !== "NoSuchKey") throw error;
       }
 
-      const sourceResponse = await fetchWithRetry(item.source.imageUrl, {
-        headers: {
-          referer: "https://movie.douban.com/",
-          "user-agent": "Mozilla/5.0",
-        },
-      });
-      const sourceBuffer = Buffer.from(await sourceResponse.arrayBuffer());
-      if (!sourceBuffer.length) throw new Error("下载到的封面为空");
       const sourceFilename = `${sha256(entry.path).slice(0, 24)}.source`;
-      await writeFile(resolve(originalsDirectory, sourceFilename), sourceBuffer, { mode: 0o600 });
+      const sourceFilePath = resolve(originalsDirectory, sourceFilename);
+      let sourceBuffer;
+      try {
+        sourceBuffer = await readFile(sourceFilePath);
+        item.sourceBackupReused = true;
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+        const sourceResponse = await fetchWithRetry(item.source.imageUrl, {
+          headers: {
+            referer: item.source.provider === "douban"
+              ? "https://movie.douban.com/"
+              : "https://bangumi.tv/",
+            "user-agent": "human-draft/1.0 (https://gufeifei.cn)",
+          },
+        });
+        sourceBuffer = Buffer.from(await sourceResponse.arrayBuffer());
+        if (!sourceBuffer.length) throw new Error("下载到的封面为空");
+        await writeFile(sourceFilePath, sourceBuffer, { mode: 0o600 });
+        item.sourceBackupReused = false;
+      }
+      if (!sourceBuffer.length) throw new Error("原始封面备份为空");
 
       const optimized = await optimizeOriginalImage(sourceBuffer, IMAGE_PROFILES.mediaCover.original);
       await putCosObject({

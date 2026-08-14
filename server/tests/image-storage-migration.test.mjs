@@ -103,6 +103,9 @@ test("media cover recovery is dry-run by default and only fills missing COS obje
   assert.match(mediaCoverRecovery, /uploaded\.equals\(optimized\.original\)/);
   assert.match(mediaCoverRecovery, /originalsRetained: apply/);
   assert.match(mediaCoverRecovery, /--source-manifest=/);
+  assert.match(mediaCoverRecovery, /sourceBackupReused/);
+  assert.match(mediaCoverRecovery, /readFile\(sourceFilePath\)/);
+  assert.match(mediaCoverRecovery, /bangumi\.tv/);
   assert.match(mediaCoverRecovery, /lain\.bgm\.tv/);
   assert.match(mediaCoverRecovery, /\.doubanio\.com/);
   assert.match(mediaCoverRecovery, /mode: 0o600/);
