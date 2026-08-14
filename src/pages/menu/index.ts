@@ -297,7 +297,7 @@ function selectionFromDish(dish: Dish | MenuPlaceDishPreview, placeId: string | 
     place_id: resolvedPlaceId,
     name: dish.name,
     place_name: "",
-    image_url: dish.thumbnail_url || dish.image_url || "",
+    image_url: dish.image_url || "",
     archived_item_id: null
   }
 }
@@ -311,7 +311,7 @@ function selectionFromPlace(place: QuickMenuPlace): SelectionItem {
     place_id: place.id,
     name: place.name,
     place_name: place.name,
-    image_url: place.thumbnail_url || place.image_url || "",
+    image_url: place.image_url || "",
     archived_item_id: null
   }
 }

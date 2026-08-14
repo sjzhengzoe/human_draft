@@ -2,6 +2,14 @@ import COS from "cos-nodejs-sdk-v5";
 import { config } from "../config.mjs";
 
 let client;
+let testAdapter;
+
+export function setCosStorageTestAdapter(adapter) {
+  if (config.nodeEnv !== "test") {
+    throw new Error("COS test adapter is only available in test mode");
+  }
+  testAdapter = adapter;
+}
 
 function getClient() {
   if (!client) {
@@ -37,6 +45,7 @@ export function cosObjectKey(bucketName, path) {
 }
 
 export async function putCosObject({ key, buffer, contentType, cacheControl }) {
+  if (testAdapter) return testAdapter.putObject({ key, buffer, contentType, cacheControl });
   return callCos("putObject", {
     ...baseParameters(key),
     Body: buffer,
@@ -48,25 +57,32 @@ export async function putCosObject({ key, buffer, contentType, cacheControl }) {
 }
 
 export async function getCosObject(key) {
+  if (testAdapter) return testAdapter.getObject(key);
   const data = await callCos("getObject", baseParameters(key));
   return Buffer.isBuffer(data.Body) ? data.Body : Buffer.from(data.Body || "");
 }
 
 export async function deleteCosObject(key) {
+  if (testAdapter) return testAdapter.deleteObject(key);
   return callCos("deleteObject", baseParameters(key));
 }
 
 export async function copyCosObject(sourceKey, destinationKey, metadata = {}) {
+  if (testAdapter?.copyObject) {
+    return testAdapter.copyObject(sourceKey, destinationKey, metadata);
+  }
   const buffer = await getCosObject(sourceKey);
-  return putCosObject({
+  await putCosObject({
     key: destinationKey,
     buffer,
     contentType: metadata.contentType || "image/webp",
     cacheControl: metadata.cacheControl || "3600",
   });
+  return buffer;
 }
 
 export function getCosSignedObjectUrl(key, expiresIn, query = {}) {
+  if (testAdapter) return testAdapter.getSignedObjectUrl(key, expiresIn, query);
   return new Promise((resolve, reject) => {
     getClient().getObjectUrl(
       {
@@ -89,6 +105,7 @@ export function getCosSignedObjectUrl(key, expiresIn, query = {}) {
 }
 
 export async function listCosObjects(prefix = "") {
+  if (testAdapter) return testAdapter.listObjects(prefix);
   const objects = [];
   let marker = "";
   do {

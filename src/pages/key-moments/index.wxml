@@ -89,12 +89,12 @@
             </view>
             <view class="moment-card moment-card--{{displayLayout}}">
               <image
-                wx:if="{{item.thumbnail_url || item.image_url}}"
+                wx:if="{{item.image_url}}"
                 class="moment-image"
-                src="{{item.thumbnail_url || item.image_url}}"
+                src="{{item.image_url}}"
                 mode="widthFix"
                 lazy-load
-                data-url="{{item.image_url || item.thumbnail_url}}"
+                data-url="{{item.image_url}}"
                 catchtap="handlePreview"
               />
               <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>

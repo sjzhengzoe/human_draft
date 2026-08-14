@@ -13,7 +13,6 @@ const migrationUrl = new URL(
 const userOwnedTables = new Set([
   "activity_items",
   "categories",
-  "dining_places",
   "dining_scenes",
   "dishes",
   "exercise_completion_events",
@@ -65,7 +64,6 @@ test("all personal modules are migrated to user-owned rows", async () => {
     "luggage_groups",
     "luggage_items",
     "dining_scenes",
-    "dining_places",
   ];
 
   for (const table of tables) {
@@ -161,10 +159,5 @@ test("all personal RPC calls receive the authenticated user id", async () => {
     }
   }
 
-  const dishSource = await readFile(
-    join(projectRoot, "server/domains/menu/dishes.mjs"),
-    "utf8",
-  );
-  assert.match(dishSource, /const rpcPayload\s*=\s*place[\s\S]*?p_user_id:\s*userId/);
   assert.ok(checkedCalls >= 30, "the RPC audit should cover all personal database functions");
 });

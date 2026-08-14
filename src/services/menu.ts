@@ -12,9 +12,7 @@ import type {
   MenuScheduleSourceKind
 } from "../types/api"
 import type { DiningScene } from "../types/dining"
-import { getCurrentUser } from "./auth"
-import { listDiningScenes } from "./dining"
-import { ApiRequestError, request, upload } from "./request"
+import { request, upload } from "./request"
 import { markMenuDataChanged } from "../utils/menu-data-revision"
 
 const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
@@ -32,7 +30,6 @@ function normalizeDish(dish: Dish): Dish {
   )
   return {
     ...dish,
-    recommended_items: normalizeStringArray(dish.recommended_items),
     main_ingredients: normalizeStringArray(dish.main_ingredients),
     introduction: typeof dish.introduction === "string" ? dish.introduction : "",
     cooking_methods: normalizeStringArray(dish.cooking_methods),
@@ -53,8 +50,7 @@ function normalizeMenuPlace(place: MenuPlace): MenuPlace {
     main_ingredients: normalizeStringArray(dish.main_ingredients),
     cooking_methods: normalizeStringArray(dish.cooking_methods),
     taste: typeof dish.taste === "string" ? dish.taste : "",
-    image_url: typeof dish.image_url === "string" ? dish.image_url : "",
-    thumbnail_url: typeof dish.thumbnail_url === "string" ? dish.thumbnail_url : ""
+    image_url: typeof dish.image_url === "string" ? dish.image_url : ""
   })
   const previewDishes = Array.isArray(place.preview_dishes)
     ? place.preview_dishes.map(normalizePreviewDish)
@@ -62,7 +58,6 @@ function normalizeMenuPlace(place: MenuPlace): MenuPlace {
   return {
     ...place,
     image_url: typeof place.image_url === "string" ? place.image_url : "",
-    thumbnail_url: typeof place.thumbnail_url === "string" ? place.thumbnail_url : "",
     dish_count: Number(place.dish_count || 0),
     dishes: Array.isArray(place.dishes)
       ? place.dishes.map(normalizePreviewDish)
@@ -97,60 +92,11 @@ export type MenuOverview = {
   canWrite: boolean
 }
 
-function resolveOverviewCategoryId<T extends { id: string }>(
-  requestedId: string | undefined,
-  categories: T[]
-): string {
-  return categories.some((category) => category.id === requestedId)
-    ? requestedId || ""
-    : categories[0]?.id || ""
-}
-
-async function getLegacyMenuOverview(params: {
-  record_type: MenuRecordType
-  category_id?: string
-}): Promise<MenuOverview> {
-  const [categories, outsideCategories, homePlaces] = await Promise.all([
-    listCategories(),
-    listDiningScenes(),
-    listMenuPlaces({ place_type: "home", include_dishes: false })
-  ])
-  const activeCategories = params.record_type === "outside"
-    ? outsideCategories
-    : categories
-  const categoryId = params.record_type === "outside" && params.category_id === undefined
-    ? ""
-    : resolveOverviewCategoryId(params.category_id, activeCategories)
-  const homePlaceId = homePlaces[0]?.id || ""
-  const [dishes, outsidePlaces] = params.record_type === "home"
-    ? [await listDishes({
-      place_id: homePlaceId || undefined,
-      category_id: categoryId || undefined,
-      record_type: "home",
-      sort: "custom",
-      page_size: 100
-    }), [] as MenuPlace[]]
-    : [[], await listMenuPlaces({
-      place_type: "outside",
-      outside_category_id: categoryId || undefined
-    })]
-  return {
-    categories,
-    outsideCategories,
-    homePlaceId,
-    activeFilter: categoryId ? `${params.record_type}:${categoryId}` : params.record_type,
-    activeRecordType: params.record_type,
-    dishes,
-    outsidePlaces,
-    canWrite: getCurrentUser()?.can_write === true
-  }
-}
-
 export async function getMenuOverview(params: {
   record_type: MenuRecordType
   category_id?: string
 }): Promise<MenuOverview> {
-  let data: {
+  const data = await request<{
       categories: Category[]
       outside_categories: DiningScene[]
       home_place_id: string
@@ -159,15 +105,7 @@ export async function getMenuOverview(params: {
       dishes: Dish[]
       outside_places: MenuPlace[]
       can_write: boolean
-    }
-  try {
-    data = await request({ path: `/api/menu-overview${toQuery(params)}` })
-  } catch (error) {
-    if (error instanceof ApiRequestError && error.statusCode === 404) {
-      return getLegacyMenuOverview(params)
-    }
-    throw error
-  }
+    }>({ path: `/api/menu-overview${toQuery(params)}` })
   return {
     categories: Array.isArray(data.categories) ? data.categories : [],
     outsideCategories: Array.isArray(data.outside_categories) ? data.outside_categories : [],
@@ -342,13 +280,10 @@ export async function deleteMenuPlace(id: string): Promise<void> {
 
 export async function createDish(input: {
   name: string
-  recordType: MenuRecordType
-  placeId?: string
+  placeId: string
   categoryId?: string
-  outsideCategoryId?: string
   imagePath?: string
   mealPeriods: MealPeriod[]
-  recommendedItems?: string[]
   mainIngredients?: string[]
   introduction?: string
   cookingMethods?: string[]
@@ -357,12 +292,9 @@ export async function createDish(input: {
 }): Promise<Dish> {
   const payload = {
       name: input.name,
-      record_type: input.recordType,
-      place_id: input.placeId || "",
+      place_id: input.placeId,
       category_id: input.categoryId || "",
-      outside_category_id: input.outsideCategoryId || "",
       meal_periods: JSON.stringify(input.mealPeriods),
-      recommended_items: JSON.stringify(input.recommendedItems || []),
       main_ingredients: JSON.stringify(input.mainIngredients || []),
       introduction: input.introduction || "",
       cooking_methods: JSON.stringify(input.cookingMethods || []),
@@ -389,11 +321,8 @@ export async function updateDish(
   changes: {
     name?: string
     place_id?: string
-    record_type?: MenuRecordType
     category_id?: string | null
-    outside_category_id?: string | null
     meal_periods?: MealPeriod[]
-    recommended_items?: string[]
     main_ingredients?: string[]
     introduction?: string
     cooking_methods?: string[]

@@ -45,9 +45,9 @@
       <view wx:for="{{items}}" wx:key="id" class="activity-card">
         <view class="activity-card__image-frame">
           <image
-            wx:if="{{item.thumbnail_url || item.image_url}}"
+            wx:if="{{item.image_url}}"
             class="activity-card__image"
-            src="{{item.thumbnail_url || item.image_url}}"
+            src="{{item.image_url}}"
             mode="aspectFill"
             lazy-load
           />

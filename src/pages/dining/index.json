@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "用餐清单",
-  "disableScroll": true,
-  "usingComponents": {
-    "operation-loading": "/components/operation-loading/index"
-  }
-}

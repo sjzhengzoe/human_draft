@@ -2,10 +2,7 @@ import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
 import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
-import {
-  IMAGE_PROFILES,
-  optimizedThumbnailPath,
-} from "../../lib/image-processing.mjs";
+import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   createSignedUrlMap,
@@ -41,21 +38,7 @@ export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
 function mediaCoverStoragePath(url) {
   if (typeof url !== "string" || !url.trim()) return "";
   const value = url.trim();
-  if (!value.includes("://")) return value.replace(/^\/+/, "");
-  try {
-    const pathname = decodeURIComponent(new URL(value).pathname);
-    const markers = [
-      `/storage/v1/object/public/${config.mediaCoverBucket}/`,
-      `/storage/v1/object/sign/${config.mediaCoverBucket}/`,
-    ];
-    for (const marker of markers) {
-      const markerIndex = pathname.lastIndexOf(marker);
-      if (markerIndex >= 0) return pathname.slice(markerIndex + marker.length);
-    }
-    return "";
-  } catch (_error) {
-    return "";
-  }
+  return value.includes("://") ? "" : value.replace(/^\/+/, "");
 }
 
 function managedMediaCoverPath(url, userId, mediaEntryId) {
@@ -64,9 +47,9 @@ function managedMediaCoverPath(url, userId, mediaEntryId) {
   return path.startsWith(expectedPrefix) ? path : "";
 }
 
-async function createMediaCoverUrlMap(supabase, records) {
+async function createMediaCoverUrlMap(records) {
   const paths = records.map((record) => mediaCoverStoragePath(record?.cover_url));
-  return createSignedUrlMap(supabase, {
+  return createSignedUrlMap({
     bucketName: config.mediaCoverBucket,
     paths,
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -85,24 +68,24 @@ function toMediaCoverResponse(record, coverUrls) {
   };
 }
 
-async function toSignedMediaCoverResponse(supabase, record) {
-  const coverUrls = await createMediaCoverUrlMap(supabase, [record]);
+async function toSignedMediaCoverResponse(record) {
+  const coverUrls = await createMediaCoverUrlMap([record]);
   return toMediaCoverResponse(record, coverUrls);
 }
 
-async function removeManagedMediaCover(supabase, path) {
+async function removeManagedMediaCover(supabase, userId, path) {
   if (!path) return;
-  const thumbnailPath = optimizedThumbnailPath(path);
   await removeStorageImages(supabase, {
     bucketName: config.mediaCoverBucket,
-    paths: [path, thumbnailPath],
+    paths: [path],
+    userId,
     errorMessage: "删除旧影视封面失败:",
   });
 }
 
-async function removeManagedMediaCovers(supabase, paths) {
+async function removeManagedMediaCovers(supabase, userId, paths) {
   const uniquePaths = [...new Set(paths.filter(Boolean))];
-  await Promise.all(uniquePaths.map((path) => removeManagedMediaCover(supabase, path)));
+  await Promise.all(uniquePaths.map((path) => removeManagedMediaCover(supabase, userId, path)));
 }
 
 async function removeMediaCoverIfUnreferenced(
@@ -148,7 +131,7 @@ async function removeMediaCoverIfUnreferenced(
   const stillReferenced = remainingCoverUrls.some(
     (coverUrl) => mediaCoverStoragePath(coverUrl) === path,
   );
-  if (!stillReferenced) await removeManagedMediaCover(supabase, path);
+  if (!stillReferenced) await removeManagedMediaCover(supabase, userId, path);
 }
 
 function mediaPlatforms(value) {
@@ -293,7 +276,6 @@ export async function listMediaEntries(supabase, userId, query) {
       integerValue(Number(query.personal_rating), "我的评分", 1, 5),
     );
   }
-  if (query.is_revisitable === "true") request = request.eq("is_revisitable", true);
   if (typeof query.keyword === "string" && query.keyword.trim()) {
     request = request.ilike("title", `%${query.keyword.trim().slice(0, 80)}%`);
   }
@@ -311,7 +293,7 @@ export async function listMediaEntries(supabase, userId, query) {
 
   const { data, error, count } = await request.range(from, to);
   throwSupabaseError(error, "读取影视记录失败。");
-  const coverUrls = await createMediaCoverUrlMap(supabase, data || []);
+  const coverUrls = await createMediaCoverUrlMap(data || []);
   return {
     items: (data || []).map((entry) => toMediaCoverResponse(entry, coverUrls)),
     pagination: {
@@ -326,7 +308,6 @@ export async function listMediaEntries(supabase, userId, query) {
 export async function getMediaEntry(supabase, userId, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
   return toSignedMediaCoverResponse(
-    supabase,
     await requireRecord(supabase, userId, "media_entries", id),
   );
 }
@@ -343,10 +324,6 @@ export async function createMediaEntry(supabase, userId, body) {
   let personalRatingValue;
   if (body.personal_rating !== undefined) {
     personalRatingValue = personalRating(body.personal_rating);
-  } else if (body.is_revisitable !== undefined) {
-    personalRatingValue = booleanValue(body.is_revisitable, "值得重温标记")
-      ? 5
-      : watchStatusValue === "completed" ? 3 : null;
   } else if (watchStatusValue === "completed") {
     personalRatingValue = 3;
   }
@@ -378,10 +355,7 @@ export async function createMediaEntry(supabase, userId, body) {
   if (personalRatingValue !== undefined) {
     const result = await supabase
       .from("media_entries")
-      .update({
-        personal_rating: personalRatingValue,
-        is_revisitable: personalRatingValue !== null && personalRatingValue >= 4,
-      })
+      .update({ personal_rating: personalRatingValue })
       .eq("id", data.id)
       .eq("user_id", userId)
       .select("*")
@@ -389,7 +363,7 @@ export async function createMediaEntry(supabase, userId, body) {
     throwSupabaseError(result.error, "更新我的评分失败。");
     data = result.data;
   }
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function updateMediaEntry(supabase, userId, id, body) {
@@ -405,18 +379,11 @@ export async function updateMediaEntry(supabase, userId, id, body) {
   if (body.platforms !== undefined) changes.platforms = mediaPlatforms(body.platforms);
   if (body.personal_rating !== undefined) {
     changes.personal_rating = personalRating(body.personal_rating);
-    changes.is_revisitable = changes.personal_rating !== null && changes.personal_rating >= 4;
-  } else if (body.is_revisitable !== undefined) {
-    changes.is_revisitable = booleanValue(body.is_revisitable, "值得重温标记");
-    changes.personal_rating = changes.is_revisitable
-      ? 5
-      : (changes.watch_status ?? current.watch_status) === "completed" ? 3 : null;
   } else if (
     changes.watch_status === "completed"
     && !Number.isInteger(current.personal_rating)
   ) {
     changes.personal_rating = 3;
-    changes.is_revisitable = false;
   }
   assertCondition(
     (changes.watch_status ?? current.watch_status) !== "completed"
@@ -464,12 +431,11 @@ export async function updateMediaEntry(supabase, userId, id, body) {
         message: "影视条目不存在。",
       },
     });
-    if (changes.personal_rating !== undefined || changes.is_revisitable !== undefined) {
+    if (changes.personal_rating !== undefined) {
       const result = await supabase
         .from("media_entries")
         .update({
           personal_rating: changes.personal_rating,
-          is_revisitable: changes.is_revisitable,
         })
         .eq("id", id)
         .eq("user_id", userId)
@@ -478,7 +444,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
       throwSupabaseError(result.error, "更新我的评分失败。");
       data = result.data;
     }
-    return toSignedMediaCoverResponse(supabase, data);
+    return toSignedMediaCoverResponse(data);
   }
 
   const { data, error } = await supabase
@@ -489,7 +455,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "更新影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function deleteMediaEntry(supabase, userId, id) {
@@ -512,7 +478,7 @@ export async function deleteMediaEntry(supabase, userId, id) {
     .eq("id", id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除影视条目失败。");
-  await removeManagedMediaCovers(supabase, [
+  await removeManagedMediaCovers(supabase, userId, [
     managedMediaCoverPath(entry.cover_url, userId, id),
     ...(seasons || []).map((season) =>
       managedMediaCoverPath(season.cover_url, userId, id)
@@ -558,7 +524,7 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
     id,
     current.cover_url,
   );
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function replaceMediaEntryCover(supabase, userId, id, image) {
@@ -574,6 +540,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
   const { imagePath } = await uploadOptimizedOriginalImage(supabase, {
     bucketName: config.mediaCoverBucket,
     basePath: `users/${userId}/entries/${id}/${randomUUID()}`,
+    userId,
     buffer: image.buffer,
     profile: IMAGE_PROFILES.mediaCover.original,
     uploadErrorMessage: "上传影视封面失败。",
@@ -589,6 +556,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     await removeStorageImages(supabase, {
       bucketName: config.mediaCoverBucket,
       paths: [imagePath],
+      userId,
       errorMessage: "回滚影视封面失败:",
     });
     throwSupabaseError(error, "更新影视封面失败。");
@@ -600,7 +568,7 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     id,
     current.cover_url,
   );
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function reorderMediaEntries(supabase, userId, body) {
@@ -638,7 +606,7 @@ export async function listMediaSeasons(supabase, userId, mediaEntryId) {
     .eq("media_entry_id", mediaEntryId)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取分季和单集失败。");
-  const coverUrls = await createMediaCoverUrlMap(supabase, data || []);
+  const coverUrls = await createMediaCoverUrlMap(data || []);
   return (data || []).map((season) => ({
     ...toMediaCoverResponse(season, coverUrls),
     episodes: [...(season.media_episodes || [])].sort(
@@ -665,7 +633,7 @@ export async function createMediaSeason(supabase, userId, mediaEntryId, body) {
     22023: { statusCode: 400, code: "MEDIA_TYPE_NOT_EPISODIC", message: "该影视分类不支持分季和单集。" },
     P0002: { statusCode: 404, code: "MEDIA_ENTRY_NOT_FOUND", message: "影视条目不存在。" },
   });
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function updateMediaSeason(supabase, userId, id, body) {
@@ -681,7 +649,7 @@ export async function updateMediaSeason(supabase, userId, id, body) {
   throwSupabaseError(error, "更新季失败。", {
     23505: { statusCode: 409, code: "MEDIA_SEASON_EXISTS", message: "这部作品中已存在同名的季。" },
   });
-  return toSignedMediaCoverResponse(supabase, data);
+  return toSignedMediaCoverResponse(data);
 }
 
 export async function deleteMediaSeason(supabase, userId, id) {

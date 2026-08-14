@@ -51,12 +51,11 @@ function toActivityResponse(item, imageUrls = new Map()) {
     ...item,
     introduction: activityIntroductionText(item.introduction),
     image_url: activityImageUrl(imageUrls, item.image_path),
-    thumbnail_url: activityImageUrl(imageUrls, item.image_path),
   };
 }
 
 async function toSignedActivityResponse(supabase, item) {
-  const imageUrls = await createSignedUrlMap(supabase, {
+  const imageUrls = await createSignedUrlMap({
     bucketName: config.activityBucket,
     paths: [item.image_path],
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -80,16 +79,18 @@ async function uploadActivityImage(supabase, userId, itemId, image) {
   return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.activityBucket,
     basePath: `users/${userId}/activities/${itemId}/${randomUUID()}`,
+    userId,
     buffer: image.buffer,
     profile: IMAGE_PROFILES.activity.original,
     uploadErrorMessage: "上传活动封面失败。",
   });
 }
 
-async function removeActivityImages(supabase, paths) {
+async function removeActivityImages(supabase, userId, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.activityBucket,
     paths,
+    userId,
     errorMessage: "删除活动封面失败:",
   });
 }
@@ -115,7 +116,7 @@ export async function listActivityItems(supabase, userId, query) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   throwSupabaseError(error, "读取活动清单失败。");
-  const imageUrls = await createSignedUrlMap(supabase, {
+  const imageUrls = await createSignedUrlMap({
     bucketName: config.activityBucket,
     paths: (data || []).map((item) => item.image_path),
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -134,7 +135,7 @@ export async function createActivityItem(supabase, userId, body, image) {
   const id = randomUUID();
   const paths = image
     ? await uploadActivityImage(supabase, userId, id, image)
-    : { imagePath: null, thumbnailPath: null };
+    : { imagePath: null };
   const { data, error } = await supabase
     .from("activity_items")
     .insert({
@@ -144,13 +145,12 @@ export async function createActivityItem(supabase, userId, body, image) {
       introduction,
       activity_type: activityType,
       image_path: paths.imagePath,
-      thumbnail_path: paths.thumbnailPath,
       sort_order: sortOrder,
     })
     .select("*")
     .single();
   if (error) {
-    await removeActivityImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeActivityImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "新增活动失败。");
   }
   return toSignedActivityResponse(supabase, data);
@@ -200,22 +200,22 @@ export async function replaceActivityItemImage(supabase, userId, id, image) {
     userId,
     "activity_items",
     id,
-    "id, image_path, thumbnail_path",
+    "id, image_path",
   );
-  const previousPaths = [current.image_path, current.thumbnail_path];
+  const previousPaths = [current.image_path];
   const paths = await uploadActivityImage(supabase, userId, current.id, image);
   const { data, error } = await supabase
     .from("activity_items")
-    .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
+    .update({ image_path: paths.imagePath })
     .eq("id", current.id)
     .eq("user_id", userId)
     .select("*")
     .single();
   if (error) {
-    await removeActivityImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeActivityImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "更新活动封面失败。");
   }
-  await removeActivityImages(supabase, previousPaths);
+  await removeActivityImages(supabase, userId, previousPaths);
   return toSignedActivityResponse(supabase, data);
 }
 
@@ -225,7 +225,7 @@ export async function deleteActivityItem(supabase, userId, id) {
     userId,
     "activity_items",
     id,
-    "id, image_path, thumbnail_path",
+    "id, image_path",
   );
   const { error } = await supabase
     .from("activity_items")
@@ -233,7 +233,7 @@ export async function deleteActivityItem(supabase, userId, id) {
     .eq("id", id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除活动失败。");
-  await removeActivityImages(supabase, [current.image_path, current.thumbnail_path]);
+  await removeActivityImages(supabase, userId, [current.image_path]);
 }
 
 export async function swapActivityItemSortOrders(supabase, userId, body) {

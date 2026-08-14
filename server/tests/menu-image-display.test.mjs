@@ -120,11 +120,11 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuPage, /displayMode === 'browse'/);
   assert.match(
     menuPage,
-    /wx:if="\{\{!contentLoading && !errorMessage && \(activeRecordType === 'home' \? dishes\.length > 0 : outsidePlaces\.length > 0\)\}\}" class="quick-footer">没有更多了/,
+    /wx:if="\{\{!contentLoading && !errorMessage && \(dishes\.length > 0 \|\| outsidePlaces\.length > 0\)\}\}" class="quick-footer">没有更多了/,
   );
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);
-  assert.doesNotMatch(menuPage, /data-type="all"/);
-  assert.equal(menuPage.match(/>全部<\/view>/g)?.length, 1);
+  assert.match(menuPage, /wx:if="\{\{selectionMode\}\}"[^>]*data-type="all"[^>]*>全部<\/view>/);
+  assert.equal(menuPage.match(/>全部<\/view>/g)?.length, 4);
   assert.match(menuPage, /data-filter="outside"[^>]*bindtap="handleFilterTap">全部<\/view>/);
   assert.doesNotMatch(menuPage, /quick-card__type/);
   assert.doesNotMatch(menuPage, /quick-card__meals/);
@@ -214,12 +214,11 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuLogic, /activeFilter,\s*activeRecordType,/);
   assert.match(menuLogic, /const overview = await getMenuOverview/);
   assert.match(menuService, /\/api\/menu-overview/);
-  assert.match(menuService, /error instanceof ApiRequestError && error\.statusCode === 404/);
-  assert.match(menuService, /return getLegacyMenuOverview\(params\)/);
+  assert.doesNotMatch(menuService, /getLegacyMenuOverview|ApiRequestError/);
   assert.match(menuOverview, /Promise\.all\(\[\s*listCategories/);
   assert.match(menuOverview, /include_dishes: false/);
   assert.match(menuService, /include_dishes\?: boolean/);
-  assert.match(menuPlaces, /if \(!includeDishes\) \{\s*return places\.map/);
+  assert.match(menuPlaces, /if \(!includeDishes\) \{[\s\S]*?return places\.map/);
   assert.match(menuLogic, /metadataLoaded:\s*false/);
   assert.match(menuLogic, /menuContentCache = new Map/);
   assert.match(menuLogic, /revisionChanged[\s\S]*cacheExpired/);

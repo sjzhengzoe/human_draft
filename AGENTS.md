@@ -39,15 +39,16 @@
 - Put large, optional, archival, design-source, and print assets under `public/` so Nginx can serve them from `https://gufeifei.cn/`. Do not duplicate the same asset in both `src/` and `public/`.
 - Before completing an asset change, run `node --test server/tests/miniprogram-package.test.mjs` and rescan code quality in WeChat Developer Tools.
 
-## Database Migration and Compatibility Rules
+## Pre-Launch Database and Cleanup Rules
 
-- Treat every schema change, table replacement, field semantic change, or change to how historical records are read as a compatibility task. Never assume the database is empty or that only new users matter.
-- Before completing a database-backed feature change, audit existing tables and live record counts, identify which historical records the new code will stop reading, and decide whether a backfill or compatibility migration is required.
-- When a migration or manual database action is required, tell the user proactively in the same task. Clearly state what will be migrated, whether it has been applied, what remains for the user to do, and the impact of not applying it. Do not wait for user reports to reveal missing migration work.
-- Prefer migrations that preserve and backfill existing data before switching reads or dropping obsolete structures. Validate migrated counts and representative user-visible results before deleting old tables or columns.
-- Before destructive cleanup, resolve exact targets and report what data exists in them. Drop old tables or fields only after replacement data and current application reads have been verified. State whether deleted data is recoverable and how.
+- This project is not yet launched. Do not preserve backward compatibility for old application code, APIs, sessions, schemas, field layouts, or data formats unless the user explicitly changes this policy.
+- Preserve all valid user business data and its meaning. Before changing storage, audit the live development database, record counts, dependencies, and representative user-visible results; never assume the database is empty.
+- Direct changes to the development Supabase database are allowed when required by the task. Use a transaction or an abort-safe migration, verify the replacement data first, and recheck counts and representative results afterward.
+- Migrate or transform existing business data into the final structure, switch every read and write to that structure, then remove the obsolete tables, columns, triggers, functions, routes, types, pages, dual writes, fallback reads, compatibility aliases, and legacy data formats in the same task. Do not leave a compatibility layer or redundant active copy behind.
+- Ephemeral operational data such as sessions may be invalidated or cleared when an auth format changes. Never delete user business records merely to simplify a migration.
+- Before destructive cleanup, resolve exact targets and report what exists in them. Delete only after replacement data and current application reads have been verified. State what was deleted and whether it is recoverable.
 - Keep migrations repeat-safe when they may also be applied manually or when live migration history is incomplete. Do not expose database URLs, keys, tokens, user identifiers, or other credentials in logs or responses.
-- In the final handoff for any database-affecting change, always include: compatibility impact on existing users, migration/backfill status, verification performed, deleted legacy structures, and any required user action. If no user action is required, say so explicitly.
+- In the final handoff for any database-affecting change, always include: business-data preservation, migration status, verification performed, deleted legacy structures, deployment status, and any required user action.
 
 ## Git Push and WeChat Mini Program Upload
 

@@ -32,14 +32,12 @@ test("all page inputs use the shared app-input component", async () => {
 });
 
 test("shared app-input keeps the project font outside native editing", async () => {
-  const [appConfig, template, logic, styles] = await Promise.all([
-    readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
+  const [template, logic, styles] = await Promise.all([
     readFile(new URL("../../src/components/app-input/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/components/app-input/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/components/app-input/index.less", import.meta.url), "utf8"),
   ]);
 
-  assert.equal(JSON.parse(appConfig).usingComponents["app-input"], "/components/app-input/index");
   assert.equal(template.match(/<input\b/g)?.length, 1);
   assert.match(template, /always-embed="\{\{true\}\}"/);
   assert.match(template, /font-family: HumanDraftUI/);

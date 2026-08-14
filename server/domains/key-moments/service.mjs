@@ -94,7 +94,7 @@ async function requireMoment(supabase, userId, momentId) {
 
 async function signedUrlsFor(supabase, moments) {
   const paths = [...new Set(moments.map((item) => item.image_path).filter(Boolean))];
-  return createSignedUrlMap(supabase, {
+  return createSignedUrlMap({
     bucketName: config.keyMomentBucket,
     paths,
     expiresIn: SIGNED_URL_TTL_SECONDS,
@@ -107,7 +107,6 @@ async function toResponses(supabase, moments) {
   return moments.map((item) => ({
     ...item,
     image_url: item.image_path ? urls.get(item.image_path) || "" : "",
-    thumbnail_url: item.image_path ? urls.get(item.image_path) || "" : "",
   }));
 }
 
@@ -123,16 +122,18 @@ async function uploadImage(supabase, userId, momentId, image) {
   return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.keyMomentBucket,
     basePath,
+    userId,
     buffer: image.buffer,
     profile: IMAGE_PROFILES.keyMoment.original,
     uploadErrorMessage: "上传关键节点图片失败。",
   });
 }
 
-async function removeImages(supabase, paths) {
+async function removeImages(supabase, userId, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.keyMomentBucket,
     paths,
+    userId,
     errorMessage: "删除关键节点图片失败:",
   });
 }
@@ -158,7 +159,7 @@ export async function createKeyMoment(supabase, userId, body, image) {
   const content = normalizeContent(body.content ?? "");
   assertCondition(content || image, 400, "CONTENT_REQUIRED", "请填写文案或上传图片。");
   const id = randomUUID();
-  const paths = image ? await uploadImage(supabase, userId, id, image) : { imagePath: null, thumbnailPath: null };
+  const paths = image ? await uploadImage(supabase, userId, id, image) : { imagePath: null };
   const { data, error } = await supabase
     .from("key_moments")
     .insert({
@@ -167,12 +168,11 @@ export async function createKeyMoment(supabase, userId, body, image) {
       content,
       occurred_at: normalizeOccurredAt(body.occurred_at),
       image_path: paths.imagePath,
-      thumbnail_path: paths.thumbnailPath,
     })
     .select("*")
     .single();
   if (error) {
-    await removeImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "新增关键节点失败。");
   }
   return (await toResponses(supabase, [data]))[0];
@@ -207,16 +207,16 @@ export async function replaceKeyMomentImage(supabase, userId, momentId, image) {
   const paths = await uploadImage(supabase, userId, current.id, image);
   const { data, error } = await supabase
     .from("key_moments")
-    .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
+    .update({ image_path: paths.imagePath })
     .eq("id", current.id)
     .eq("user_id", userId)
     .select("*")
     .single();
   if (error) {
-    await removeImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "更新关键节点图片失败。");
   }
-  await removeImages(supabase, [current.image_path, current.thumbnail_path]);
+  await removeImages(supabase, userId, [current.image_path]);
   return (await toResponses(supabase, [data]))[0];
 }
 
@@ -225,13 +225,13 @@ export async function deleteKeyMomentImage(supabase, userId, momentId) {
   assertCondition(current.content.trim(), 400, "CONTENT_REQUIRED", "删除图片前请先填写文案。");
   const { data, error } = await supabase
     .from("key_moments")
-    .update({ image_path: null, thumbnail_path: null })
+    .update({ image_path: null })
     .eq("id", current.id)
     .eq("user_id", userId)
     .select("*")
     .single();
   throwSupabaseError(error, "删除关键节点图片失败。");
-  await removeImages(supabase, [current.image_path, current.thumbnail_path]);
+  await removeImages(supabase, userId, [current.image_path]);
   return (await toResponses(supabase, [data]))[0];
 }
 
@@ -243,5 +243,5 @@ export async function deleteKeyMoment(supabase, userId, momentId) {
     .eq("id", current.id)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除关键节点失败。");
-  await removeImages(supabase, [current.image_path, current.thumbnail_path]);
+  await removeImages(supabase, userId, [current.image_path]);
 }

@@ -138,7 +138,7 @@ Page({
       editorName: item.name,
       editorIntroduction: item.introduction || "",
       editorType: item.activity_type,
-      currentImageUrl: item.image_url || item.thumbnail_url || "",
+      currentImageUrl: item.image_url || "",
       selectedImagePath: ""
     })
   },

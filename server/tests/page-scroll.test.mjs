@@ -9,7 +9,6 @@ const nativeScrollPageConfigs = [
   "../../src/pages/media/category-edit/index.json",
   "../../src/pages/media/edit/index.json",
   "../../src/pages/media/episode-edit/index.json",
-  "../../src/pages/menu/day-plan/index.json",
   "../../src/pages/settings/index.json",
   "../../src/pages/wardrobe/categories/index.json",
   "../../src/pages/wardrobe/category-edit/index.json",

@@ -20,13 +20,6 @@ export const DEFAULT_MEAL_PERIODS = ["lunch", "dinner"];
 const ALLOWED_MEAL_PERIODS = new Set(["breakfast", "lunch", "afternoon_tea", "dinner"]);
 export const ALLOWED_RECORD_TYPES = new Set(["home", "outside"]);
 
-export function isMissingMenuPlaceSchema(error) {
-  const message = `${error?.message || ""} ${error?.details || ""}`.toLowerCase();
-  return ["42703", "42p01", "pgrst200", "pgrst204"].includes(error?.code)
-    || message.includes("place_id")
-    || message.includes("menu_places");
-}
-
 export function normalizeMealPeriods(value, useDefault = false) {
   let periods = value;
 
@@ -63,25 +56,6 @@ export function normalizeRecordType(value, useDefault = false) {
     "请选择在家或外食。",
   );
   return recordType;
-}
-
-export function normalizeRecommendedItems(value, useDefault = false) {
-  let items = value;
-  if (typeof items === "string") {
-    try {
-      items = JSON.parse(items);
-    } catch (_error) {
-      items = items.split(/[\n，,、]/);
-    }
-  }
-  if (items === undefined && useDefault) return [];
-  assertCondition(
-    Array.isArray(items) && items.length <= 50 && items.every((item) => typeof item === "string"),
-    400,
-    "INVALID_RECOMMENDED_ITEMS",
-    "推荐菜品格式无效。",
-  );
-  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
 }
 
 function normalizeTextItems(

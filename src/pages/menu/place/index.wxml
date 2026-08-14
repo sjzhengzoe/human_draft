@@ -15,9 +15,9 @@
     <view class="store-hero">
       <view class="store-hero__image-frame">
         <image
-          wx:if="{{place.thumbnail_url || place.image_url}}"
+          wx:if="{{place.image_url}}"
           class="store-hero__image"
-          src="{{place.thumbnail_url || place.image_url}}"
+          src="{{place.image_url}}"
           mode="aspectFill"
         />
         <view wx:else class="store-hero__empty">暂无店铺图片</view>
@@ -58,9 +58,9 @@
           bindtap="handleDishTap"
         >
           <image
-            wx:if="{{item.thumbnail_url || item.image_url}}"
+            wx:if="{{item.image_url}}"
             class="dish-row__image"
-            src="{{item.thumbnail_url || item.image_url}}"
+            src="{{item.image_url}}"
             mode="aspectFill"
           />
           <view wx:else class="dish-row__image dish-row__image--empty">暂无图片</view>

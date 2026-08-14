@@ -31,7 +31,6 @@ const tabSelectors = new Map([
     ".activity-type-switch__item--active",
     ".type-option--active"
   ]],
-  ["src/pages/dining/index.less", [".side-tab--active"]],
   ["src/pages/footprint/index.less", [
     ".map-level-switch__button--active",
     ".province-tabs__button--active"

@@ -9,6 +9,7 @@ import {
   updateUserAvatar,
   updateUserDisplayName
 } from "../domains/auth/profile.mjs"
+import { getUserImageStorageUsage } from "../domains/shared/image-storage.mjs"
 
 export function registerAuthRoutes(app, context) {
   const {
@@ -79,6 +80,18 @@ export function registerAuthRoutes(app, context) {
     ok: true,
     data: { user: await getAuthenticatedUser(getSupabaseAdmin(), request.auth) }
   }))
+
+  app.get(
+    "/api/auth/storage-usage",
+    { preHandler: authenticated },
+    async (request) => ({
+      ok: true,
+      data: await getUserImageStorageUsage(
+        getSupabaseAdmin(),
+        request.auth.user.id
+      )
+    })
+  )
 
   app.post(
     "/api/auth/logout",

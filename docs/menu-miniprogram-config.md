@@ -1,5 +1,7 @@
 # 菜单小程序配置清单
 
+> 项目状态：当前未上线、尚未正式发布。开发阶段只保证现有有效业务数据不丢失，不保留旧代码、API、会话、表结构或数据格式的兼容层。
+
 ## 1. Supabase
 
 在 Supabase 创建项目后，将以下内容填入项目根目录 `.env`：
@@ -8,9 +10,8 @@
 | --- | --- | --- |
 | `SUPABASE_URL` | Project URL | 待填写 |
 | `SUPABASE_SECRET_KEY` | 服务端 `sb_secret_...` Secret key | 待填写 |
-| `SUPABASE_DISH_BUCKET` | 默认 `dish-images` | 已默认 |
-| `SUPABASE_ACTIVITY_BUCKET` | 默认 `activity-images` | 已默认 |
-| `SUPABASE_AVATAR_BUCKET` | 默认 `user-avatars` | 已默认 |
+
+Supabase 只保存账号、会话、业务记录和 `image_assets` 图片资产台账，不再保存业务图片。业务图片统一存放在腾讯云私有 COS；设置页的图片空间统计聚合 `image_assets`，不会在请求时扫描 COS。
 
 在 Supabase SQL Editor 执行：
 
@@ -35,7 +36,9 @@
 - `supabase/migrations/202607110007_sort_order_integrity.sql`
 - `supabase/migrations/202607110008_auth_and_sort_concurrency.sql`
 
-以上 migration 会依次创建账号、会话、菜单、生活清单、排序函数，以及菜品和用户头像所需的公开只读 Bucket。
+以上 migration 会依次创建账号、会话、菜单、生活清单和排序函数。图片资产台账迁移为：
+
+`supabase/migrations/20260814120830_cos_image_assets.sql`
 
 ## 2. 微信小程序登录
 
@@ -43,11 +46,11 @@
 | --- | --- | --- |
 | `WECHAT_APP_ID` | 小程序 AppID | 已填写 |
 | `WECHAT_APP_SECRET` | 微信公众平台的 AppSecret | 待填写 |
-| `WECHAT_ALLOWED_OPENIDS` | 管理员微信 openid，多个用逗号分隔 | 首次登录后填写 |
+| `ADMIN_USER_IDS` | 管理员内部用户 UUID，多个用逗号分隔 | 首次登录后填写 |
 
-首次登录后，“我的 → 我的 OpenID”可以直接复制当前账号的 `openid`。将它填入白名单后重启 Node 服务，再退出并重新登录一次。
+首次登录后，“我的 → 用户 ID”可以直接复制当前账号的内部 UUID。将它填入管理员白名单后重启 Node 服务，再退出并重新登录一次。OpenID 只用于微信登录映射和微信内容安全接口，不参与管理员权限判断。
 
-白名单只控制修改权限，所有登录账号读取同一份共享菜单数据。
+管理员白名单只控制管理员专属功能；所有业务数据继续按内部用户 UUID 隔离。
 
 ## 3. 小程序域名
 
@@ -62,7 +65,7 @@
 - request 合法域名：`https://gufeifei.cn`
 - uploadFile 合法域名：`https://gufeifei.cn`
 - downloadFile 合法域名：`https://gufeifei.cn`
-- downloadFile 合法域名：Supabase 项目的精确域名，例如 `https://xxxx.supabase.co`
+- downloadFile 合法域名：`https://images.gufeifei.cn`
 
 ## 4. 服务器环境
 
@@ -80,9 +83,15 @@ SUPABASE_URL=https://你的项目.supabase.co
 SUPABASE_SECRET_KEY=你的服务端 Secret key
 WECHAT_APP_ID=你的小程序 AppID
 WECHAT_APP_SECRET=你的小程序 AppSecret
-WECHAT_ALLOWED_OPENIDS=管理员openid，多个用逗号分隔
+ADMIN_USER_IDS=管理员内部用户UUID，多个用逗号分隔
 ACCESS_TOKEN_SECRET=至少32字节的随机服务端密钥
 ACCESS_TOKEN_TTL_MINUTES=60
+SESSION_TTL_DAYS=30
+COS_SECRET_ID=腾讯云子账号 SecretId
+COS_SECRET_KEY=腾讯云子账号 SecretKey
+COS_BUCKET=human-draft-images-1258101045
+COS_REGION=ap-guangzhou
+COS_IMAGE_DOMAIN=images.gufeifei.cn
 ```
 
 可以使用 `openssl rand -base64 48` 生成 `ACCESS_TOKEN_SECRET`。它与
@@ -94,9 +103,8 @@ ACCESS_TOKEN_TTL_MINUTES=60
 `ACCESS_TOKEN_SECRET` 会让现有 access token 立即失效，但 refresh token 可在客户端
 下次请求时自动换取新 access token。
 
-从旧版透明会话 token 切换到本方案时不做兼容：已登录用户需要重新登录
-一次。旧 `app_sessions` 记录不再被当作 access token 使用，可按原有的过期
-清理策略自然清理。
+从旧版透明会话 token 切换到本方案时不做兼容：旧 `app_sessions`
+已清空，已登录用户需要重新登录一次。代码中不保留旧 token 的回退验证。
 
 TLS 证书和私钥也不要放进 Git。将腾讯云下载的 Nginx 完整证书链与私钥单独安装到服务器：
 
@@ -119,9 +127,9 @@ curl https://gufeifei.cn/api/health
 
 当健康检查的 `configured` 为 `true` 且 `missing_config` 为空时，运行配置已完整。
 
-## 5. 导入旧菜品
+## 5. 导入菜品
 
-数据库和 Bucket 配置好后运行：
+数据库和 COS 配置好后运行：
 
 ```bash
 pnpm run import:dishes

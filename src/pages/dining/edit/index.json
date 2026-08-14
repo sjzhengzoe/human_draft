@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "店铺",
-  "disableScroll": true,
-  "usingComponents": {
-    "app-input": "/components/app-input/index"
-  }
-}

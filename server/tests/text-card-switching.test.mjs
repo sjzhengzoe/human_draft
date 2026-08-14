@@ -64,28 +64,21 @@ test("template switching changes host state without navigating", async () => {
   )
 })
 
-test("all entries converge on one persistent native switch", async () => {
-  const [app, homeModules, homePage, hostTemplate, hostConfig, ...legacyEntries] = await Promise.all([
+test("text cards use one persistent native switch", async () => {
+  const [app, homeModules, homePage, hostTemplate, hostConfig] = await Promise.all([
     readProjectFile("src/app.json"),
     readProjectFile("src/utils/home-modules.js"),
     readProjectFile("src/pages/create/index.ts"),
     readProjectFile("src/pages/text-card/index.wxml"),
-    readProjectFile("src/pages/text-card/index.json"),
-    readProjectFile("src/pages/xiaohongshu/index.ts"),
-    readProjectFile("src/pages/douyin2/index.ts"),
-    readProjectFile("src/pages/douyin3/index.ts")
+    readProjectFile("src/pages/text-card/index.json")
   ])
 
   const pages = JSON.parse(app).pages
-  for (const route of ["xiaohongshu", "douyin2", "douyin3", "text-card"]) {
-    assert.ok(pages.includes(`pages/${route}/index`))
-  }
+  assert.ok(pages.includes("pages/text-card/index"))
+  assert.equal(pages.some((page) => /^pages\/(xiaohongshu|douyin2|douyin3)\//.test(page)), false)
   assert.match(homeModules, /path: "\/pages\/text-card\/index"/)
   assert.match(homePage, /`\$\{String\(path\)\}\?template=\$\{lastTemplate\}`/)
   assert.doesNotMatch(homePage, /`\/pages\/\$\{lastTemplate\}\/index`/)
-  for (const legacyEntry of legacyEntries) {
-    assert.match(legacyEntry, /wx\.redirectTo\(\{ url: "\/pages\/text-card\/index\?template=/)
-  }
   assert.equal(hostTemplate.match(/wx:if="\{\{mountedTemplates\./g)?.length, 3)
   assert.equal(hostTemplate.match(/hidden="\{\{activeTemplate !==/g)?.length, 3)
   assert.equal(hostTemplate.match(/bindtap="handleTemplateTap"/g)?.length, 1)

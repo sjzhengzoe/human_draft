@@ -8,6 +8,7 @@ process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-
 
 const { loginWithWechatCode, requireAuth } = await import("../domains/auth/service.mjs");
 const { updateUserAvatar, updateUserDisplayName } = await import("../domains/auth/profile.mjs");
+const { setCosStorageTestAdapter } = await import("../lib/cos-storage.mjs");
 
 class FakeQuery {
   constructor(state, table) {
@@ -31,6 +32,17 @@ class FakeQuery {
   update(values) {
     this.operation = "update";
     this.values = values;
+    return this;
+  }
+
+  upsert(values) {
+    this.operation = "upsert";
+    this.values = values;
+    return this;
+  }
+
+  delete() {
+    this.operation = "delete";
     return this;
   }
 
@@ -63,6 +75,12 @@ class FakeQuery {
     if (this.table === "app_sessions") {
       const session = this.state.sessions.find((candidate) => this.matches(candidate));
       return { data: session || null, error: null };
+    }
+
+    if (this.table === "image_assets") {
+      if (this.operation === "upsert") this.state.assetWrites.push({ ...this.values });
+      if (this.operation === "delete") this.state.assetDeletes.push([...this.filters]);
+      return { data: this.values || null, error: null };
     }
 
     if (this.table !== "app_users") {
@@ -108,7 +126,35 @@ function createFakeSupabase(users = []) {
     userUpdates: [],
     uploads: [],
     removals: [],
+    assetWrites: [],
+    assetDeletes: [],
   };
+
+  const splitObjectKey = (key) => {
+    const separator = key.indexOf("/");
+    return { bucket: key.slice(0, separator), path: key.slice(separator + 1) };
+  };
+  setCosStorageTestAdapter({
+    async putObject({ key, buffer, contentType, cacheControl }) {
+      const { bucket, path } = splitObjectKey(key);
+      state.uploads.push({
+        bucket,
+        path,
+        contents: buffer,
+        options: { contentType, cacheControl },
+      });
+      return {};
+    },
+    async deleteObject(key) {
+      const { bucket, path } = splitObjectKey(key);
+      state.removals.push({ bucket, paths: [path] });
+      return {};
+    },
+    async getSignedObjectUrl(key, expiresIn) {
+      const { bucket, path } = splitObjectKey(key);
+      return `https://assets.example/${bucket}/${path}?expires=${expiresIn}`;
+    },
+  });
 
   return {
     state,
@@ -118,29 +164,6 @@ function createFakeSupabase(users = []) {
     async rpc(name) {
       assert.equal(name, "ensure_user_defaults");
       return { data: null, error: null };
-    },
-    storage: {
-      from(bucket) {
-        return {
-          async upload(path, contents, options) {
-            state.uploads.push({ bucket, path, contents, options });
-            return { error: null };
-          },
-          async remove(paths) {
-            state.removals.push({ bucket, paths });
-            return { error: null };
-          },
-          async createSignedUrls(paths, expiresIn) {
-            return {
-              data: paths.map((path) => ({
-                path,
-                signedUrl: `https://assets.example/${bucket}/${path}?expires=${expiresIn}`,
-              })),
-              error: null,
-            };
-          },
-        };
-      },
     },
   };
 }
@@ -187,6 +210,7 @@ test("a migrated completed user can still log in without an avatar", async (cont
   const session = await loginWithWechatCode(supabase, "login-code");
 
   assert.equal(session.user.id, "existing-user");
+  assert.equal("openid" in session.user, false);
   assert.equal(session.user.avatar_url, "");
   assert.equal(supabase.state.sessions.length, 1);
 });
@@ -218,7 +242,9 @@ test("a successful local avatar update completes the user profile", async () => 
     /^users\/pending-user\/avatar-\d+-[0-9a-f-]+\.webp$/,
   );
   assert.equal(supabase.state.uploads.length, 1);
-  assert.equal(supabase.state.uploads[0].options.upsert, false);
+  assert.equal(supabase.state.uploads[0].options.contentType, "image/webp");
+  assert.equal(supabase.state.assetWrites.length, 1);
+  assert.equal(supabase.state.assetWrites[0].module, "avatars");
   assert.equal(supabase.state.removals.length, 0);
 });
 

@@ -2,7 +2,6 @@ import sharp from "sharp";
 import { HttpError } from "./errors.mjs";
 
 export const IMAGE_STORAGE_VERSION = "cost-v4";
-export const LEGACY_IMAGE_STORAGE_VERSIONS = Object.freeze(["normalized-v3"]);
 export const MAX_IMAGE_PIXELS = 50_000_000;
 
 export const IMAGE_PROFILES = Object.freeze({
@@ -85,15 +84,4 @@ export function optimizedImagePaths(basePath) {
 
 export function isOptimizedImagePath(path) {
   return typeof path === "string" && path.endsWith(`-${IMAGE_STORAGE_VERSION}.webp`);
-}
-
-export function optimizedThumbnailPath(path) {
-  if (typeof path !== "string") return "";
-  for (const version of [IMAGE_STORAGE_VERSION, ...LEGACY_IMAGE_STORAGE_VERSIONS]) {
-    const suffix = `-${version}.webp`;
-    if (path.endsWith(suffix)) {
-      return path.slice(0, -suffix.length) + `-${version}-thumbnail.webp`;
-    }
-  }
-  return "";
 }

@@ -18,7 +18,6 @@ export type MediaEntry = {
   cover_url: string
   cover_path: string
   personal_rating: number | null
-  is_revisitable: boolean
   season_count: number
   episode_count: number
   favorite_episode_count: number

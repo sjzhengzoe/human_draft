@@ -20,8 +20,8 @@ export function dishImageUrl(urls, path) {
   return urls.get(path) || "";
 }
 
-export function createDishImageUrlMap(supabase, paths) {
-  return createSignedUrlMap(supabase, {
+export function createDishImageUrlMap(paths) {
+  return createSignedUrlMap({
     bucketName: config.dishBucket,
     paths,
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -50,10 +50,10 @@ export async function uploadDishImage(supabase, userId, dishId, buffer) {
     await uploadStorageImage(supabase, {
       bucketName: config.dishBucket,
       path: imagePath,
+      userId,
       buffer: original,
       cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: originalContentType,
-      upsert: false,
     });
   } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", "上传菜品图片失败。" );
@@ -61,7 +61,7 @@ export async function uploadDishImage(supabase, userId, dishId, buffer) {
     throw wrapped;
   }
 
-  return { imagePath, thumbnailPath: null };
+  return { imagePath };
 }
 
 export async function copyDishImageToScheduleArchive(supabase, userId, sourceId, path) {
@@ -72,15 +72,17 @@ export async function copyDishImageToScheduleArchive(supabase, userId, sourceId,
     bucketName: config.dishBucket,
     sourcePath: path,
     destinationPath: archivePath,
+    userId,
     errorMessage: "保存菜单历史图片失败。",
   });
   return archivePath;
 }
 
-export async function removeDishImages(supabase, paths) {
+export async function removeDishImages(supabase, userId, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.dishBucket,
     paths,
+    userId,
     errorMessage: "删除 Storage 图片失败:",
   });
 }

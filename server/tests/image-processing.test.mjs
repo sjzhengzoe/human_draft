@@ -6,7 +6,6 @@ import {
   IMAGE_PROFILES,
   MAX_IMAGE_PIXELS,
   isOptimizedImagePath,
-  optimizedThumbnailPath,
   optimizeOriginalImage,
   optimizedImagePaths,
 } from "../lib/image-processing.mjs";
@@ -144,17 +143,7 @@ test("images above the decoded pixel limit are rejected before processing", asyn
 test("optimized storage paths are versioned and recognizable", () => {
   const paths = optimizedImagePaths("users/user/dishes/dish/revision");
   assert.equal(paths.imagePath, "users/user/dishes/dish/revision-cost-v4.webp");
-  assert.equal(paths.thumbnailPath, undefined);
   assert.equal(isOptimizedImagePath(paths.imagePath), true);
   assert.equal(isOptimizedImagePath("users/user/dishes/dish/revision-normalized-v3.webp"), false);
   assert.equal(isOptimizedImagePath("users/user/dishes/dish/original.png"), false);
-  assert.equal(
-    optimizedThumbnailPath(paths.imagePath),
-    "users/user/dishes/dish/revision-cost-v4-thumbnail.webp",
-  );
-  assert.equal(
-    optimizedThumbnailPath("users/user/dishes/dish/revision-normalized-v3.webp"),
-    "users/user/dishes/dish/revision-normalized-v3-thumbnail.webp",
-  );
-  assert.equal(optimizedThumbnailPath("users/user/dishes/dish/original.png"), "");
 });

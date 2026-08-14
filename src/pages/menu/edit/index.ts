@@ -410,7 +410,6 @@ Page({
       } else {
         await createDish({
           name,
-          recordType,
           placeId: this.data.placeId,
           categoryId: recordType === "home" ? category?.id : undefined,
           imagePath: this.data.selectedImagePath || undefined,

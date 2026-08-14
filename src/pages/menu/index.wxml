@@ -87,7 +87,7 @@
     <view wx:if="{{activeRecordType !== 'outside' && dishes.length}}" class="quick-grid">
       <view wx:for="{{dishes}}" wx:key="id" class="quick-card {{item.selected ? 'quick-card--selected' : ''}}" data-id="{{item.id}}" bindtap="handleDishTap">
         <view class="dish-image-frame quick-card__image-frame">
-          <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+          <image wx:if="{{item.image_url}}" class="dish-image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
           <view wx:else class="dish-image-empty">暂无图片</view>
           <view wx:if="{{selectionMode && item.selected}}" class="selection-badge">已选</view>
         </view>
@@ -120,7 +120,7 @@
     <view wx:if="{{activeRecordType !== 'home' && outsidePlaces.length}}" class="outside-store-list">
       <view wx:for="{{outsidePlaces}}" wx:key="id" wx:for-item="place" wx:for-index="placeIndex" class="outside-store">
         <view class="outside-store__header {{place.selected ? 'outside-store__header--selected' : ''}}" data-id="{{place.id}}" bindtap="handlePlaceTap" role="button" aria-label="{{selectionMode ? '选择' : '查看'}}{{place.name}}">
-          <image wx:if="{{place.thumbnail_url || place.image_url}}" class="outside-store__image" src="{{place.thumbnail_url || place.image_url}}" mode="aspectFill" lazy-load />
+          <image wx:if="{{place.image_url}}" class="outside-store__image" src="{{place.image_url}}" mode="aspectFill" lazy-load />
           <view wx:else class="outside-store__image outside-store__image--empty">暂无图片</view>
           <view class="outside-store__copy">
             <view class="outside-store__name">{{place.name}}</view>
@@ -138,7 +138,7 @@
           <view class="outside-store__dish-grid">
             <view wx:for="{{place.dishes}}" wx:key="id" wx:for-item="dish" wx:for-index="dishIndex" class="quick-card outside-store__dish-card {{dish.selected ? 'quick-card--selected' : ''}}" data-id="{{dish.id}}" bindtap="handleDishTap">
               <view class="dish-image-frame quick-card__image-frame">
-                <image wx:if="{{dish.thumbnail_url || dish.image_url}}" class="dish-image" src="{{dish.thumbnail_url || dish.image_url}}" mode="aspectFill" lazy-load />
+                <image wx:if="{{dish.image_url}}" class="dish-image" src="{{dish.image_url}}" mode="aspectFill" lazy-load />
                 <view wx:else class="dish-image-empty">暂无图片</view>
                 <view wx:if="{{selectionMode && dish.selected}}" class="selection-badge">已选</view>
               </view>
@@ -187,7 +187,7 @@
         <scroll-view wx:if="{{item.browseVisible}}" class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
           <view class="browse-card store-browse-card" data-id="{{item.id}}" bindtap="handlePlaceTap" role="button" aria-label="查看{{item.name}}">
             <view class="dish-image-frame browse-card__image-frame">
-              <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+              <image wx:if="{{item.image_url}}" class="dish-image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
               <view wx:else class="dish-image-empty dish-image-empty--large">暂无店铺图片</view>
             </view>
             <view class="browse-card__body">
@@ -214,7 +214,7 @@
         <scroll-view wx:if="{{item.browseVisible}}" class="browse-slide-scroll" scroll-y enhanced bounces="{{true}}" show-scrollbar="{{false}}">
           <view class="browse-card" data-id="{{item.id}}" bindtap="handleEditDishTap" role="button" aria-label="编辑{{item.name}}">
             <view class="dish-image-frame browse-card__image-frame">
-              <image wx:if="{{item.thumbnail_url || item.image_url}}" class="dish-image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFill" lazy-load />
+              <image wx:if="{{item.image_url}}" class="dish-image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
               <view wx:else class="dish-image-empty dish-image-empty--large">暂无图片</view>
             </view>
             <view class="browse-card__body">

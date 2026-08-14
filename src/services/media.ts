@@ -45,7 +45,6 @@ export async function listMediaEntries(input: {
   mediaType?: MediaType
   status?: MediaStatus
   personalRating?: number
-  revisitable?: boolean
   keyword?: string
   sort?: "created_desc" | "rating_desc"
   page?: number
@@ -58,7 +57,6 @@ export async function listMediaEntries(input: {
       media_type: input.mediaType,
       watch_status: input.status,
       personal_rating: input.personalRating ? String(input.personalRating) : undefined,
-      is_revisitable: input.revisitable ? "true" : undefined,
       keyword: input.keyword,
       sort: input.sort,
       page: input.page ? String(input.page) : undefined,
@@ -137,7 +135,6 @@ export async function createMediaEntry(input: {
   watch_status: MediaStatus
   platforms: string[]
   personal_rating?: number | null
-  is_revisitable?: boolean
 }): Promise<MediaEntry> {
   const data = await request<{ item: MediaEntry }>({
     path: "/api/media",
@@ -156,7 +153,6 @@ export async function updateMediaEntry(
     watch_status?: MediaStatus
     platforms?: string[]
     personal_rating?: number | null
-    is_revisitable?: boolean
   }
 ): Promise<MediaEntry> {
   const data = await request<{ item: MediaEntry }>({

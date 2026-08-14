@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import sharp from "sharp";
 
 import { config } from "../config.mjs";
+import { cosObjectKey, getCosObject } from "../lib/cos-storage.mjs";
 import {
   createDish,
   replaceDishImage,
@@ -234,11 +235,8 @@ async function verify(supabase, state) {
     })),
   ];
   await Promise.all(records.map(async (record) => {
-    const { data, error } = await supabase.storage
-      .from(config.dishBucket)
-      .download(record.path);
-    if (error) throw error;
-    const metadata = await sharp(Buffer.from(await data.arrayBuffer())).metadata();
+    const data = await getCosObject(cosObjectKey(config.dishBucket, record.path));
+    const metadata = await sharp(data).metadata();
     if (
       metadata.format !== "webp"
       || metadata.width !== record.width

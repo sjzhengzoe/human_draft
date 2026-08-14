@@ -16,7 +16,6 @@ export type MediaEntryQuery = {
   mediaType?: string
   status?: MediaStatus
   personalRating?: number
-  revisitable?: boolean
   keyword?: string
   sort?: "created_desc" | "rating_desc"
   page?: number
@@ -45,7 +44,6 @@ function entryPageKey(input: MediaEntryQuery) {
     mediaType: input.mediaType || "",
     status: input.status || "",
     personalRating: input.personalRating || 0,
-    revisitable: input.revisitable === true,
     keyword: String(input.keyword || "").trim().toLocaleLowerCase(),
     sort: input.sort || "",
     page: input.page || 1,
@@ -61,7 +59,6 @@ function entryMatchesQuery(entry: MediaEntry, input: MediaEntryQuery) {
       entry.watch_status === "completed"
       && entry.personal_rating === input.personalRating
     )) &&
-    (!input.revisitable || entry.is_revisitable) &&
     (!keyword || entry.title.toLocaleLowerCase().includes(keyword))
 }
 

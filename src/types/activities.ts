@@ -6,9 +6,7 @@ export type ActivityItem = {
   introduction: string
   activity_type: ActivityType
   image_path: string | null
-  thumbnail_path: string | null
   image_url: string
-  thumbnail_url: string
   sort_order: number
   created_at: string
   updated_at: string

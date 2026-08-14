@@ -2,8 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { createSignedUrlMap } from "../domains/shared/image-storage.mjs";
-import { cosObjectKey } from "../lib/cos-storage.mjs";
+import {
+  createSignedUrlMap,
+  getUserImageStorageUsage,
+} from "../domains/shared/image-storage.mjs";
+import {
+  cosObjectKey,
+  setCosStorageTestAdapter,
+} from "../lib/cos-storage.mjs";
 
 const projectRoot = new URL("../../", import.meta.url);
 
@@ -24,15 +30,20 @@ test("personal image migration makes only account-associated buckets private", a
   assert.doesNotMatch(migration, /delete\s+from|truncate|drop\s+table|storage\.objects/i);
 });
 
-test("private image inventory is restricted to the service role", async () => {
+test("COS image asset ledger is private and replaces Storage inventory RPCs", async () => {
   const migration = await readProjectFile(
-    "supabase/migrations/202608130002_private_image_inventory.sql",
+    "supabase/migrations/20260814120830_cos_image_assets.sql",
   );
-  assert.match(migration, /private_image_storage_inventory/);
-  assert.match(migration, /from\s+storage\.objects/i);
-  assert.match(migration, /objects\.bucket_id\s*=\s*any\(p_bucket_ids\)/i);
-  assert.match(migration, /revoke all[\s\S]*from public, anon, authenticated/i);
-  assert.match(migration, /grant execute[\s\S]*to service_role/i);
+  assert.match(migration, /create table public\.image_assets/i);
+  assert.match(migration, /primary key/i);
+  assert.match(migration, /references public\.app_users\(id\) on delete cascade/i);
+  assert.match(migration, /create index image_assets_user_module_idx[\s\S]*user_id, module/i);
+  assert.match(migration, /alter table public\.image_assets enable row level security/i);
+  assert.match(migration, /get_user_image_storage_usage/i);
+  assert.match(migration, /revoke all on table public\.image_assets from public, anon, authenticated/i);
+  assert.match(migration, /grant select, insert, update, delete[\s\S]*to service_role/i);
+  assert.match(migration, /drop function if exists public\.private_image_storage_inventory/i);
+  assert.match(migration, /drop function if exists public\.admin_image_storage_inventory/i);
 });
 
 test("personal image responses and uploaded avatars use signed URLs", async () => {
@@ -73,69 +84,58 @@ test("COS keeps the logical bucket in every object key", () => {
   );
 });
 
-test("Supabase to COS migration is backup-first and does not delete source originals", async () => {
-  const migration = await readProjectFile(
-    "server/scripts/migrate-supabase-images-to-cos.mjs",
-  );
-
-  assert.match(migration, /manifest\.json/);
-  assert.match(migration, /sha256/);
-  assert.match(migration, /backupObjects\(supabase, manifest\)/);
-  assert.match(migration, /uploadObjects\(cos, manifest\)/);
-  assert.match(migration, /verifyObjects\(cos, manifest\)/);
-  assert.match(migration, /status = "complete"/);
-  assert.match(migration, /\.range\(from, from \+ INVENTORY_PAGE_SIZE - 1\)/);
-  assert.match(migration, /--only=/);
-  assert.doesNotMatch(migration, /storage\.from\([^)]+\)\.remove|emptyBucket|deleteBucket/);
-});
-
-test("private bucket rebuild keeps a verified backup until every object is restored", async () => {
-  const rebuild = await readProjectFile(
-    "server/scripts/rebuild-private-image-buckets.mjs",
-  );
-  assert.match(rebuild, /process\.argv\.includes\("--apply"\)/);
-  assert.match(rebuild, /sha256/);
-  assert.match(rebuild, /manifest\.json/);
-  assert.match(rebuild, /\.remove\(/);
-  assert.match(rebuild, /deleteBucket/);
-  assert.match(rebuild, /createBucket/);
-  assert.match(rebuild, /public:\s*false/);
-  assert.doesNotMatch(rebuild, /emptyBucket/);
-  assert.match(rebuild, /after\.count !== before\.count \|\| after\.bytes !== before\.bytes/);
-  assert.match(rebuild, /publicResponse\.status < 400 \|\| !signedResponse\.ok/);
-  assert.match(rebuild, /await rm\(backupRoot/);
-  assert.match(rebuild, /\.range\(from, from \+ MANIFEST_PAGE_SIZE - 1\)/);
-});
-
-test("signed image URL batches stay below the storage API limit", async () => {
+test("signed image URLs come directly from COS without Supabase Storage", async () => {
   const requests = [];
-  const supabase = {
-    storage: {
-      from(bucketName) {
-        return {
-          async createSignedUrls(paths, expiresIn) {
-            requests.push({ bucketName, paths, expiresIn });
-            return {
-              data: paths.map((path) => ({ path, signedUrl: `signed:${path}` })),
-              error: null,
-            };
-          },
-        };
-      },
+  setCosStorageTestAdapter({
+    async getSignedObjectUrl(key, expiresIn) {
+      requests.push({ key, expiresIn });
+      return `signed:${key}`;
     },
-  };
+  });
   const paths = Array.from({ length: 205 }, (_, index) => `users/u/image-${index}.webp`);
 
-  const urls = await createSignedUrlMap(supabase, {
+  const urls = await createSignedUrlMap({
     bucketName: "dish-images",
     paths: [paths[0], ...paths, ""],
     expiresIn: 21_600,
     errorMessage: "读取图片失败。",
   });
 
-  assert.deepEqual(requests.map(({ paths: batch }) => batch.length), [100, 100, 5]);
-  assert.equal(requests.every(({ bucketName }) => bucketName === "dish-images"), true);
+  assert.equal(requests.length, 205);
+  assert.equal(requests.every(({ key }) => key.startsWith("dish-images/users/u/")), true);
   assert.equal(requests.every(({ expiresIn }) => expiresIn === 21_600), true);
   assert.equal(urls.size, 205);
-  assert.equal(urls.get(paths[204]), `signed:${paths[204]}`);
+  assert.equal(urls.get(paths[204]), `signed:dish-images/${paths[204]}`);
+});
+
+test("storage usage is aggregated from the authenticated user's asset ledger", async () => {
+  const calls = [];
+  const supabase = {
+    async rpc(name, params) {
+      calls.push({ name, params });
+      return {
+        data: [
+          { module: "menu", image_count: 1, used_bytes: 1024 },
+          { module: "activities", image_count: 0, used_bytes: 0 },
+          { module: "media", image_count: 1, used_bytes: 2048 },
+          { module: "wardrobe", image_count: 0, used_bytes: 0 },
+          { module: "key_moments", image_count: 0, used_bytes: 0 },
+          { module: "avatars", image_count: 0, used_bytes: 0 },
+        ],
+        error: null,
+      };
+    },
+  };
+
+  const usage = await getUserImageStorageUsage(supabase, "user-1");
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].name, "get_user_image_storage_usage");
+  assert.equal(calls[0].params.p_user_id, "user-1");
+  assert.equal(usage.plan, "public_beta");
+  assert.equal(usage.used_bytes, 3072);
+  assert.equal(usage.image_count, 2);
+  assert.equal(usage.quota_bytes, null);
+  assert.equal(usage.modules.find((item) => item.key === "menu").used_bytes, 1024);
+  assert.equal(usage.modules.find((item) => item.key === "media").image_count, 1);
 });

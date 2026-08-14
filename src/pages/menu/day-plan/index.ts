@@ -265,7 +265,7 @@ function temporaryScheduleItem(dish: Dish, position: number): MenuScheduleItem {
     place_id: dish.place_id,
     name: dish.name,
     place_name: "",
-    image_url: dish.thumbnail_url || dish.image_url,
+    image_url: dish.image_url,
     place_image_url: "",
     position,
     archived: false

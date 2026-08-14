@@ -5,9 +5,7 @@ export type KeyMoment = {
   content: string
   occurred_at: string
   image_path: string | null
-  thumbnail_path: string | null
   image_url: string
-  thumbnail_url: string
   created_at: string
   updated_at: string
 }

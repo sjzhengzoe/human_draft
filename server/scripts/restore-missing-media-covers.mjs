@@ -123,9 +123,6 @@ async function writeManifest(manifest) {
 }
 
 async function main() {
-  if (config.imageStorageProvider !== "cos") {
-    throw new Error("当前图片存储来源不是 COS，拒绝执行恢复。" );
-  }
   const supabase = getSupabaseAdmin();
   const sourceManifest = sourceManifestPath
     ? JSON.parse(await readFile(sourceManifestPath, "utf8"))

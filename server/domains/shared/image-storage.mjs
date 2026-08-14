@@ -15,32 +15,67 @@ import {
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
 export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "3600";
 
-export const usesCosImageStorage = () => config.imageStorageProvider === "cos";
+const IMAGE_MODULE_BY_BUCKET = new Map([
+  [config.dishBucket, "menu"],
+  [config.activityBucket, "activities"],
+  [config.mediaCoverBucket, "media"],
+  [config.wardrobeBucket, "wardrobe"],
+  [config.keyMomentBucket, "key_moments"],
+  [config.avatarBucket, "avatars"],
+]);
+
+const numericObjectSize = (value) => {
+  const size = Number(value);
+  return Number.isFinite(size) && size > 0 ? Math.round(size) : 0;
+};
+
+export async function getUserImageStorageUsage(supabase, userId) {
+  const { data, error } = await supabase.rpc("get_user_image_storage_usage", {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  const modules = (data || []).map((row) => ({
+    key: row.module,
+    image_count: Number(row.image_count || 0),
+    used_bytes: numericObjectSize(row.used_bytes),
+  }));
+
+  return {
+    plan: "public_beta",
+    used_bytes: modules.reduce((total, module) => total + module.used_bytes, 0),
+    image_count: modules.reduce((total, module) => total + module.image_count, 0),
+    quota_bytes: null,
+    modules,
+  };
+}
 
 export async function uploadStorageImage(
   supabase,
-  { bucketName, path, buffer, contentType, cacheControl, upsert = false },
+  { bucketName, path, userId, buffer, contentType, cacheControl },
 ) {
-  if (usesCosImageStorage()) {
-    await putCosObject({
-      key: cosObjectKey(bucketName, path),
-      buffer,
-      contentType,
-      cacheControl,
-    });
-    return;
+  const module = IMAGE_MODULE_BY_BUCKET.get(bucketName);
+  if (!module) throw new Error(`Unknown image bucket: ${bucketName}`);
+  const objectKey = cosObjectKey(bucketName, path);
+  await putCosObject({ key: objectKey, buffer, contentType, cacheControl });
+  const { error } = await supabase.from("image_assets").upsert({
+    object_key: objectKey,
+    user_id: userId,
+    module,
+    size_bytes: buffer.length,
+    mime_type: contentType,
+  }, { onConflict: "object_key" });
+  if (!error) return;
+  try {
+    await deleteCosObject(objectKey);
+  } catch (cleanupError) {
+    console.error("回滚未登记的 COS 图片失败:", cleanupError);
   }
-  const { error } = await supabase.storage.from(bucketName).upload(path, buffer, {
-    cacheControl,
-    contentType,
-    upsert,
-  });
-  if (error) throw error;
+  throw error;
 }
 
 export async function uploadOptimizedOriginalImage(
   supabase,
-  { bucketName, basePath, buffer, profile, uploadErrorMessage },
+  { bucketName, basePath, userId, buffer, profile, uploadErrorMessage },
 ) {
   let optimized;
   try {
@@ -57,98 +92,85 @@ export async function uploadOptimizedOriginalImage(
     await uploadStorageImage(supabase, {
       bucketName,
       path: imagePath,
+      userId,
       buffer: optimized.original,
       cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: optimized.originalContentType,
-      upsert: false,
     });
   } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", uploadErrorMessage);
     wrapped.cause = error;
     throw wrapped;
   }
-  return { imagePath, thumbnailPath: null };
+  return { imagePath };
 }
 
-export async function createSignedUrlMap(
-  supabase,
-  { bucketName, paths, expiresIn, errorMessage },
-) {
+export async function createSignedUrlMap({ bucketName, paths, expiresIn, errorMessage }) {
   const uniquePaths = [...new Set(paths.filter(Boolean))];
   if (!uniquePaths.length) return new Map();
 
-  if (usesCosImageStorage()) {
-    try {
-      const pairs = await Promise.all(uniquePaths.map(async (path) => [
-        path,
-        await getCosSignedObjectUrl(cosObjectKey(bucketName, path), expiresIn),
-      ]));
-      return new Map(pairs);
-    } catch (error) {
-      const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
-      wrapped.cause = error;
-      throw wrapped;
-    }
+  try {
+    const pairs = await Promise.all(uniquePaths.map(async (path) => [
+      path,
+      await getCosSignedObjectUrl(cosObjectKey(bucketName, path), expiresIn),
+    ]));
+    return new Map(pairs);
+  } catch (error) {
+    const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
+    wrapped.cause = error;
+    throw wrapped;
   }
-
-  const chunks = [];
-  for (let index = 0; index < uniquePaths.length; index += 100) {
-    chunks.push(uniquePaths.slice(index, index + 100));
-  }
-  const results = await Promise.all(chunks.map((chunk) =>
-    supabase.storage.from(bucketName).createSignedUrls(chunk, expiresIn)
-  ));
-  const urls = new Map();
-  results.forEach(({ data, error }, chunkIndex) => {
-    if (error) {
-      const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
-      wrapped.cause = error;
-      throw wrapped;
-    }
-    (data || []).forEach((item, itemIndex) => {
-      const path = item.path || chunks[chunkIndex][itemIndex];
-      urls.set(path, item.signedUrl || "");
-    });
-  });
-  return urls;
 }
 
 export async function removeStorageImages(
   supabase,
-  { bucketName, paths, errorMessage },
+  { bucketName, paths, userId, errorMessage },
 ) {
   const validPaths = paths.filter(Boolean);
   if (!validPaths.length) return;
-  if (usesCosImageStorage()) {
+  for (const path of validPaths) {
+    const objectKey = cosObjectKey(bucketName, path);
     try {
-      await Promise.all(validPaths.map((path) => deleteCosObject(cosObjectKey(bucketName, path))));
+      await deleteCosObject(objectKey);
+      const { error } = await supabase
+        .from("image_assets")
+        .delete()
+        .eq("object_key", objectKey)
+        .eq("user_id", userId);
+      if (error) throw error;
     } catch (error) {
       console.error(errorMessage, error);
     }
-    return;
   }
-  const { error } = await supabase.storage.from(bucketName).remove(validPaths);
-  if (error) console.error(errorMessage, error);
 }
 
 export async function copyStorageImage(
   supabase,
-  { bucketName, sourcePath, destinationPath, errorMessage },
+  { bucketName, sourcePath, destinationPath, userId, errorMessage },
 ) {
+  const destinationKey = cosObjectKey(bucketName, destinationPath);
   try {
-    if (usesCosImageStorage()) {
-      await copyCosObject(
-        cosObjectKey(bucketName, sourcePath),
-        cosObjectKey(bucketName, destinationPath),
-        { cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS },
-      );
-      return;
-    }
-    const { error } = await supabase.storage
-      .from(bucketName)
-      .copy(sourcePath, destinationPath);
+    const buffer = await copyCosObject(
+      cosObjectKey(bucketName, sourcePath),
+      destinationKey,
+      { cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS },
+    );
+    const module = IMAGE_MODULE_BY_BUCKET.get(bucketName);
+    if (!module) throw new Error(`Unknown image bucket: ${bucketName}`);
+    const { error } = await supabase.from("image_assets").upsert({
+      object_key: destinationKey,
+      user_id: userId,
+      module,
+      size_bytes: buffer.length,
+      mime_type: "image/webp",
+    }, { onConflict: "object_key" });
     if (error) throw error;
   } catch (error) {
+    try {
+      await deleteCosObject(destinationKey);
+    } catch (_cleanupError) {
+      // Copy failures before object creation have nothing to clean up.
+    }
     const wrapped = new HttpError(500, "IMAGE_COPY_FAILED", errorMessage);
     wrapped.cause = error;
     throw wrapped;

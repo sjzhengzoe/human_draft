@@ -2,9 +2,6 @@
   "pages": [
     "pages/create/index",
     "pages/login/index",
-    "pages/xiaohongshu/index",
-    "pages/douyin2/index",
-    "pages/douyin3/index",
     "pages/text-card/index",
     "pages/editor/index",
     "pages/settings/index",

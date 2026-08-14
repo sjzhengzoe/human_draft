@@ -5,10 +5,11 @@ import test from "node:test";
 import sharp from "sharp";
 
 process.env.NODE_ENV = "test";
-process.env.WECHAT_ALLOWED_OPENIDS = "test-openid";
+process.env.ADMIN_USER_IDS = "10000000-0000-4000-8000-000000000002";
 process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-bytes";
 const { buildServer } = await import("../index.mjs");
 const { issueAccessToken } = await import("../domains/auth/access-token.mjs");
+const { setCosStorageTestAdapter } = await import("../lib/cos-storage.mjs");
 
 const SESSION_ID = "10000000-0000-4000-8000-000000000001";
 const USER_ID = "10000000-0000-4000-8000-000000000002";
@@ -24,15 +25,19 @@ const TEST_TOKEN = (await issueAccessToken({
   sessionId: SESSION_ID,
   user: { id: USER_ID, wechat_openid: "test-openid" },
 })).token;
+const NON_ADMIN_TOKEN = (await issueAccessToken({
+  sessionId: SESSION_ID,
+  user: { id: OTHER_USER_ID, wechat_openid: "test-openid" },
+})).token;
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
   const fromCalls = [];
   const rpcCalls = [];
   const orderCalls = [];
-  const storageUploads = [];
-  const storageCopies = [];
-  const storageRemovals = [];
-  const storageSignedUrlRequests = [];
+  const cosUploads = [];
+  const cosCopies = [];
+  const cosRemovals = [];
+  const cosSignedUrlRequests = [];
 
   class Query {
     constructor(table) {
@@ -53,6 +58,18 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     insert(values) {
       this.rows = Array.isArray(values) ? [...values] : [values];
+      return this;
+    }
+
+    upsert(values) {
+      const nextRows = Array.isArray(values) ? values : [values];
+      const target = tables[this.table] || (tables[this.table] = []);
+      for (const value of nextRows) {
+        const index = target.findIndex((row) => row.object_key === value.object_key);
+        if (index >= 0) Object.assign(target[index], value);
+        else target.push(value);
+      }
+      this.rows = nextRows;
       return this;
     }
 
@@ -164,54 +181,10 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
     fromCalls,
     rpcCalls,
     orderCalls,
-    storageUploads,
-    storageCopies,
-    storageRemovals,
-    storageSignedUrlRequests,
-    storage: {
-      from(bucket) {
-        return {
-          async upload(path, buffer, options) {
-            storageUploads.push({ bucket, path, buffer, options });
-            return { data: { path }, error: null };
-          },
-          async remove(paths) {
-            storageRemovals.push({ bucket, paths });
-            return { data: paths, error: null };
-          },
-          async copy(sourcePath, destinationPath) {
-            storageCopies.push({ bucket, sourcePath, destinationPath });
-            return { data: { path: destinationPath }, error: null };
-          },
-          getPublicUrl(path) {
-            return {
-              data: {
-                publicUrl: `https://example.test/storage/v1/object/public/${bucket}/${path || ""}`,
-              },
-            };
-          },
-          async createSignedUrl(path, expiresIn) {
-            storageSignedUrlRequests.push({ bucket, paths: [path], expiresIn });
-            return {
-              data: {
-                signedUrl: `https://example.test/${bucket}/signed/${path}?expires=${expiresIn}`,
-              },
-              error: null,
-            };
-          },
-          async createSignedUrls(paths, expiresIn) {
-            storageSignedUrlRequests.push({ bucket, paths, expiresIn });
-            return {
-              data: paths.map((path) => ({
-                path,
-                signedUrl: `https://example.test/${bucket}/signed/${path}?expires=${expiresIn}`,
-              })),
-              error: null,
-            };
-          },
-        };
-      },
-    },
+    cosUploads,
+    cosCopies,
+    cosRemovals,
+    cosSignedUrlRequests,
     from(table) {
       fromCalls.push(table);
       return new Query(table);
@@ -230,6 +203,50 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       };
     },
   };
+
+  const splitObjectKey = (key) => {
+    const separator = key.indexOf("/");
+    return {
+      bucket: separator >= 0 ? key.slice(0, separator) : key,
+      path: separator >= 0 ? key.slice(separator + 1) : "",
+    };
+  };
+  setCosStorageTestAdapter({
+    async putObject({ key, buffer, contentType, cacheControl }) {
+      const { bucket, path } = splitObjectKey(key);
+      cosUploads.push({
+        bucket,
+        path,
+        buffer,
+        options: { contentType, cacheControl },
+      });
+    },
+    async getObject() {
+      return Buffer.from("test-cos-object");
+    },
+    async deleteObject(key) {
+      const { bucket, path } = splitObjectKey(key);
+      cosRemovals.push({ bucket, paths: [path] });
+    },
+    async copyObject(sourceKey, destinationKey) {
+      const source = splitObjectKey(sourceKey);
+      const destination = splitObjectKey(destinationKey);
+      cosCopies.push({
+        bucket: source.bucket,
+        sourcePath: source.path,
+        destinationPath: destination.path,
+      });
+      return Buffer.from("test-cos-copy");
+    },
+    async getSignedObjectUrl(key, expiresIn) {
+      const { bucket, path } = splitObjectKey(key);
+      cosSignedUrlRequests.push({ bucket, paths: [path], expiresIn });
+      return `https://example.test/${bucket}/signed/${path}?expires=${expiresIn}`;
+    },
+    async listObjects() {
+      return [];
+    },
+  });
 
   return supabase;
 }
@@ -380,6 +397,23 @@ test("authenticated users can update their nickname without changing account ide
   assert.deepEqual(checked, [{ openId: "test-openid", content: "新昵称" }]);
 });
 
+test("admin authorization uses the internal user UUID instead of the OpenID", async (t) => {
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({ tables: authenticatedTables() }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/chat-topics/official",
+    headers: { authorization: `Bearer ${NON_ADMIN_TOKEN}` },
+    payload: { content: "不能用相同 OpenID 获得管理员权限" },
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error.code, "ADMIN_REQUIRED");
+});
 
 test("authenticated template text is checked before use", async () => {
   const checked = [];
@@ -572,7 +606,7 @@ test("chat topics list official examples and only the authenticated user's topic
   assert.equal(mine.content, "最近有什么小事，让你觉得生活很可爱？");
 });
 
-test("media and dining detail routes load records by id", async (t) => {
+test("media detail routes load records by id", async (t) => {
   const media = {
     id: MEDIA_ID,
     title: "千与千寻",
@@ -581,19 +615,11 @@ test("media and dining detail routes load records by id", async (t) => {
     platforms: ["哔哩哔哩"],
     sort_order: 1000,
   };
-  const dining = {
-    id: DINING_ID,
-    name: "街角面馆",
-    service_modes: ["dine_in"],
-    menu_items: ["牛肉面"],
-    sort_order: 1000,
-  };
   const app = buildServer({
     logger: false,
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         media_entries: [media],
-        dining_places: [dining],
       }),
     }),
   });
@@ -607,14 +633,6 @@ test("media and dining detail routes load records by id", async (t) => {
   assert.equal(mediaResponse.statusCode, 200);
   assert.deepEqual(mediaResponse.json(), { ok: true, data: { item: media } });
 
-  const diningResponse = await app.inject({
-    method: "GET",
-    url: `/api/dining/${DINING_ID}`,
-    headers: authHeaders,
-  });
-  assert.equal(diningResponse.statusCode, 200);
-  assert.deepEqual(diningResponse.json(), { ok: true, data: { item: dining } });
-
   const missingResponse = await app.inject({
     method: "GET",
     url: "/api/media/10000000-0000-4000-8000-000000000099",
@@ -623,12 +641,6 @@ test("media and dining detail routes load records by id", async (t) => {
   assert.equal(missingResponse.statusCode, 404);
   assert.equal(missingResponse.json().error.code, "RECORD_NOT_FOUND");
 
-  const unauthenticatedResponse = await app.inject({
-    method: "GET",
-    url: `/api/dining/${DINING_ID}`,
-  });
-  assert.equal(unauthenticatedResponse.statusCode, 401);
-  assert.equal(unauthenticatedResponse.json().error.code, "UNAUTHORIZED");
 });
 
 test("footprint routes require login and scope reads and writes to the authenticated user", async (t) => {
@@ -746,6 +758,8 @@ test("menu overview combines metadata, permissions, and initial content", async 
     id: MEDIA_ID,
     user_id: USER_ID,
     name: "番茄炒鸡蛋",
+    record_type: "home",
+    place_id: DINING_ID,
     record_type: "home",
     category_id: SOURCE_ID,
     outside_category_id: null,
@@ -972,7 +986,7 @@ test("deleting a referenced dish copies history images before the atomic databas
   });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(
-    supabase.storageCopies.map((copy) => copy.sourcePath),
+    supabase.cosCopies.map((copy) => copy.sourcePath),
     ["dishes/original.webp", "places/original.webp"],
   );
   const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_dish");
@@ -1011,7 +1025,7 @@ test("deleting a referenced store archives both store and child-dish images", as
   });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(
-    supabase.storageCopies.map((copy) => copy.sourcePath),
+    supabase.cosCopies.map((copy) => copy.sourcePath),
     ["places/original.webp", "dishes/original.webp"],
   );
   const deleteCall = supabase.rpcCalls.find((call) => call.name === "archive_and_delete_menu_place");
@@ -1232,7 +1246,7 @@ test("media list uses one independently signed private cover", async (t) => {
     response.json().data.items[0].cover_url,
     `https://example.test/media-covers/signed/${coverPath}?expires=21600`,
   );
-  assert.deepEqual(supabase.storageSignedUrlRequests, [{
+  assert.deepEqual(supabase.cosSignedUrlRequests, [{
     bucket: "media-covers",
     paths: [coverPath],
     expiresIn: 21_600,
@@ -1427,7 +1441,6 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
     content: "当天的节点",
     occurred_at: "2026-08-02T04:00:00.000Z",
     image_path: null,
-    thumbnail_path: null,
   };
   const app = buildServer({
     logger: false,
@@ -1458,7 +1471,7 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
   });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json().data.items, [
-    { ...ownMoment, image_url: "", thumbnail_url: "" },
+    { ...ownMoment, image_url: "" },
   ]);
 });
 
@@ -1796,8 +1809,8 @@ test("media cover upload stores one WebP image and updates the existing entry", 
 
   assert.equal(response.statusCode, 200);
   assert.equal(checkedImages.length, 1);
-  assert.equal(supabase.storageUploads.length, 1);
-  const upload = supabase.storageUploads[0];
+  assert.equal(supabase.cosUploads.length, 1);
+  const upload = supabase.cosUploads[0];
   assert.ok(upload);
   assert.equal(upload.bucket, "media-covers");
   assert.match(upload.path, new RegExp(`^users/${USER_ID}/entries/${MEDIA_ID}/.+\\.webp$`));
@@ -1826,7 +1839,6 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
     introduction: "沿着湖岸慢慢骑。",
     activity_type: "户外",
     image_path: "users/old/activity.webp",
-    thumbnail_path: "users/old/activity-thumbnail.webp",
     sort_order: 1000,
   };
   const homeActivity = {
@@ -1860,7 +1872,7 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
   assert.equal(listResponse.statusCode, 200);
   assert.equal(listResponse.json().data.items[0].introduction, "沿着湖岸慢慢骑。");
   assert.equal(
-    listResponse.json().data.items[0].thumbnail_url,
+    listResponse.json().data.items[0].image_url,
     "https://example.test/activity-images/signed/users/old/activity.webp?expires=21600",
   );
 
@@ -1936,14 +1948,14 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
 
   assert.equal(imageResponse.statusCode, 200);
   assert.equal(checkedImages.length, 1);
-  assert.equal(supabase.storageUploads.length, 1);
-  const upload = supabase.storageUploads[0];
+  assert.equal(supabase.cosUploads.length, 1);
+  const upload = supabase.cosUploads[0];
   assert.ok(upload);
   assert.equal(upload.bucket, "activity-images");
   assert.match(upload.path, new RegExp(`^users/${USER_ID}/activities/${SOURCE_ID}/.+\\.webp$`));
-  assert.deepEqual(supabase.storageRemovals[0], {
+  assert.deepEqual(supabase.cosRemovals[0], {
     bucket: "activity-images",
-    paths: ["users/old/activity.webp", "users/old/activity-thumbnail.webp"],
+    paths: ["users/old/activity.webp"],
   });
   assert.equal(imageResponse.json().data.item.image_url.includes(upload.path), true);
 });
@@ -1999,30 +2011,24 @@ test("delete routes return a JSON success envelope", async (t) => {
     platforms: [],
     sort_order: 1000,
   };
-  const dining = {
-    id: DINING_ID,
-    name: "待删除店铺",
-    service_modes: ["takeout"],
-    menu_items: [],
-    sort_order: 1000,
-  };
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [media],
-      dining_places: [dining],
     }),
   });
   const app = buildServer({ logger: false, supabase });
   t.after(() => app.close());
 
-  for (const url of [`/api/media/${MEDIA_ID}`, `/api/dining/${DINING_ID}`]) {
-    const response = await app.inject({ method: "DELETE", url, headers: authHeaders });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { ok: true, data: { deleted: true } });
-  }
+  const response = await app.inject({
+    method: "DELETE",
+    url: `/api/media/${MEDIA_ID}`,
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json(), { ok: true, data: { deleted: true } });
 });
 
-test("deleting a media entry removes each managed original and thumbnail once", async (t) => {
+test("deleting a media entry removes each managed image once", async (t) => {
   const sharedCover = `users/${USER_ID}/entries/${MEDIA_ID}/shared-normalized-v3.webp`;
   const seasonCover = `users/${USER_ID}/entries/${MEDIA_ID}/season-normalized-v3.webp`;
   const supabase = createFakeSupabase({
@@ -2049,20 +2055,14 @@ test("deleting a media entry removes each managed original and thumbnail once", 
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(supabase.storageRemovals, [
+  assert.deepEqual(supabase.cosRemovals, [
     {
       bucket: "media-covers",
-      paths: [
-        sharedCover,
-        sharedCover.replace(".webp", "-thumbnail.webp"),
-      ],
+      paths: [sharedCover],
     },
     {
       bucket: "media-covers",
-      paths: [
-        seasonCover,
-        seasonCover.replace(".webp", "-thumbnail.webp"),
-      ],
+      paths: [seasonCover],
     },
   ]);
 });
@@ -2094,12 +2094,9 @@ test("deleting a media season removes its managed cover only when no reference r
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(supabase.storageRemovals, [{
+  assert.deepEqual(supabase.cosRemovals, [{
     bucket: "media-covers",
-    paths: [
-      removedCover,
-      removedCover.replace(".webp", "-thumbnail.webp"),
-    ],
+    paths: [removedCover],
   }]);
 });
 
@@ -2132,7 +2129,7 @@ test("switching a media entry cover keeps the old file while a season still uses
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().data.item.cover_path, selectedCover);
-  assert.deepEqual(supabase.storageRemovals, []);
+  assert.deepEqual(supabase.cosRemovals, []);
 });
 
 test("luggage reorder accepts one final snapshot and applies only the required moves", async (t) => {
@@ -2437,7 +2434,6 @@ test("new completed media defaults its required rating to three", async (t) => {
     watch_status: "planned",
     platforms: [],
     personal_rating: null,
-    is_revisitable: false,
     sort_order: 1000,
   };
   const app = buildServer({
@@ -2463,7 +2459,6 @@ test("new completed media defaults its required rating to three", async (t) => {
 
   assert.equal(response.statusCode, 201);
   assert.equal(response.json().data.item.personal_rating, 3);
-  assert.equal(response.json().data.item.is_revisitable, false);
 
   const missingResponse = await app.inject({
     method: "POST",
@@ -2478,21 +2473,9 @@ test("new completed media defaults its required rating to three", async (t) => {
   assert.equal(missingResponse.statusCode, 400);
   assert.equal(missingResponse.json().error.code, "RATING_REQUIRED");
 
-  const legacyResponse = await app.inject({
-    method: "POST",
-    url: "/api/media",
-    headers: authHeaders,
-    payload: {
-      title: "旧版未标记作品",
-      media_type: "电影",
-      is_revisitable: false,
-    },
-  });
-  assert.equal(legacyResponse.statusCode, 201);
-  assert.equal(legacyResponse.json().data.item.personal_rating, 3);
 });
 
-test("completed media ratings are required, validate one to five, and sync legacy revisit state", async (t) => {
+test("completed media ratings are required and validate one to five", async (t) => {
   const existing = {
     id: MEDIA_ID,
     title: "评分测试",
@@ -2500,7 +2483,6 @@ test("completed media ratings are required, validate one to five, and sync legac
     watch_status: "completed",
     platforms: [],
     personal_rating: null,
-    is_revisitable: false,
     sort_order: 1000,
   };
   const app = buildServer({
@@ -2519,7 +2501,6 @@ test("completed media ratings are required, validate one to five, and sync legac
   });
   assert.equal(fiveStarResponse.statusCode, 200);
   assert.equal(fiveStarResponse.json().data.item.personal_rating, 5);
-  assert.equal(fiveStarResponse.json().data.item.is_revisitable, true);
 
   const clearResponse = await app.inject({
     method: "PUT",
@@ -2529,16 +2510,6 @@ test("completed media ratings are required, validate one to five, and sync legac
   });
   assert.equal(clearResponse.statusCode, 400);
   assert.equal(clearResponse.json().error.code, "RATING_REQUIRED");
-
-  const legacyResponse = await app.inject({
-    method: "PUT",
-    url: `/api/media/${MEDIA_ID}`,
-    headers: authHeaders,
-    payload: { is_revisitable: true },
-  });
-  assert.equal(legacyResponse.statusCode, 200);
-  assert.equal(legacyResponse.json().data.item.personal_rating, 5);
-  assert.equal(legacyResponse.json().data.item.is_revisitable, true);
 
   const invalidResponse = await app.inject({
     method: "PUT",
@@ -2800,10 +2771,11 @@ test("dish meal periods accept free combinations and reject invalid values", asy
     id: SOURCE_ID,
     user_id: USER_ID,
     name: "番茄炒鸡蛋",
+    record_type: "home",
+    place_id: DINING_ID,
     category_id: TARGET_ID,
     categories: { id: TARGET_ID, name: "半荤" },
     image_path: "dish.png",
-    thumbnail_path: "dish-thumb.webp",
     meal_periods: ["lunch", "dinner"],
     printed_at: null,
     sort_order: 1000,
@@ -2813,7 +2785,10 @@ test("dish meal periods accept free combinations and reject invalid values", asy
   const app = buildServer({
     logger: false,
     supabase: createFakeSupabase({
-      tables: authenticatedTables({ dishes: [dish] }),
+      tables: authenticatedTables({
+        dishes: [dish],
+        menu_places: [{ id: DINING_ID, user_id: USER_ID, place_type: "home", outside_category_id: null }],
+      }),
     }),
   });
   t.after(() => app.close());
@@ -2863,15 +2838,14 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
     record_type: "home",
     category_id: TARGET_ID,
     outside_category_id: null,
+    place_id: DINING_ID,
     categories: { id: TARGET_ID, name: "荤菜" },
-    recommended_items: [],
     main_ingredients: [],
     introduction: "",
     cooking_methods: [],
     taste: [],
     flavor_options: [],
     image_path: "dish.png",
-    thumbnail_path: "dish-thumb.webp",
     meal_periods: ["lunch", "dinner"],
     printed_at: null,
     sort_order: 1000,
@@ -2881,7 +2855,10 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
   const app = buildServer({
     logger: false,
     supabase: createFakeSupabase({
-      tables: authenticatedTables({ dishes: [dish] }),
+      tables: authenticatedTables({
+        dishes: [dish],
+        menu_places: [{ id: DINING_ID, user_id: USER_ID, place_type: "home", outside_category_id: null }],
+      }),
     }),
   });
   t.after(() => app.close());
@@ -3023,22 +3000,20 @@ test("menu place creation trigger uses array defaults after taste code migration
   assert.doesNotMatch(migration, /drop table|drop column|delete from public\.dishes/i);
 });
 
-test("legacy outside-store creation sends an empty taste array", async () => {
-  const dishLogic = await readFile(
-    new URL("../domains/menu/dishes.mjs", import.meta.url),
-    "utf8",
-  );
+test("outside stores are created directly without proxy dishes", async () => {
   const placeLogic = await readFile(
     new URL("../domains/menu/places.mjs", import.meta.url),
     "utf8",
   );
-
-  assert.match(
-    dishLogic,
-    /const taste = place \|\| recordType === "home" \? normalizeTaste\(fields\.taste, true\) : \[\];/,
+  const migration = await readFile(
+    new URL("../../supabase/migrations/20260814105241_cleanup_prelaunch_redundancy.sql", import.meta.url),
+    "utf8",
   );
-  assert.match(placeLogic, /taste: "\[\]"/);
-  assert.doesNotMatch(placeLogic, /taste: "",/);
+
+  assert.match(placeLogic, /rpc\("create_menu_place_at_end"/);
+  assert.doesNotMatch(placeLogic, /\bcreateDish\(|source_dish_id/);
+  assert.match(migration, /delete from public\.dishes as legacy/);
+  assert.match(migration, /drop column if exists source_dish_id/);
 });
 
 test("dish ordering migration backfills newest-first and inserts new dishes first", async () => {
@@ -3059,7 +3034,7 @@ test("dish ordering migration backfills newest-first and inserts new dishes firs
   assert.match(migration, /hashtextextended\('dishes:' \|\| new\.user_id::text, 0\)/i);
 });
 
-test("menu records can switch from a home dish to an outside store", async (t) => {
+test("dishes can move from the home place to an outside place", async (t) => {
   const dish = {
     id: SOURCE_ID,
     user_id: USER_ID,
@@ -3067,14 +3042,13 @@ test("menu records can switch from a home dish to an outside store", async (t) =
     record_type: "home",
     category_id: TARGET_ID,
     categories: { id: TARGET_ID, name: "半荤" },
-    recommended_items: [],
+    place_id: SEASON_ID,
     main_ingredients: ["番茄", "鸡蛋"],
     introduction: "家常快手菜。",
     cooking_methods: ["cooking_01"],
     taste: ["taste_05", "taste_06"],
     flavor_options: ["少糖"],
     image_path: "dish.png",
-    thumbnail_path: "dish-thumb.webp",
     meal_periods: ["lunch", "dinner"],
     printed_at: null,
     sort_order: 1000,
@@ -3088,6 +3062,10 @@ test("menu records can switch from a home dish to an outside store", async (t) =
         dishes: [dish],
         categories: [{ id: TARGET_ID, user_id: USER_ID, name: "半荤" }],
         dining_scenes: [{ id: DINING_ID, user_id: USER_ID, name: "日常" }],
+        menu_places: [
+          { id: SEASON_ID, user_id: USER_ID, place_type: "home", outside_category_id: null },
+          { id: DINING_ID, user_id: USER_ID, place_type: "outside", outside_category_id: DINING_ID },
+        ],
       }),
     }),
   });
@@ -3098,20 +3076,16 @@ test("menu records can switch from a home dish to an outside store", async (t) =
     url: `/api/dishes/${SOURCE_ID}`,
     headers: authHeaders,
     payload: {
-      name: "海底捞",
-      record_type: "outside",
-      category_id: null,
-      outside_category_id: DINING_ID,
-      recommended_items: ["番茄锅", "虾滑"],
+      place_id: DINING_ID,
     },
   });
 
   assert.equal(response.statusCode, 200);
-  assert.equal(response.json().data.dish.name, "海底捞");
+  assert.equal(response.json().data.dish.name, "番茄炒鸡蛋");
   assert.equal(response.json().data.dish.record_type, "outside");
   assert.equal(response.json().data.dish.category_id, null);
   assert.equal(response.json().data.dish.outside_category_id, DINING_ID);
-  assert.deepEqual(response.json().data.dish.recommended_items, ["番茄锅", "虾滑"]);
+  assert.equal(response.json().data.dish.place_id, DINING_ID);
   assert.deepEqual(response.json().data.dish.main_ingredients, ["番茄", "鸡蛋"]);
   assert.equal(response.json().data.dish.introduction, "家常快手菜。");
   assert.deepEqual(response.json().data.dish.cooking_methods, ["煎炒"]);
@@ -3131,6 +3105,22 @@ test("unified menu migration preserves stores as outside records", async () => {
   assert.match(migration, /from public\.dining_places as place/i);
   assert.match(migration, /outside_record\.menu_items/i);
   assert.match(migration, /source_dining_place_id/i);
+});
+
+test("legacy dining-place cleanup verifies migration before dropping obsolete storage", async () => {
+  const migration = await readFile(
+    new URL(
+      "../../supabase/migrations/20260814105240_drop_legacy_dining_places.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const verification = migration.indexOf("where not exists");
+  const dropTable = migration.indexOf("drop table if exists public.dining_places");
+  assert.ok(verification >= 0);
+  assert.ok(dropTable > verification);
+  assert.match(migration, /join public\.menu_places as place/i);
+  assert.match(migration, /drop column if exists source_dining_place_id/i);
 });
 
 test("outside menu category migration keeps each store in its previous scene", async () => {

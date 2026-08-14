@@ -14,7 +14,6 @@ export type AppUser = {
   id: string
   display_name: string
   avatar_url: string
-  openid: string
   can_write: boolean
   is_admin: boolean
   created_at: string
@@ -26,6 +25,20 @@ export type AuthSession = {
   refresh_token: string
   refresh_expires_at: string
   user: AppUser
+}
+
+export type ImageStorageUsageModule = {
+  key: string
+  image_count: number
+  used_bytes: number
+}
+
+export type ImageStorageUsage = {
+  plan: "public_beta"
+  used_bytes: number
+  image_count: number
+  quota_bytes: null
+  modules: ImageStorageUsageModule[]
 }
 
 export type Category = {
@@ -46,7 +59,6 @@ export type MenuPlaceDishPreview = {
   cooking_methods: string[]
   taste: string
   image_url: string
-  thumbnail_url: string
 }
 
 export type MenuPlace = {
@@ -56,11 +68,8 @@ export type MenuPlace = {
   outside_category_id: string | null
   outside_category: Pick<Category, "id" | "name"> | null
   image_path: string
-  thumbnail_path: string | null
   image_url: string
-  thumbnail_url: string
   sort_order: number
-  source_dish_id: string | null
   dish_count: number
   dishes: MenuPlaceDishPreview[]
   preview_dishes: MenuPlaceDishPreview[]
@@ -76,7 +85,6 @@ export type Dish = {
   category: Pick<Category, "id" | "name"> | null
   outside_category_id: string | null
   outside_category: Pick<Category, "id" | "name"> | null
-  recommended_items: string[]
   main_ingredients: string[]
   introduction: string
   cooking_methods: string[]
@@ -85,9 +93,7 @@ export type Dish = {
   place_id: string | null
   place_sort_order: number
   image_path: string
-  thumbnail_path: string | null
   image_url: string
-  thumbnail_url: string
   meal_periods: MealPeriod[]
   printed_at: string | null
   sort_order: number

@@ -1,5 +1,7 @@
 # 生活清单
 
+> 项目状态：当前未上线、尚未正式发布。开发阶段不保留历史功能或数据格式的兼容层，完成有效业务数据迁移后直接删除旧表、旧字段和无入口代码。
+
 生活清单与小红书模板、抖音模板、菜单同级，包括：
 
 - 影视：电影、电视剧、动漫、动画、广播剧、小说；状态为想看、正在看、已阅；平台/来源必填并支持多选，不确定时可选择“待定”；支持分类内自定义排序。作品列表按 20 条分页加载，并支持按作品名进行服务端模糊搜索，例如“默”可以匹配“默读”。
@@ -13,7 +15,30 @@
 原“外出吃饭”店铺已合并到“饮食记录”。菜单记录通过“在家 / 外食”区分：
 
 - 在家记录保留菜品分类、图片和适用餐次。
-- 外食记录以店铺为主标题，保留图片、适用餐次和推荐菜品。
+- 外食记录以 `menu_places` 店铺为主，店内菜品统一通过 `dishes.place_id` 归属店铺；不再用一条同名菜品镜像店铺，也不再保留旧推荐菜品数组。
+
+旧 `dining_places` 的 15 条记录已全部迁移到 `dishes` / `menu_places`，缺失数为 0。
+`dining_places` 及 `dishes.source_dining_place_id` 已从开发数据库删除；
+`dining_scenes` 仍作为外食分类的当前数据表，不属于兼容结构。对应的可重复执行清理迁移为：
+
+`supabase/migrations/20260814105240_drop_legacy_dining_places.sql`
+
+2026-08-14 的未上线清理已应用到开发数据库：
+
+- 22 条与 `menu_places` 完全一致、且无日程或收藏引用的旧店铺镜像菜品已删除，菜品从 126 条归一为 104 条，34 个店铺及全部店内菜品关系不变。
+- 删除 `menu_places.source_dish_id`、`dishes.recommended_items`、五张业务表的 `thumbnail_path`、`media_entries.is_revisitable`，五星评分 `personal_rating` 是唯一评分来源。
+- 删除旧店铺同步触发器、3 个兼容同步函数和 19 个无用户参数的旧 RPC 重载；店铺改为直接写入 `menu_places`。
+- 图片统一使用腾讯云私有 COS；Supabase Storage 的 6 个旧桶、1,374 个冗余对象和两个库存 RPC 已删除。`image_assets` 按对象记录归属、模块、字节和 MIME，图片空间接口只聚合当前用户台账，不再扫描 COS 或 Supabase Storage。
+- 7 张仅存在于 Supabase 的有效衣橱图片已逐字节校验后补入 COS；177 个旧格式影视对象路径已归一到用户／条目目录。内容相同且归属同一影视条目的对象被合并，最终 471 个有效 COS 对象与数据库台账一一对应，缺失、孤儿和归属错误均为 0。
+- 29 张现存表均有数据且启用 RLS；复核未发现孤儿记录、重复业务名称组、空表或重复索引。`anon` / `authenticated` 对 `public` schema 的表、序列和函数权限已撤销，业务数据库访问只由服务端 `service_role` 执行。
+
+对应迁移为：
+
+- `supabase/migrations/20260814105241_cleanup_prelaunch_redundancy.sql`
+- `supabase/migrations/20260814110840_harden_public_schema_grants.sql`
+- `supabase/migrations/20260814111657_scope_private_image_inventory.sql`
+- `supabase/migrations/20260814111845_fix_set_updated_at_search_path.sql`
+- `supabase/migrations/20260814120830_cos_image_assets.sql`
 
 “本周菜单”复用已有菜品和店铺，可以按日、周、月、年安排早餐、午餐、下午茶和晚餐。菜品或店铺存在时，菜单实时读取其最新名称和图片；删除被菜单引用的菜品或店铺时，系统会复制独立的历史图片并保留名称快照，再断开原记录引用。每餐默认三个可增减档位；日视图支持保留锁定项后随机菜单。菜单选择复用“我的菜单”速览结构，并提供全菜单搜索、常吃清单和菜篮子。排行榜按周、月、年统计截至当天的记录：在家菜品按菜品统计，外食店内菜品统一归入所属店铺，同一餐同一家店只计一次。
 

@@ -129,7 +129,7 @@ async function signedUrlFor(supabase, path) {
 }
 
 async function signedUrlsFor(supabase, paths) {
-  return createSignedUrlMap(supabase, {
+  return createSignedUrlMap({
     bucketName: config.wardrobeBucket,
     paths,
     expiresIn: SIGNED_URL_TTL_SECONDS,
@@ -138,16 +138,15 @@ async function signedUrlsFor(supabase, paths) {
 }
 
 async function toItemResponse(supabase, item, category, signedUrls) {
-  const [imageUrl, thumbnailUrl] = signedUrls
-    ? [signedUrls.get(item.image_path) || "", signedUrls.get(item.image_path) || ""]
-    : await signedUrlFor(supabase, item.image_path).then((url) => [url, url]);
+  const imageUrl = signedUrls
+    ? signedUrls.get(item.image_path) || ""
+    : await signedUrlFor(supabase, item.image_path);
   return {
     ...item,
     category: category
       ? { id: category.id, name: category.name, fields: category.fields }
       : null,
     image_url: imageUrl,
-    thumbnail_url: thumbnailUrl,
   };
 }
 
@@ -159,16 +158,18 @@ async function uploadImage(supabase, userId, itemId, image) {
   return uploadOptimizedOriginalImage(supabase, {
     bucketName: config.wardrobeBucket,
     basePath,
+    userId,
     buffer: image.buffer,
     profile: IMAGE_PROFILES.wardrobe.original,
     uploadErrorMessage: "上传衣物图片失败。",
   });
 }
 
-async function removeImages(supabase, paths) {
+async function removeImages(supabase, userId, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.wardrobeBucket,
     paths,
+    userId,
     errorMessage: "删除衣物图片失败:",
   });
 }
@@ -346,12 +347,11 @@ export async function createWardrobeItem(supabase, userId, fields, image) {
       p_category_id: category.id,
       p_name: name,
       p_image_path: paths.imagePath,
-      p_thumbnail_path: paths.thumbnailPath,
       p_values: values,
     })
     .single();
   if (error) {
-    await removeImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "新增衣物失败。");
   }
   return toItemResponse(supabase, data, category);
@@ -388,16 +388,16 @@ export async function replaceWardrobeItemImage(supabase, userId, itemId, image) 
   const paths = await uploadImage(supabase, userId, itemId, image);
   const { data, error } = await supabase
     .from("wardrobe_items")
-    .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
+    .update({ image_path: paths.imagePath })
     .eq("id", itemId)
     .eq("user_id", userId)
     .select("*")
     .single();
   if (error) {
-    await removeImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "更新衣物图片失败。");
   }
-  await removeImages(supabase, [current.image_path, current.thumbnail_path]);
+  await removeImages(supabase, userId, [current.image_path]);
   return toItemResponse(supabase, data, category);
 }
 
@@ -409,7 +409,7 @@ export async function deleteWardrobeItem(supabase, userId, itemId) {
     .eq("id", itemId)
     .eq("user_id", userId);
   throwSupabaseError(error, "删除衣物失败。");
-  await removeImages(supabase, [item.image_path, item.thumbnail_path]);
+  await removeImages(supabase, userId, [item.image_path]);
 }
 
 export async function swapWardrobeItemSortOrders(supabase, userId, body) {

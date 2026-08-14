@@ -2,6 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import {
+  removeStorageImages,
+  uploadStorageImage,
+} from "../server/domains/shared/image-storage.mjs";
 
 const APPLY = process.argv.includes("--apply");
 const PREVIEW_DIR = process.argv
@@ -609,22 +613,22 @@ const ATTRIBUTE_PLANS = [
 function requireRuntimeConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || "";
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  const allowedOpenIds = new Set(
-    (process.env.WECHAT_ALLOWED_OPENIDS || "")
+  const adminUserIds = new Set(
+    (process.env.ADMIN_USER_IDS || "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean),
   );
-  if (!supabaseUrl || !supabaseKey || !allowedOpenIds.size) {
+  if (!supabaseUrl || !supabaseKey || !adminUserIds.size) {
     throw new Error("缺少 Supabase 或可写账号配置。");
   }
-  return { supabaseUrl, supabaseKey, allowedOpenIds };
+  return { supabaseUrl, supabaseKey, adminUserIds };
 }
 
-async function findWriterAccount(client, allowedOpenIds) {
-  const { data, error } = await client.from("app_users").select("id,wechat_openid");
+async function findWriterAccount(client, adminUserIds) {
+  const { data, error } = await client.from("app_users").select("id");
   if (error) throw error;
-  const writers = (data || []).filter((user) => allowedOpenIds.has(user.wechat_openid));
+  const writers = (data || []).filter((user) => adminUserIds.has(user.id));
   if (writers.length !== 1) {
     throw new Error(`预期找到 1 个可写账号，实际找到 ${writers.length} 个。`);
   }
@@ -1171,11 +1175,11 @@ async function applyEpisodePlans(client, userId, entries) {
 }
 
 async function main() {
-  const { supabaseUrl, supabaseKey, allowedOpenIds } = requireRuntimeConfig();
+  const { supabaseUrl, supabaseKey, adminUserIds } = requireRuntimeConfig();
   const client = createClient(supabaseUrl, supabaseKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const userId = await findWriterAccount(client, allowedOpenIds);
+  const userId = await findWriterAccount(client, adminUserIds);
   const { data: entries, error } = await client
     .from("media_entries")
     .select(
@@ -1210,24 +1214,30 @@ async function main() {
     previews.push({ ...plan, image: downloaded.image });
     let status = "校验通过";
     if (APPLY) {
-      const path = `entries/${entry.id}.webp`;
-      const upload = await client.storage.from(MEDIA_COVER_BUCKET).upload(path, downloaded.image, {
+      const imagePath = `users/${userId}/entries/${entry.id}/backfill.webp`;
+      await uploadStorageImage(client, {
+        bucketName: MEDIA_COVER_BUCKET,
+        path: imagePath,
+        userId,
+        buffer: downloaded.image,
         cacheControl: "3600",
         contentType: "image/webp",
-        upsert: true,
       });
-      if (upload.error) throw upload.error;
-      const publicUrl = client.storage.from(MEDIA_COVER_BUCKET).getPublicUrl(path).data.publicUrl;
       const update = await client
         .from("media_entries")
-        .update({ cover_url: publicUrl })
+        .update({ cover_url: imagePath })
         .eq("id", entry.id)
         .eq("user_id", userId)
         .eq("cover_url", "")
         .select("id")
         .single();
       if (update.error) {
-        await client.storage.from(MEDIA_COVER_BUCKET).remove([path]);
+        await removeStorageImages(client, {
+          bucketName: MEDIA_COVER_BUCKET,
+          paths: [imagePath],
+          userId,
+          errorMessage: "回滚影视封面失败:",
+        });
         throw update.error;
       }
       status = "已补充";

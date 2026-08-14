@@ -18,9 +18,7 @@ export type WardrobeItem = {
   category: Pick<WardrobeCategory, "id" | "name" | "fields"> | null
   name: string
   image_path: string
-  thumbnail_path: string | null
   image_url: string
-  thumbnail_url: string
   values: Record<string, string>
   sort_order: number
   created_at: string

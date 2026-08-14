@@ -20,26 +20,13 @@ const ALLOWED_IMAGE_TYPES = new Set([
 export function avatarStoragePath(value) {
   if (typeof value !== "string" || !value.trim()) return "";
   const text = value.trim();
-  if (!text.includes("://")) return text.replace(/^\/+/, "");
-  try {
-    const pathname = decodeURIComponent(new URL(text).pathname);
-    for (const marker of [
-      `/storage/v1/object/public/${config.avatarBucket}/`,
-      `/storage/v1/object/sign/${config.avatarBucket}/`,
-    ]) {
-      const index = pathname.lastIndexOf(marker);
-      if (index >= 0) return pathname.slice(index + marker.length);
-    }
-  } catch (_error) {
-    return "";
-  }
-  return "";
+  return text.includes("://") ? "" : text.replace(/^\/+/, "");
 }
 
-export async function resolveUserAvatarUrl(supabase, value) {
+export async function resolveUserAvatarUrl(value) {
   const path = avatarStoragePath(value);
   if (!path) return typeof value === "string" ? value : "";
-  const urls = await createSignedUrlMap(supabase, {
+  const urls = await createSignedUrlMap({
     bucketName: config.avatarBucket,
     paths: [path],
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -103,10 +90,10 @@ export async function updateUserAvatar(supabase, userId, buffer) {
     await uploadStorageImage(supabase, {
       bucketName: config.avatarBucket,
       path,
+      userId,
       buffer: normalized,
       cacheControl: "0",
       contentType: "image/webp",
-      upsert: false,
     });
   } catch (error) {
     const wrapped = new HttpError(500, "AVATAR_UPLOAD_FAILED", "保存头像失败。" );
@@ -114,7 +101,7 @@ export async function updateUserAvatar(supabase, userId, buffer) {
     throw wrapped;
   }
 
-  const urls = await createSignedUrlMap(supabase, {
+  const urls = await createSignedUrlMap({
     bucketName: config.avatarBucket,
     paths: [path],
     expiresIn: USER_IMAGE_SIGNED_URL_TTL_SECONDS,
@@ -129,6 +116,7 @@ export async function updateUserAvatar(supabase, userId, buffer) {
     await removeStorageImages(supabase, {
       bucketName: config.avatarBucket,
       paths: [path],
+      userId,
       errorMessage: "清理未完成上传的头像失败。",
     });
     throwSupabaseError(updateError, "更新头像失败。" );
@@ -137,6 +125,7 @@ export async function updateUserAvatar(supabase, userId, buffer) {
     await removeStorageImages(supabase, {
       bucketName: config.avatarBucket,
       paths: [previousPath],
+      userId,
       errorMessage: "清理旧头像失败。",
     });
   }

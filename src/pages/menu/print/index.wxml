@@ -67,7 +67,7 @@
           data-id="{{item.id}}"
           bindtap="handleDishTap"
         >
-          <image class="dish-card__image" src="{{item.thumbnail_url || item.image_url}}" mode="aspectFit" lazy-load />
+          <image class="dish-card__image" src="{{item.image_url}}" mode="aspectFit" lazy-load />
           <view wx:if="{{item.selectionOrder > 0}}" class="dish-card__order">
             {{item.selectionOrder}}
           </view>

@@ -1,4 +1,5 @@
 import { getCurrentUser, logout } from "../../services/auth"
+import { getImageStorageUsage } from "../../services/account"
 import { updateAccountAvatar, updateAccountProfile } from "../../services/profile"
 import { UI_COLORS } from "../../styles/colors"
 import { updateAppTabBarState } from "../../utils/tab-bar"
@@ -8,8 +9,16 @@ type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
   navigationLocked?: boolean
   logoutPending?: boolean
   failedAvatarSignature?: string
+  storageUsageRequestId?: number
 }
 
+function formatStorageBytes(value: number): string {
+  const bytes = Math.max(0, Number(value) || 0)
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
 
 function profileInitial(value: string) {
   return value.trim().slice(0, 1) || "E"
@@ -23,6 +32,7 @@ function getSettingsAccountState(failedAvatarSignature = "") {
       displayName: "未登录",
       avatarUrl: "",
       avatarInitial: "E",
+      userId: "",
       isAdmin: false
     }
   }
@@ -33,6 +43,7 @@ function getSettingsAccountState(failedAvatarSignature = "") {
     displayName: user.display_name,
     avatarUrl: avatarSignature === failedAvatarSignature ? "" : user.avatar_url,
     avatarInitial: user.display_name.trim().slice(0, 1) || "E",
+    userId: user.id,
     isAdmin: user.is_admin
   }
 }
@@ -49,6 +60,9 @@ Component({
     showImageCropper: false,
     cropSourcePath: "",
     savingProfile: false,
+    storageUsageText: "正在统计…",
+    storageImageCountText: "",
+    storageUsageLoading: false,
     themeColors: UI_COLORS
   },
   pageLifetimes: {
@@ -64,8 +78,10 @@ Component({
         nextAccountState.displayName !== this.data.displayName ||
         nextAccountState.avatarUrl !== this.data.avatarUrl ||
         nextAccountState.avatarInitial !== this.data.avatarInitial ||
+        nextAccountState.userId !== this.data.userId ||
         nextAccountState.isAdmin !== this.data.isAdmin
       if (accountChanged) this.setData(nextAccountState)
+      if (nextAccountState.loggedIn) void this.refreshStorageUsage()
     }
   },
   methods: {
@@ -244,6 +260,41 @@ Component({
           wx.showToast({ title: "暂时无法退出，请重试", icon: "none" })
         }
       })
+    },
+    handleCopyUserIdTap() {
+      const userId = String(this.data.userId || "")
+      if (!userId) return
+      wx.setClipboardData({
+        data: userId,
+        success: () => wx.showToast({ title: "用户 ID 已复制", icon: "success" }),
+        fail: () => wx.showToast({ title: "复制失败，请重试", icon: "none" })
+      })
+    },
+    async refreshStorageUsage() {
+      const page = this as SettingsPageInstance
+      const requestId = (page.storageUsageRequestId || 0) + 1
+      page.storageUsageRequestId = requestId
+      this.setData({
+        storageUsageLoading: true,
+        storageUsageText: "正在统计…",
+        storageImageCountText: ""
+      })
+      try {
+        const usage = await getImageStorageUsage()
+        if (page.storageUsageRequestId !== requestId) return
+        this.setData({
+          storageUsageText: `已使用 ${formatStorageBytes(usage.used_bytes)}`,
+          storageImageCountText: `共 ${usage.image_count} 张图片 · 总额度待定`,
+          storageUsageLoading: false
+        })
+      } catch (_error) {
+        if (page.storageUsageRequestId !== requestId) return
+        this.setData({
+          storageUsageText: "暂时无法读取",
+          storageImageCountText: "稍后重新进入页面即可重试",
+          storageUsageLoading: false
+        })
+      }
     },
     handleModuleSettingsTap() {
       const page = this as SettingsPageInstance

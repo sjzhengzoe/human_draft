@@ -179,7 +179,8 @@ test("key moment image loading uses one stored image", async () => {
     readFile(new URL("../domains/shared/image-storage.mjs", import.meta.url), "utf8"),
     readFile(new URL("../lib/image-processing.mjs", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /thumbnail_url \|\| item\.image_url[\s\S]*?lazy-load/);
+  assert.match(page, /src="\{\{item\.image_url\}\}"[\s\S]*?lazy-load/);
+  assert.doesNotMatch(page, /thumbnail_/);
   assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
   assert.match(storage, /uploadOptimizedOriginalImage/);
   assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);

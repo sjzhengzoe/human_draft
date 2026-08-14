@@ -1,8 +1,4 @@
-import type {
-  DiningMode,
-  DiningPlace,
-  DiningScene
-} from "../types/dining"
+import type { DiningScene } from "../types/dining"
 import { request } from "./request"
 import { markMenuDataChanged } from "../utils/menu-data-revision"
 
@@ -36,46 +32,4 @@ export async function deleteDiningScene(id: string): Promise<void> {
 export async function swapDiningSceneSortOrders(sourceId: string, targetId: string): Promise<void> {
   await request<void>({ path: "/api/dining-scenes/order/swap", method: "PUT", data: { source_id: sourceId, target_id: targetId } })
   markMenuDataChanged()
-}
-
-export async function listDiningPlaces(sceneId?: string): Promise<DiningPlace[]> {
-  const data = await request<{ items: DiningPlace[] }>({
-    path: sceneId ? `/api/dining?scene_id=${encodeURIComponent(sceneId)}` : "/api/dining"
-  })
-  return data.items
-}
-
-export async function getDiningPlace(id: string): Promise<DiningPlace> {
-  const data = await request<{ item: DiningPlace }>({ path: `/api/dining/${id}` })
-  return data.item
-}
-
-export async function createDiningPlace(input: {
-  name: string
-  scene_id: string
-  service_modes: DiningMode[]
-  menu_items: string[]
-}): Promise<DiningPlace> {
-  const data = await request<{ item: DiningPlace }>({
-    path: "/api/dining",
-    method: "POST",
-    data: input
-  })
-  return data.item
-}
-
-export async function updateDiningPlace(
-  id: string,
-  input: { name: string; scene_id: string; service_modes: DiningMode[]; menu_items: string[] }
-): Promise<DiningPlace> {
-  const data = await request<{ item: DiningPlace }>({
-    path: `/api/dining/${id}`,
-    method: "PUT",
-    data: input
-  })
-  return data.item
-}
-
-export function deleteDiningPlace(id: string): Promise<void> {
-  return request<void>({ path: `/api/dining/${id}`, method: "DELETE" })
 }

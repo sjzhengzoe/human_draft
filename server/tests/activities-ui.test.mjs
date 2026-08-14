@@ -16,7 +16,8 @@ test("activity list uses top scene tabs and the same two-column image grid as me
   assert.match(template, /class="activity-list-scroll"[^>]*scroll-y/);
   assert.match(template, /class="activity-grid"/);
   assert.match(template, /class="activity-card"/);
-  assert.match(template, /item\.thumbnail_url \|\| item\.image_url/);
+  assert.match(template, /src="\{\{item\.image_url\}\}"/);
+  assert.doesNotMatch(template, /thumbnail_/);
   assert.match(template, /item\.introduction/);
   assert.doesNotMatch(template, /<swiper|<swiper-item/);
   assert.doesNotMatch(template, /室内活动/);

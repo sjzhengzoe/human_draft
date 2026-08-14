@@ -22,7 +22,7 @@ test("home module settings uses an independent page route", async () => {
   assert.notEqual(moduleSettingsConfig.disableScroll, true);
 });
 
-test("account actions stay compact without exposing internal account ids", async () => {
+test("account section displays and copies the internal user UUID", async () => {
   const [markup, styles, logic] = await Promise.all([
     readFile(new URL("../../src/pages/settings/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/settings/index.less", import.meta.url), "utf8"),
@@ -30,12 +30,27 @@ test("account actions stay compact without exposing internal account ids", async
   ]);
 
   assert.match(markup, /class="settings-logout-button"[\s\S]*?>退出登录</);
-  assert.doesNotMatch(markup, /class="settings-section__title">账号</);
-  assert.doesNotMatch(markup, /账号 ID|accountIdText|profile-account/);
+  assert.match(markup, /class="settings-section__title">账号</);
+  assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{userId\}\}/);
+  assert.match(markup, /aria-label="复制用户 ID"[\s\S]*?bindtap="handleCopyUserIdTap"/);
+  assert.match(markup, /aria-label="修改头像和昵称"[\s\S]*?bindtap="handleEditProfileTap"/);
+  assert.match(markup, /<app-dialog[\s\S]*?title="编辑个人资料"/);
+  assert.match(markup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
   assert.match(markup, /wx:if="\{\{isAdmin\}\}" class="profile-role">管理员</);
   assert.doesNotMatch(markup, /普通用户/);
   assert.match(styles, /\.profile-card\s*\{[\s\S]*?min-height: 152rpx/);
-  assert.doesNotMatch(logic, /handleCopyOpenIdTap|setClipboardData|accountIdText/);
+  assert.match(styles, /\.account-id-item__copy\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
+  assert.match(styles, /\.profile-edit-button\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
+  assert.match(logic, /userId: user\.id/);
+  assert.match(logic, /handleCopyUserIdTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
+  assert.doesNotMatch(logic, /handleCopyOpenIdTap|accountIdText/);
+  assert.match(logic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\(pendingAvatarPath\)/);
+  assert.match(markup, /class="settings-section__title">存储空间</);
+  assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
+  assert.match(markup, /公开测试期间仅展示实际用量/);
+  assert.match(logic, /getImageStorageUsage\(\)/);
+  assert.match(logic, /formatStorageBytes\(usage\.used_bytes\)/);
+  assert.match(logic, /总额度待定/);
 });
 
 test("settings renders local account state without a fullscreen loading frame", async () => {

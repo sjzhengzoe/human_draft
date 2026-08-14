@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import sharp from "sharp";
 
 import { config } from "../config.mjs";
+import { cosObjectKey, getCosObject } from "../lib/cos-storage.mjs";
 import {
   createDish,
   replaceDishImage,
@@ -101,7 +102,7 @@ async function imageInput(filename) {
 async function findSingleCompanyPlace(supabase) {
   const { data, error } = await supabase
     .from("menu_places")
-    .select("id, user_id, name, place_type, outside_category_id, image_path, source_dish_id")
+    .select("id, user_id, name, place_type, outside_category_id, image_path")
     .eq("name", COMPANY_PLACE_NAME)
     .eq("place_type", "outside");
   if (error) throw error;
@@ -127,7 +128,7 @@ async function findSingleCategory(supabase, userId) {
 async function findPlaceByName(supabase, userId, name) {
   const { data, error } = await supabase
     .from("menu_places")
-    .select("id, user_id, name, place_type, outside_category_id, image_path, source_dish_id")
+    .select("id, user_id, name, place_type, outside_category_id, image_path")
     .eq("user_id", userId)
     .eq("name", name)
     .eq("place_type", "outside");
@@ -239,11 +240,8 @@ async function verifyStoredImages(supabase, state) {
   }
 
   await Promise.all(records.map(async (record) => {
-    const { data, error } = await supabase.storage
-      .from(config.dishBucket)
-      .download(record.path);
-    if (error) throw error;
-    const metadata = await sharp(Buffer.from(await data.arrayBuffer())).metadata();
+    const data = await getCosObject(cosObjectKey(config.dishBucket, record.path));
+    const metadata = await sharp(data).metadata();
     if (
       metadata.format !== "webp"
       || metadata.width !== record.width

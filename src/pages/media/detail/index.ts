@@ -827,8 +827,7 @@ Page({
     this.setData({
       entry: {
         ...entry,
-        personal_rating: personalRating,
-        is_revisitable: personalRating >= 4
+        personal_rating: personalRating
       },
       operating: true
     })

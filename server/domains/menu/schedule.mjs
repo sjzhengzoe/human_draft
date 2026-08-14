@@ -118,7 +118,7 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
     "dishes",
     userId,
     (items || []).map((item) => item.dish_id),
-    "id, name, record_type, place_id, image_path, thumbnail_path",
+    "id, name, record_type, place_id, image_path",
     "读取菜单菜品失败。",
   );
   const livePlaces = await selectSourcesByIds(
@@ -129,13 +129,12 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
       ...(items || []).map((item) => item.place_id),
       ...liveDishes.map((dish) => dish.place_id),
     ],
-    "id, name, place_type, image_path, thumbnail_path",
+    "id, name, place_type, image_path",
     "读取菜单地点失败。",
   );
   const dishesById = new Map(liveDishes.map((dish) => [dish.id, dish]));
   const placesById = new Map(livePlaces.map((place) => [place.id, place]));
   const imageUrls = await createDishImageUrlMap(
-    supabase,
     [
       ...liveDishes.map((dish) => dish.image_path),
       ...livePlaces.map((place) => place.image_path),
@@ -278,10 +277,10 @@ export async function listMenuFavorites(supabase, userId) {
   const placeIds = favorites.filter((item) => item.source_kind === "place").map((item) => item.place_id);
   const [{ data: dishes, error: dishError }, { data: places, error: placeError }] = await Promise.all([
     dishIds.length
-      ? supabase.from("dishes").select("id, name, record_type, place_id, image_path, thumbnail_path").eq("user_id", userId).in("id", dishIds)
+      ? supabase.from("dishes").select("id, name, record_type, place_id, image_path").eq("user_id", userId).in("id", dishIds)
       : Promise.resolve({ data: [], error: null }),
     placeIds.length
-      ? supabase.from("menu_places").select("id, name, place_type, image_path, thumbnail_path").eq("user_id", userId).in("id", placeIds)
+      ? supabase.from("menu_places").select("id, name, place_type, image_path").eq("user_id", userId).in("id", placeIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   throwSupabaseError(dishError, "读取常吃菜品失败。" );
@@ -289,7 +288,6 @@ export async function listMenuFavorites(supabase, userId) {
   const dishMap = new Map((dishes || []).map((dish) => [dish.id, dish]));
   const placeMap = new Map((places || []).map((place) => [place.id, place]));
   const imageUrls = await createDishImageUrlMap(
-    supabase,
     [
       ...(dishes || []).map((dish) => dish.image_path),
       ...(places || []).map((place) => place.image_path),

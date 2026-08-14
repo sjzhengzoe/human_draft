@@ -42,6 +42,40 @@
       ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
     </view>
 
+    <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
+      <view class="settings-section__title">账号</view>
+      <view class="settings-list">
+        <view class="account-id-item">
+          <view class="account-id-item__content">
+            <view class="account-id-item__label">用户 ID</view>
+            <text class="account-id-item__value" selectable="{{true}}">{{userId}}</text>
+          </view>
+          <view
+            class="account-id-item__copy"
+            role="button"
+            aria-label="复制用户 ID"
+            hover-class="account-id-item__copy--hover"
+            hover-stay-time="80"
+            bindtap="handleCopyUserIdTap"
+          ><app-icon name="copy" size="27" /></view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loggedIn}}" class="settings-section">
+      <view class="settings-section__title">存储空间</view>
+      <view class="settings-list">
+        <view class="storage-usage-item">
+          <view class="storage-usage-item__header">
+            <view class="storage-usage-item__label">图片空间</view>
+            <view class="storage-usage-item__value">{{storageUsageText}}</view>
+          </view>
+          <view wx:if="{{storageImageCountText}}" class="storage-usage-item__count">{{storageImageCountText}}</view>
+          <view class="storage-usage-item__note">公开测试期间仅展示实际用量，正式额度将根据真实使用情况确定。</view>
+        </view>
+      </view>
+    </view>
+
     <view class="settings-section">
       <view class="settings-section__title">通用</view>
       <view class="settings-list">

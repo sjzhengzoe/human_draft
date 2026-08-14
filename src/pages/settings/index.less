@@ -119,6 +119,80 @@
   font-size: var(--ui-font-size-small);
 }
 
+.settings-section.settings-section--account { margin-top: 20rpx; }
+
+.account-id-item {
+  display: flex;
+  min-height: 104rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx 20rpx 18rpx 28rpx;
+}
+
+.account-id-item__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-id-item__label {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.4;
+}
+
+.account-id-item__value {
+  display: block;
+  margin-top: 4rpx;
+  overflow-wrap: anywhere;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+  line-height: 1.4;
+}
+
+.account-id-item__copy {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-pill);
+  color: var(--ui-color-text-primary);
+}
+
+.account-id-item__copy--hover { background: var(--ui-hover-background); }
+
+.storage-usage-item {
+  min-height: 124rpx;
+  box-sizing: border-box;
+  padding: 22rpx 28rpx;
+}
+
+.storage-usage-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.storage-usage-item__label,
+.storage-usage-item__value {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.4;
+}
+
+.storage-usage-item__value { font-weight: 600; }
+
+.storage-usage-item__count,
+.storage-usage-item__note {
+  margin-top: 6rpx;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+  line-height: 1.45;
+}
+
 .settings-section { margin-top: 32rpx; }
 
 .settings-section__title {

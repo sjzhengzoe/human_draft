@@ -7,7 +7,7 @@ import { resolveUserAvatarUrl } from "./profile.mjs";
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 
-const canOpenIdWrite = (openId) => config.allowedOpenIds.has(openId);
+const isAdminUser = (userId) => config.adminUserIds.has(userId);
 
 function requiredDisplayName(value) {
   assertCondition(
@@ -114,9 +114,8 @@ function toAuthUser(user, avatarUrl = "") {
     id: user.id,
     display_name: user.display_name || "",
     avatar_url: avatarUrl,
-    openid: user.wechat_openid,
     can_write: true,
-    is_admin: canOpenIdWrite(user.wechat_openid),
+    is_admin: isAdminUser(user.id),
     created_at: user.created_at || "",
   };
 }
@@ -210,7 +209,7 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
 
   const sessionUser = { ...user, wechat_openid: openId };
   const session = await createSession(supabase, sessionUser);
-  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
+  const avatarUrl = await resolveUserAvatarUrl(user.avatar_url);
 
   return {
     token: session.token,
@@ -233,7 +232,7 @@ export async function requireAuth(_supabase, request) {
       avatar_url: "",
       openid: claims.openId,
       can_write: true,
-      is_admin: canOpenIdWrite(claims.openId),
+      is_admin: isAdminUser(claims.userId),
       created_at: "",
     },
   };
@@ -303,7 +302,7 @@ export async function refreshSession(supabase, refreshAuth) {
     .maybeSingle();
   throwSupabaseError(error, "刷新登录会话失败。");
   assertCondition(data, 401, "REFRESH_TOKEN_REUSED", "登录已过期，请重新登录。" );
-  const avatarUrl = await resolveUserAvatarUrl(supabase, refreshAuth.user.avatar_url);
+  const avatarUrl = await resolveUserAvatarUrl(refreshAuth.user.avatar_url);
   return {
     token: access.token,
     expires_at: access.expiresAt,
@@ -330,6 +329,6 @@ export async function getAuthenticatedUser(supabase, auth) {
     .maybeSingle();
   throwSupabaseError(error, "读取账号信息失败。");
   assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );
-  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
+  const avatarUrl = await resolveUserAvatarUrl(user.avatar_url);
   return toAuthUser(user, avatarUrl);
 }

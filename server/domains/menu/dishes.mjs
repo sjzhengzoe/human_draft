@@ -8,13 +8,11 @@ import {
   DEFAULT_MEAL_PERIODS,
   TASTE_OPTIONS,
   enumLabels,
-  isMissingMenuPlaceSchema,
   normalizeCookingMethods,
   normalizeFlavorOptions,
   normalizeIntroduction,
   normalizeMainIngredients,
   normalizeMealPeriods,
-  normalizeRecommendedItems,
   normalizeRecordType,
   normalizeTaste,
 } from "./dish-fields.mjs";
@@ -35,7 +33,6 @@ export function toDishResponse(dish, imageUrls = new Map()) {
     category: dish.categories || null,
     outside_category_id: dish.outside_category_id || null,
     outside_category: dish.outside_category || null,
-    recommended_items: Array.isArray(dish.recommended_items) ? dish.recommended_items : [],
     main_ingredients: Array.isArray(dish.main_ingredients) ? dish.main_ingredients : [],
     introduction: typeof dish.introduction === "string" ? dish.introduction : "",
     cooking_methods: enumLabels(dish.cooking_methods, COOKING_METHOD_OPTIONS),
@@ -44,9 +41,7 @@ export function toDishResponse(dish, imageUrls = new Map()) {
     place_id: dish.place_id || null,
     place_sort_order: dish.place_sort_order ?? dish.sort_order ?? 0,
     image_path: dish.image_path,
-    thumbnail_path: dish.thumbnail_path,
     image_url: dishImageUrl(imageUrls, dish.image_path),
-    thumbnail_url: dishImageUrl(imageUrls, dish.image_path),
     meal_periods: Array.isArray(dish.meal_periods)
       ? dish.meal_periods
       : [...DEFAULT_MEAL_PERIODS],
@@ -59,7 +54,6 @@ export function toDishResponse(dish, imageUrls = new Map()) {
 
 async function toSignedDishResponse(supabase, dish) {
   const imageUrls = await createDishImageUrlMap(
-    supabase,
     [dish.image_path],
   );
   return toDishResponse(dish, imageUrls);
@@ -118,7 +112,7 @@ export async function listDishes(supabase, userId, query) {
   const pageSize = Math.min(100, Math.max(1, Number(query.page_size) || 30));
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  const execute = async (useMenuPlaces) => {
+  const execute = async () => {
     let request = supabase
       .from("dishes")
       .select(
@@ -135,16 +129,9 @@ export async function listDishes(supabase, userId, query) {
       const recordType = normalizeRecordType(query.record_type);
       request = request.eq("record_type", recordType);
     }
-    if (useMenuPlaces) {
-      if (query.place_id) {
-        assertCondition(UUID_PATTERN.test(query.place_id), 400, "INVALID_PLACE_ID", "用餐地点无效。" );
-        request = request.eq("place_id", query.place_id);
-      } else if (query.record_type === "outside") {
-        // Older clients use this query to read store proxy rows.
-        request = request.is("place_id", null);
-      } else {
-        request = request.not("place_id", "is", null);
-      }
+    if (query.place_id) {
+      assertCondition(UUID_PATTERN.test(query.place_id), 400, "INVALID_PLACE_ID", "用餐地点无效。" );
+      request = request.eq("place_id", query.place_id);
     }
     if (query.printed === "true") request = request.not("printed_at", "is", null);
     if (query.printed === "false") request = request.is("printed_at", null);
@@ -154,7 +141,7 @@ export async function listDishes(supabase, userId, query) {
         request = request.order("created_at", { ascending: true });
         break;
       case "custom":
-        request = query.place_id && useMenuPlaces
+        request = query.place_id
           ? request
             .order("place_sort_order", { ascending: true })
             .order("created_at", { ascending: false })
@@ -170,14 +157,10 @@ export async function listDishes(supabase, userId, query) {
     return request.range(from, to);
   };
 
-  let result = await execute(true);
-  if (result.error && isMissingMenuPlaceSchema(result.error) && !query.place_id) {
-    result = await execute(false);
-  }
+  const result = await execute();
   const { data, error, count } = result;
   throwSupabaseError(error, "读取菜品列表失败。" );
   const imageUrls = await createDishImageUrlMap(
-    supabase,
     data.map((dish) => dish.image_path),
   );
 
@@ -210,16 +193,15 @@ export async function getDishResponse(supabase, userId, dishId) {
 export async function createDish(supabase, userId, fields, image) {
   const name = fields.name?.trim();
   const requestedPlaceId = fields.place_id?.trim() || "";
-  const place = requestedPlaceId
-    ? await assertMenuPlaceExists(supabase, userId, requestedPlaceId)
-    : null;
-  const recordType = place?.place_type || normalizeRecordType(fields.record_type, true);
+  assertCondition(requestedPlaceId, 400, "PLACE_REQUIRED", "请选择用餐地点。" );
+  const place = await assertMenuPlaceExists(supabase, userId, requestedPlaceId);
+  const recordType = place.place_type;
   const categoryId = fields.category_id?.trim() || null;
-  const outsideCategoryId = place?.outside_category_id || fields.outside_category_id?.trim() || null;
-  assertCondition(name, 400, "DISH_NAME_REQUIRED", place ? "请填写菜名。" : recordType === "outside" ? "请填写店铺名。" : "请填写菜名。" );
+  const outsideCategoryId = place.outside_category_id || null;
+  assertCondition(name, 400, "DISH_NAME_REQUIRED", "请填写菜名。" );
   assertCondition(name.length <= 120, 400, "DISH_NAME_TOO_LONG", "名称不能超过 120 个字符。" );
   assertCondition(
-    (place && place.place_type === "outside") || recordType === "outside" || categoryId,
+    recordType === "outside" || categoryId,
     400,
     "CATEGORY_REQUIRED",
     "请选择分类。",
@@ -237,22 +219,11 @@ export async function createDish(supabase, userId, fields, image) {
     "请选择图片。",
   );
   const mealPeriods = normalizeMealPeriods(fields.meal_periods, true);
-  const recommendedItems = recordType === "outside" && !place
-    ? normalizeRecommendedItems(fields.recommended_items, true)
-    : [];
-  const mainIngredients = place || recordType === "home"
-    ? normalizeMainIngredients(fields.main_ingredients, true)
-    : [];
-  const introduction = place || recordType === "home"
-    ? normalizeIntroduction(fields.introduction, true)
-    : "";
-  const cookingMethods = place || recordType === "home"
-    ? normalizeCookingMethods(fields.cooking_methods, true)
-    : [];
-  const taste = place || recordType === "home" ? normalizeTaste(fields.taste, true) : [];
-  const flavorOptions = place || recordType === "home"
-    ? normalizeFlavorOptions(fields.flavor_options, true)
-    : [];
+  const mainIngredients = normalizeMainIngredients(fields.main_ingredients, true);
+  const introduction = normalizeIntroduction(fields.introduction, true);
+  const cookingMethods = normalizeCookingMethods(fields.cooking_methods, true);
+  const taste = normalizeTaste(fields.taste, true);
+  const flavorOptions = normalizeFlavorOptions(fields.flavor_options, true);
   const category = recordType === "home" && categoryId
     ? await assertCategoryExists(supabase, userId, categoryId)
     : null;
@@ -263,47 +234,26 @@ export async function createDish(supabase, userId, fields, image) {
   const dishId = randomUUID();
   const paths = image?.buffer?.length
     ? await uploadDishImage(supabase, userId, dishId, image.buffer)
-    : { imagePath: "", thumbnailPath: null };
-  const rpcName = place ? "create_menu_dish" : "create_dish_at_end";
-  const rpcPayload = place
-    ? {
+    : { imagePath: "" };
+  const { data, error } = await supabase
+    .rpc("create_menu_dish", {
       p_user_id: userId,
       p_id: dishId,
       p_place_id: place.id,
       p_name: name,
       p_category_id: categoryId,
       p_image_path: paths.imagePath,
-      p_thumbnail_path: paths.thumbnailPath,
       p_meal_periods: mealPeriods,
       p_main_ingredients: mainIngredients,
       p_introduction: introduction,
       p_cooking_methods: cookingMethods,
       p_taste: taste,
       p_flavor_options: flavorOptions,
-    }
-    : {
-      p_user_id: userId,
-      p_id: dishId,
-      p_name: name,
-      p_record_type: recordType,
-      p_category_id: categoryId,
-      p_outside_category_id: outsideCategoryId,
-      p_image_path: paths.imagePath,
-      p_thumbnail_path: paths.thumbnailPath,
-      p_meal_periods: mealPeriods,
-      p_recommended_items: recommendedItems,
-      p_main_ingredients: mainIngredients,
-      p_introduction: introduction,
-      p_cooking_methods: cookingMethods,
-      p_taste: taste,
-      p_flavor_options: flavorOptions,
-    };
-  const { data, error } = await supabase
-    .rpc(rpcName, rpcPayload)
+    })
     .single();
 
   if (error) {
-    await removeDishImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeDishImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "创建菜品失败。" );
   }
 
@@ -317,118 +267,44 @@ export async function createDish(supabase, userId, fields, image) {
 export async function updateDish(supabase, userId, dishId, body) {
   const existing = await getDish(supabase, userId, dishId);
   const changes = {};
-  const existingRecordType = normalizeRecordType(existing.record_type, true);
   const targetPlaceId = body.place_id === undefined ? existing.place_id : body.place_id;
-  const targetPlace = targetPlaceId
-    ? await assertMenuPlaceExists(supabase, userId, targetPlaceId)
-    : null;
-  const recordType = targetPlace?.place_type || (body.record_type === undefined
-    ? existingRecordType
-    : normalizeRecordType(body.record_type));
+  assertCondition(targetPlaceId, 400, "PLACE_REQUIRED", "请选择用餐地点。" );
+  const targetPlace = await assertMenuPlaceExists(supabase, userId, targetPlaceId);
+  const recordType = targetPlace.place_type;
 
   if (body.name !== undefined) {
     assertCondition(
       typeof body.name === "string" && body.name.trim(),
       400,
       "DISH_NAME_REQUIRED",
-      recordType === "outside" ? "请填写店铺名。" : "请填写菜名。",
+      "请填写菜名。",
     );
     assertCondition(body.name.trim().length <= 120, 400, "DISH_NAME_TOO_LONG", "名称不能超过 120 个字符。" );
     changes.name = body.name.trim();
   }
-  if (body.record_type !== undefined) {
-    changes.record_type = recordType;
+  const categoryId = body.category_id === undefined ? existing.category_id : body.category_id;
+  assertCondition(
+    recordType === "outside" || (typeof categoryId === "string" && categoryId),
+    400,
+    "CATEGORY_REQUIRED",
+    "请选择分类。",
+  );
+  if (
+    recordType === "home"
+    && categoryId
+    && (body.category_id !== undefined || targetPlace.id !== existing.place_id)
+  ) {
+    await assertCategoryExists(supabase, userId, categoryId);
   }
-  if (targetPlace) {
-    const categoryId = body.category_id === undefined ? existing.category_id : body.category_id;
-    assertCondition(
-      targetPlace.place_type === "outside" || (typeof categoryId === "string" && categoryId),
-      400,
-      "CATEGORY_REQUIRED",
-      "请选择分类。",
-    );
-    if (categoryId) await assertCategoryExists(supabase, userId, categoryId);
-    changes.place_id = targetPlace.id;
-    changes.record_type = targetPlace.place_type;
-    changes.category_id = categoryId || null;
-    changes.outside_category_id = targetPlace.place_type === "outside"
-      ? targetPlace.outside_category_id
-      : null;
-    changes.recommended_items = [];
-    if (body.main_ingredients !== undefined) {
-      changes.main_ingredients = normalizeMainIngredients(body.main_ingredients);
-    }
-    if (body.introduction !== undefined) {
-      changes.introduction = normalizeIntroduction(body.introduction);
-    }
-    if (body.cooking_methods !== undefined) {
-      changes.cooking_methods = normalizeCookingMethods(body.cooking_methods);
-    }
-    if (body.taste !== undefined) {
-      changes.taste = normalizeTaste(body.taste);
-    }
-    if (body.flavor_options !== undefined) {
-      changes.flavor_options = normalizeFlavorOptions(body.flavor_options);
-    }
-    if (body.meal_periods !== undefined) {
-      changes.meal_periods = normalizeMealPeriods(body.meal_periods);
-    }
-    assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
-    const { data, error } = await supabase
-      .from("dishes")
-      .update(changes)
-      .eq("id", dishId)
-      .eq("user_id", userId)
-      .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
-      .single();
-    throwSupabaseError(error, "更新菜品失败。" );
-    return toSignedDishResponse(supabase, data);
-  }
-  if (recordType === "home") {
-    const categoryId = body.category_id === undefined ? existing.category_id : body.category_id;
-    assertCondition(typeof categoryId === "string" && categoryId, 400, "CATEGORY_REQUIRED", "请选择分类。" );
-    if (body.category_id !== undefined || existingRecordType === "outside") {
-      await assertCategoryExists(supabase, userId, categoryId);
-      changes.category_id = categoryId;
-    }
-    if (existingRecordType === "outside" || body.recommended_items !== undefined) {
-      changes.recommended_items = [];
-    }
-    if (existing.outside_category_id !== null) changes.outside_category_id = null;
-    if (body.main_ingredients !== undefined) {
-      changes.main_ingredients = normalizeMainIngredients(body.main_ingredients);
-    }
-    if (body.introduction !== undefined) {
-      changes.introduction = normalizeIntroduction(body.introduction);
-    }
-    if (body.cooking_methods !== undefined) {
-      changes.cooking_methods = normalizeCookingMethods(body.cooking_methods);
-    }
-    if (body.taste !== undefined) {
-      changes.taste = normalizeTaste(body.taste);
-    }
-    if (body.flavor_options !== undefined) {
-      changes.flavor_options = normalizeFlavorOptions(body.flavor_options);
-    }
-  } else {
-    const outsideCategoryId = body.outside_category_id === undefined
-      ? existing.outside_category_id
-      : body.outside_category_id;
-    assertCondition(
-      typeof outsideCategoryId === "string" && outsideCategoryId,
-      400,
-      "OUTSIDE_CATEGORY_REQUIRED",
-      "请选择外食分类。",
-    );
-    if (body.outside_category_id !== undefined || existingRecordType === "home") {
-      await assertOutsideCategoryExists(supabase, userId, outsideCategoryId);
-      changes.outside_category_id = outsideCategoryId;
-    }
-    if (existing.category_id !== null) changes.category_id = null;
-    if (body.recommended_items !== undefined) {
-      changes.recommended_items = normalizeRecommendedItems(body.recommended_items);
-    }
-  }
+  changes.place_id = targetPlace.id;
+  changes.record_type = recordType;
+  changes.category_id = recordType === "home" ? categoryId : null;
+  changes.outside_category_id = recordType === "outside" ? targetPlace.outside_category_id : null;
+  if (body.main_ingredients !== undefined) changes.main_ingredients = normalizeMainIngredients(body.main_ingredients);
+  if (body.introduction !== undefined) changes.introduction = normalizeIntroduction(body.introduction);
+  if (body.cooking_methods !== undefined) changes.cooking_methods = normalizeCookingMethods(body.cooking_methods);
+  if (body.taste !== undefined) changes.taste = normalizeTaste(body.taste);
+  if (body.flavor_options !== undefined) changes.flavor_options = normalizeFlavorOptions(body.flavor_options);
   if (body.meal_periods !== undefined) {
     changes.meal_periods = normalizeMealPeriods(body.meal_periods);
   }
@@ -451,18 +327,18 @@ export async function replaceDishImage(supabase, userId, dishId, image) {
   const paths = await uploadDishImage(supabase, userId, dishId, image.buffer);
   const { data, error } = await supabase
     .from("dishes")
-    .update({ image_path: paths.imagePath, thumbnail_path: paths.thumbnailPath })
+    .update({ image_path: paths.imagePath })
     .eq("id", dishId)
     .eq("user_id", userId)
     .select("*, categories(id, name), outside_category:dining_scenes!dishes_outside_category_user_fkey(id, name)")
     .single();
 
   if (error) {
-    await removeDishImages(supabase, [paths.imagePath, paths.thumbnailPath]);
+    await removeDishImages(supabase, userId, [paths.imagePath]);
     throwSupabaseError(error, "更新菜品图片失败。" );
   }
 
-  await removeDishImages(supabase, [dish.image_path, dish.thumbnail_path]);
+  await removeDishImages(supabase, userId, [dish.image_path]);
   return toSignedDishResponse(supabase, data);
 }
 
@@ -481,7 +357,7 @@ export async function deleteDish(supabase, userId, dishId) {
   if (scheduleReferences?.length && dish.place_id) {
     const { data, error } = await supabase
       .from("menu_places")
-      .select("id, image_path, thumbnail_path")
+      .select("id, image_path")
       .eq("id", dish.place_id)
       .eq("user_id", userId)
       .maybeSingle();
@@ -518,10 +394,10 @@ export async function deleteDish(supabase, userId, dishId) {
     });
     throwSupabaseError(error, "删除菜品失败。" );
   } catch (error) {
-    await removeDishImages(supabase, archivedPaths);
+    await removeDishImages(supabase, userId, archivedPaths);
     throw error;
   }
-  await removeDishImages(supabase, [dish.image_path, dish.thumbnail_path]);
+  await removeDishImages(supabase, userId, [dish.image_path]);
 }
 
 export async function updatePrintStatus(supabase, userId, body) {

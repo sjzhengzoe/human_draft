@@ -62,7 +62,7 @@
         <view class="garment-card" style="height: {{item.cardHeightRpx}}rpx;">
           <image
             class="garment-card__image"
-            src="{{item.thumbnail_url || item.image_url}}"
+            src="{{item.image_url}}"
             mode="aspectFit"
             lazy-load
           />
