@@ -9,6 +9,7 @@ import {
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   createSignedUrlMap,
+  removeStorageImages,
   uploadOptimizedOriginalImage,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
@@ -92,10 +93,11 @@ async function toSignedMediaCoverResponse(supabase, record) {
 async function removeManagedMediaCover(supabase, path) {
   if (!path) return;
   const thumbnailPath = optimizedThumbnailPath(path);
-  const { error } = await supabase.storage
-    .from(config.mediaCoverBucket)
-    .remove([path, thumbnailPath].filter(Boolean));
-  if (error) console.error("删除旧影视封面失败:", error);
+  await removeStorageImages(supabase, {
+    bucketName: config.mediaCoverBucket,
+    paths: [path, thumbnailPath],
+    errorMessage: "删除旧影视封面失败:",
+  });
 }
 
 async function removeManagedMediaCovers(supabase, paths) {
@@ -576,7 +578,6 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     profile: IMAGE_PROFILES.mediaCover.original,
     uploadErrorMessage: "上传影视封面失败。",
   });
-  const bucket = supabase.storage.from(config.mediaCoverBucket);
   const { data, error } = await supabase
     .from("media_entries")
     .update({ cover_url: imagePath })
@@ -585,7 +586,11 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     .select("*")
     .single();
   if (error) {
-    await bucket.remove([imagePath]);
+    await removeStorageImages(supabase, {
+      bucketName: config.mediaCoverBucket,
+      paths: [imagePath],
+      errorMessage: "回滚影视封面失败:",
+    });
     throwSupabaseError(error, "更新影视封面失败。");
   }
 

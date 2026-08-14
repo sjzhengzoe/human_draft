@@ -7,8 +7,11 @@ import {
   optimizedImagePaths,
 } from "../../lib/image-processing.mjs";
 import {
+  copyStorageImage,
   createSignedUrlMap,
   PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
+  removeStorageImages,
+  uploadStorageImage,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
 
@@ -43,14 +46,16 @@ export async function uploadDishImage(supabase, userId, dishId, buffer) {
   const { imagePath } = optimizedImagePaths(basePath);
   const { original, originalContentType } = await normalizeDishImage(buffer);
 
-  const { error } = await supabase.storage
-    .from(config.dishBucket)
-    .upload(imagePath, original, {
+  try {
+    await uploadStorageImage(supabase, {
+      bucketName: config.dishBucket,
+      path: imagePath,
+      buffer: original,
       cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: originalContentType,
       upsert: false,
     });
-  if (error) {
+  } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", "上传菜品图片失败。" );
     wrapped.cause = error;
     throw wrapped;
@@ -63,20 +68,19 @@ export async function copyDishImageToScheduleArchive(supabase, userId, sourceId,
   if (!path) return "";
   const extension = path.match(/(\.[a-z0-9]+)$/i)?.[1] || ".webp";
   const archivePath = `users/${userId}/menu-schedule-archives/${sourceId}/${randomUUID()}${extension}`;
-  const { error } = await supabase.storage
-    .from(config.dishBucket)
-    .copy(path, archivePath);
-  if (error) {
-    const wrapped = new HttpError(500, "MENU_ARCHIVE_IMAGE_FAILED", "保存菜单历史图片失败。" );
-    wrapped.cause = error;
-    throw wrapped;
-  }
+  await copyStorageImage(supabase, {
+    bucketName: config.dishBucket,
+    sourcePath: path,
+    destinationPath: archivePath,
+    errorMessage: "保存菜单历史图片失败。",
+  });
   return archivePath;
 }
 
 export async function removeDishImages(supabase, paths) {
-  const validPaths = paths.filter(Boolean);
-  if (validPaths.length === 0) return;
-  const { error } = await supabase.storage.from(config.dishBucket).remove(validPaths);
-  if (error) console.error("删除 Storage 图片失败:", error);
+  return removeStorageImages(supabase, {
+    bucketName: config.dishBucket,
+    paths,
+    errorMessage: "删除 Storage 图片失败:",
+  });
 }

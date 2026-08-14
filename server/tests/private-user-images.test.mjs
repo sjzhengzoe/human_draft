@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createSignedUrlMap } from "../domains/shared/image-storage.mjs";
+import { cosObjectKey } from "../lib/cos-storage.mjs";
 
 const projectRoot = new URL("../../", import.meta.url);
 
@@ -34,7 +35,7 @@ test("private image inventory is restricted to the service role", async () => {
   assert.match(migration, /grant execute[\s\S]*to service_role/i);
 });
 
-test("personal image responses use signed URLs while avatars remain public", async () => {
+test("personal image responses and uploaded avatars use signed URLs", async () => {
   const [dishImages, activities, media, profile] = await Promise.all([
     readProjectFile("server/domains/menu/dish-images.mjs"),
     readProjectFile("server/domains/activities/service.mjs"),
@@ -50,13 +51,40 @@ test("personal image responses use signed URLs while avatars remain public", asy
   assert.match(media, /createMediaCoverUrlMap/);
   assert.match(media, /toMediaCoverResponse/);
   assert.doesNotMatch(media, /cover_thumbnail_url/);
-  assert.match(profile, /avatarBucket\)\.getPublicUrl/);
+  assert.match(profile, /resolveUserAvatarUrl/);
+  assert.match(profile, /createSignedUrlMap/);
+  assert.doesNotMatch(profile, /getPublicUrl/);
 });
 
 test("private image uploads do not outlive their signed access window in caches", async () => {
   const sharedStorage = await readProjectFile("server/domains/shared/image-storage.mjs");
   assert.match(sharedStorage, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS\s*=\s*"3600"/);
   assert.doesNotMatch(sharedStorage, /cacheControl:\s*"31536000"/);
+});
+
+test("COS keeps the logical bucket in every object key", () => {
+  assert.equal(
+    cosObjectKey("dish-images", "/users/u/example.webp"),
+    "dish-images/users/u/example.webp",
+  );
+  assert.equal(
+    cosObjectKey("key-moment-images/", "users/u/moment.webp"),
+    "key-moment-images/users/u/moment.webp",
+  );
+});
+
+test("Supabase to COS migration is backup-first and does not delete source originals", async () => {
+  const migration = await readProjectFile(
+    "server/scripts/migrate-supabase-images-to-cos.mjs",
+  );
+
+  assert.match(migration, /manifest\.json/);
+  assert.match(migration, /sha256/);
+  assert.match(migration, /backupObjects\(supabase, manifest\)/);
+  assert.match(migration, /uploadObjects\(cos, manifest\)/);
+  assert.match(migration, /verifyObjects\(cos, manifest\)/);
+  assert.match(migration, /status = "complete"/);
+  assert.doesNotMatch(migration, /storage\.from\([^)]+\)\.remove|emptyBucket|deleteBucket/);
 });
 
 test("private bucket rebuild keeps a verified backup until every object is restored", async () => {

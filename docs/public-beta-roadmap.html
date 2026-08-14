@@ -1062,6 +1062,44 @@
         </div>
       </details>
 
+      <details class="reference stage-audit" open>
+        <summary>图片存储迁移记录 · Supabase 原图备份与腾讯云 COS 切换（2026-08-14）</summary>
+        <div class="reference-body">
+          <p class="plan-note"><strong>迁移目标：</strong>数据库、登录和业务数据暂时继续使用 Supabase，所有业务图片改由腾讯云 COS 存储。项目仍保持“每次上传只存一张处理后图片”的单图规则，不因为迁移增加缩略图。正式切换由服务端统一完成，小程序页面和数据库中现有逻辑路径不需要批量改写。</p>
+
+          <h3>已完成的备份与复制</h3>
+          <ul>
+            <li>迁移清单覆盖 <code>dish-images</code>、<code>activity-images</code>、<code>media-covers</code>、<code>wardrobe-images</code>、<code>key-moment-images</code> 和 <code>user-avatars</code> 六个图片桶。执行时 Supabase 中实际存在 1,000 个对象，共 337,902,128 字节（约 322.25 MiB）。</li>
+            <li>1,000 个对象已经全部下载到本机独立备份目录，按“原桶名／原对象路径”保存；同时生成只允许本机所有者读取的 <code>manifest.json</code>，记录桶、路径、字节数、MIME 类型、迁移状态和 SHA-256 文件指纹。备份不进入 Git 仓库。</li>
+            <li>同一批 1,000 个对象已复制到腾讯云私有桶 <code>human-draft-images-1258101045</code>（广州），COS 对象键统一为“原 Supabase 桶名／原路径”，避免不同业务模块的同名路径冲突。</li>
+            <li>上传后又从 COS 逐个重新下载核验：备份、上传和校验均为 1,000／1,000，字节数与 SHA-256 全部一致，错误和不一致均为 0。</li>
+            <li>Supabase 云端原图没有删除。本机备份、Supabase 原图和 COS 副本当前同时存在；在 COS 正式运行和页面目测完成前，不清理任何 Supabase 原图。</li>
+          </ul>
+
+          <h3>存储结构与回退方式</h3>
+          <ul>
+            <li>服务端增加统一图片存储层：上传、读取短时地址、复制和删除根据 <code>IMAGE_STORAGE_PROVIDER</code> 选择 Supabase 或 COS，业务模块不再直接依赖某一家 Storage SDK。</li>
+            <li>正式运行时设置为 <code>cos</code> 后，新上传、替换和删除只作用于 COS；数据库继续保存现有逻辑路径，因此现有记录无需修改。头像上传也统一保存逻辑路径，外部微信头像地址继续原样使用。</li>
+            <li>紧急回退只需把服务端存储开关改回 <code>supabase</code> 并重启。因为本轮没有删除 Supabase 原图，切换前已经存在的图片可立即恢复读取；切换后才新增到 COS 的图片如需长期回退，必须先按清单反向复制到 Supabase，不能只改开关。</li>
+            <li>COS 使用专用子账号和最小权限策略，只允许当前广州图片桶的对象列表、读取、写入和删除，不使用主账号永久密钥；密钥只写服务器受限环境文件，不写代码、文档、Git 或小程序包。</li>
+          </ul>
+
+          <h3>切换前剩余事项</h3>
+          <ul>
+            <li>将已备案域名 <code>images.gufeifei.cn</code> 绑定为 COS 自定义源站域名，完成 CNAME、HTTPS 证书和强制 HTTPS。小程序不能依赖腾讯云默认 COS 域名直接展示图片。</li>
+            <li>把 COS 专用密钥和存储开关写入服务器受限配置，部署代码并重启服务；先验证健康检查和抽样授权地址，再验证菜品／店铺、菜单历史、活动、影视、衣橱、关键节点和头像上传。</li>
+            <li>确认新增、替换、删除以及短时授权地址均只命中 COS，并复核各模块图片显示后，才把本项标记为完成。Supabase 图片清理不属于本次切换范围，后续如需释放空间必须另做清单、二次备份和明确授权。</li>
+          </ul>
+
+          <h3>历史兼容审计</h3>
+          <ul>
+            <li>菜品、店铺、菜单历史、活动和关键节点当前数据库引用均能在 Supabase 找到源对象，已随本次全量对象复制进入 COS。</li>
+            <li>迁移前已经存在 7 条衣橱引用、113 条影视作品引用和 109 条影视分季引用找不到对应 Supabase 对象，路径均为旧 <code>cost-v4.webp</code> 测试路径；其他桶也没有同名可恢复对象。这些是迁移前旧测试数据的既有缺图，不是 COS 迁移造成，复制存储本身不能自动修复。</li>
+            <li>项目尚未发布、没有真实用户，本轮不为了这批公测前旧缺图修改或删除业务记录。若管理员以后仍要保留这些记录，需要重新上传图片；若确认只是废弃测试数据，可在发布前另行清理。</li>
+          </ul>
+        </div>
+      </details>
+
       <div class="publish-gate" id="publish-gate" aria-live="polite">
         <span class="gate-icon">!</span>
         <span>

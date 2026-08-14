@@ -1,4 +1,12 @@
 import { HttpError } from "../../lib/errors.mjs";
+import { config } from "../../config.mjs";
+import {
+  copyCosObject,
+  cosObjectKey,
+  deleteCosObject,
+  getCosSignedObjectUrl,
+  putCosObject,
+} from "../../lib/cos-storage.mjs";
 import {
   optimizeOriginalImage,
   optimizedImagePaths,
@@ -6,6 +14,29 @@ import {
 
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
 export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "3600";
+
+export const usesCosImageStorage = () => config.imageStorageProvider === "cos";
+
+export async function uploadStorageImage(
+  supabase,
+  { bucketName, path, buffer, contentType, cacheControl, upsert = false },
+) {
+  if (usesCosImageStorage()) {
+    await putCosObject({
+      key: cosObjectKey(bucketName, path),
+      buffer,
+      contentType,
+      cacheControl,
+    });
+    return;
+  }
+  const { error } = await supabase.storage.from(bucketName).upload(path, buffer, {
+    cacheControl,
+    contentType,
+    upsert,
+  });
+  if (error) throw error;
+}
 
 export async function uploadOptimizedOriginalImage(
   supabase,
@@ -22,16 +53,16 @@ export async function uploadOptimizedOriginalImage(
   }
 
   const { imagePath } = optimizedImagePaths(basePath);
-  const { error } = await supabase.storage.from(bucketName).upload(
-    imagePath,
-    optimized.original,
-    {
+  try {
+    await uploadStorageImage(supabase, {
+      bucketName,
+      path: imagePath,
+      buffer: optimized.original,
       cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: optimized.originalContentType,
       upsert: false,
-    },
-  );
-  if (error) {
+    });
+  } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", uploadErrorMessage);
     wrapped.cause = error;
     throw wrapped;
@@ -45,6 +76,20 @@ export async function createSignedUrlMap(
 ) {
   const uniquePaths = [...new Set(paths.filter(Boolean))];
   if (!uniquePaths.length) return new Map();
+
+  if (usesCosImageStorage()) {
+    try {
+      const pairs = await Promise.all(uniquePaths.map(async (path) => [
+        path,
+        await getCosSignedObjectUrl(cosObjectKey(bucketName, path), expiresIn),
+      ]));
+      return new Map(pairs);
+    } catch (error) {
+      const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);
+      wrapped.cause = error;
+      throw wrapped;
+    }
+  }
 
   const chunks = [];
   for (let index = 0; index < uniquePaths.length; index += 100) {
@@ -74,6 +119,38 @@ export async function removeStorageImages(
 ) {
   const validPaths = paths.filter(Boolean);
   if (!validPaths.length) return;
+  if (usesCosImageStorage()) {
+    try {
+      await Promise.all(validPaths.map((path) => deleteCosObject(cosObjectKey(bucketName, path))));
+    } catch (error) {
+      console.error(errorMessage, error);
+    }
+    return;
+  }
   const { error } = await supabase.storage.from(bucketName).remove(validPaths);
   if (error) console.error(errorMessage, error);
+}
+
+export async function copyStorageImage(
+  supabase,
+  { bucketName, sourcePath, destinationPath, errorMessage },
+) {
+  try {
+    if (usesCosImageStorage()) {
+      await copyCosObject(
+        cosObjectKey(bucketName, sourcePath),
+        cosObjectKey(bucketName, destinationPath),
+        { cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS },
+      );
+      return;
+    }
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .copy(sourcePath, destinationPath);
+    if (error) throw error;
+  } catch (error) {
+    const wrapped = new HttpError(500, "IMAGE_COPY_FAILED", errorMessage);
+    wrapped.cause = error;
+    throw wrapped;
+  }
 }

@@ -60,6 +60,7 @@ test("client services and types follow the same domain boundaries", async () => 
 test("server lib contains infrastructure only", async () => {
   const files = await readdir(new URL("server/lib/", projectRoot))
   assert.deepEqual(files.sort(), [
+    "cos-storage.mjs",
     "errors.mjs",
     "image-processing.mjs",
     "supabase.mjs",

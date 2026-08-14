@@ -124,15 +124,8 @@ async function requireItem(supabase, userId, itemId) {
 
 async function signedUrlFor(supabase, path) {
   if (!path) return "";
-  const { data, error } = await supabase.storage
-    .from(config.wardrobeBucket)
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
-  if (error) {
-    const wrapped = new HttpError(500, "IMAGE_URL_FAILED", "读取衣物图片失败。");
-    wrapped.cause = error;
-    throw wrapped;
-  }
-  return data?.signedUrl || "";
+  const urls = await signedUrlsFor(supabase, [path]);
+  return urls.get(path) || "";
 }
 
 async function signedUrlsFor(supabase, paths) {

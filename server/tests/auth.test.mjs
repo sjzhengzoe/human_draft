@@ -123,9 +123,13 @@ function createFakeSupabase(users = []) {
             state.uploads.push({ bucket, path, contents, options });
             return { error: null };
           },
-          getPublicUrl(path) {
+          async createSignedUrls(paths, expiresIn) {
             return {
-              data: { publicUrl: `https://assets.example/${bucket}/${path}` },
+              data: paths.map((path) => ({
+                path,
+                signedUrl: `https://assets.example/${bucket}/${path}?expires=${expiresIn}`,
+              })),
+              error: null,
             };
           },
         };
@@ -197,9 +201,12 @@ test("a successful local avatar update completes the user profile", async () => 
 
   const avatarUrl = await updateUserAvatar(supabase, "pending-user", image);
 
-  assert.match(avatarUrl, /^https:\/\/assets\.example\/user-avatars\/users\/pending-user\/avatar\.webp\?v=\d+$/);
+  assert.equal(
+    avatarUrl,
+    "https://assets.example/user-avatars/users/pending-user/avatar.webp?expires=21600",
+  );
   assert.equal(supabase.state.users[0].profile_completed, true);
-  assert.equal(supabase.state.users[0].avatar_url, avatarUrl);
+  assert.equal(supabase.state.users[0].avatar_url, "users/pending-user/avatar.webp");
   assert.equal(supabase.state.uploads.length, 1);
 });
 

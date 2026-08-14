@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition, HttpError } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
+import { resolveUserAvatarUrl } from "./profile.mjs";
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 
@@ -181,6 +182,7 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
   throwSupabaseError(defaultsError, "初始化个人数据失败。");
 
   const session = await createSession(supabase, user.id);
+  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
 
   return {
     token: session.token,
@@ -188,7 +190,7 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
     user: {
       id: user.id,
       display_name: user.display_name,
-      avatar_url: user.avatar_url,
+      avatar_url: avatarUrl,
       openid: openId,
       can_write: true,
       is_admin: canOpenIdWrite(openId),
@@ -218,13 +220,14 @@ export async function requireAuth(supabase, request, options = {}) {
     .maybeSingle();
   throwSupabaseError(userError, "读取账号信息失败。");
   assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );
+  const avatarUrl = await resolveUserAvatarUrl(supabase, user.avatar_url);
   request.auth = {
     sessionId: session.id,
     tokenHash,
     user: {
       id: user.id,
       display_name: user.display_name,
-      avatar_url: user.avatar_url,
+      avatar_url: avatarUrl,
       openid: user.wechat_openid,
       can_write: true,
       is_admin: canOpenIdWrite(user.wechat_openid),

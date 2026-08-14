@@ -22,6 +22,18 @@ const normalizeSupabaseUrl = (value = "") => {
 const supabaseSecretKey =
   process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
+const imageStorageProvider = process.env.IMAGE_STORAGE_PROVIDER === "cos" ? "cos" : "supabase";
+
+const normalizeHostname = (value = "") => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    return new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).hostname;
+  } catch (_error) {
+    return trimmed.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+};
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   host: process.env.HOST || "127.0.0.1",
@@ -34,6 +46,12 @@ export const config = {
   wardrobeBucket: process.env.SUPABASE_WARDROBE_BUCKET || "wardrobe-images",
   keyMomentBucket: process.env.SUPABASE_KEY_MOMENT_BUCKET || "key-moment-images",
   avatarBucket: process.env.SUPABASE_AVATAR_BUCKET || "user-avatars",
+  imageStorageProvider,
+  cosSecretId: process.env.COS_SECRET_ID || "",
+  cosSecretKey: process.env.COS_SECRET_KEY || "",
+  cosBucket: process.env.COS_BUCKET || "",
+  cosRegion: process.env.COS_REGION || "",
+  cosImageDomain: normalizeHostname(process.env.COS_IMAGE_DOMAIN),
   wechatAppId: process.env.WECHAT_APP_ID || "",
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",
   allowedOpenIds: new Set(splitCsv(process.env.WECHAT_ALLOWED_OPENIDS)),
@@ -42,12 +60,22 @@ export const config = {
 };
 
 export function getMissingRuntimeConfig() {
-  return [
+  const required = [
     ["SUPABASE_URL", config.supabaseUrl],
     ["SUPABASE_SECRET_KEY", config.supabaseSecretKey],
     ["WECHAT_APP_ID", config.wechatAppId],
     ["WECHAT_APP_SECRET", config.wechatAppSecret],
-  ]
+  ];
+  if (config.imageStorageProvider === "cos") {
+    required.push(
+      ["COS_SECRET_ID", config.cosSecretId],
+      ["COS_SECRET_KEY", config.cosSecretKey],
+      ["COS_BUCKET", config.cosBucket],
+      ["COS_REGION", config.cosRegion],
+      ["COS_IMAGE_DOMAIN", config.cosImageDomain],
+    );
+  }
+  return required
     .filter(([, value]) => !value)
     .map(([name]) => name);
 }
