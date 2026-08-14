@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
-import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   readMultipartImage,
@@ -11,7 +10,7 @@ import { UUID_PATTERN } from "../shared/records.mjs";
 import {
   createSignedUrlMap,
   removeStorageImages,
-  uploadOptimizedOriginalImage,
+  uploadStandardImage,
 } from "../shared/image-storage.mjs";
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -119,12 +118,12 @@ async function uploadImage(supabase, userId, momentId, image) {
   assertImage(image);
   const revision = randomUUID();
   const basePath = `users/${userId}/moments/${momentId}/${revision}`;
-  return uploadOptimizedOriginalImage(supabase, {
+  return uploadStandardImage(supabase, {
     bucketName: config.keyMomentBucket,
     basePath,
     userId,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.keyMoment.original,
+    crop: image.crop,
     uploadErrorMessage: "上传关键节点图片失败。",
   });
 }

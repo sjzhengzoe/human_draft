@@ -30,7 +30,7 @@ test("media cover recovery is dry-run by default and only fills missing COS obje
   assert.match(mediaCoverRecovery, /process\.argv\.includes\("--apply"\)/);
   assert.match(mediaCoverRecovery, /!existingKeys\.has\(cosObjectKey/);
   assert.match(mediaCoverRecovery, /status = "skipped-existing"/);
-  assert.match(mediaCoverRecovery, /uploaded\.equals\(optimized\.original\)/);
+  assert.match(mediaCoverRecovery, /uploaded\.equals\(optimized\.buffer\)/);
   assert.match(mediaCoverRecovery, /originalsRetained: apply/);
   assert.match(mediaCoverRecovery, /--source-manifest=/);
   assert.match(mediaCoverRecovery, /sourceBackupReused/);

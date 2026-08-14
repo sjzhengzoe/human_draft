@@ -148,7 +148,7 @@ test("media detail inline editing supports a shared 3:4 cover crop and deferred 
 
   assert.match(config, /"image-cropper":\s*"\/components\/image-cropper\/index"/);
   assert.match(page, /aspect-ratio="0\.75"/);
-  assert.match(page, /output-size="1080"/);
+  assert.doesNotMatch(page, /output-size=/);
   assert.doesNotMatch(page, /compact-typography/);
   assert.match(page, /selectedEntryImagePath/);
   assert.match(logic, /wx\.chooseMedia\(/);

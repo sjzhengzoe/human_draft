@@ -1,4 +1,5 @@
 import type { ActivityItem, ActivityType } from "../types/activities"
+import type { ImageCrop } from "../types/images"
 import { queryString } from "./query-string"
 import { request, upload } from "./request"
 
@@ -18,6 +19,7 @@ export async function createActivityItem(
     introduction: string
     activityType: ActivityType
     imagePath?: string
+    imageCrop?: ImageCrop | null
   }
 ): Promise<ActivityItem> {
   const payload = {
@@ -29,6 +31,7 @@ export async function createActivityItem(
     ? await upload<{ item: ActivityItem }>({
       path: "/api/activities",
       filePath: input.imagePath,
+      imageCrop: input.imageCrop,
       formData: payload
     })
     : await request<{ item: ActivityItem }>({
@@ -61,11 +64,13 @@ export async function updateActivityItem(
 
 export async function replaceActivityItemImage(
   id: string,
-  imagePath: string
+  imagePath: string,
+  imageCrop?: ImageCrop | null
 ): Promise<ActivityItem> {
   const data = await upload<{ item: ActivityItem }>({
     path: `/api/activities/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   return data.item
 }

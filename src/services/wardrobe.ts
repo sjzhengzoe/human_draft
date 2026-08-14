@@ -4,6 +4,7 @@ import type {
   WardrobeItem,
   WardrobeSort
 } from "../types/wardrobe"
+import type { ImageCrop } from "../types/images"
 import { request, upload } from "./request"
 
 function queryString(values: Record<string, string | undefined>): string {
@@ -106,10 +107,12 @@ export async function createWardrobeItem(input: {
   categoryId: string
   values: Record<string, string>
   imagePath: string
+  imageCrop?: ImageCrop | null
 }): Promise<WardrobeItem> {
   const data = await upload<{ item: WardrobeItem }>({
     path: "/api/wardrobe/items",
     filePath: input.imagePath,
+    imageCrop: input.imageCrop,
     formData: {
       name: input.name,
       category_id: input.categoryId,
@@ -137,11 +140,13 @@ export async function updateWardrobeItem(
 
 export async function replaceWardrobeItemImage(
   id: string,
-  imagePath: string
+  imagePath: string,
+  imageCrop?: ImageCrop | null
 ): Promise<WardrobeItem> {
   const data = await upload<{ item: WardrobeItem }>({
     path: `/api/wardrobe/items/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   return data.item
 }

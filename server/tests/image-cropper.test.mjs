@@ -39,10 +39,13 @@ test("shared image cropper uses a fullscreen adjustable frame with optional fixe
   assert.match(logic, /const ratioLocked = fixedAspectRatio > 0/);
   assert.match(logic, /function constrainCropFrame[\s\S]*?state\.cropLeft = clamp[\s\S]*?state\.cropTop = clamp/);
   assert.match(logic, /-EXPORT_EDGE_GUARD_PX,[\s\S]*?outputWidth \+ EXPORT_EDGE_GUARD_PX \* 2/);
-  assert.match(logic, /outputType:[\s\S]*?value: "png"/);
-  assert.match(logic, /outputQuality:[\s\S]*?value: 0\.86/);
-  assert.match(logic, /const outputScale = Math\.min\(maximumOutputWidth \/ sourceWidth, 1\)/);
-  assert.doesNotMatch(logic, /if \(!cropped\)[\s\S]*?tempFilePath: this\.data\.displaySrc/);
+  assert.match(logic, /CROP_PREVIEW_MAX_EDGE = 1080/);
+  assert.match(logic, /const outputScale = Math\.min\(CROP_PREVIEW_MAX_EDGE \/ sourceWidth, 1\)/);
+  assert.doesNotMatch(logic, /outputSize|outputType|outputQuality/);
+  assert.match(logic, /if \(!cropped\)[\s\S]*?resultPath = this\.data\.displaySrc \|\| this\.properties\.src/);
+  assert.match(logic, /function normalizedCrop\(state: CropState\): ImageCrop/);
+  assert.match(logic, /sourceFilePath: this\.data\.displaySrc \|\| this\.properties\.src/);
+  assert.match(logic, /crop: cropped \? normalizedCrop\(state\) : undefined/);
   assert.match(logic, /wx\.hideLoading\(\)[\s\S]*?this\.triggerEvent\("error"/);
   assert.match(logic, /const sourceWidth = Math\.min\(state\.cropWidth \* imageScaleX/);
 

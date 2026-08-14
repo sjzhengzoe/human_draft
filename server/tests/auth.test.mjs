@@ -230,16 +230,20 @@ test("a successful local avatar update completes the user profile", async () => 
     '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="red"/></svg>',
   );
 
-  const avatarUrl = await updateUserAvatar(supabase, "pending-user", image);
+  const avatarUrl = await updateUserAvatar(supabase, "pending-user", {
+    buffer: image,
+    mimetype: "image/png",
+    filename: "avatar.png",
+  });
 
   assert.match(
     avatarUrl,
-    /^https:\/\/assets\.example\/user-avatars\/users\/pending-user\/avatar-\d+-[0-9a-f-]+\.webp\?expires=21600$/,
+    /^https:\/\/assets\.example\/user-avatars\/users\/pending-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp\?expires=21600$/,
   );
   assert.equal(supabase.state.users[0].profile_completed, true);
   assert.match(
     supabase.state.users[0].avatar_url,
-    /^users\/pending-user\/avatar-\d+-[0-9a-f-]+\.webp$/,
+    /^users\/pending-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
   );
   assert.equal(supabase.state.uploads.length, 1);
   assert.equal(supabase.state.uploads[0].options.contentType, "image/webp");
@@ -287,11 +291,15 @@ test("replacing an avatar switches to a versioned path before removing the old o
     '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="blue"/></svg>',
   );
 
-  await updateUserAvatar(supabase, "avatar-user", image);
+  await updateUserAvatar(supabase, "avatar-user", {
+    buffer: image,
+    mimetype: "image/png",
+    filename: "avatar.png",
+  });
 
   assert.match(
     supabase.state.users[0].avatar_url,
-    /^users\/avatar-user\/avatar-\d+-[0-9a-f-]+\.webp$/,
+    /^users\/avatar-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
   );
   assert.deepEqual(supabase.state.removals, [{
     bucket: "user-avatars",

@@ -87,7 +87,6 @@
   src="{{cropSourcePath}}"
   shape="rectangle"
   aspect-ratio="0.75"
-  output-size="1080"
   title="裁剪为 3:4 衣物图片"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"

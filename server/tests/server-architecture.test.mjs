@@ -93,7 +93,7 @@ test("image upload parsing and storage transactions are shared without cross-dom
   assert.match(wardrobeRoutes, /http\/multipart-image\.mjs/)
   assert.doesNotMatch(wardrobeRoutes, /domains\/menu/)
   assert.match(keyMoments, /shared\/image-storage\.mjs/)
-  assert.match(sharedStorage, /export async function uploadOptimizedOriginalImage/)
+  assert.match(sharedStorage, /export async function uploadStandardImage/)
   assert.doesNotMatch(sharedStorage, /uploadOptimizedImagePair|THUMBNAIL_UPLOAD_FAILED/)
   assert.match(sharedStorage, /export async function createSignedUrlMap/)
   assert.match(multipart, /export async function readMultipartImage/)

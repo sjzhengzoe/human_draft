@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
 import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
-import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   createSignedUrlMap,
   removeStorageImages,
-  uploadOptimizedOriginalImage,
+  uploadStandardImage,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
 import {
@@ -537,12 +536,12 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     "仅支持 PNG、JPEG 或 WebP 图片。",
   );
   const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
-  const { imagePath } = await uploadOptimizedOriginalImage(supabase, {
+  const { imagePath } = await uploadStandardImage(supabase, {
     bucketName: config.mediaCoverBucket,
     basePath: `users/${userId}/entries/${id}/${randomUUID()}`,
     userId,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.mediaCover.original,
+    crop: image.crop,
     uploadErrorMessage: "上传影视封面失败。",
   });
   const { data, error } = await supabase

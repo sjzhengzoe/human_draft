@@ -96,7 +96,7 @@ test("key moment images keep their source ratio and make the shared crop step op
   assert.match(page, /class="moment-image"[\s\S]*?mode="widthFix"/);
   assert.match(page, /class="image-editor__preview"[\s\S]*?mode="aspectFit"[\s\S]*?bindtap="handleChooseImage"/);
   assert.match(page, /<image-cropper[\s\S]*?shape="rectangle"[\s\S]*?title="调整节点图片"/);
-  assert.match(page, /<image-cropper[\s\S]*?output-size="1440"[\s\S]*?output-type="jpg"[\s\S]*?output-quality="0\.88"/);
+  assert.doesNotMatch(page, /<image-cropper[\s\S]*?output-(?:size|type|quality)=/);
   assert.doesNotMatch(page, /<image-cropper[\s\S]*?aspect-ratio=/);
   assert.doesNotMatch(page, /image-editor__action|可直接使用|>裁剪<|bind:original|free-ratio|allow-original/);
   assert.doesNotMatch(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 4 \/ 3;/);
@@ -182,9 +182,9 @@ test("key moment image loading uses one stored image", async () => {
   assert.match(page, /src="\{\{item\.image_url\}\}"[\s\S]*?lazy-load/);
   assert.doesNotMatch(page, /thumbnail_/);
   assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
-  assert.match(storage, /uploadOptimizedOriginalImage/);
+  assert.match(storage, /uploadStandardImage/);
   assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);
-  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 2_560[\s\S]*?quality: 92/);
+  assert.match(imageProcessing, /STANDARD_IMAGE_PROFILE[\s\S]*?width: 2_560[\s\S]*?quality: 88/);
   assert.doesNotMatch(imageProcessing, /thumbnail:/);
 });
 

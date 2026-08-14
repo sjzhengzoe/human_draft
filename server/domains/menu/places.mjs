@@ -185,7 +185,7 @@ export async function createMenuPlace(supabase, userId, fields, image) {
   await assertOutsideCategoryExists(supabase, userId, outsideCategoryId);
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择店铺图片。" );
   const placeId = randomUUID();
-  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image.buffer);
+  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image);
   const { error } = await supabase.rpc("create_menu_place_at_end", {
     p_user_id: userId,
     p_id: placeId,
@@ -224,7 +224,7 @@ export async function replaceMenuPlaceImage(supabase, userId, placeId, image) {
   const place = await requireMenuPlace(supabase, userId, placeId);
   assertCondition(place.place_type === "outside", 400, "PLACE_IMAGE_UNAVAILABLE", "当前地点不能更换图片。" );
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择店铺图片。" );
-  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image.buffer);
+  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image);
   const { error } = await supabase
     .from("menu_places")
     .update({ image_path: imagePath })

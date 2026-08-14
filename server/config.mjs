@@ -55,7 +55,7 @@ export const config = {
   sessionTtlDays: toPositiveInteger(process.env.SESSION_TTL_DAYS, 30),
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || "",
   accessTokenTtlMinutes: toPositiveInteger(process.env.ACCESS_TOKEN_TTL_MINUTES, 60),
-  maxUploadSizeMb: Math.min(toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 5), 5),
+  maxUploadSizeMb: Math.min(toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 10), 10),
 };
 
 export function getMissingRuntimeConfig() {

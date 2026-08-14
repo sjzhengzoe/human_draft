@@ -1,14 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition, HttpError } from "../../lib/errors.mjs";
-import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
 import { requiredText, UUID_PATTERN } from "../shared/records.mjs";
 import {
   createSignedUrlMap,
   removeStorageImages,
-  uploadOptimizedOriginalImage,
+  uploadStandardImage,
 } from "../shared/image-storage.mjs";
 
 const SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
@@ -155,12 +154,12 @@ async function uploadImage(supabase, userId, itemId, image) {
   assertCondition(STANDARD_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
   const revision = randomUUID();
   const basePath = `users/${userId}/items/${itemId}/${revision}`;
-  return uploadOptimizedOriginalImage(supabase, {
+  return uploadStandardImage(supabase, {
     bucketName: config.wardrobeBucket,
     basePath,
     userId,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.wardrobe.original,
+    crop: image.crop,
     uploadErrorMessage: "上传衣物图片失败。",
   });
 }

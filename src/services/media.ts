@@ -8,6 +8,7 @@ import type {
   MediaTimelineNote,
   MediaType
 } from "../types/media"
+import type { ImageCrop } from "../types/images"
 import {
   addCachedMediaCategory,
   adjustCachedMediaEntryStats,
@@ -166,11 +167,13 @@ export async function updateMediaEntry(
 
 export async function replaceMediaEntryCover(
   id: string,
-  imagePath: string
+  imagePath: string,
+  imageCrop?: ImageCrop | null
 ): Promise<MediaEntry> {
   const data = await upload<{ item: MediaEntry }>({
     path: `/api/media/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   cacheMediaEntry(data.item)
   return data.item

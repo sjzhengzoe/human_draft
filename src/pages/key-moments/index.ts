@@ -12,6 +12,7 @@ import type {
   KeyMomentGranularity,
   KeyMomentTimelineItem
 } from "../../types/key-moments"
+import type { ImageCrop, ImageCropResult } from "../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -140,6 +141,8 @@ Page({
     currentImageUrl: "",
     originalImageUrl: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     removeCurrentImage: false,
     selectingImage: false,
     showImageCropper: false,
@@ -279,6 +282,8 @@ Page({
       currentImageUrl: "",
       originalImageUrl: "",
       selectedImagePath: "",
+      selectedImageUploadPath: "",
+      selectedImageCrop: null,
       removeCurrentImage: false,
       selectingImage: false,
       showImageCropper: false,
@@ -306,6 +311,8 @@ Page({
       currentImageUrl: item.image_url,
       originalImageUrl: item.image_url,
       selectedImagePath: "",
+      selectedImageUploadPath: "",
+      selectedImageCrop: null,
       removeCurrentImage: false,
       selectingImage: false,
       showImageCropper: false,
@@ -331,6 +338,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -360,12 +368,14 @@ Page({
   },
 
   handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const tempFilePath = event.detail.tempFilePath
-    if (!tempFilePath) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
       selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
       currentImageUrl: this.data.originalImageUrl,
       removeCurrentImage: false,
       showImageCropper: false,
@@ -385,7 +395,11 @@ Page({
   handleRemoveEditorImage() {
     if (this.data.saving || this.data.deleting) return
     if (this.data.selectedImagePath) {
-      this.setData({ selectedImagePath: "" })
+      this.setData({
+        selectedImagePath: "",
+        selectedImageUploadPath: "",
+        selectedImageCrop: null
+      })
       return
     }
     if (this.data.currentImageUrl) {
@@ -418,8 +432,12 @@ Page({
     try {
       if (this.data.editingId) {
         await updateKeyMoment(this.data.editingId, { content, occurredAt })
-        if (this.data.selectedImagePath) {
-          await replaceKeyMomentImage(this.data.editingId, this.data.selectedImagePath)
+        if (this.data.selectedImageUploadPath) {
+          await replaceKeyMomentImage(
+            this.data.editingId,
+            this.data.selectedImageUploadPath,
+            this.data.selectedImageCrop
+          )
         } else if (this.data.removeCurrentImage) {
           await deleteKeyMomentImage(this.data.editingId)
         }
@@ -427,7 +445,8 @@ Page({
         await createKeyMoment({
           content,
           occurredAt,
-          imagePath: this.data.selectedImagePath || undefined
+          imagePath: this.data.selectedImageUploadPath || undefined,
+          imageCrop: this.data.selectedImageCrop
         })
       }
       if (!isAsyncPageActive(this)) return

@@ -208,7 +208,6 @@
   src="{{cropSourcePath}}"
   shape="rectangle"
   aspect-ratio="1.333333"
-  output-size="1536"
   title="裁剪为 4:3 图片"
   bind:cancel="handleImageCropCancel"
   bind:confirm="handleImageCropConfirm"

@@ -5,6 +5,7 @@ import {
   replaceMediaEntryCover
 } from "../../../services/media"
 import type { MediaStatus, MediaType } from "../../../types/media"
+import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -46,6 +47,8 @@ Page({
   data: {
     title: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     selectingImage: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -212,6 +215,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -237,12 +241,14 @@ Page({
   },
 
   handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const path = event.detail.tempFilePath
-    if (!path) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
-      selectedImagePath: path,
+      selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
       showImageCropper: false,
       cropSourcePath: ""
     }, () => this.enableDraftGuard())
@@ -327,8 +333,12 @@ Page({
       const savedEntry = await createMediaEntry(input)
       const id = savedEntry.id
       entryCreated = true
-      if (this.data.selectedImagePath) {
-        await replaceMediaEntryCover(id, this.data.selectedImagePath)
+      if (this.data.selectedImageUploadPath) {
+        await replaceMediaEntryCover(
+          id,
+          this.data.selectedImageUploadPath,
+          this.data.selectedImageCrop
+        )
       }
       markMediaDataChanged()
       if (!isAsyncPageActive(this)) return

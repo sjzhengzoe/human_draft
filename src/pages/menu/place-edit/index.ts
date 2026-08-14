@@ -9,6 +9,7 @@ import {
 } from "../../../services/menu"
 import type { MenuPlace } from "../../../types/api"
 import type { DiningScene } from "../../../types/dining"
+import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -26,6 +27,8 @@ Page({
     categoryIndex: 0,
     currentImageUrl: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     selectingImage: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -95,6 +98,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         const path = result.tempFiles[0]?.tempFilePath
@@ -112,9 +116,15 @@ Page({
     this.setData({ showImageCropper: false, cropSourcePath: "" })
   },
 
-  handleImageCropConfirm(event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>) {
-    const path = event.detail.tempFilePath
-    if (path) this.setData({ selectedImagePath: path, showImageCropper: false, cropSourcePath: "" })
+  handleImageCropConfirm(event: WechatMiniprogram.CustomEvent<ImageCropResult>) {
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (tempFilePath && sourceFilePath) this.setData({
+      selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
+      showImageCropper: false,
+      cropSourcePath: ""
+    })
   },
 
   handleImageCropError(event: WechatMiniprogram.CustomEvent<{ message?: string }>) {
@@ -133,7 +143,7 @@ Page({
       wx.showToast({ title: "请选择外食分类", icon: "none" })
       return null
     }
-    if (!this.data.placeId && !this.data.selectedImagePath) {
+    if (!this.data.placeId && !this.data.selectedImageUploadPath) {
       wx.showToast({ title: "请选择店铺图片", icon: "none" })
       return null
     }
@@ -152,14 +162,19 @@ Page({
           name: input.name,
           outside_category_id: input.category.id
         })
-        if (this.data.selectedImagePath) {
-          place = await replaceMenuPlaceImage(this.data.placeId, this.data.selectedImagePath)
+        if (this.data.selectedImageUploadPath) {
+          place = await replaceMenuPlaceImage(
+            this.data.placeId,
+            this.data.selectedImageUploadPath,
+            this.data.selectedImageCrop
+          )
         }
       } else {
         place = await createMenuPlace({
           name: input.name,
           outsideCategoryId: input.category.id,
-          imagePath: this.data.selectedImagePath
+          imagePath: this.data.selectedImageUploadPath,
+          imageCrop: this.data.selectedImageCrop
         })
       }
       return place

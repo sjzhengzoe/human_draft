@@ -7,6 +7,7 @@ import {
   updateWardrobeItem
 } from "../../../services/wardrobe"
 import type { WardrobeCategory } from "../../../types/wardrobe"
+import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -39,6 +40,8 @@ Page({
     name: "",
     currentImageUrl: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     selectingImage: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -162,6 +165,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -187,12 +191,14 @@ Page({
   },
 
   handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const path = event.detail.tempFilePath
-    if (!path) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
-      selectedImagePath: path,
+      selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
       showImageCropper: false,
       cropSourcePath: ""
     })
@@ -225,7 +231,7 @@ Page({
       wx.showToast({ title: "请选择分类", icon: "none" })
       return
     }
-    if (!this.data.itemId && !this.data.selectedImagePath) {
+    if (!this.data.itemId && !this.data.selectedImageUploadPath) {
       wx.showToast({ title: "请选择衣物图片", icon: "none" })
       return
     }
@@ -246,15 +252,20 @@ Page({
           category_id: category.id,
           values
         })
-        if (this.data.selectedImagePath) {
-          await replaceWardrobeItemImage(this.data.itemId, this.data.selectedImagePath)
+        if (this.data.selectedImageUploadPath) {
+          await replaceWardrobeItemImage(
+            this.data.itemId,
+            this.data.selectedImageUploadPath,
+            this.data.selectedImageCrop
+          )
         }
       } else {
         await createWardrobeItem({
           name,
           categoryId: category.id,
           values,
-          imagePath: this.data.selectedImagePath
+          imagePath: this.data.selectedImageUploadPath,
+          imageCrop: this.data.selectedImageCrop
         })
       }
       if (!isAsyncPageActive(this)) return

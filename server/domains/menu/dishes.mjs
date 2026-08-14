@@ -233,7 +233,7 @@ export async function createDish(supabase, userId, fields, image) {
 
   const dishId = randomUUID();
   const paths = image?.buffer?.length
-    ? await uploadDishImage(supabase, userId, dishId, image.buffer)
+    ? await uploadDishImage(supabase, userId, dishId, image)
     : { imagePath: "" };
   const { data, error } = await supabase
     .rpc("create_menu_dish", {
@@ -324,7 +324,7 @@ export async function updateDish(supabase, userId, dishId, body) {
 export async function replaceDishImage(supabase, userId, dishId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
   const dish = await getDish(supabase, userId, dishId);
-  const paths = await uploadDishImage(supabase, userId, dishId, image.buffer);
+  const paths = await uploadDishImage(supabase, userId, dishId, image);
   const { data, error } = await supabase
     .from("dishes")
     .update({ image_path: paths.imagePath })

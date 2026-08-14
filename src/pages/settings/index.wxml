@@ -167,8 +167,6 @@
   src="{{cropSourcePath}}"
   shape="circle"
   aspect-ratio="1"
-  output-size="640"
-  output-type="png"
   title="裁剪头像"
   bind:cancel="handleAvatarCropCancel"
   bind:confirm="handleAvatarCropConfirm"

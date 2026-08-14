@@ -1,6 +1,7 @@
 import { getCurrentUser, logout } from "../../services/auth"
 import { getImageStorageUsage } from "../../services/account"
 import { updateAccountAvatar, updateAccountProfile } from "../../services/profile"
+import type { ImageCrop, ImageCropResult } from "../../types/images"
 import { UI_COLORS } from "../../styles/colors"
 import { updateAppTabBarState } from "../../utils/tab-bar"
 
@@ -56,6 +57,8 @@ Component({
     editingAvatarUrl: "",
     editingAvatarInitial: "E",
     pendingAvatarPath: "",
+    pendingAvatarUploadPath: "",
+    pendingAvatarCrop: null as ImageCrop | null,
     selectingProfileAvatar: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -101,6 +104,8 @@ Component({
         editingAvatarUrl: user.avatar_url,
         editingAvatarInitial: profileInitial(user.display_name),
         pendingAvatarPath: "",
+        pendingAvatarUploadPath: "",
+        pendingAvatarCrop: null,
         selectingProfileAvatar: false
       })
     },
@@ -110,7 +115,9 @@ Component({
         showProfileDialog: false,
         editingDisplayName: "",
         editingAvatarUrl: "",
-        pendingAvatarPath: ""
+        pendingAvatarPath: "",
+        pendingAvatarUploadPath: "",
+        pendingAvatarCrop: null
       })
     },
     handleDisplayNameInput(event: WechatMiniprogram.Input) {
@@ -130,6 +137,7 @@ Component({
       wx.chooseMedia({
         count: 1,
         mediaType: ["image"],
+        sizeType: ["original"],
         sourceType: ["album", "camera"],
         success: (result) => {
           const path = result.tempFiles[0]?.tempFilePath
@@ -150,13 +158,15 @@ Component({
       this.setData({ showImageCropper: false, cropSourcePath: "" })
     },
     handleAvatarCropConfirm(
-      event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+      event: WechatMiniprogram.CustomEvent<ImageCropResult>
     ) {
-      const path = event.detail.tempFilePath
-      if (!path) return
+      const { tempFilePath, sourceFilePath, crop } = event.detail
+      if (!tempFilePath || !sourceFilePath) return
       this.setData({
-        editingAvatarUrl: path,
-        pendingAvatarPath: path,
+        editingAvatarUrl: tempFilePath,
+        pendingAvatarPath: tempFilePath,
+        pendingAvatarUploadPath: sourceFilePath,
+        pendingAvatarCrop: crop || null,
         showImageCropper: false,
         cropSourcePath: ""
       })
@@ -193,7 +203,12 @@ Component({
       this.setData({ savingProfile: true })
       try {
         if (displayNameChanged) await updateAccountProfile(displayName)
-        if (pendingAvatarPath) await updateAccountAvatar(pendingAvatarPath)
+        if (pendingAvatarPath) {
+          await updateAccountAvatar(
+            this.data.pendingAvatarUploadPath,
+            this.data.pendingAvatarCrop
+          )
+        }
         const page = this as SettingsPageInstance
         page.failedAvatarSignature = ""
         const nextAccountState = getSettingsAccountState()
@@ -202,7 +217,9 @@ Component({
           showProfileDialog: false,
           editingDisplayName: "",
           editingAvatarUrl: "",
-          pendingAvatarPath: ""
+          pendingAvatarPath: "",
+          pendingAvatarUploadPath: "",
+          pendingAvatarCrop: null
         })
         wx.showToast({ title: "个人资料已更新", icon: "success" })
       } catch (error) {

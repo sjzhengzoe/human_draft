@@ -24,6 +24,7 @@ import type {
   MediaTimelineNoteType,
   MediaType
 } from "../../../types/media"
+import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -280,6 +281,8 @@ Page({
     entryDraftIsAudio: false,
     entryDraftIsEpisodic: false,
     selectedEntryImagePath: "",
+    selectedEntryImageUploadPath: "",
+    selectedEntryImageCrop: null as ImageCrop | null,
     selectingEntryImage: false,
     showEntryImageCropper: false,
     entryCropSourcePath: "",
@@ -622,7 +625,9 @@ Page({
       entryPlatformOptions: platformOptions(entry.platforms),
       entryDraftIsAudio: entry.media_type === "广播剧",
       entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
-      selectedEntryImagePath: ""
+      selectedEntryImagePath: "",
+      selectedEntryImageUploadPath: "",
+      selectedEntryImageCrop: null
     }, () => wx.enableAlertBeforeUnload({ message: "作品修改还没有保存，确定离开吗？" }))
   },
 
@@ -635,6 +640,8 @@ Page({
       entryDraftPlatforms: [],
       entryPlatformOptions: platformOptions([]),
       selectedEntryImagePath: "",
+      selectedEntryImageUploadPath: "",
+      selectedEntryImageCrop: null,
       showEntryImageCropper: false,
       entryCropSourcePath: ""
     })
@@ -679,6 +686,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -702,12 +710,14 @@ Page({
   },
 
   handleEntryImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const selectedEntryImagePath = String(event.detail.tempFilePath || "")
-    if (!selectedEntryImagePath) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
-      selectedEntryImagePath,
+      selectedEntryImagePath: tempFilePath,
+      selectedEntryImageUploadPath: sourceFilePath,
+      selectedEntryImageCrop: crop || null,
       showEntryImageCropper: false,
       entryCropSourcePath: ""
     })
@@ -751,10 +761,11 @@ Page({
         watch_status: this.data.entryDraftWatchStatus,
         platforms
       })
-      if (this.data.selectedEntryImagePath) {
+      if (this.data.selectedEntryImageUploadPath) {
         persistedEntry = await replaceMediaEntryCover(
           entry.id,
-          this.data.selectedEntryImagePath
+          this.data.selectedEntryImageUploadPath,
+          this.data.selectedEntryImageCrop
         )
       }
       const mediaRevision = markMediaDataChanged()
@@ -774,6 +785,8 @@ Page({
         entryDraftPlatforms: [],
         entryPlatformOptions: platformOptions([]),
         selectedEntryImagePath: "",
+        selectedEntryImageUploadPath: "",
+        selectedEntryImageCrop: null,
         savingEntry: false,
         mediaRevision
       }, () => this.restoreDetailScroll())

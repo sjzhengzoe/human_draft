@@ -74,7 +74,7 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.doesNotMatch(page, /bindinput="handleTasteInput"/);
   assert.match(page, /shape="rectangle"/);
   assert.match(page, /aspect-ratio="1\.333333"/);
-  assert.match(page, /output-size="1536"/);
+  assert.doesNotMatch(page, /output-size=/);
   assert.match(styles, /\.image-field[^}]*aspect-ratio:\s*4\s*\/\s*3/);
   assert.match(styles, /\.field--inline[^}]*grid-template-columns:\s*132rpx minmax\(0, 1fr\)/);
   assert.match(styles, /\.field--inline[^}]*padding:\s*22rpx 28rpx/);
@@ -164,7 +164,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(placeStyles, /\.store-action--primary[^}]*background:\s*var\(--ui-color-action-primary\)/);
   assert.match(placeStyles, /\.store-action--secondary[^}]*background:\s*var\(--ui-surface\)/);
   assert.match(placeEdit, /<app-dialog[\s\S]*title="删除店铺"/);
-  assert.match(placeEdit, /shape="square"[\s\S]*aspect-ratio="1"[\s\S]*output-size="1080"/);
+  assert.match(placeEdit, /shape="square"[\s\S]*aspect-ratio="1"/);
+  assert.doesNotMatch(placeEdit, /output-size=/);
   assert.match(placeEdit, /bindtap="handleAddDish">保存并新增菜品/);
   assert.match(placeEditStyles, /\.image-field[^}]*aspect-ratio:\s*1\s*\/\s*1/);
   assert.match(menuStyles, /\.browse-card__record-row[^}]*border-top:\s*1rpx solid var\(--ui-color-border\)/);

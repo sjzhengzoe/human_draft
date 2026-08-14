@@ -8,6 +8,7 @@ import {
   updateActivityItem
 } from "../../services/activities"
 import type { ActivityItem, ActivityType } from "../../types/activities"
+import type { ImageCrop, ImageCropResult } from "../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -55,6 +56,8 @@ Page({
     editorType: "室内" as ActivityType,
     currentImageUrl: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     selectingImage: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -126,7 +129,9 @@ Page({
       editorIntroduction: "",
       editorType: this.data.activeType,
       currentImageUrl: "",
-      selectedImagePath: ""
+      selectedImagePath: "",
+      selectedImageUploadPath: "",
+      selectedImageCrop: null
     })
   },
 
@@ -139,7 +144,9 @@ Page({
       editorIntroduction: item.introduction || "",
       editorType: item.activity_type,
       currentImageUrl: item.image_url || "",
-      selectedImagePath: ""
+      selectedImagePath: "",
+      selectedImageUploadPath: "",
+      selectedImageCrop: null
     })
   },
 
@@ -195,6 +202,8 @@ Page({
     this.setData({
       showEditor: false,
       selectedImagePath: "",
+      selectedImageUploadPath: "",
+      selectedImageCrop: null,
       currentImageUrl: ""
     })
   },
@@ -210,6 +219,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -235,12 +245,14 @@ Page({
   },
 
   handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const tempFilePath = event.detail.tempFilePath
-    if (!tempFilePath) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
       selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
       showImageCropper: false,
       cropSourcePath: ""
     })
@@ -271,15 +283,20 @@ Page({
           introduction,
           activityType: this.data.editorType
         })
-        if (this.data.selectedImagePath) {
-          item = await replaceActivityItemImage(item.id, this.data.selectedImagePath)
+        if (this.data.selectedImageUploadPath) {
+          item = await replaceActivityItemImage(
+            item.id,
+            this.data.selectedImageUploadPath,
+            this.data.selectedImageCrop
+          )
         }
       } else {
         item = await createActivityItem({
           name,
           introduction,
           activityType: this.data.editorType,
-          imagePath: this.data.selectedImagePath || undefined
+          imagePath: this.data.selectedImageUploadPath || undefined,
+          imageCrop: this.data.selectedImageCrop
         })
       }
       if (!isAsyncPageActive(this)) return
@@ -287,6 +304,8 @@ Page({
       this.setData({
         showEditor: false,
         selectedImagePath: "",
+        selectedImageUploadPath: "",
+        selectedImageCrop: null,
         currentImageUrl: ""
       })
     } catch (error) {

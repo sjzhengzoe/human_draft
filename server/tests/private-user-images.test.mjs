@@ -55,7 +55,7 @@ test("personal image responses and uploaded avatars use signed URLs", async () =
   ]);
 
   assert.match(dishImages, /createSignedUrlMap/);
-  assert.match(dishImages, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS/);
+  assert.match(dishImages, /uploadStandardImage/);
   assert.doesNotMatch(dishImages, /getPublicUrl/);
   assert.match(activities, /createSignedUrlMap/);
   assert.doesNotMatch(activities, /getPublicUrl/);

@@ -3,12 +3,12 @@ import test from "node:test";
 import sharp from "sharp";
 import { config } from "../config.mjs";
 import {
-  IMAGE_PROFILES,
   MAX_IMAGE_PIXELS,
-  isOptimizedImagePath,
-  optimizeOriginalImage,
-  optimizedImagePaths,
+  optimizeImage,
+  STANDARD_IMAGE_PROFILE,
+  standardImagePath,
 } from "../lib/image-processing.mjs";
+import { parseImageCrop } from "../http/multipart-image.mjs";
 
 async function createTestImage(width, height) {
   return sharp({
@@ -23,31 +23,30 @@ async function createTestImage(width, height) {
     .toBuffer();
 }
 
-test("incoming image uploads keep a five-megabyte server hard cap", () => {
+test("incoming image uploads keep a ten-megabyte server hard cap", () => {
   assert.ok(config.maxUploadSizeMb > 0);
-  assert.ok(config.maxUploadSizeMb <= 5);
+  assert.ok(config.maxUploadSizeMb <= 10);
 });
 
-test("every image profile stores only one original", () => {
-  for (const profile of Object.values(IMAGE_PROFILES)) {
-    assert.ok(profile.original);
-    assert.equal(profile.thumbnail, undefined);
-  }
+test("all business images share one high-definition storage profile", () => {
+  assert.deepEqual(STANDARD_IMAGE_PROFILE, {
+    width: 2_560,
+    height: 2_560,
+    quality: 88,
+  });
 });
 
-test("activity images keep one bounded lossy original", async () => {
+test("image optimization produces one bounded WebP master", async () => {
   const input = await createTestImage(3_200, 2_400);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.activity.original);
-  const original = await sharp(result.original).metadata();
+  const result = await optimizeImage(input);
+  const metadata = await sharp(result.buffer).metadata();
 
-  assert.equal(result.originalContentType, "image/webp");
+  assert.deepEqual(Object.keys(result).sort(), ["buffer", "contentType"]);
+  assert.equal(result.contentType, "image/webp");
   assert.deepEqual(
-    { format: original.format, width: original.width, height: original.height },
-    { format: "webp", width: 1_536, height: 1_152 },
+    { format: metadata.format, width: metadata.width, height: metadata.height },
+    { format: "webp", width: 2_560, height: 1_920 },
   );
-  assert.deepEqual(Object.keys(result).sort(), ["original", "originalContentType"]);
-  assert.equal(IMAGE_PROFILES.activity.original.quality, 84);
-  assert.equal(IMAGE_PROFILES.activity.thumbnail, undefined);
 });
 
 test("WebP output uses lossy encoding rather than preserving every source pixel", async () => {
@@ -60,56 +59,70 @@ test("WebP output uses lossy encoding rather than preserving every source pixel"
   })
     .png()
     .toBuffer();
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.dish.original);
-  const outputPixels = await sharp(result.original).raw().toBuffer();
+  const result = await optimizeImage(input);
+  const outputPixels = await sharp(result.buffer).raw().toBuffer();
   assert.notDeepEqual(outputPixels, pixels);
-});
-
-test("dish optimization keeps one print-quality image without creating a thumbnail", async () => {
-  const input = await createTestImage(3_200, 2_400);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.dish.original);
-  const metadata = await sharp(result.original).metadata();
-
-  assert.deepEqual(Object.keys(result).sort(), ["original", "originalContentType"]);
-  assert.equal(result.originalContentType, "image/webp");
-  assert.deepEqual(
-    { format: metadata.format, width: metadata.width, height: metadata.height },
-    { format: "webp", width: 1_536, height: 1_152 },
-  );
-  assert.equal(IMAGE_PROFILES.dish.thumbnail, undefined);
-  assert.equal(IMAGE_PROFILES.dish.original.quality, 84);
 });
 
 test("image optimization never enlarges small images", async () => {
   const input = await createTestImage(300, 200);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.wardrobe.original);
-  const original = await sharp(result.original).metadata();
-  assert.deepEqual([original.width, original.height], [300, 200]);
+  const result = await optimizeImage(input);
+  const metadata = await sharp(result.buffer).metadata();
+  assert.deepEqual([metadata.width, metadata.height], [300, 200]);
 });
 
-test("wardrobe stores one bounded image", async () => {
+test("normalized crop coordinates are applied before the shared resize", async () => {
   const input = await createTestImage(3_200, 2_400);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.wardrobe.original);
-  const original = await sharp(result.original).metadata();
-  assert.deepEqual([original.width, original.height], [1_080, 810]);
-  assert.equal(IMAGE_PROFILES.wardrobe.thumbnail, undefined);
+  const result = await optimizeImage(input, {
+    x: 0.25,
+    y: 0.25,
+    width: 0.5,
+    height: 0.5,
+  });
+  const metadata = await sharp(result.buffer).metadata();
+  assert.deepEqual([metadata.width, metadata.height], [1_600, 1_200]);
 });
 
-test("media cover stores one bounded image", async () => {
-  const input = await createTestImage(1_080, 1_440);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.mediaCover.original);
-  const original = await sharp(result.original).metadata();
-  assert.deepEqual([original.width, original.height], [810, 1_080]);
-  assert.equal(IMAGE_PROFILES.mediaCover.thumbnail, undefined);
+test("image orientation is normalized before crop coordinates are applied", async () => {
+  const input = await sharp({
+    create: {
+      width: 400,
+      height: 200,
+      channels: 3,
+      background: { r: 80, g: 140, b: 220 },
+    },
+  })
+    .jpeg()
+    .withMetadata({ orientation: 6 })
+    .toBuffer();
+  const result = await optimizeImage(input, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 0.5,
+  });
+  const metadata = await sharp(result.buffer).metadata();
+  assert.deepEqual([metadata.width, metadata.height], [200, 200]);
+  assert.equal(metadata.orientation, undefined);
+  assert.equal(metadata.exif, undefined);
 });
 
-test("key moment photos keep one bounded lossy original", async () => {
-  const input = await createTestImage(3_200, 2_400);
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.keyMoment.original);
-  const original = await sharp(result.original).metadata();
-  assert.deepEqual([original.width, original.height], [2_560, 1_920]);
-  assert.equal(IMAGE_PROFILES.keyMoment.original.quality, 92);
-  assert.equal(IMAGE_PROFILES.keyMoment.thumbnail, undefined);
+test("image crop metadata accepts only normalized rectangles", () => {
+  assert.deepEqual(parseImageCrop('{"x":0.1,"y":0.2,"width":0.6,"height":0.5}'), {
+    x: 0.1,
+    y: 0.2,
+    width: 0.6,
+    height: 0.5,
+  });
+  assert.equal(parseImageCrop(""), undefined);
+  assert.throws(
+    () => parseImageCrop('{"x":0.8,"y":0,"width":0.3,"height":1}'),
+    (error) => error?.statusCode === 400 && error?.code === "INVALID_IMAGE_CROP",
+  );
+  assert.throws(
+    () => parseImageCrop('{"x":null,"y":0,"width":1,"height":1}'),
+    (error) => error?.statusCode === 400 && error?.code === "INVALID_IMAGE_CROP",
+  );
 });
 
 test("image optimization preserves transparent pixels", async () => {
@@ -123,8 +136,8 @@ test("image optimization preserves transparent pixels", async () => {
   })
     .png()
     .toBuffer();
-  const result = await optimizeOriginalImage(input, IMAGE_PROFILES.dish.original);
-  const metadata = await sharp(result.original).metadata();
+  const result = await optimizeImage(input);
+  const metadata = await sharp(result.buffer).metadata();
   assert.equal(metadata.hasAlpha, true);
 });
 
@@ -135,15 +148,14 @@ test("images above the decoded pixel limit are rejected before processing", asyn
     }"><rect width="100%" height="100%" fill="red"/></svg>`,
   );
   await assert.rejects(
-    optimizeOriginalImage(oversizedSvg, IMAGE_PROFILES.dish.original),
+    optimizeImage(oversizedSvg),
     (error) => error?.statusCode === 413 && error?.code === "IMAGE_PIXELS_TOO_LARGE",
   );
 });
 
-test("optimized storage paths are versioned and recognizable", () => {
-  const paths = optimizedImagePaths("users/user/dishes/dish/revision");
-  assert.equal(paths.imagePath, "users/user/dishes/dish/revision-cost-v4.webp");
-  assert.equal(isOptimizedImagePath(paths.imagePath), true);
-  assert.equal(isOptimizedImagePath("users/user/dishes/dish/revision-normalized-v3.webp"), false);
-  assert.equal(isOptimizedImagePath("users/user/dishes/dish/original.png"), false);
+test("new image storage paths identify the shared master policy", () => {
+  assert.equal(
+    standardImagePath("users/user/dishes/dish/revision"),
+    "users/user/dishes/dish/revision-master-v1.webp",
+  );
 });

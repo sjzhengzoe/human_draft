@@ -44,7 +44,8 @@ test("account section displays and copies the internal user UUID", async () => {
   assert.match(logic, /userId: user\.id/);
   assert.match(logic, /handleCopyUserIdTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
   assert.doesNotMatch(logic, /handleCopyOpenIdTap|accountIdText/);
-  assert.match(logic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\(pendingAvatarPath\)/);
+  assert.match(logic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);
+  assert.match(logic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
   assert.match(markup, /class="settings-section__title">存储空间</);
   assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
   assert.match(markup, /公开测试期间仅展示实际用量/);

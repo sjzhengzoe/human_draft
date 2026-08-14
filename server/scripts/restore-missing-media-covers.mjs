@@ -3,8 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { config } from "../config.mjs";
 import {
-  IMAGE_PROFILES,
-  optimizeOriginalImage,
+  optimizeImage,
 } from "../lib/image-processing.mjs";
 import {
   cosObjectKey,
@@ -217,15 +216,15 @@ async function main() {
       }
       if (!sourceBuffer.length) throw new Error("原始封面备份为空");
 
-      const optimized = await optimizeOriginalImage(sourceBuffer, IMAGE_PROFILES.mediaCover.original);
+      const optimized = await optimizeImage(sourceBuffer);
       await putCosObject({
         key,
-        buffer: optimized.original,
-        contentType: optimized.originalContentType,
+        buffer: optimized.buffer,
+        contentType: optimized.contentType,
         cacheControl: "3600",
       });
       const uploaded = await getCosObject(key);
-      if (!uploaded.equals(optimized.original)) throw new Error("上传后逐字节校验失败");
+      if (!uploaded.equals(optimized.buffer)) throw new Error("上传后逐字节校验失败");
       item.sourceBytes = sourceBuffer.length;
       item.sourceSha256 = sha256(sourceBuffer);
       item.uploadedBytes = uploaded.length;

@@ -12,6 +12,7 @@ import type {
   MenuScheduleSourceKind
 } from "../types/api"
 import type { DiningScene } from "../types/dining"
+import type { ImageCrop } from "../types/images"
 import { request, upload } from "./request"
 import { markMenuDataChanged } from "../utils/menu-data-revision"
 
@@ -238,10 +239,12 @@ export async function createMenuPlace(input: {
   name: string
   outsideCategoryId: string
   imagePath: string
+  imageCrop?: ImageCrop | null
 }): Promise<MenuPlace> {
   const data = await upload<{ place: MenuPlace }>({
     path: "/api/menu-places",
     filePath: input.imagePath,
+    imageCrop: input.imageCrop,
     formData: {
       name: input.name,
       outside_category_id: input.outsideCategoryId
@@ -264,10 +267,15 @@ export async function updateMenuPlace(
   return normalizeMenuPlace(data.place)
 }
 
-export async function replaceMenuPlaceImage(id: string, imagePath: string): Promise<MenuPlace> {
+export async function replaceMenuPlaceImage(
+  id: string,
+  imagePath: string,
+  imageCrop?: ImageCrop | null
+): Promise<MenuPlace> {
   const data = await upload<{ place: MenuPlace }>({
     path: `/api/menu-places/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   markMenuDataChanged()
   return normalizeMenuPlace(data.place)
@@ -283,6 +291,7 @@ export async function createDish(input: {
   placeId: string
   categoryId?: string
   imagePath?: string
+  imageCrop?: ImageCrop | null
   mealPeriods: MealPeriod[]
   mainIngredients?: string[]
   introduction?: string
@@ -305,6 +314,7 @@ export async function createDish(input: {
     ? await upload<{ dish: Dish }>({
       path: "/api/dishes",
       filePath: input.imagePath,
+      imageCrop: input.imageCrop,
       formData: payload
     })
     : await request<{ dish: Dish }>({
@@ -339,10 +349,15 @@ export async function updateDish(
   return normalizeDish(data.dish)
 }
 
-export async function replaceDishImage(id: string, imagePath: string): Promise<Dish> {
+export async function replaceDishImage(
+  id: string,
+  imagePath: string,
+  imageCrop?: ImageCrop | null
+): Promise<Dish> {
   const data = await upload<{ dish: Dish }>({
     path: `/api/dishes/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   markMenuDataChanged()
   return normalizeDish(data.dish)

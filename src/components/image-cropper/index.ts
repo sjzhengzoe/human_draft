@@ -1,3 +1,5 @@
+import type { ImageCrop } from "../../types/images"
+
 type CropShape = "circle" | "square" | "rectangle"
 type CropHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w"
 
@@ -58,11 +60,6 @@ type CropGesture = {
   startFrame: CropFrame
 }
 
-type TouchPoint = {
-  clientX: number
-  clientY: number
-}
-
 type ImageInfo = {
   width: number
   height: number
@@ -77,6 +74,7 @@ const CANVAS_ID = "imageCropperCanvas"
 const WORKSPACE_INSET_RPX = 24
 const MIN_CROP_PX = 56
 const EXPORT_EDGE_GUARD_PX = 2
+const CROP_PREVIEW_MAX_EDGE = 1080
 const RATIO_OPTIONS = [
   { label: "自由", value: 0 },
   { label: "1:1", value: 1 },
@@ -99,18 +97,6 @@ Component({
     title: {
       type: String,
       value: "裁剪图片"
-    },
-    outputSize: {
-      type: Number,
-      value: 1080
-    },
-    outputType: {
-      type: String,
-      value: "png"
-    },
-    outputQuality: {
-      type: Number,
-      value: 0.86
     },
     aspectRatio: {
       type: Number,
@@ -352,50 +338,53 @@ Component({
       this.setData({ processing: true })
       wx.showLoading({ title: "保存中", mask: true })
       try {
-        const canvas = await this.getCanvas()
-        const image = await loadCanvasImage(canvas, this.data.displaySrc || this.properties.src)
-        const imageScaleX = state.naturalWidth / state.imageWidth
-        const imageScaleY = state.naturalHeight / state.imageHeight
-        const sourceX = clamp(
-          (state.cropLeft - state.imageLeft) * imageScaleX,
-          0,
-          state.naturalWidth
-        )
-        const sourceY = clamp(
-          (state.cropTop - state.imageTop) * imageScaleY,
-          0,
-          state.naturalHeight
-        )
-        const sourceWidth = Math.min(state.cropWidth * imageScaleX, state.naturalWidth - sourceX)
-        const sourceHeight = Math.min(state.cropHeight * imageScaleY, state.naturalHeight - sourceY)
-        const maximumOutputWidth = Math.max(Number(this.properties.outputSize) || 1080, 320)
-        const outputScale = Math.min(maximumOutputWidth / sourceWidth, 1)
-        const outputWidth = Math.max(Math.round(sourceWidth * outputScale), 1)
-        const outputHeight = Math.max(Math.round(sourceHeight * outputScale), 1)
+        if (!cropped) {
+          resultPath = this.data.displaySrc || this.properties.src
+        } else {
+          const canvas = await this.getCanvas()
+          const image = await loadCanvasImage(canvas, this.data.displaySrc || this.properties.src)
+          const imageScaleX = state.naturalWidth / state.imageWidth
+          const imageScaleY = state.naturalHeight / state.imageHeight
+          const sourceX = clamp(
+            (state.cropLeft - state.imageLeft) * imageScaleX,
+            0,
+            state.naturalWidth
+          )
+          const sourceY = clamp(
+            (state.cropTop - state.imageTop) * imageScaleY,
+            0,
+            state.naturalHeight
+          )
+          const sourceWidth = Math.min(state.cropWidth * imageScaleX, state.naturalWidth - sourceX)
+          const sourceHeight = Math.min(state.cropHeight * imageScaleY, state.naturalHeight - sourceY)
+          const outputScale = Math.min(CROP_PREVIEW_MAX_EDGE / sourceWidth, 1)
+          const outputWidth = Math.max(Math.round(sourceWidth * outputScale), 1)
+          const outputHeight = Math.max(Math.round(sourceHeight * outputScale), 1)
 
-        canvas.width = outputWidth
-        canvas.height = outputHeight
-        const ctx = canvas.getContext("2d")
-        ctx.clearRect(0, 0, outputWidth, outputHeight)
-        ctx.drawImage(
-          image,
-          sourceX,
-          sourceY,
-          sourceWidth,
-          sourceHeight,
-          -EXPORT_EDGE_GUARD_PX,
-          -EXPORT_EDGE_GUARD_PX,
-          outputWidth + EXPORT_EDGE_GUARD_PX * 2,
-          outputHeight + EXPORT_EDGE_GUARD_PX * 2
-        )
+          canvas.width = outputWidth
+          canvas.height = outputHeight
+          const ctx = canvas.getContext("2d")
+          ctx.clearRect(0, 0, outputWidth, outputHeight)
+          ctx.drawImage(
+            image,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            -EXPORT_EDGE_GUARD_PX,
+            -EXPORT_EDGE_GUARD_PX,
+            outputWidth + EXPORT_EDGE_GUARD_PX * 2,
+            outputHeight + EXPORT_EDGE_GUARD_PX * 2
+          )
 
-        resultPath = await canvasToTempFilePath(
-          canvas,
-          outputWidth,
-          outputHeight,
-          normalizedOutputType(this.properties.outputType),
-          normalizedOutputQuality(this.properties.outputQuality)
-        )
+          resultPath = await canvasToTempFilePath(
+            canvas,
+            outputWidth,
+            outputHeight,
+            "png",
+            1
+          )
+        }
       } catch (error) {
         console.error("保存裁剪图片失败", error)
         errorMessage = cropExportErrorMessage(error)
@@ -409,6 +398,8 @@ Component({
       }
       this.triggerEvent("confirm", {
         tempFilePath: resultPath,
+        sourceFilePath: this.data.displaySrc || this.properties.src,
+        crop: cropped ? normalizedCrop(state) : undefined,
         cropped
       })
     },
@@ -628,6 +619,22 @@ function isCropped(state: CropState) {
     || Math.abs(state.cropHeight - state.imageHeight) > tolerance
 }
 
+function normalizedCrop(state: CropState): ImageCrop {
+  const imageScaleX = state.naturalWidth / state.imageWidth
+  const imageScaleY = state.naturalHeight / state.imageHeight
+  const sourceX = clamp((state.cropLeft - state.imageLeft) * imageScaleX, 0, state.naturalWidth)
+  const sourceY = clamp((state.cropTop - state.imageTop) * imageScaleY, 0, state.naturalHeight)
+  const sourceWidth = Math.min(state.cropWidth * imageScaleX, state.naturalWidth - sourceX)
+  const sourceHeight = Math.min(state.cropHeight * imageScaleY, state.naturalHeight - sourceY)
+  const rounded = (value: number) => Number(value.toFixed(6))
+  return {
+    x: rounded(sourceX / state.naturalWidth),
+    y: rounded(sourceY / state.naturalHeight),
+    width: rounded(sourceWidth / state.naturalWidth),
+    height: rounded(sourceHeight / state.naturalHeight)
+  }
+}
+
 function clamp(value: number, minimum: number, maximum: number) {
   if (maximum < minimum) return maximum
   return Math.min(maximum, Math.max(minimum, value))
@@ -664,14 +671,6 @@ function canvasToTempFilePath(
       fail: reject
     })
   })
-}
-
-function normalizedOutputType(value: string): "jpg" | "png" {
-  return value === "png" ? "png" : "jpg"
-}
-
-function normalizedOutputQuality(value: number): number {
-  return Number.isFinite(value) ? clamp(value, 0.5, 1) : 0.86
 }
 
 function cropExportErrorMessage(error: unknown): string {

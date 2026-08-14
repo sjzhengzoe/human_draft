@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
-import { IMAGE_PROFILES } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   readMultipartImage,
@@ -11,7 +10,7 @@ import {
   createSignedUrlMap,
   removeStorageImages,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
-  uploadOptimizedOriginalImage,
+  uploadStandardImage,
 } from "../shared/image-storage.mjs";
 import {
   enumValue,
@@ -76,12 +75,12 @@ function assertActivityImage(image) {
 
 async function uploadActivityImage(supabase, userId, itemId, image) {
   assertActivityImage(image);
-  return uploadOptimizedOriginalImage(supabase, {
+  return uploadStandardImage(supabase, {
     bucketName: config.activityBucket,
     basePath: `users/${userId}/activities/${itemId}/${randomUUID()}`,
     userId,
     buffer: image.buffer,
-    profile: IMAGE_PROFILES.activity.original,
+    crop: image.crop,
     uploadErrorMessage: "上传活动封面失败。",
   });
 }

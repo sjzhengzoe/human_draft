@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope } from "../types/api"
+import type { ImageCrop } from "../types/images"
 import { ensureLogin, redirectToLogin, refreshLoginSession } from "./auth"
 
 export class ApiRequestError extends Error {
@@ -82,17 +83,20 @@ type UploadOptions = {
   filePath: string
   fieldName?: string
   formData?: Record<string, string>
+  imageCrop?: ImageCrop | null
 }
 
 async function sendUpload<T>(options: UploadOptions, canRefresh = true): Promise<T> {
   const session = await ensureLogin()
+  const formData = { ...(options.formData || {}) }
+  if (options.imageCrop) formData.image_crop = JSON.stringify(options.imageCrop)
   const response = await new Promise<WechatMiniprogram.UploadFileSuccessCallbackResult>(
     (resolve, reject) => {
       wx.uploadFile({
         url: `${API_BASE_URL}${options.path}`,
         filePath: options.filePath,
         name: options.fieldName || "image",
-        formData: options.formData,
+        formData: Object.keys(formData).length ? formData : undefined,
         header: { Authorization: `Bearer ${session.token}` },
         success: resolve,
         fail: reject

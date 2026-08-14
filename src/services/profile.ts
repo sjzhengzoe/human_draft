@@ -1,4 +1,5 @@
 import type { AppUser } from "../types/api"
+import type { ImageCrop } from "../types/images"
 import { replaceCurrentUser } from "./auth"
 import { request, upload } from "./request"
 
@@ -12,10 +13,14 @@ export async function updateAccountProfile(displayName: string): Promise<AppUser
   return data.user
 }
 
-export async function updateAccountAvatar(filePath: string): Promise<AppUser> {
+export async function updateAccountAvatar(
+  filePath: string,
+  imageCrop?: ImageCrop | null
+): Promise<AppUser> {
   const data = await upload<{ user: AppUser }>({
     path: "/api/auth/avatar",
     filePath,
+    imageCrop,
     fieldName: "avatar"
   })
   replaceCurrentUser(data.user)

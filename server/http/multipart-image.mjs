@@ -2,13 +2,48 @@ import { assertCondition } from "../lib/errors.mjs";
 
 export const STANDARD_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-export async function readMultipartImage(request) {
+export function parseImageCrop(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  let crop;
+  try {
+    crop = typeof value === "string" ? JSON.parse(value) : value;
+  } catch (_error) {
+    assertCondition(false, 400, "INVALID_IMAGE_CROP", "图片裁剪范围无效。" );
+  }
+  assertCondition(
+    crop && typeof crop === "object" && !Array.isArray(crop),
+    400,
+    "INVALID_IMAGE_CROP",
+    "图片裁剪范围无效。",
+  );
+  const normalized = Object.fromEntries(
+    ["x", "y", "width", "height"].map((key) => [key, crop[key]]),
+  );
+  assertCondition(
+    Object.values(normalized).every(
+      (coordinate) => typeof coordinate === "number" && Number.isFinite(coordinate),
+    )
+      && normalized.x >= 0
+      && normalized.y >= 0
+      && normalized.width > 0
+      && normalized.height > 0
+      && normalized.x + normalized.width <= 1.000001
+      && normalized.y + normalized.height <= 1.000001,
+    400,
+    "INVALID_IMAGE_CROP",
+    "图片裁剪范围无效。",
+  );
+  return normalized;
+}
+
+export async function readMultipartImage(request, options = {}) {
+  const fieldName = options.fieldName || "image";
   const fields = {};
   let image;
 
   for await (const part of request.parts()) {
     if (part.type === "file") {
-      if (part.fieldname !== "image") {
+      if (part.fieldname !== fieldName) {
         part.file.resume();
         continue;
       }
@@ -31,6 +66,9 @@ export async function readMultipartImage(request) {
       fields[part.fieldname] = String(part.value ?? "").trim();
     }
   }
+
+  if (image) image.crop = parseImageCrop(fields.image_crop);
+  delete fields.image_crop;
 
   return { fields, image };
 }

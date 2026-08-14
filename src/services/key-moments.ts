@@ -1,4 +1,5 @@
 import type { KeyMoment, KeyMomentGranularity } from "../types/key-moments"
+import type { ImageCrop } from "../types/images"
 import {
   cacheKeyMoments,
   getCachedKeyMoments,
@@ -69,11 +70,13 @@ export async function createKeyMoment(input: {
   content: string
   occurredAt: string
   imagePath?: string
+  imageCrop?: ImageCrop | null
 }): Promise<KeyMoment> {
   if (input.imagePath) {
     const data = await upload<{ item: KeyMoment }>({
       path: "/api/key-moments",
       filePath: input.imagePath,
+      imageCrop: input.imageCrop,
       formData: {
         content: input.content,
         occurred_at: input.occurredAt
@@ -104,10 +107,15 @@ export async function updateKeyMoment(
   return data.item
 }
 
-export async function replaceKeyMomentImage(id: string, imagePath: string): Promise<KeyMoment> {
+export async function replaceKeyMomentImage(
+  id: string,
+  imagePath: string,
+  imageCrop?: ImageCrop | null
+): Promise<KeyMoment> {
   const data = await upload<{ item: KeyMoment }>({
     path: `/api/key-moments/${id}/image`,
-    filePath: imagePath
+    filePath: imagePath,
+    imageCrop
   })
   updateCachedKeyMoment(data.item)
   return data.item

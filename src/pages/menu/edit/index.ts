@@ -11,6 +11,7 @@ import {
   updateDish
 } from "../../../services/menu"
 import type { Category, MealPeriod, MenuRecordType } from "../../../types/api"
+import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -71,6 +72,8 @@ Page({
     mealOptions: DEFAULT_MEAL_OPTIONS.map((option) => ({ ...option })),
     currentImageUrl: "",
     selectedImagePath: "",
+    selectedImageUploadPath: "",
+    selectedImageCrop: null as ImageCrop | null,
     selectingImage: false,
     showImageCropper: false,
     cropSourcePath: "",
@@ -290,6 +293,7 @@ Page({
     wx.chooseMedia({
       count: 1,
       mediaType: ["image"],
+      sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
@@ -315,12 +319,14 @@ Page({
   },
 
   handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<{ tempFilePath?: string }>
+    event: WechatMiniprogram.CustomEvent<ImageCropResult>
   ) {
-    const tempFilePath = event.detail.tempFilePath
-    if (!tempFilePath) return
+    const { tempFilePath, sourceFilePath, crop } = event.detail
+    if (!tempFilePath || !sourceFilePath) return
     this.setData({
       selectedImagePath: tempFilePath,
+      selectedImageUploadPath: sourceFilePath,
+      selectedImageCrop: crop || null,
       showImageCropper: false,
       cropSourcePath: ""
     })
@@ -384,7 +390,7 @@ Page({
       wx.showToast({ title: "用餐地点无效", icon: "none" })
       return
     }
-    if (!this.data.dishId && !this.data.selectedImagePath && recordType === "home") {
+    if (!this.data.dishId && !this.data.selectedImageUploadPath && recordType === "home") {
       wx.showToast({ title: "请选择菜品图片", icon: "none" })
       return
     }
@@ -404,15 +410,20 @@ Page({
           taste,
           flavor_options: flavorOptions
         })
-        if (this.data.selectedImagePath) {
-          await replaceDishImage(this.data.dishId, this.data.selectedImagePath)
+        if (this.data.selectedImageUploadPath) {
+          await replaceDishImage(
+            this.data.dishId,
+            this.data.selectedImageUploadPath,
+            this.data.selectedImageCrop
+          )
         }
       } else {
         await createDish({
           name,
           placeId: this.data.placeId,
           categoryId: recordType === "home" ? category?.id : undefined,
-          imagePath: this.data.selectedImagePath || undefined,
+          imagePath: this.data.selectedImageUploadPath || undefined,
+          imageCrop: this.data.selectedImageCrop,
           mealPeriods,
           mainIngredients,
           introduction,

@@ -497,7 +497,6 @@
   src="{{entryCropSourcePath}}"
   shape="rectangle"
   aspect-ratio="0.75"
-  output-size="1080"
   title="裁剪为 3:4 影视封面"
   bind:cancel="handleEntryImageCropCancel"
   bind:confirm="handleEntryImageCropConfirm"

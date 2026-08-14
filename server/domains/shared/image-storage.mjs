@@ -8,8 +8,8 @@ import {
   putCosObject,
 } from "../../lib/cos-storage.mjs";
 import {
-  optimizeOriginalImage,
-  optimizedImagePaths,
+  optimizeImage,
+  standardImagePath,
 } from "../../lib/image-processing.mjs";
 
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
@@ -73,13 +73,13 @@ export async function uploadStorageImage(
   throw error;
 }
 
-export async function uploadOptimizedOriginalImage(
+export async function uploadStandardImage(
   supabase,
-  { bucketName, basePath, userId, buffer, profile, uploadErrorMessage },
+  { bucketName, basePath, userId, buffer, crop, cacheControl, uploadErrorMessage },
 ) {
   let optimized;
   try {
-    optimized = await optimizeOriginalImage(buffer, profile);
+    optimized = await optimizeImage(buffer, crop);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     const wrapped = new HttpError(400, "INVALID_IMAGE", "图片文件损坏或格式不受支持。" );
@@ -87,15 +87,15 @@ export async function uploadOptimizedOriginalImage(
     throw wrapped;
   }
 
-  const { imagePath } = optimizedImagePaths(basePath);
+  const imagePath = standardImagePath(basePath);
   try {
     await uploadStorageImage(supabase, {
       bucketName,
       path: imagePath,
       userId,
-      buffer: optimized.original,
-      cacheControl: PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
-      contentType: optimized.originalContentType,
+      buffer: optimized.buffer,
+      cacheControl: cacheControl ?? PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
+      contentType: optimized.contentType,
     });
   } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_UPLOAD_FAILED", uploadErrorMessage);
