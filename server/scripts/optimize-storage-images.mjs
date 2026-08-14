@@ -17,6 +17,7 @@ import { getSupabaseAdmin } from "../lib/supabase.mjs";
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const applyChanges = process.argv.includes("--apply");
 const rollbackArgument = process.argv.find((value) => value.startsWith("--rollback="));
+const resumeArgument = process.argv.find((value) => value.startsWith("--resume="));
 const manifestArgument = process.argv.find((value) => value.startsWith("--manifest="));
 const limitArgument = process.argv.find((value) => value.startsWith("--limit="));
 const parsedLimit = Number(limitArgument?.slice("--limit=".length));
@@ -29,6 +30,9 @@ const defaultManifestPath = resolve(
   `image-cost-migration-${runId}.json`,
 );
 const manifestPath = resolve(manifestArgument?.slice("--manifest=".length) || defaultManifestPath);
+const resumePath = resumeArgument
+  ? resolve(resumeArgument.slice("--resume=".length))
+  : "";
 const rollbackPath = rollbackArgument
   ? resolve(rollbackArgument.slice("--rollback=".length))
   : "";
@@ -112,6 +116,9 @@ function assertRuntimeConfig() {
   }
   if (applyChanges && rollbackPath) {
     throw new Error("--apply 与 --rollback 不能同时使用。");
+  }
+  if ([applyChanges, Boolean(rollbackPath), Boolean(resumePath)].filter(Boolean).length > 1) {
+    throw new Error("--apply、--rollback 与 --resume 只能使用一个。");
   }
 }
 
@@ -461,41 +468,55 @@ async function switchPlan(supabase, plan, values, expectedValues) {
   return Boolean(data);
 }
 
-async function rollbackPlans(supabase, manifest, { save = true } = {}) {
+async function recordMatches(supabase, plan, values) {
+  let query = supabase.from(plan.table).select("id").eq("id", plan.id);
+  query = addConditions(query, values);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw new Error(`${plan.table} 状态核对失败：${error.message}`);
+  return Boolean(data);
+}
+
+async function rollbackPlans(
+  supabase,
+  manifest,
+  { save = true, path = rollbackPath || manifestPath } = {},
+) {
   let restored = 0;
   let skipped = 0;
   for (const plan of [...manifest.plans].reverse()) {
     if (plan.status !== "switched") continue;
     const changed = await switchPlan(supabase, plan, plan.oldValues, plan.newValues);
-    if (changed) {
+    if (changed || await recordMatches(supabase, plan, plan.oldValues)) {
       plan.status = "rolled_back";
-      restored += 1;
+      if (changed) restored += 1;
     } else {
       skipped += 1;
     }
-    if (save) await saveManifest(manifest, rollbackPath || manifestPath);
+    if (save) await saveManifest(manifest, path);
   }
   return { restored, skipped };
 }
 
-async function switchReferences(supabase, manifest) {
+async function switchReferences(supabase, manifest, path = manifestPath) {
   try {
     for (const [index, plan] of manifest.plans.entries()) {
       const changed = await switchPlan(supabase, plan, plan.newValues, plan.oldValues);
-      if (!changed) throw new Error(`${plan.table} 的记录已变化，已停止切换。`);
+      if (!changed && !await recordMatches(supabase, plan, plan.newValues)) {
+        throw new Error(`${plan.table} 的记录已变化，已停止切换。`);
+      }
       plan.status = "switched";
-      await saveManifest(manifest);
+      await saveManifest(manifest, path);
       if ((index + 1) % 50 === 0 || index + 1 === manifest.plans.length) {
         console.log(`已切换 ${index + 1}/${manifest.plans.length} 条数据库记录。`);
       }
     }
   } catch (error) {
     manifest.status = "rolling_back";
-    await saveManifest(manifest);
-    const result = await rollbackPlans(supabase, manifest);
+    await saveManifest(manifest, path);
+    const result = await rollbackPlans(supabase, manifest, { path });
     manifest.status = "rolled_back_after_failure";
     manifest.failure = error.message;
-    await saveManifest(manifest);
+    await saveManifest(manifest, path);
     throw new Error(`数据库切换失败，已自动恢复 ${result.restored} 条记录：${error.message}`);
   }
 }
@@ -519,11 +540,37 @@ async function performRollback(supabase) {
   console.log(`回退完成：恢复 ${result.restored} 条，跳过 ${result.skipped} 条；文件均未删除。`);
 }
 
+async function resumeMigration(supabase) {
+  const manifest = JSON.parse(await readFile(resumePath, "utf8"));
+  if (!manifest.oldFilesRetained || manifest.migrationDeletesFiles !== false) {
+    throw new Error("清单不符合保留旧文件要求，拒绝继续。");
+  }
+  if (manifest.transforms.some((transform) => transform.status !== "uploaded")) {
+    throw new Error("清单中存在未完成上传的图片，不能只恢复数据库切换。");
+  }
+  manifest.plans.forEach((plan) => {
+    if (plan.status === "rolled_back") plan.status = "planned";
+  });
+  manifest.status = "resuming";
+  await saveManifest(manifest, resumePath);
+  await switchReferences(supabase, manifest, resumePath);
+  await verifyReferences(supabase, manifest);
+  manifest.status = "complete";
+  manifest.completedAt = new Date().toISOString();
+  delete manifest.failure;
+  await saveManifest(manifest, resumePath);
+  console.log("迁移恢复完成，已复用之前上传并校验的新图。");
+}
+
 async function main() {
   assertRuntimeConfig();
   const supabase = getSupabaseAdmin();
   if (rollbackPath) {
     await performRollback(supabase);
+    return;
+  }
+  if (resumePath) {
+    await resumeMigration(supabase);
     return;
   }
 

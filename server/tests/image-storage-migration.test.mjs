@@ -34,6 +34,8 @@ test("historical image migration keeps a private manifest and conditional rollba
   assert.match(script, /mode: 0o700/);
   assert.match(script, /mode: 0o600/);
   assert.match(script, /--rollback=/);
+  assert.match(script, /--resume=/);
   assert.match(script, /rolling_back/);
   assert.match(script, /addConditions\(query, expectedValues\)/);
+  assert.match(script, /recordMatches\(supabase, plan, plan\.newValues\)/);
 });
