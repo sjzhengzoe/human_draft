@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { config } from "../config.mjs";
 import {
@@ -15,6 +15,8 @@ import {
 import { getSupabaseAdmin } from "../lib/supabase.mjs";
 
 const apply = process.argv.includes("--apply");
+const sourceManifestArgument = process.argv.find((argument) => argument.startsWith("--source-manifest="));
+const sourceManifestPath = sourceManifestArgument?.slice("--source-manifest=".length) || "";
 const sourceDirectory = process.env.MEDIA_COVER_RECOVERY_DIR
   || resolve(process.cwd(), "..", "private-image-migrations", "media-cover-recovery");
 const originalsDirectory = resolve(sourceDirectory, "originals");
@@ -67,7 +69,8 @@ function chooseCandidate(title, candidates) {
       return false;
     }
   });
-  const exact = usable.find((candidate) => normalizedTitle(candidate.title) === target);
+  const exact = usable.find((candidate) => [candidate.title, candidate.sub_title]
+    .some((candidateTitle) => normalizedTitle(candidateTitle) === target));
   if (exact) return { candidate: exact, match: "exact" };
   const close = usable.find((candidate) => {
     const candidateTitle = normalizedTitle(candidate.title);
@@ -75,6 +78,16 @@ function chooseCandidate(title, candidates) {
   });
   if (close) return { candidate: close, match: "contains" };
   return usable.length ? { candidate: usable[0], match: "first-result" } : null;
+}
+
+function trustedSourceImageUrl(value) {
+  const url = new URL(String(value || ""));
+  const trustedHost = url.hostname === "lain.bgm.tv"
+    || url.hostname.endsWith(".doubanio.com");
+  if (url.protocol !== "https:" || !trustedHost) {
+    throw new Error("封面来源不在允许的影视资料域名中");
+  }
+  return url.toString();
 }
 
 async function fetchWithRetry(url, options = {}, attempts = 3) {
@@ -113,6 +126,12 @@ async function main() {
     throw new Error("当前图片存储来源不是 COS，拒绝执行恢复。" );
   }
   const supabase = getSupabaseAdmin();
+  const sourceManifest = sourceManifestPath
+    ? JSON.parse(await readFile(sourceManifestPath, "utf8"))
+    : null;
+  const sourceByPath = new Map((sourceManifest?.items || [])
+    .filter((item) => item?.path && item?.source?.imageUrl)
+    .map((item) => [item.path, item]));
   const [entriesResult, objects] = await Promise.all([
     supabase.from("media_entries").select("id,title,media_type,cover_url").order("title"),
     listCosObjects(mediaCoverPrefix),
@@ -149,14 +168,19 @@ async function main() {
     };
     manifest.items.push(item);
     try {
-      const match = await searchCover(entry.title);
+      const prepared = sourceByPath.get(entry.path);
+      const match = prepared
+        ? { candidate: prepared.source, match: prepared.match || "prepared" }
+        : await searchCover(entry.title);
       if (!match) throw new Error("没有搜索到可用封面");
       item.match = match.match;
       item.source = {
+        provider: String(match.candidate.provider || (prepared ? "prepared" : "douban")),
         id: String(match.candidate.id || ""),
         title: String(match.candidate.title || ""),
+        subTitle: String(match.candidate.subTitle || match.candidate.sub_title || ""),
         year: String(match.candidate.year || ""),
-        imageUrl: String(match.candidate.img || ""),
+        imageUrl: trustedSourceImageUrl(match.candidate.imageUrl || match.candidate.img),
       };
       item.status = apply ? "matched" : "planned";
       if (!apply) continue;
