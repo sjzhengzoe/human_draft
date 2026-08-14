@@ -84,6 +84,8 @@ test("Supabase to COS migration is backup-first and does not delete source origi
   assert.match(migration, /uploadObjects\(cos, manifest\)/);
   assert.match(migration, /verifyObjects\(cos, manifest\)/);
   assert.match(migration, /status = "complete"/);
+  assert.match(migration, /\.range\(from, from \+ INVENTORY_PAGE_SIZE - 1\)/);
+  assert.match(migration, /--only=/);
   assert.doesNotMatch(migration, /storage\.from\([^)]+\)\.remove|emptyBucket|deleteBucket/);
 });
 
@@ -102,6 +104,7 @@ test("private bucket rebuild keeps a verified backup until every object is resto
   assert.match(rebuild, /after\.count !== before\.count \|\| after\.bytes !== before\.bytes/);
   assert.match(rebuild, /publicResponse\.status < 400 \|\| !signedResponse\.ok/);
   assert.match(rebuild, /await rm\(backupRoot/);
+  assert.match(rebuild, /\.range\(from, from \+ MANIFEST_PAGE_SIZE - 1\)/);
 });
 
 test("signed image URL batches stay below the storage API limit", async () => {

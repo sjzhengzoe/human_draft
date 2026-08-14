@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { config } from "../../config.mjs";
 import { assertCondition, HttpError } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
   createSignedUrlMap,
+  removeStorageImages,
   uploadStorageImage,
   USER_IMAGE_SIGNED_URL_TTL_SECONDS,
 } from "../shared/image-storage.mjs";
@@ -86,7 +88,16 @@ async function normalizeAvatar(buffer) {
 }
 
 export async function updateUserAvatar(supabase, userId, buffer) {
-  const path = `users/${userId}/avatar.webp`;
+  const { data: currentUser, error: currentUserError } = await supabase
+    .from("app_users")
+    .select("avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+  throwSupabaseError(currentUserError, "读取当前头像失败。" );
+  assertCondition(currentUser, 404, "USER_NOT_FOUND", "账号不存在。" );
+
+  const previousPath = avatarStoragePath(currentUser.avatar_url);
+  const path = `users/${userId}/avatar-${Date.now()}-${randomUUID()}.webp`;
   const normalized = await normalizeAvatar(buffer);
   try {
     await uploadStorageImage(supabase, {
@@ -95,7 +106,7 @@ export async function updateUserAvatar(supabase, userId, buffer) {
       buffer: normalized,
       cacheControl: "0",
       contentType: "image/webp",
-      upsert: true,
+      upsert: false,
     });
   } catch (error) {
     const wrapped = new HttpError(500, "AVATAR_UPLOAD_FAILED", "保存头像失败。" );
@@ -114,6 +125,45 @@ export async function updateUserAvatar(supabase, userId, buffer) {
     .from("app_users")
     .update({ avatar_url: path, profile_completed: true })
     .eq("id", userId);
-  throwSupabaseError(updateError, "更新头像失败。" );
+  if (updateError) {
+    await removeStorageImages(supabase, {
+      bucketName: config.avatarBucket,
+      paths: [path],
+      errorMessage: "清理未完成上传的头像失败。",
+    });
+    throwSupabaseError(updateError, "更新头像失败。" );
+  }
+  if (previousPath && previousPath !== path) {
+    await removeStorageImages(supabase, {
+      bucketName: config.avatarBucket,
+      paths: [previousPath],
+      errorMessage: "清理旧头像失败。",
+    });
+  }
   return avatarUrl;
+}
+
+export async function updateUserDisplayName(supabase, userId, value) {
+  assertCondition(
+    typeof value === "string" && value.trim().length > 0,
+    400,
+    "DISPLAY_NAME_REQUIRED",
+    "请填写昵称。",
+  );
+  const displayName = value.trim();
+  assertCondition(
+    Array.from(displayName).length <= 40,
+    400,
+    "DISPLAY_NAME_TOO_LONG",
+    "昵称不能超过 40 个字符。",
+  );
+  const { data: user, error } = await supabase
+    .from("app_users")
+    .update({ display_name: displayName, profile_completed: true })
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
+  throwSupabaseError(error, "更新昵称失败。" );
+  assertCondition(user, 404, "USER_NOT_FOUND", "账号不存在。" );
+  return displayName;
 }

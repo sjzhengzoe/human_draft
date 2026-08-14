@@ -1069,17 +1069,18 @@
 
           <h3>已完成的备份与复制</h3>
           <ul>
-            <li>迁移清单覆盖 <code>dish-images</code>、<code>activity-images</code>、<code>media-covers</code>、<code>wardrobe-images</code>、<code>key-moment-images</code> 和 <code>user-avatars</code> 六个图片桶。执行时 Supabase 中实际存在 1,000 个对象，共 337,902,128 字节（约 322.25 MiB）。</li>
+            <li>首次迁移清单覆盖 <code>dish-images</code>、<code>activity-images</code>、<code>media-covers</code>、<code>wardrobe-images</code>、<code>key-moment-images</code> 和 <code>user-avatars</code> 六个图片桶，当时 Data API 返回 1,000 个对象，共 337,902,128 字节（约 322.25 MiB）。后续排查头像缺失时确认该结果恰好命中了 Data API 的 1,000 行上限，并不是完整对象总数；迁移脚本现已改为分页拉取，避免后续桶再次被截断。</li>
             <li>1,000 个对象已经全部下载到本机独立备份目录，按“原桶名／原对象路径”保存；同时生成只允许本机所有者读取的 <code>manifest.json</code>，记录桶、路径、字节数、MIME 类型、迁移状态和 SHA-256 文件指纹。备份不进入 Git 仓库。</li>
             <li>同一批 1,000 个对象已复制到腾讯云私有桶 <code>human-draft-images-1258101045</code>（广州），COS 对象键统一为“原 Supabase 桶名／原路径”，避免不同业务模块的同名路径冲突。</li>
             <li>上传后又从 COS 逐个重新下载核验：备份、上传和校验均为 1,000／1,000，字节数与 SHA-256 全部一致，错误和不一致均为 0。</li>
+            <li>头像补迁单独盘点出 2 个 Supabase 对象、10,472 字节，已再次执行“Supabase 备份 → COS 上传 → COS 下载校验”，2／2 全部一致；随后原子地把 2 条旧 Supabase 头像 URL 改为稳定逻辑路径。另有 1 条历史微信 CDN 头像也已按现有头像规格转为 WebP、上传并逐字节校验后切换为 COS 逻辑路径，数据库不再保留外部头像 URL。</li>
             <li>Supabase 云端原图没有删除。本机备份、Supabase 原图和 COS 副本当前同时存在；本次切换不释放 Supabase Storage 空间，原图继续作为回退副本保留。</li>
           </ul>
 
           <h3>存储结构与回退方式</h3>
           <ul>
             <li>服务端增加统一图片存储层：上传、读取短时地址、复制和删除根据 <code>IMAGE_STORAGE_PROVIDER</code> 选择 Supabase 或 COS，业务模块不再直接依赖某一家 Storage SDK。</li>
-            <li>正式运行时设置为 <code>cos</code> 后，新上传、替换和删除只作用于 COS；数据库继续保存现有逻辑路径，因此现有记录无需修改。头像上传也统一保存逻辑路径，外部微信头像地址继续原样使用。</li>
+            <li>正式运行时设置为 <code>cos</code> 后，新上传、替换和删除只作用于 COS；数据库继续保存现有逻辑路径。头像上传同样保存带版本号的逻辑路径，存量 Supabase URL 和历史微信 CDN URL 均已迁入 COS 并完成路径归一化。</li>
             <li>紧急回退只需把服务端存储开关改回 <code>supabase</code> 并重启。因为本轮没有删除 Supabase 原图，切换前已经存在的图片可立即恢复读取；切换后才新增到 COS 的图片如需长期回退，必须先按清单反向复制到 Supabase，不能只改开关。</li>
             <li>COS 使用专用子账号和最小权限策略，只允许当前广州图片桶的对象列表、读取、写入和删除，不使用主账号永久密钥；密钥只写服务器受限环境文件，不写代码、文档、Git 或小程序包。</li>
           </ul>
@@ -1090,9 +1091,9 @@
             <li>当前证书编号为 <code>Zzo9eX36</code>，证书覆盖 <code>images.gufeifei.cn</code>，有效期截至 2026-11-12 14:59:59。到期前必须续签证书并重新确认 COS 域名绑定，不能等图片访问失败后再处理。</li>
             <li>微信小程序后台已把 <code>https://images.gufeifei.cn</code> 加入 <code>downloadFile</code> 合法域名；COS 密钥已写入服务器仅管理员可读的环境文件，没有写入代码、Git 或小程序包。</li>
             <li>兼容代码由提交 <code>7be194f</code> 部署，线上 <code>IMAGE_STORAGE_PROVIDER</code> 已正式切换为 <code>cos</code>，服务重启后进程为正常运行状态，公网健康检查返回 <code>ok: true</code>、配置完整。</li>
-            <li>自定义域名的短时签名图片实测返回 200。又分别抽检菜品、活动、影视封面和关键节点四个实际有对象的模块，均返回 200 且图片字节非空；衣橱和头像桶当前为 0 个对象，无法抽取历史样本，但共用的存储读写路径已经覆盖。</li>
+            <li>自定义域名的短时签名图片实测返回 200。菜品、活动、影视封面和关键节点抽检均返回 200 且图片字节非空；头像迁移后当前 3 个头像的短时签名 HTTPS 地址逐一验证为 200、内容类型均为 WebP，数据库 COS 逻辑路径为 3、外部头像 URL 为 0。</li>
             <li>使用一张独立的 1 像素临时 PNG 完成“上传到 COS → 生成自定义域名签名地址 → 严格 HTTPS 读取并逐字节比对 → 删除 → 确认对象不存在”的完整验证，上传、读取和删除全部通过，测试对象已清理。</li>
-            <li>本轮没有客户端代码改动，因此不需要重新上传小程序体验版。正式页面目测仍建议在下一次打开体验版时覆盖菜品／店铺、菜单历史、活动、影视、衣橱、关键节点和头像；Supabase 图片清理不属于本次切换范围，后续如需释放空间必须另做清单、二次备份和明确授权。</li>
+            <li>首次 COS 切换当时没有客户端代码改动；本次头像补迁同时新增“我的”页头像与昵称编辑，需要在代码提交并重新上传体验版后使用。正式页面目测仍应覆盖菜品／店铺、菜单历史、活动、影视、衣橱、关键节点和头像；Supabase 图片清理不属于本次切换范围，后续如需释放空间必须另做清单、二次备份和明确授权。</li>
           </ul>
 
           <h3>历史兼容审计</h3>

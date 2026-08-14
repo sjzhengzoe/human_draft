@@ -4,7 +4,11 @@ import {
   logoutSession,
   refreshSession
 } from "../domains/auth/service.mjs"
-import { readAvatarImage, updateUserAvatar } from "../domains/auth/profile.mjs"
+import {
+  readAvatarImage,
+  updateUserAvatar,
+  updateUserDisplayName
+} from "../domains/auth/profile.mjs"
 
 export function registerAuthRoutes(app, context) {
   const {
@@ -30,6 +34,26 @@ export function registerAuthRoutes(app, context) {
       ok: true,
       data: await refreshSession(getSupabaseAdmin(), request.refreshAuth)
     })
+  )
+
+  app.put(
+    "/api/auth/profile",
+    { preHandler: authenticated },
+    async (request) => {
+      const displayName = String(request.body?.display_name || "").trim()
+      await contentSecurity.checkText(request.auth.user.openid, displayName)
+      await updateUserDisplayName(
+        getSupabaseAdmin(),
+        request.auth.user.id,
+        displayName
+      )
+      return {
+        ok: true,
+        data: {
+          user: await getAuthenticatedUser(getSupabaseAdmin(), request.auth)
+        }
+      }
+    }
   )
 
   app.post(

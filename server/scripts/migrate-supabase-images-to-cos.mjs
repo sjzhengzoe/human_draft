@@ -24,7 +24,7 @@ const backupRoot = resolve(
 const credentialsPath = process.env.COS_CREDENTIALS_CSV || "";
 const manifestPath = resolve(backupRoot, "manifest.json");
 const objectRoot = resolve(backupRoot, "objects");
-const bucketNames = [
+const allBucketNames = [
   config.dishBucket,
   config.activityBucket,
   config.mediaCoverBucket,
@@ -32,6 +32,12 @@ const bucketNames = [
   config.keyMomentBucket,
   config.avatarBucket,
 ];
+const onlyArgument = process.argv.find((value) => value.startsWith("--only="));
+const onlyBucket = onlyArgument?.slice("--only=".length) || "";
+const bucketNames = onlyBucket
+  ? allBucketNames.filter((bucketName) => bucketName === onlyBucket)
+  : allBucketNames;
+const INVENTORY_PAGE_SIZE = 1_000;
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -127,11 +133,16 @@ function safeObjectPath(item) {
 }
 
 async function loadInventory(supabase) {
-  const { data, error } = await supabase.rpc("private_image_storage_inventory", {
-    p_bucket_ids: bucketNames,
-  });
-  if (error) throw error;
-  return (data || [])
+  const rows = [];
+  for (let from = 0; ; from += INVENTORY_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .rpc("private_image_storage_inventory", { p_bucket_ids: bucketNames })
+      .range(from, from + INVENTORY_PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if ((data || []).length < INVENTORY_PAGE_SIZE) break;
+  }
+  return rows
     .map((item) => ({
       bucketId: item.bucket_id,
       path: item.object_name,
@@ -248,6 +259,7 @@ async function main() {
   if (applyMigration && (!config.cosBucket || !config.cosRegion)) {
     throw new Error("迁移时必须设置 COS_BUCKET 和 COS_REGION。" );
   }
+  if (!bucketNames.length) throw new Error(`未知图片桶：${onlyBucket}`);
   await mkdir(backupRoot, { recursive: true, mode: 0o700 });
   await chmod(backupRoot, 0o700);
   const supabase = getSupabaseAdmin();

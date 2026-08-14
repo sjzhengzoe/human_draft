@@ -80,6 +80,7 @@ export function request<T>(options: RequestOptions): Promise<T> {
 type UploadOptions = {
   path: string
   filePath: string
+  fieldName?: string
   formData?: Record<string, string>
 }
 
@@ -90,7 +91,7 @@ async function sendUpload<T>(options: UploadOptions, canRefresh = true): Promise
       wx.uploadFile({
         url: `${API_BASE_URL}${options.path}`,
         filePath: options.filePath,
-        name: "image",
+        name: options.fieldName || "image",
         formData: options.formData,
         header: { Authorization: `Bearer ${session.token}` },
         success: resolve,

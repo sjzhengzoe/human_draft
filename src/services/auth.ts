@@ -147,6 +147,17 @@ export function getCurrentUser(): AppUser | null {
   return getStoredSession()?.user || null
 }
 
+export function replaceCurrentUser(user: AppUser): void {
+  const session = getStoredSession()
+  if (!session) return
+  setStoredSession({ ...session, user })
+  try {
+    getApp<IAppOption>().globalData.currentUser = user
+  } catch (_error) {
+    // App 初始化早期可能还取不到实例。
+  }
+}
+
 export async function logout(): Promise<void> {
   const session = getStoredSession()
   if (session) {

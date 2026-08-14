@@ -351,6 +351,36 @@ test("legacy opaque tokens are not accepted as access or refresh tokens", async 
   assert.equal(refreshResponse.statusCode, 401);
 });
 
+test("authenticated users can update their nickname without changing account identity", async (t) => {
+  const tables = authenticatedTables();
+  const checked = [];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({ tables }),
+    contentSecurity: {
+      async checkText(openId, content) {
+        checked.push({ openId, content });
+      },
+      async checkImage() {},
+    },
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: "/api/auth/profile",
+    headers: authHeaders,
+    payload: { display_name: "新昵称" },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().data.user.id, USER_ID);
+  assert.equal(response.json().data.user.display_name, "新昵称");
+  assert.equal(tables.app_users[0].display_name, "新昵称");
+  assert.deepEqual(checked, [{ openId: "test-openid", content: "新昵称" }]);
+});
+
+
 test("authenticated template text is checked before use", async () => {
   const checked = [];
   const app = buildServer({

@@ -23,6 +23,15 @@
         <view wx:if="{{isAdmin}}" class="profile-role">管理员</view>
       </view>
       <view
+        wx:if="{{loggedIn}}"
+        class="profile-edit-button"
+        role="button"
+        aria-label="修改头像和昵称"
+        hover-class="profile-edit-button--hover"
+        hover-stay-time="80"
+        bindtap="handleEditProfileTap"
+      ><app-icon name="pencil" size="27" /></view>
+      <view
         wx:if="{{!loggedIn}}"
         class="profile-login-button"
         role="button"
@@ -61,3 +70,73 @@
     ><app-icon name="log-out" size="27" /><text>退出登录</text></view>
   </view>
 </view>
+
+<app-dialog
+  visible="{{showProfileDialog && !showImageCropper}}"
+  title="编辑个人资料"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+  bind:cancel="handleProfileDialogCancel"
+>
+  <view slot="body" class="profile-dialog__body">
+    <view class="profile-avatar-editor">
+      <image
+        wx:if="{{editingAvatarUrl}}"
+        class="profile-avatar-editor__image"
+        src="{{editingAvatarUrl}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="profile-avatar-editor__fallback">{{editingAvatarInitial}}</view>
+      <view
+        class="profile-avatar-editor__button"
+        role="button"
+        aria-label="选择并裁剪头像"
+        hover-class="profile-avatar-editor__button--hover"
+        hover-stay-time="80"
+        bindtap="handleChooseProfileAvatar"
+      ><app-icon name="pencil" size="27" inverse="{{true}}" /></view>
+    </view>
+
+    <view class="profile-dialog__field">
+      <view class="profile-dialog__label">昵称</view>
+      <app-input
+        custom-class="profile-dialog__input"
+        type="nickname"
+        value="{{editingDisplayName}}"
+        maxlength="40"
+        placeholder="请输入昵称"
+        dialog-mode="{{true}}"
+        disabled="{{savingProfile}}"
+        bindinput="handleDisplayNameInput"
+      />
+    </view>
+    <view class="profile-dialog__hint">头像会裁剪为正方形并安全保存</view>
+  </view>
+
+  <view slot="actions" class="profile-dialog__actions">
+    <button
+      class="profile-dialog__action profile-dialog__action--cancel"
+      disabled="{{savingProfile}}"
+      bindtap="handleProfileDialogCancel"
+    >取消</button>
+    <button
+      class="profile-dialog__action profile-dialog__action--save"
+      loading="{{savingProfile}}"
+      disabled="{{savingProfile || selectingProfileAvatar}}"
+      bindtap="handleProfileSave"
+    >保存</button>
+  </view>
+</app-dialog>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="circle"
+  aspect-ratio="1"
+  output-size="640"
+  output-type="png"
+  title="裁剪头像"
+  bind:cancel="handleAvatarCropCancel"
+  bind:confirm="handleAvatarCropConfirm"
+  bind:error="handleAvatarCropError"
+/>

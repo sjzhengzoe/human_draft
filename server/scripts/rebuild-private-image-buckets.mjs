@@ -20,6 +20,7 @@ const TARGET_BUCKETS = [
 const CACHE_CONTROL = "3600";
 const APPLY = process.argv.includes("--apply");
 const MANIFEST_RPC = "private_image_storage_inventory";
+const MANIFEST_PAGE_SIZE = 1_000;
 const onlyArgument = process.argv.find((argument) => argument.startsWith("--only="));
 const onlyBucket = onlyArgument ? onlyArgument.slice("--only=".length) : "";
 
@@ -60,11 +61,16 @@ async function runPool(items, concurrency, worker) {
 }
 
 async function loadManifest(supabase) {
-  const { data, error } = await supabase.rpc(MANIFEST_RPC, {
-    p_bucket_ids: TARGET_BUCKETS,
-  });
-  if (error) throw error;
-  return (data || [])
+  const rows = [];
+  for (let from = 0; ; from += MANIFEST_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .rpc(MANIFEST_RPC, { p_bucket_ids: TARGET_BUCKETS })
+      .range(from, from + MANIFEST_PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if ((data || []).length < MANIFEST_PAGE_SIZE) break;
+  }
+  return rows
     .map((item) => ({
       bucketId: item.bucket_id,
       path: item.object_name,

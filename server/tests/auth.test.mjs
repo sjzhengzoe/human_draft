@@ -7,7 +7,7 @@ process.env.WECHAT_APP_SECRET = "test-app-secret";
 process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-bytes";
 
 const { loginWithWechatCode, requireAuth } = await import("../domains/auth/service.mjs");
-const { updateUserAvatar } = await import("../domains/auth/profile.mjs");
+const { updateUserAvatar, updateUserDisplayName } = await import("../domains/auth/profile.mjs");
 
 class FakeQuery {
   constructor(state, table) {
@@ -107,6 +107,7 @@ function createFakeSupabase(users = []) {
     sessions: [],
     userUpdates: [],
     uploads: [],
+    removals: [],
   };
 
   return {
@@ -123,6 +124,10 @@ function createFakeSupabase(users = []) {
         return {
           async upload(path, contents, options) {
             state.uploads.push({ bucket, path, contents, options });
+            return { error: null };
+          },
+          async remove(paths) {
+            state.removals.push({ bucket, paths });
             return { error: null };
           },
           async createSignedUrls(paths, expiresIn) {
@@ -203,13 +208,69 @@ test("a successful local avatar update completes the user profile", async () => 
 
   const avatarUrl = await updateUserAvatar(supabase, "pending-user", image);
 
-  assert.equal(
+  assert.match(
     avatarUrl,
-    "https://assets.example/user-avatars/users/pending-user/avatar.webp?expires=21600",
+    /^https:\/\/assets\.example\/user-avatars\/users\/pending-user\/avatar-\d+-[0-9a-f-]+\.webp\?expires=21600$/,
   );
   assert.equal(supabase.state.users[0].profile_completed, true);
-  assert.equal(supabase.state.users[0].avatar_url, "users/pending-user/avatar.webp");
+  assert.match(
+    supabase.state.users[0].avatar_url,
+    /^users\/pending-user\/avatar-\d+-[0-9a-f-]+\.webp$/,
+  );
   assert.equal(supabase.state.uploads.length, 1);
+  assert.equal(supabase.state.uploads[0].options.upsert, false);
+  assert.equal(supabase.state.removals.length, 0);
+});
+
+test("updating a nickname preserves the account and completes its profile", async () => {
+  const supabase = createFakeSupabase([
+    {
+      id: "profile-user",
+      wechat_openid: "openid-profile",
+      display_name: "旧昵称",
+      avatar_url: "users/profile-user/avatar-old.webp",
+      profile_completed: false,
+      created_at: "2026-07-11T00:00:00.000Z",
+    },
+  ]);
+
+  const displayName = await updateUserDisplayName(
+    supabase,
+    "profile-user",
+    "  新昵称  ",
+  );
+
+  assert.equal(displayName, "新昵称");
+  assert.equal(supabase.state.users[0].display_name, "新昵称");
+  assert.equal(supabase.state.users[0].avatar_url, "users/profile-user/avatar-old.webp");
+  assert.equal(supabase.state.users[0].profile_completed, true);
+});
+
+test("replacing an avatar switches to a versioned path before removing the old object", async () => {
+  const supabase = createFakeSupabase([
+    {
+      id: "avatar-user",
+      wechat_openid: "openid-avatar",
+      display_name: "头像用户",
+      avatar_url: "users/avatar-user/avatar-old.webp",
+      profile_completed: true,
+      created_at: "2026-07-11T00:00:00.000Z",
+    },
+  ]);
+  const image = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="blue"/></svg>',
+  );
+
+  await updateUserAvatar(supabase, "avatar-user", image);
+
+  assert.match(
+    supabase.state.users[0].avatar_url,
+    /^users\/avatar-user\/avatar-\d+-[0-9a-f-]+\.webp$/,
+  );
+  assert.deepEqual(supabase.state.removals, [{
+    bucket: "user-avatars",
+    paths: ["users/avatar-user/avatar-old.webp"],
+  }]);
 });
 
 test("temporary local avatar URLs are rejected by the login endpoint", async (context) => {
