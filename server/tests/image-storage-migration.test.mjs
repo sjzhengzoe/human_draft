@@ -14,6 +14,10 @@ const thumbnailCleanup = await readFile(
   new URL("../scripts/cleanup-storage-thumbnails.mjs", import.meta.url),
   "utf8",
 );
+const keyMomentQualityUpgrade = await readFile(
+  new URL("../scripts/upgrade-key-moment-image-quality.mjs", import.meta.url),
+  "utf8",
+);
 
 test("historical image migration covers every database-backed image module", () => {
   for (const table of [
@@ -71,4 +75,19 @@ test("thumbnail cleanup is dry-run by default and preserves recoverable original
   assert.match(thumbnailCleanup, /仍有数据库记录引用候选缩略图/);
   assert.match(thumbnailCleanup, /sha256/);
   assert.match(thumbnailCleanup, /mode: 0o600/);
+});
+
+test("key moment quality upgrade uses retained source images and keeps a conditional rollback", () => {
+  assert.match(keyMomentQualityUpgrade, /--source-manifest=/);
+  assert.match(keyMomentQualityUpgrade, /const applyChanges = process\.argv\.includes\("--apply"\)/);
+  assert.match(keyMomentQualityUpgrade, /oldFilesRetained: true/);
+  assert.match(keyMomentQualityUpgrade, /sourceFilesRetained: true/);
+  assert.match(keyMomentQualityUpgrade, /migrationDeletesFiles: false/);
+  assert.match(keyMomentQualityUpgrade, /--rollback=/);
+  assert.match(keyMomentQualityUpgrade, /addConditions\(query, expectedValues\)/);
+  assert.match(keyMomentQualityUpgrade, /sourceCopiedWithoutReencoding/);
+  assert.match(keyMomentQualityUpgrade, /rolling_back_after_verification_failure/);
+  assert.match(keyMomentQualityUpgrade, /mode: 0o600/);
+  assert.doesNotMatch(keyMomentQualityUpgrade, /\.remove\(/);
+  assert.doesNotMatch(keyMomentQualityUpgrade, /upsert: true/);
 });

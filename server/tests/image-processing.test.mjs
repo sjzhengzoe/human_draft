@@ -108,8 +108,8 @@ test("key moment photos keep one bounded lossy original", async () => {
   const input = await createTestImage(3_200, 2_400);
   const result = await optimizeOriginalImage(input, IMAGE_PROFILES.keyMoment.original);
   const original = await sharp(result.original).metadata();
-  assert.deepEqual([original.width, original.height], [1_920, 1_440]);
-  assert.equal(IMAGE_PROFILES.keyMoment.original.quality, 84);
+  assert.deepEqual([original.width, original.height], [2_560, 1_920]);
+  assert.equal(IMAGE_PROFILES.keyMoment.original.quality, 92);
   assert.equal(IMAGE_PROFILES.keyMoment.thumbnail, undefined);
 });
 

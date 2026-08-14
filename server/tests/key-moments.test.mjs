@@ -183,7 +183,7 @@ test("key moment image loading uses one stored image", async () => {
   assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
   assert.match(storage, /uploadOptimizedOriginalImage/);
   assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);
-  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 1_920/);
+  assert.match(imageProcessing, /keyMoment:[\s\S]*?width: 2_560[\s\S]*?quality: 92/);
   assert.doesNotMatch(imageProcessing, /thumbnail:/);
 });
 

@@ -16,7 +16,7 @@ export const IMAGE_PROFILES = Object.freeze({
     original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
   }),
   keyMoment: Object.freeze({
-    original: Object.freeze({ width: 1_920, height: 1_920, quality: 84 }),
+    original: Object.freeze({ width: 2_560, height: 2_560, quality: 92 }),
   }),
   mediaCover: Object.freeze({
     original: Object.freeze({ width: 1_080, height: 1_080, quality: 82 }),
