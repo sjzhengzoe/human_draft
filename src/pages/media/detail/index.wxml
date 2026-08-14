@@ -502,3 +502,29 @@
   bind:confirm="handleEntryImageCropConfirm"
   bind:error="handleEntryImageCropError"
 />
+
+<app-dialog
+  wx:if="{{textSheetVisible}}"
+  visible="{{true}}"
+  placement="bottom"
+  title="{{textSheetTitle}}"
+  custom-body="{{true}}"
+  confirm-text="{{textSheetConfirmText}}"
+  bind:cancel="handleTextSheetCancel"
+  bind:confirm="handleTextSheetConfirm"
+>
+  <view slot="body" class="text-sheet-body">
+    <app-input
+      custom-class="text-sheet-input"
+      type="{{textSheetInputType}}"
+      value="{{textSheetValue}}"
+      maxlength="120"
+      placeholder="{{textSheetPlaceholder}}"
+      focus
+      dialog-mode
+      bindinput="handleTextSheetInput"
+      bindconfirm="handleTextSheetConfirm"
+    />
+    <view wx:if="{{textSheetPurpose === 'add-season-count'}}" class="text-sheet-hint">更新中的作品可以填写 0</view>
+  </view>
+</app-dialog>

@@ -1,8 +1,7 @@
 {
-  "navigationBarTitleText": "作品详情",
+  "navigationBarTitleText": "编辑活动",
   "disableScroll": true,
   "usingComponents": {
-    "app-dialog": "/components/app-dialog/index",
     "app-input": "/components/app-input/index",
     "image-cropper": "/components/image-cropper/index"
   }

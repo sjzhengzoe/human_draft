@@ -1,10 +1,6 @@
 import {
-  createKeyMoment,
   deleteKeyMoment,
-  deleteKeyMomentImage,
-  listKeyMoments,
-  replaceKeyMomentImage,
-  updateKeyMoment
+  listKeyMoments
 } from "../../services/key-moments"
 import { ensureLogin, getCurrentUser } from "../../services/auth"
 import type {
@@ -12,7 +8,6 @@ import type {
   KeyMomentGranularity,
   KeyMomentTimelineItem
 } from "../../types/key-moments"
-import type { ImageCrop, ImageCropResult } from "../../types/images"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -132,22 +127,8 @@ Page({
     hasLoaded: false,
     keyMomentRevision: -1,
     timelineScrollAnchor: "",
-    showEditor: false,
     showDeleteConfirm: false,
     editingId: "",
-    editorContent: "",
-    editorDate: INITIAL_DATE_TIME.date,
-    editorTime: INITIAL_DATE_TIME.time,
-    currentImageUrl: "",
-    originalImageUrl: "",
-    selectedImagePath: "",
-    selectedImageUploadPath: "",
-    selectedImageCrop: null as ImageCrop | null,
-    removeCurrentImage: false,
-    selectingImage: false,
-    showImageCropper: false,
-    cropSourcePath: "",
-    saving: false,
     deleting: false
   },
 
@@ -273,22 +254,7 @@ Page({
     const editorDate = this.data.activeGranularity === "day"
       ? this.data.anchorDate
       : now.date
-    this.setData({
-      showEditor: true,
-      editingId: "",
-      editorContent: "",
-      editorDate,
-      editorTime: now.time,
-      currentImageUrl: "",
-      originalImageUrl: "",
-      selectedImagePath: "",
-      selectedImageUploadPath: "",
-      selectedImageCrop: null,
-      removeCurrentImage: false,
-      selectingImage: false,
-      showImageCropper: false,
-      cropSourcePath: ""
-    })
+    this.openEditor(`/pages/key-moments/edit/index?date=${editorDate}&time=${now.time}`)
   },
 
   handleSettings() {
@@ -302,176 +268,30 @@ Page({
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
     const dateTime = editorDateTime(item.occurred_at)
-    this.setData({
-      showEditor: true,
-      editingId: item.id,
-      editorContent: item.content,
-      editorDate: dateTime.date,
-      editorTime: dateTime.time,
-      currentImageUrl: item.image_url,
-      originalImageUrl: item.image_url,
-      selectedImagePath: "",
-      selectedImageUploadPath: "",
-      selectedImageCrop: null,
-      removeCurrentImage: false,
-      selectingImage: false,
-      showImageCropper: false,
-      cropSourcePath: ""
-    })
+    this.openEditor(
+      `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
+    )
   },
 
-  handleContentInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ editorContent: event.detail.value })
-  },
-
-  handleEditorDateChange(event: WechatMiniprogram.PickerChange) {
-    this.setData({ editorDate: String(event.detail.value) })
-  },
-
-  handleEditorTimeChange(event: WechatMiniprogram.PickerChange) {
-    this.setData({ editorTime: String(event.detail.value) })
-  },
-
-  handleChooseImage() {
-    if (this.data.saving || this.data.deleting || this.data.selectingImage) return
-    this.setData({ selectingImage: true })
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ["image"],
-      sizeType: ["original"],
-      sourceType: ["album", "camera"],
-      success: (result) => {
-        if (!isAsyncPageActive(this)) return
-        const file = result.tempFiles[0]
-        if (file?.tempFilePath) {
+  openEditor(url: string) {
+    wx.navigateTo({
+      url,
+      events: {
+        saved: (result: { date?: string }) => {
+          const date = String(result?.date || "")
+          if (!date) return
           this.setData({
-            selectingImage: false,
-            showImageCropper: true,
-            cropSourcePath: file.tempFilePath
+            anchorDate: date,
+            periodLabel: periodLabel(this.data.activeGranularity, date)
           })
-          return
         }
-        this.setData({ selectingImage: false })
-      },
-      fail: () => {
-        if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
       }
     })
-  },
-
-  handleImageCropCancel() {
-    if (this.data.saving || this.data.deleting) return
-    this.setData({
-      showImageCropper: false,
-      cropSourcePath: ""
-    })
-  },
-
-  handleImageCropConfirm(
-    event: WechatMiniprogram.CustomEvent<ImageCropResult>
-  ) {
-    const { tempFilePath, sourceFilePath, crop } = event.detail
-    if (!tempFilePath || !sourceFilePath) return
-    this.setData({
-      selectedImagePath: tempFilePath,
-      selectedImageUploadPath: sourceFilePath,
-      selectedImageCrop: crop || null,
-      currentImageUrl: this.data.originalImageUrl,
-      removeCurrentImage: false,
-      showImageCropper: false,
-      cropSourcePath: ""
-    })
-  },
-
-  handleImageCropError(
-    event: WechatMiniprogram.CustomEvent<{ message?: string }>
-  ) {
-    wx.showToast({
-      title: event.detail.message || "图片裁剪失败，请重试",
-      icon: "none"
-    })
-  },
-
-  handleRemoveEditorImage() {
-    if (this.data.saving || this.data.deleting) return
-    if (this.data.selectedImagePath) {
-      this.setData({
-        selectedImagePath: "",
-        selectedImageUploadPath: "",
-        selectedImageCrop: null
-      })
-      return
-    }
-    if (this.data.currentImageUrl) {
-      this.setData({ currentImageUrl: "", removeCurrentImage: true })
-    }
   },
 
   handlePreview(event: WechatMiniprogram.TouchEvent) {
     const url = String(event.currentTarget.dataset.url || "")
     if (url) wx.previewImage({ current: url, urls: [url] })
-  },
-
-  closeEditor() {
-    if (!this.data.saving && !this.data.deleting) this.setData({ showEditor: false })
-  },
-
-  async saveEditor() {
-    if (this.data.saving || this.data.deleting || this.data.selectingImage) return
-    const content = this.data.editorContent.trim()
-    const hasImage = Boolean(this.data.selectedImagePath || this.data.currentImageUrl)
-    if (!content && !hasImage) {
-      wx.showToast({ title: "请填写文案或上传图片", icon: "none" })
-      return
-    }
-    const occurredAt = `${this.data.editorDate}T${this.data.editorTime}:00+08:00`
-    let toastTitle = ""
-    let toastIcon: "success" | "none" = "success"
-    this.setData({ saving: true })
-    wx.showLoading({ title: "保存中", mask: true })
-    try {
-      if (this.data.editingId) {
-        await updateKeyMoment(this.data.editingId, { content, occurredAt })
-        if (this.data.selectedImageUploadPath) {
-          await replaceKeyMomentImage(
-            this.data.editingId,
-            this.data.selectedImageUploadPath,
-            this.data.selectedImageCrop
-          )
-        } else if (this.data.removeCurrentImage) {
-          await deleteKeyMomentImage(this.data.editingId)
-        }
-      } else {
-        await createKeyMoment({
-          content,
-          occurredAt,
-          imagePath: this.data.selectedImageUploadPath || undefined,
-          imageCrop: this.data.selectedImageCrop
-        })
-      }
-      if (!isAsyncPageActive(this)) return
-      this.setData({
-        showEditor: false,
-        anchorDate: this.data.editorDate,
-        periodLabel: periodLabel(this.data.activeGranularity, this.data.editorDate)
-      })
-      if (!this.syncItemsFromCache({
-        granularity: this.data.activeGranularity,
-        date: this.data.editorDate
-      })) {
-        await this.loadItems({ background: true })
-      }
-      toastTitle = "已保存"
-    } catch (error) {
-      toastTitle = error instanceof Error ? error.message : "保存失败"
-      toastIcon = "none"
-    } finally {
-      wx.hideLoading()
-      if (isAsyncPageActive(this)) this.setData({ saving: false })
-    }
-    if (toastTitle && isAsyncPageActive(this)) {
-      wx.showToast({ title: toastTitle, icon: toastIcon })
-    }
   },
 
   handleDelete(event: WechatMiniprogram.TouchEvent) {
@@ -483,7 +303,7 @@ Page({
     ) return
     const id = String(event.currentTarget.dataset.id || "")
     if (!id) return
-    this.setData({ editingId: id, showEditor: false, showDeleteConfirm: true })
+    this.setData({ editingId: id, showDeleteConfirm: true })
   },
 
   handleDeleteConfirmCancel() {
@@ -500,7 +320,7 @@ Page({
     try {
       await deleteKeyMoment(this.data.editingId)
       if (!isAsyncPageActive(this)) return
-      this.setData({ showDeleteConfirm: false, showEditor: false, editingId: "" })
+      this.setData({ showDeleteConfirm: false, editingId: "" })
       if (!this.syncItemsFromCache()) await this.loadItems({ background: true })
       toastTitle = "已删除"
     } catch (error) {

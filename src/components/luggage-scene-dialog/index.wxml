@@ -1,6 +1,7 @@
 <app-dialog
   wx:if="{{visible}}"
   visible="{{true}}"
+  placement="bottom"
   title="{{title}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "编辑人生节点",
+  "disableScroll": true,
+  "usingComponents": {
+    "image-cropper": "/components/image-cropper/index"
+  }
+}

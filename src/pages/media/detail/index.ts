@@ -171,18 +171,6 @@ function getSubmittedText(
   return typeof value === "string" ? value : fallback
 }
 
-function promptText(title: string, placeholder: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    wx.showModal({
-      title,
-      editable: true,
-      placeholderText: placeholder,
-      success: (result) => resolve(result.confirm ? String(result.content || "").trim() : null),
-      fail: () => resolve(null)
-    })
-  })
-}
-
 function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
@@ -301,6 +289,15 @@ Page({
     hasLoaded: false,
     mediaRevision: -1,
     operating: false,
+    textSheetVisible: false,
+    textSheetPurpose: "",
+    textSheetTitle: "",
+    textSheetPlaceholder: "",
+    textSheetValue: "",
+    textSheetInputType: "text",
+    textSheetConfirmText: "确定",
+    pendingSeasonName: "",
+    pendingRenameSeasonId: "",
     detailScrollTop: 0,
     recordsScrollTop: 0,
     errorMessage: "",
@@ -891,13 +888,78 @@ Page({
     }
   },
 
-  async handleAddSeason() {
+  handleAddSeason() {
     if (!this.data.canWrite || this.data.operating) return
-    const name = await promptText("新增季或篇章", `例如：第${this.data.seasons.length + 1}季`)
+    this.setData({
+      textSheetVisible: true,
+      textSheetPurpose: "add-season-name",
+      textSheetTitle: "新增季或篇章",
+      textSheetPlaceholder: `例如：第${this.data.seasons.length + 1}季`,
+      textSheetValue: "",
+      textSheetInputType: "text",
+      textSheetConfirmText: "下一步",
+      pendingSeasonName: "",
+      pendingRenameSeasonId: ""
+    })
+  },
+
+  handleTextSheetInput(event: WechatMiniprogram.Input) {
+    this.setData({ textSheetValue: event.detail.value })
+  },
+
+  handleTextSheetCancel() {
+    if (this.data.operating) return
+    this.setData({
+      textSheetVisible: false,
+      textSheetPurpose: "",
+      textSheetValue: "",
+      pendingSeasonName: "",
+      pendingRenameSeasonId: ""
+    })
+  },
+
+  handleTextSheetConfirm() {
+    const value = this.data.textSheetValue.trim()
+    if (this.data.textSheetPurpose === "add-season-name") {
+      if (!value) {
+        wx.showToast({ title: "请填写名称", icon: "none" })
+        return
+      }
+      this.setData({
+        textSheetPurpose: "add-season-count",
+        textSheetTitle: "总集数",
+        textSheetPlaceholder: "请输入 0 到 500；更新中可填 0",
+        textSheetValue: "",
+        textSheetInputType: "number",
+        textSheetConfirmText: "创建",
+        pendingSeasonName: value
+      })
+      return
+    }
+    if (this.data.textSheetPurpose === "add-season-count") {
+      const episodeCount = Number(value || "0")
+      if (!Number.isInteger(episodeCount) || episodeCount < 0 || episodeCount > 500) {
+        wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
+        return
+      }
+      const name = this.data.pendingSeasonName
+      this.handleTextSheetCancel()
+      void this.createSeason(name, episodeCount)
+      return
+    }
+    if (this.data.textSheetPurpose === "rename-season") {
+      if (!value) {
+        wx.showToast({ title: "请填写名称", icon: "none" })
+        return
+      }
+      const seasonId = this.data.pendingRenameSeasonId
+      this.handleTextSheetCancel()
+      void this.saveSeasonName(seasonId, value)
+    }
+  },
+
+  async createSeason(name: string, episodeCount: number) {
     if (!name || !isAsyncPageActive(this)) return
-    const countText = await promptText("总集数", "请输入 0 到 500；更新中可填 0")
-    if (countText === null || !isAsyncPageActive(this)) return
-    const episodeCount = Number(countText || "0")
     if (!Number.isInteger(episodeCount) || episodeCount < 0 || episodeCount > 500) {
       wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
       return
@@ -932,13 +994,26 @@ Page({
     })
   },
 
-  async renameSeason(season: MediaSeason) {
-    const name = await promptText("修改名称", `当前：${season.name}`)
-    if (!name || !isAsyncPageActive(this)) return
+  renameSeason(season: MediaSeason) {
+    this.setData({
+      textSheetVisible: true,
+      textSheetPurpose: "rename-season",
+      textSheetTitle: "修改名称",
+      textSheetPlaceholder: `当前：${season.name}`,
+      textSheetValue: season.name,
+      textSheetInputType: "text",
+      textSheetConfirmText: "保存",
+      pendingSeasonName: "",
+      pendingRenameSeasonId: season.id
+    })
+  },
+
+  async saveSeasonName(seasonId: string, name: string) {
+    if (!seasonId || !name || !isAsyncPageActive(this)) return
     try {
-      await updateMediaSeason(season.id, name)
+      await updateMediaSeason(seasonId, name)
       markMediaDataChanged()
-      this.setData({ requestedSeasonId: season.id })
+      this.setData({ requestedSeasonId: seasonId })
       await this.loadPage()
     } catch (error) {
       if (isAsyncPageActive(this)) {

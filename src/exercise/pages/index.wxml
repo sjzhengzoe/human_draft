@@ -134,6 +134,7 @@
   <app-dialog
     wx:if="{{minutesDialogVisible}}"
     visible="{{true}}"
+    placement="bottom"
     title="{{minutesDialogTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"

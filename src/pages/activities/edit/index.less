@@ -1,0 +1,150 @@
+.page {
+  display: flex;
+  height: calc(100vh - var(--app-navigation-height));
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.editor-scroll {
+  min-height: 0;
+  flex: 1;
+}
+
+.editor-card {
+  margin: 28rpx var(--ui-page-gutter) 0;
+  padding: 30rpx;
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
+}
+
+.field-label {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+}
+
+.field-label--spaced {
+  margin-top: 30rpx;
+}
+
+.editor-input {
+  height: 76rpx;
+  box-sizing: border-box;
+  margin-top: 14rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid var(--ui-color-border-subtle);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-color-background-page);
+  font-size: var(--ui-font-size-base);
+}
+
+.type-options {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.type-option {
+  display: flex;
+  min-height: 62rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx 4rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-subtle);
+  font-size: var(--ui-font-size-base);
+}
+
+.type-option--active {
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+  font-weight: 600;
+}
+
+.activity-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin-top: 14rpx;
+  overflow: hidden;
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-color-background-subtle);
+}
+
+.activity-image--loading {
+  opacity: .6;
+  pointer-events: none;
+}
+
+.activity-image__preview {
+  width: 100%;
+  height: 100%;
+}
+
+.activity-image__empty {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+}
+
+.activity-image__action {
+  position: absolute;
+  right: 14rpx;
+  bottom: 14rpx;
+  padding: 9rpx 14rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-overlay-strong);
+  color: var(--ui-color-text-inverse);
+  font-size: var(--ui-font-size-base);
+}
+
+.editor-safe-area {
+  height: 36rpx;
+}
+
+.editor-actions {
+  display: flex;
+  flex: none;
+  gap: 16rpx;
+  padding: 20rpx var(--ui-page-gutter) calc(24rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid var(--ui-color-border-subtle);
+  background: var(--ui-surface);
+}
+
+.cancel-button,
+.save-button {
+  display: flex;
+  height: 76rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 20rpx;
+  border-radius: var(--ui-radius-pill);
+  font-size: var(--ui-font-size-base);
+}
+
+.cancel-button::after,
+.save-button::after {
+  border: 0;
+}
+
+.cancel-button {
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-secondary);
+}
+
+.save-button {
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+}

@@ -27,10 +27,8 @@ const tabSelectors = new Map([
     ".category-chip--active"
   ]],
   ["src/pages/chat-topics/index.less", [".topic-tab--active"]],
-  ["src/pages/activities/index.less", [
-    ".activity-type-switch__item--active",
-    ".type-option--active"
-  ]],
+  ["src/pages/activities/index.less", [".activity-type-switch__item--active"]],
+  ["src/pages/activities/edit/index.less", [".type-option--active"]],
   ["src/pages/footprint/index.less", [
     ".map-level-switch__button--active",
     ".province-tabs__button--active"

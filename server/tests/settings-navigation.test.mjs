@@ -23,10 +23,12 @@ test("home module settings uses an independent page route", async () => {
 });
 
 test("account section displays and copies the internal user UUID", async () => {
-  const [markup, styles, logic] = await Promise.all([
+  const [markup, styles, logic, profileMarkup, profileLogic] = await Promise.all([
     readFile(new URL("../../src/pages/settings/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/settings/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/settings/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/settings/profile-edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/settings/profile-edit/index.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(markup, /class="settings-logout-button"[\s\S]*?>退出登录</);
@@ -34,8 +36,9 @@ test("account section displays and copies the internal user UUID", async () => {
   assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{userId\}\}/);
   assert.match(markup, /aria-label="复制用户 ID"[\s\S]*?bindtap="handleCopyUserIdTap"/);
   assert.match(markup, /aria-label="修改头像和昵称"[\s\S]*?bindtap="handleEditProfileTap"/);
-  assert.match(markup, /<app-dialog[\s\S]*?title="编辑个人资料"/);
-  assert.match(markup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
+  assert.doesNotMatch(markup, /<app-dialog|<image-cropper/);
+  assert.match(logic, /pages\/settings\/profile-edit\/index/);
+  assert.match(profileMarkup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
   assert.match(markup, /wx:if="\{\{isAdmin\}\}" class="profile-role">管理员</);
   assert.doesNotMatch(markup, /普通用户/);
   assert.match(styles, /\.profile-card\s*\{[\s\S]*?min-height: 152rpx/);
@@ -44,8 +47,8 @@ test("account section displays and copies the internal user UUID", async () => {
   assert.match(logic, /userId: user\.id/);
   assert.match(logic, /handleCopyUserIdTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
   assert.doesNotMatch(logic, /handleCopyOpenIdTap|accountIdText/);
-  assert.match(logic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);
-  assert.match(logic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
+  assert.match(profileLogic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);
+  assert.match(profileLogic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
   assert.match(markup, /class="settings-section__title">存储空间</);
   assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
   assert.match(markup, /公开测试期间仅展示实际用量/);
@@ -94,7 +97,8 @@ test("settings navigation ignores repeated taps and unlocks after failures", asy
   assert.match(logic, /show\(\)[\s\S]*?page\.navigationLocked = false/);
   assert.match(logic, /handleLoginTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleModuleSettingsTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
-  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 2);
+  assert.match(logic, /handleEditProfileTap\(\)[\s\S]*?if \(!user \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
+  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 3);
 });
 
 test("settings logout ignores duplicate taps and releases its lock on every exit path", async () => {

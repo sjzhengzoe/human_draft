@@ -259,6 +259,7 @@
   <app-dialog
     wx:if="{{editorVisible}}"
     visible="{{true}}"
+    placement="bottom"
     title="{{editorTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"

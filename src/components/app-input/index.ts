@@ -58,7 +58,6 @@ Component({
   },
   data: {
     fontSize: UI_FONT_SIZES.base,
-    dialogCursorSpacing: 160,
     localValue: "",
     editing: false,
     nativeFocus: false

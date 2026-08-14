@@ -44,13 +44,13 @@ test("shared app-input keeps the project font outside native editing", async () 
   assert.match(template, /font-size: \{\{fontSize\}\}/);
   assert.match(template, /placeholder-style="[^"]*font-size: \{\{fontSize\}\}/);
   assert.match(template, /wx:if="\{\{dialogMode \|\| persistent \|\| editing\}\}"/);
-  assert.match(template, /adjust-position="\{\{dialogMode \|\| adjustPosition\}\}"/);
-  assert.match(template, /cursor-spacing="\{\{dialogMode \? dialogCursorSpacing : cursorSpacing\}\}"/);
+  assert.match(template, /adjust-position="\{\{dialogMode \? false : adjustPosition\}\}"/);
+  assert.match(template, /cursor-spacing="\{\{dialogMode \? 0 : cursorSpacing\}\}"/);
   assert.match(template, /wx:else[\s\S]*app-input__display/);
   assert.match(logic, /externalClasses:\s*\["custom-class"\]/);
   assert.match(logic, /persistent:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
   assert.match(logic, /dialogMode:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
-  assert.match(logic, /dialogCursorSpacing:\s*160/);
+  assert.doesNotMatch(logic, /dialogCursorSpacing/);
   assert.match(logic, /fontSize:\s*UI_FONT_SIZES\.base/);
   assert.match(logic, /handleActivate\(\)/);
   assert.match(logic, /handleFocus[\s\S]*?!this\.properties\.persistent && !this\.properties\.dialogMode[\s\S]*?this\.triggerEvent\("focus", event\.detail\)/);

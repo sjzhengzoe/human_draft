@@ -1,0 +1,63 @@
+<custom-navigation
+  title="编辑个人资料"
+  custom-back="{{true}}"
+  bind:back="handleBack"
+/>
+
+<view class="page page--with-navigation">
+  <scroll-view class="profile-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="profile-card">
+      <view class="profile-avatar-editor">
+        <image
+          wx:if="{{editingAvatarUrl}}"
+          class="profile-avatar-editor__image"
+          src="{{editingAvatarUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="profile-avatar-editor__fallback">{{editingAvatarInitial}}</view>
+        <view
+          class="profile-avatar-editor__button"
+          role="button"
+          aria-label="选择并裁剪头像"
+          bindtap="handleChooseProfileAvatar"
+        ><app-icon name="pencil" size="27" inverse="{{true}}" /></view>
+      </view>
+
+      <view class="profile-field">
+        <view class="profile-field__label">昵称</view>
+        <app-input
+          custom-class="profile-field__input"
+          type="nickname"
+          value="{{editingDisplayName}}"
+          maxlength="40"
+          placeholder="请输入昵称"
+          persistent
+          disabled="{{savingProfile}}"
+          bindinput="handleDisplayNameInput"
+        />
+      </view>
+      <view class="profile-hint">头像会裁剪为正方形并安全保存</view>
+    </view>
+  </scroll-view>
+
+  <view class="profile-actions">
+    <button class="profile-action profile-action--cancel" disabled="{{savingProfile}}" bindtap="handleBack">取消</button>
+    <button
+      class="profile-action profile-action--save"
+      loading="{{savingProfile}}"
+      disabled="{{savingProfile || selectingProfileAvatar}}"
+      bindtap="handleProfileSave"
+    >保存</button>
+  </view>
+</view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="circle"
+  aspect-ratio="1"
+  title="裁剪头像"
+  bind:cancel="handleAvatarCropCancel"
+  bind:confirm="handleAvatarCropConfirm"
+  bind:error="handleAvatarCropError"
+/>

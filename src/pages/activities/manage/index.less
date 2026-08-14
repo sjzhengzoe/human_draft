@@ -1,0 +1,74 @@
+.page {
+  display: flex;
+  height: calc(100vh - var(--app-navigation-height));
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.manager-scroll {
+  min-height: 0;
+  flex: 1;
+}
+
+.manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  padding: 28rpx var(--ui-page-gutter) 0;
+}
+
+.manager-item {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+  padding: 12rpx 14rpx 12rpx 24rpx;
+  border: 1rpx solid var(--ui-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-surface);
+}
+
+.manager-item__name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-item__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.manager-icon-button {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-secondary);
+}
+
+.manager-icon-button--disabled {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.manager-empty {
+  padding: 180rpx 20rpx;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.manager-safe-area {
+  height: calc(36rpx + env(safe-area-inset-bottom));
+}

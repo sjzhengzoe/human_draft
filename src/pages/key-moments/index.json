@@ -2,7 +2,6 @@
   "navigationBarTitleText": "人生节点",
   "disableScroll": true,
   "usingComponents": {
-    "app-dialog": "/components/app-dialog/index",
-    "image-cropper": "/components/image-cropper/index"
+    "app-dialog": "/components/app-dialog/index"
   }
 }

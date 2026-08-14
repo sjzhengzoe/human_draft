@@ -111,64 +111,6 @@
   </scroll-view>
 
   <app-dialog
-    wx:if="{{showEditor}}"
-    visible="{{true}}"
-    title="{{editingId ? '编辑关键节点' : '新增关键节点'}}"
-    custom-body="{{true}}"
-    custom-actions="{{true}}"
-  >
-    <view slot="body" class="key-moment-editor">
-      <view class="time-fields">
-        <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
-          <view class="time-field__value">{{editorDate}}</view>
-        </picker>
-        <picker class="time-field" mode="time" value="{{editorTime}}" bindchange="handleEditorTimeChange">
-          <view class="time-field__value">{{editorTime}}</view>
-        </picker>
-      </view>
-
-      <view class="editor-content-row">
-        <view class="image-editor {{selectingImage ? 'image-editor--loading' : ''}}">
-          <image
-            wx:if="{{selectedImagePath || currentImageUrl}}"
-            class="image-editor__preview"
-            src="{{selectedImagePath || currentImageUrl}}"
-            mode="aspectFit"
-            bindtap="handleChooseImage"
-          />
-          <view wx:else class="image-editor__empty" bindtap="handleChooseImage">
-            <app-icon name="image-plus" size="30" />
-            <text>{{selectingImage ? '选择中…' : '上传图片'}}</text>
-          </view>
-          <view
-            wx:if="{{selectedImagePath || currentImageUrl}}"
-            class="image-editor__remove-button"
-            aria-label="移除图片"
-            catchtap="handleRemoveEditorImage"
-          ><app-icon name="x-muted" size="24" inverse="{{true}}" /></view>
-        </view>
-
-        <view class="editor-text">
-          <textarea
-            class="content-input"
-            value="{{editorContent}}"
-            maxlength="50"
-            placeholder="写下这个关键节点…"
-            adjust-position="{{true}}"
-            cursor-spacing="160"
-            bindinput="handleContentInput"
-          />
-          <view class="content-count">{{editorContent.length}} / 50</view>
-        </view>
-      </view>
-    </view>
-    <view slot="actions" class="modal-actions">
-      <button class="cancel-button" disabled="{{saving || deleting || selectingImage}}" bindtap="closeEditor">取消</button>
-      <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting || selectingImage}}" bindtap="saveEditor">确定</button>
-    </view>
-  </app-dialog>
-
-  <app-dialog
     wx:if="{{showDeleteConfirm}}"
     visible="{{true}}"
     title="删除关键节点"
@@ -179,13 +121,3 @@
     bindconfirm="handleDeleteConfirm"
   />
 </view>
-
-<image-cropper
-  wx:if="{{showImageCropper}}"
-  src="{{cropSourcePath}}"
-  shape="rectangle"
-  title="调整节点图片"
-  bind:cancel="handleImageCropCancel"
-  bind:confirm="handleImageCropConfirm"
-  bind:error="handleImageCropError"
-/>

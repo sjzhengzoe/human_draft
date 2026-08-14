@@ -35,31 +35,33 @@ test("activity list uses top scene tabs and the same two-column image grid as me
   assert.match(service, /all_types: activityType \? undefined : "true"/);
 });
 
-test("activity editor reuses shared dialogs and the 4:3 image cropper", async () => {
-  const [template, styles, page, config] = await Promise.all([
+test("activity editing and management use dedicated pages", async () => {
+  const [template, page, editorTemplate, editorStyles, editorPage, editorConfig, managerTemplate, appConfig] = await Promise.all([
     readFile(new URL("src/pages/activities/index.wxml", projectRoot), "utf8"),
-    readFile(new URL("src/pages/activities/index.less", projectRoot), "utf8"),
     readFile(new URL("src/pages/activities/index.ts", projectRoot), "utf8"),
-    readFile(new URL("src/pages/activities/index.json", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/edit/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/edit/index.less", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/edit/index.ts", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/edit/index.json", projectRoot), "utf8"),
+    readFile(new URL("src/pages/activities/manage/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/app.json", projectRoot), "utf8"),
   ]);
 
-  assert.match(template, /<app-dialog/);
-  assert.match(template, /maxlength="12"/);
-  assert.match(template, /aspect-ratio="1\.333333"/);
-  assert.match(template, /title="裁剪为 4:3 活动封面"/);
+  assert.doesNotMatch(template, /<app-dialog|<image-cropper|<app-input/);
   assert.match(template, /aria-label="新增活动"/);
   assert.match(template, /aria-label="管理\{\{activeType\}\}活动"/);
-  assert.match(template, /wx:if="\{\{showEditor\}\}"\s+visible="\{\{true\}\}"/);
-  assert.equal(template.match(/^\s+dialog-mode\s*$/gm)?.length, 2);
-  assert.match(template, /aria-label="\{\{selectedImagePath \|\| currentImageUrl \? '更换活动封面' : '添加活动封面'\}\}"/);
-  assert.match(template, /<text>添加封面<\/text>/);
-  assert.match(template, /class="activity-editor__main"/);
-  assert.match(styles, /\.activity-editor__image\s*{[^}]*width:\s*200rpx/);
-  assert.doesNotMatch(template, /bindfocus=|bindblur=|scroll-into-view=/);
-  assert.doesNotMatch(template, /track-keyboard=|adjust-position=|cursor-spacing=|^\s+persistent\s*$/m);
-  assert.doesNotMatch(page, /handleEditorInputFocus|editorKeyboardSpacerHeight|editorFocusAnchor/);
-  assert.doesNotMatch(template, /选择活动封面（选填）|例如：红花湖骑行|一句简介（选填）/);
-  assert.doesNotMatch(template, /^\s+focus\s*$/m);
-  assert.doesNotMatch(template, /wx\.showModal/);
-  assert.match(config, /"image-cropper": "\/components\/image-cropper\/index"/);
+  assert.match(page, /pages\/activities\/edit\/index/);
+  assert.match(page, /pages\/activities\/manage\/index/);
+  assert.match(editorTemplate, /maxlength="12"/);
+  assert.match(editorTemplate, /aspect-ratio="1\.333333"/);
+  assert.match(editorTemplate, /title="裁剪为 4:3 活动封面"/);
+  assert.match(editorTemplate, /custom-back="\{\{true\}\}"/);
+  assert.match(editorTemplate, /aria-label="\{\{selectedImagePath \|\| currentImageUrl \? '更换活动封面' : '添加活动封面'\}\}"/);
+  assert.match(editorStyles, /\.activity-image\s*{[^}]*aspect-ratio:\s*4 \/ 3/);
+  assert.match(editorPage, /createActivityItem/);
+  assert.match(editorPage, /replaceActivityItemImage/);
+  assert.match(editorConfig, /"image-cropper": "\/components\/image-cropper\/index"/);
+  assert.match(managerTemplate, /管理\{\{activeType\}\}活动/);
+  assert.match(managerTemplate, /<app-dialog[\s\S]*?title="删除活动"/);
+  assert.match(appConfig, /"pages\/activities"[\s\S]*?"edit\/index"[\s\S]*?"manage\/index"/);
 });

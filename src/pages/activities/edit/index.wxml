@@ -1,0 +1,87 @@
+<custom-navigation
+  title="{{editingId ? '编辑活动' : '新增活动'}}"
+  custom-back="{{true}}"
+  bind:back="handleBack"
+/>
+
+<view wx:if="{{loading}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在读取活动…</view>
+</view>
+
+<view wx:else class="page page--with-navigation">
+  <scroll-view class="editor-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="editor-card">
+      <view class="field-label">活动名称</view>
+      <app-input
+        custom-class="editor-input"
+        value="{{editorName}}"
+        maxlength="120"
+        placeholder="活动名称"
+        persistent
+        bindinput="handleEditorNameInput"
+      />
+
+      <view class="field-label field-label--spaced">一句简介</view>
+      <app-input
+        custom-class="editor-input"
+        value="{{editorIntroduction}}"
+        maxlength="12"
+        placeholder="最多 12 个字符"
+        confirm-type="done"
+        persistent
+        bindinput="handleEditorIntroductionInput"
+      />
+
+      <view class="field-label field-label--spaced">活动场景</view>
+      <view class="type-options" role="radiogroup" aria-label="活动场景">
+        <view
+          wx:for="{{activityTypes}}"
+          wx:key="*this"
+          class="type-option {{editorType === item ? 'type-option--active' : ''}}"
+          data-type="{{item}}"
+          bindtap="handleEditorTypeTap"
+          role="radio"
+          aria-checked="{{editorType === item}}"
+        >{{item}}</view>
+      </view>
+
+      <view class="field-label field-label--spaced">活动封面</view>
+      <view
+        class="activity-image {{selectingImage ? 'activity-image--loading' : ''}}"
+        role="button"
+        aria-label="{{selectedImagePath || currentImageUrl ? '更换活动封面' : '添加活动封面'}}"
+        bindtap="handleChooseImage"
+      >
+        <image
+          wx:if="{{selectedImagePath || currentImageUrl}}"
+          class="activity-image__preview"
+          src="{{selectedImagePath || currentImageUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="activity-image__empty">
+          <app-icon name="image-plus" size="30" />
+          <text>{{selectingImage ? '选择中…' : '添加封面'}}</text>
+        </view>
+        <view wx:if="{{selectedImagePath || currentImageUrl}}" class="activity-image__action">更换封面</view>
+      </view>
+    </view>
+    <view class="editor-safe-area" />
+  </scroll-view>
+
+  <view class="editor-actions">
+    <button class="cancel-button" disabled="{{saving || selectingImage}}" bindtap="handleBack">取消</button>
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>
+  </view>
+</view>
+
+<image-cropper
+  wx:if="{{showImageCropper}}"
+  src="{{cropSourcePath}}"
+  shape="rectangle"
+  aspect-ratio="1.333333"
+  title="裁剪为 4:3 活动封面"
+  bind:cancel="handleImageCropCancel"
+  bind:confirm="handleImageCropConfirm"
+  bind:error="handleImageCropError"
+/>

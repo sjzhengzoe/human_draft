@@ -5,6 +5,7 @@
     "pages/text-card/index",
     "pages/editor/index",
     "pages/settings/index",
+    "pages/settings/profile-edit/index",
     "pages/settings/home-modules/index"
   ],
   "subPackages": [
@@ -36,6 +37,7 @@
       "root": "pages/key-moments",
       "pages": [
         "index",
+        "edit/index",
         "settings/index"
       ]
     },
@@ -54,7 +56,9 @@
     {
       "root": "pages/activities",
       "pages": [
-        "index"
+        "index",
+        "edit/index",
+        "manage/index"
       ]
     },
     {

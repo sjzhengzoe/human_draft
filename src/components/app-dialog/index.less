@@ -134,3 +134,41 @@
 .app-dialog--fullscreen .app-dialog__actions--custom {
   padding: 0;
 }
+
+.app-dialog--bottom {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.app-dialog--bottom .app-dialog__panel {
+  min-height: 0;
+  max-height: 78vh;
+  border-radius: var(--ui-radius-modal) var(--ui-radius-modal) 0 0;
+  box-shadow: 0 -16rpx 56rpx var(--ui-color-shadow-strong);
+  transition: transform 0.18s ease-out;
+}
+
+.app-dialog__handle {
+  width: 64rpx;
+  height: 7rpx;
+  flex: none;
+  margin: 20rpx auto 0;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-border-strong);
+}
+
+.app-dialog--bottom .app-dialog__header {
+  padding: 24rpx 32rpx 0;
+}
+
+.app-dialog--bottom .app-dialog__body,
+.app-dialog--bottom .app-dialog__body--custom {
+  justify-content: flex-start;
+  padding: 28rpx 32rpx 0;
+  text-align: left;
+}
+
+.app-dialog--bottom .app-dialog__actions,
+.app-dialog--bottom .app-dialog__actions--custom {
+  padding: 28rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+}

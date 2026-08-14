@@ -1,7 +1,5 @@
 import { getCurrentUser, logout } from "../../services/auth"
 import { getImageStorageUsage } from "../../services/account"
-import { updateAccountAvatar, updateAccountProfile } from "../../services/profile"
-import type { ImageCrop, ImageCropResult } from "../../types/images"
 import { UI_COLORS } from "../../styles/colors"
 import { updateAppTabBarState } from "../../utils/tab-bar"
 
@@ -19,10 +17,6 @@ function formatStorageBytes(value: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-}
-
-function profileInitial(value: string) {
-  return value.trim().slice(0, 1) || "E"
 }
 
 function getSettingsAccountState(failedAvatarSignature = "") {
@@ -52,17 +46,6 @@ function getSettingsAccountState(failedAvatarSignature = "") {
 Component({
   data: {
     ...getSettingsAccountState(),
-    showProfileDialog: false,
-    editingDisplayName: "",
-    editingAvatarUrl: "",
-    editingAvatarInitial: "E",
-    pendingAvatarPath: "",
-    pendingAvatarUploadPath: "",
-    pendingAvatarCrop: null as ImageCrop | null,
-    selectingProfileAvatar: false,
-    showImageCropper: false,
-    cropSourcePath: "",
-    savingProfile: false,
     storageUsageText: "正在统计…",
     storageImageCountText: "",
     storageUsageLoading: false,
@@ -97,140 +80,16 @@ Component({
     },
     handleEditProfileTap() {
       const user = getCurrentUser()
-      if (!user || this.data.savingProfile) return
-      this.setData({
-        showProfileDialog: true,
-        editingDisplayName: user.display_name,
-        editingAvatarUrl: user.avatar_url,
-        editingAvatarInitial: profileInitial(user.display_name),
-        pendingAvatarPath: "",
-        pendingAvatarUploadPath: "",
-        pendingAvatarCrop: null,
-        selectingProfileAvatar: false
-      })
-    },
-    handleProfileDialogCancel() {
-      if (this.data.savingProfile || this.data.selectingProfileAvatar) return
-      this.setData({
-        showProfileDialog: false,
-        editingDisplayName: "",
-        editingAvatarUrl: "",
-        pendingAvatarPath: "",
-        pendingAvatarUploadPath: "",
-        pendingAvatarCrop: null
-      })
-    },
-    handleDisplayNameInput(event: WechatMiniprogram.Input) {
-      const editingDisplayName = event.detail.value
-      this.setData({
-        editingDisplayName,
-        editingAvatarInitial: profileInitial(editingDisplayName)
-      })
-    },
-    handleChooseProfileAvatar() {
-      if (
-        this.data.savingProfile ||
-        this.data.selectingProfileAvatar ||
-        this.data.showImageCropper
-      ) return
-      this.setData({ selectingProfileAvatar: true })
-      wx.chooseMedia({
-        count: 1,
-        mediaType: ["image"],
-        sizeType: ["original"],
-        sourceType: ["album", "camera"],
-        success: (result) => {
-          const path = result.tempFiles[0]?.tempFilePath
-          if (!path) {
-            this.setData({ selectingProfileAvatar: false })
-            return
-          }
-          this.setData({
-            selectingProfileAvatar: false,
-            showImageCropper: true,
-            cropSourcePath: path
-          })
-        },
-        fail: () => this.setData({ selectingProfileAvatar: false })
-      })
-    },
-    handleAvatarCropCancel() {
-      this.setData({ showImageCropper: false, cropSourcePath: "" })
-    },
-    handleAvatarCropConfirm(
-      event: WechatMiniprogram.CustomEvent<ImageCropResult>
-    ) {
-      const { tempFilePath, sourceFilePath, crop } = event.detail
-      if (!tempFilePath || !sourceFilePath) return
-      this.setData({
-        editingAvatarUrl: tempFilePath,
-        pendingAvatarPath: tempFilePath,
-        pendingAvatarUploadPath: sourceFilePath,
-        pendingAvatarCrop: crop || null,
-        showImageCropper: false,
-        cropSourcePath: ""
-      })
-    },
-    handleAvatarCropError(
-      event: WechatMiniprogram.CustomEvent<{ message?: string }>
-    ) {
-      wx.showToast({
-        title: event.detail.message || "头像裁剪失败，请重试",
-        icon: "none"
-      })
-    },
-    async handleProfileSave() {
-      if (this.data.savingProfile) return
-      const user = getCurrentUser()
-      if (!user) return
-      const displayName = String(this.data.editingDisplayName || "").trim()
-      if (!displayName) {
-        wx.showToast({ title: "请填写昵称", icon: "none" })
-        return
-      }
-      if (Array.from(displayName).length > 40) {
-        wx.showToast({ title: "昵称不能超过 40 个字符", icon: "none" })
-        return
-      }
-
-      const displayNameChanged = displayName !== user.display_name
-      const pendingAvatarPath = String(this.data.pendingAvatarPath || "")
-      if (!displayNameChanged && !pendingAvatarPath) {
-        this.handleProfileDialogCancel()
-        return
-      }
-
-      this.setData({ savingProfile: true })
-      try {
-        if (displayNameChanged) await updateAccountProfile(displayName)
-        if (pendingAvatarPath) {
-          await updateAccountAvatar(
-            this.data.pendingAvatarUploadPath,
-            this.data.pendingAvatarCrop
-          )
+      const page = this as SettingsPageInstance
+      if (!user || page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: "/pages/settings/profile-edit/index",
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
         }
-        const page = this as SettingsPageInstance
-        page.failedAvatarSignature = ""
-        const nextAccountState = getSettingsAccountState()
-        this.setData({
-          ...nextAccountState,
-          showProfileDialog: false,
-          editingDisplayName: "",
-          editingAvatarUrl: "",
-          pendingAvatarPath: "",
-          pendingAvatarUploadPath: "",
-          pendingAvatarCrop: null
-        })
-        wx.showToast({ title: "个人资料已更新", icon: "success" })
-      } catch (error) {
-        wx.showToast({
-          title: error instanceof Error ? error.message : "保存失败，请重试",
-          icon: "none",
-          duration: 3000
-        })
-      } finally {
-        this.setData({ savingProfile: false })
-      }
+      })
     },
     handleLoginTap() {
       const page = this as SettingsPageInstance

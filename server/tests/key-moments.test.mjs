@@ -30,15 +30,17 @@ test("key moment period bounds reject invalid dates", () => {
 });
 
 test("key moment creation uses the previewed date only for day view", async () => {
-  const page = await readFile(
-    new URL("../../src/pages/key-moments/index.ts", import.meta.url),
-    "utf8",
-  );
+  const [page, editor] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+  ]);
   assert.match(
     page,
     /const editorDate = this\.data\.activeGranularity === "day"[\s\S]*?\? this\.data\.anchorDate[\s\S]*?: now\.date/,
   );
-  assert.match(page, /editorDate,[\s\S]*?editorTime: now\.time/);
+  assert.match(page, /pages\/key-moments\/edit\/index\?date=\$\{editorDate\}&time=\$\{now\.time\}/);
+  assert.match(editor, /editorDate: INITIAL_DATE_TIME\.date/);
+  assert.match(editor, /editorTime: INITIAL_DATE_TIME\.time/);
 });
 
 test("key moment items own the edit hit area and isolate the corner delete control", async () => {
@@ -87,25 +89,28 @@ test("tapping the key moment page title scrolls the timeline back to the top", a
 });
 
 test("key moment images keep their source ratio and make the shared crop step optional", async () => {
-  const [page, styles, logic] = await Promise.all([
+  const [page, styles, editorPage, editorStyles, editorLogic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
-    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /class="moment-image"[\s\S]*?mode="widthFix"/);
-  assert.match(page, /class="image-editor__preview"[\s\S]*?mode="aspectFit"[\s\S]*?bindtap="handleChooseImage"/);
-  assert.match(page, /<image-cropper[\s\S]*?shape="rectangle"[\s\S]*?title="调整节点图片"/);
-  assert.doesNotMatch(page, /<image-cropper[\s\S]*?output-(?:size|type|quality)=/);
-  assert.doesNotMatch(page, /<image-cropper[\s\S]*?aspect-ratio=/);
-  assert.doesNotMatch(page, /image-editor__action|可直接使用|>裁剪<|bind:original|free-ratio|allow-original/);
+  assert.match(editorPage, /class="image-editor__preview"[\s\S]*?mode="aspectFit"[\s\S]*?bindtap="handleChooseImage"/);
+  assert.match(editorPage, /<image-cropper[\s\S]*?shape="rectangle"[\s\S]*?title="调整节点图片"/);
+  assert.doesNotMatch(editorPage, /<image-cropper[\s\S]*?output-(?:size|type|quality)=/);
+  assert.doesNotMatch(editorPage, /<image-cropper[\s\S]*?aspect-ratio=/);
+  assert.doesNotMatch(editorPage, /image-editor__action|可直接使用|>裁剪<|bind:original|free-ratio|allow-original/);
   assert.doesNotMatch(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 4 \/ 3;/);
+  assert.match(editorStyles, /\.image-editor\s*\{/);
   assert.match(
-    logic,
+    editorLogic,
     /showImageCropper: true,[\s\S]*?cropSourcePath: file\.tempFilePath/,
   );
-  assert.match(logic, /handleImageCropConfirm\([\s\S]*?selectedImagePath: tempFilePath/);
-  assert.doesNotMatch(logic, /handleOpenImageCropper|handleImageOriginal/);
+  assert.match(editorLogic, /handleImageCropConfirm\([\s\S]*?selectedImagePath: tempFilePath/);
+  assert.doesNotMatch(editorLogic, /handleOpenImageCropper|handleImageOriginal/);
 });
 
 test("key moments offer user-scoped horizontal and vertical display settings", async () => {
@@ -146,6 +151,7 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
     ),
   ];
   assert.ok(registeredPages.includes("pages/key-moments/settings/index"));
+  assert.ok(registeredPages.includes("pages/key-moments/edit/index"));
 });
 
 test("key moments reuse cached periods and update cached lists after writes", async () => {

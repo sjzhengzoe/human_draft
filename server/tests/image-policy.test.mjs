@@ -3,13 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const businessImagePages = [
-  "../../src/pages/activities/index.ts",
-  "../../src/pages/key-moments/index.ts",
+  "../../src/pages/activities/edit/index.ts",
+  "../../src/pages/key-moments/edit/index.ts",
   "../../src/pages/menu/edit/index.ts",
   "../../src/pages/menu/place-edit/index.ts",
   "../../src/pages/media/detail/index.ts",
   "../../src/pages/media/edit/index.ts",
-  "../../src/pages/settings/index.ts",
+  "../../src/pages/settings/profile-edit/index.ts",
   "../../src/pages/wardrobe/item-edit/index.ts",
 ];
 

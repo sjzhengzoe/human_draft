@@ -1,3 +1,7 @@
+type AppDialogInstance = WechatMiniprogram.Component.TrivialInstance & {
+  keyboardHeightHandler?: (result: WechatMiniprogram.OnKeyboardHeightChangeCallbackResult) => void
+}
+
 Component({
   options: {
     multipleSlots: true
@@ -34,6 +38,38 @@ Component({
     fullscreen: {
       type: Boolean,
       value: false
+    },
+    placement: {
+      type: String,
+      value: "center"
+    }
+  },
+  data: {
+    keyboardHeight: 0
+  },
+  observers: {
+    "visible, placement"(visible: boolean, placement: string) {
+      if ((!visible || placement !== "bottom") && this.data.keyboardHeight) {
+        this.setData({ keyboardHeight: 0 })
+      }
+    }
+  },
+  lifetimes: {
+    attached() {
+      const component = this as AppDialogInstance
+      component.keyboardHeightHandler = ({ height }) => {
+        if (!this.properties.visible || this.properties.placement !== "bottom") return
+        const keyboardHeight = Math.max(0, Number(height) || 0)
+        if (keyboardHeight !== this.data.keyboardHeight) this.setData({ keyboardHeight })
+      }
+      wx.onKeyboardHeightChange(component.keyboardHeightHandler)
+    },
+    detached() {
+      const component = this as AppDialogInstance
+      if (component.keyboardHeightHandler) {
+        wx.offKeyboardHeightChange(component.keyboardHeightHandler)
+        component.keyboardHeightHandler = undefined
+      }
     }
   },
   methods: {

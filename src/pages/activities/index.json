@@ -1,10 +1,5 @@
 {
   "navigationBarTitleText": "活动清单",
   "disableScroll": true,
-  "usingComponents": {
-    "app-dialog": "/components/app-dialog/index",
-    "app-input": "/components/app-input/index",
-    "operation-loading": "/components/operation-loading/index",
-    "image-cropper": "/components/image-cropper/index"
-  }
+  "usingComponents": {}
 }

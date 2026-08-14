@@ -220,6 +220,7 @@
   <app-dialog
     wx:if="{{showOfficialEditor}}"
     visible="{{true}}"
+    placement="bottom"
     title="{{editingOfficialId ? '编辑官方话题' : '添加官方话题'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
@@ -231,8 +232,7 @@
         maxlength="120"
         placeholder="写下一个官方话题…"
         focus
-        adjust-position="{{true}}"
-        cursor-spacing="160"
+        adjust-position="{{false}}"
         bindinput="handleOfficialEditorInput"
       />
       <view class="topic-editor__count">{{officialEditorContent.length}} / 120</view>
@@ -246,6 +246,7 @@
   <app-dialog
     wx:if="{{showEditor}}"
     visible="{{true}}"
+    placement="bottom"
     title="{{editorTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
@@ -257,8 +258,7 @@
         maxlength="120"
         placeholder="写下一个想聊的话题…"
         focus
-        adjust-position="{{true}}"
-        cursor-spacing="160"
+        adjust-position="{{false}}"
         bindinput="handleEditorInput"
       />
       <view class="topic-editor__count">{{editorContent.length}} / 120</view>
