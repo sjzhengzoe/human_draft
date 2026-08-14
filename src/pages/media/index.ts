@@ -75,8 +75,8 @@ function mediaPlaceholderIcon(mediaType: MediaType): string {
 function mediaCoverThumbnailUrl(url: string): string {
   if (!url.includes("/media-covers/")) return url
   return url.replace(
-    /-normalized-v3\.webp(?=($|\?))/,
-    "-normalized-v3-thumbnail.webp"
+    /-(normalized-v3|cost-v4)\.webp(?=($|\?))/,
+    "-$1-thumbnail.webp"
   )
 }
 

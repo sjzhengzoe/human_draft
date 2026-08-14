@@ -275,6 +275,8 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(page, /scroll-top="\{\{contentScrollTop\}\}"/);
   assert.match(page, /bindscroll="handleContentScroll"/);
   assert.match(page, /src="\{\{item\.coverThumbnailUrl\}\}"/);
+  assert.match(logic, /normalized-v3\|cost-v4/);
+  assert.match(logic, /"-\$1-thumbnail\.webp"/);
   assert.match(styles, /-webkit-line-clamp:\s*2/);
   assert.match(logic, /const PAGE_SIZE = 60/);
   assert.match(logic, /SEARCH_DEBOUNCE_MS = 180/);

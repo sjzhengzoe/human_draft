@@ -4,7 +4,7 @@ import { assertCondition } from "../../lib/errors.mjs";
 import { STANDARD_IMAGE_TYPES } from "../../http/multipart-image.mjs";
 import {
   IMAGE_PROFILES,
-  IMAGE_STORAGE_VERSION,
+  optimizedThumbnailPath,
 } from "../../lib/image-processing.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
@@ -90,12 +90,7 @@ async function toSignedMediaCoverResponse(supabase, record) {
 
 async function removeManagedMediaCover(supabase, path) {
   if (!path) return;
-  const thumbnailPath = path.endsWith(`-${IMAGE_STORAGE_VERSION}.webp`)
-    ? path.replace(
-        `-${IMAGE_STORAGE_VERSION}.webp`,
-        `-${IMAGE_STORAGE_VERSION}-thumbnail.webp`,
-      )
-    : "";
+  const thumbnailPath = optimizedThumbnailPath(path);
   const { error } = await supabase.storage
     .from(config.mediaCoverBucket)
     .remove([path, thumbnailPath].filter(Boolean));
