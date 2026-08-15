@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../services/auth"
 import { listActivityItems } from "../../services/activities"
 import type { ActivityItem, ActivityType } from "../../types/activities"
 import {
@@ -7,6 +7,7 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { requireLoginForAction } from "../../utils/login-required"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
 type ActivityItemsByType = Record<ActivityType, ActivityItem[]>
@@ -28,12 +29,18 @@ Page({
     itemsByType: emptyActivityItemsByType(),
     items: [] as ActivityItem[],
     canWrite: false,
+    guestMode: false,
     loading: true,
     hasLoaded: false
   },
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ guestMode: true, loading: false, hasLoaded: true })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     void this.loadItems(this.data.hasLoaded)
   },
 
@@ -79,6 +86,7 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.loading) return
     wx.navigateTo({
       url: `/pages/activities/edit/index?type=${encodeURIComponent(this.data.activeType)}`,
@@ -92,6 +100,7 @@ Page({
   },
 
   handleManagerOpen() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.loading) return
     wx.navigateTo({
       url: `/pages/activities/manage/index?type=${encodeURIComponent(this.data.activeType)}`

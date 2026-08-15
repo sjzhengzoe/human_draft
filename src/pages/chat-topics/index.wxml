@@ -110,7 +110,7 @@
             <app-icon name="sparkles-white" size="24" />
             <text>随机一组</text>
           </button>
-          <button wx:if="{{canWrite}}" class="add-button" bindtap="handleAddMine">
+          <button wx:if="{{canWrite || guestMode}}" class="add-button" bindtap="handleAddMine">
             <app-icon name="plus-white" size="24" />
             <text>新增</text>
           </button>
@@ -293,3 +293,5 @@
 
   <operation-loading visible="{{deleting || officialDeleting}}" text="正在处理…" />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

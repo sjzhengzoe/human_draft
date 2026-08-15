@@ -2,7 +2,5 @@
   "navigationStyle": "custom",
   "disableScroll": true,
   "backgroundColor": "#f6f7f1",
-  "usingComponents": {
-    "app-dialog": "/components/app-dialog/index"
-  }
+  "usingComponents": {}
 }

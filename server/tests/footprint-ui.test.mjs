@@ -33,10 +33,7 @@ test("footprint page is registered and reachable from the home modules", async (
   assert.match(homeModules, /key: "footprint"/)
   assert.match(homeModules, /path: "\/pages\/footprint\/index"/)
   assert.match(homeModules, /icon: "map-pinned"/)
-  assert.match(
-    homeModules,
-    /key: "footprint"[\s\S]*?path: "\/pages\/footprint\/index"[\s\S]*?requiresLogin: true/
-  )
+  assert.doesNotMatch(homeModules, /requiresLogin/)
 })
 
 test("footprint records load and save directly against the authenticated user's cloud data", async () => {

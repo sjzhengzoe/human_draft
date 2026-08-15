@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../services/auth"
 import {
   createLuggageScene,
   createLuggageGroup,
@@ -27,6 +27,7 @@ import {
   getLuggageDataRevision,
   hasCachedLuggageScenes
 } from "../../utils/luggage-data-cache"
+import { requireLoginForAction } from "../../utils/login-required"
 
 type LuggageOrderSnapshot = {
   groupIds: string[]
@@ -196,6 +197,7 @@ Page({
     activeUnpackedCount: 0,
     activePackingPercent: 0,
     canWrite: false,
+    guestMode: false,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -228,6 +230,11 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     if (!this.data.hasLoaded || this.data.luggageRevision !== getLuggageDataRevision()) {
       void this.loadScenes()
     }
@@ -241,6 +248,7 @@ Page({
   },
 
   async loadScenes() {
+    if (!getCurrentUser()) return
     if (!isAsyncPageActive(this)) return
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
@@ -355,6 +363,7 @@ Page({
   },
 
   handleAddScene() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading || this.data.sceneCreating) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
@@ -391,6 +400,7 @@ Page({
   },
 
   handleManageScenes() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })

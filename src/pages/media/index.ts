@@ -7,6 +7,7 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { requireLoginForAction } from "../../utils/login-required"
 import {
   MEDIA_CACHE_FRESH_MS,
   getCachedMediaCategories,
@@ -202,6 +203,7 @@ Page({
     selectedRating: 0 as RatingFilter,
     ratingOptions: RATING_FILTER_OPTIONS,
     canWrite: false,
+    guestMode: false,
     loading: true,
     contentLoading: false,
     loadingMore: false,
@@ -223,6 +225,23 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({
+        guestMode: true,
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        sharedLoaded: false,
+        overviewLoaded: true,
+        recordLoaded: true,
+        overviewItems: [],
+        recordItems: []
+      })
+      return
+    }
+    if (this.data.guestMode) {
+      this.setData({ guestMode: false, hasLoaded: false, overviewLoaded: false, recordLoaded: false })
+    }
     const mediaRevision = getMediaDataRevision()
     if (!this.data.hasLoaded) {
       const hydrated = this.hydrateCurrentViewFromCache()
@@ -423,6 +442,7 @@ Page({
   },
 
   async loadCurrentView(options: LoadCurrentViewOptions = {}) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const reset = options.reset !== false
     const background = options.background === true
@@ -668,6 +688,10 @@ Page({
   },
 
   handlePullRefresh() {
+    if (!getCurrentUser()) {
+      this.setData({ refresherTriggered: false })
+      return
+    }
     if (this.data.loading || this.data.contentLoading || this.data.loadingMore) return
     this.setData({ refresherTriggered: true })
     void this.loadCurrentView({
@@ -679,6 +703,7 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading) return
     if (!this.data.mediaTypes.length) {
       wx.showToast({ title: "请先创建影视分类", icon: "none" })
@@ -692,6 +717,7 @@ Page({
   },
 
   handleManageCategories() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading) return
     wx.navigateTo({ url: "/pages/media/categories/index" })
   },

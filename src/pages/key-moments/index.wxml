@@ -33,7 +33,7 @@
       bindtap="handleSettings"
     ><app-icon name="settings-2" size="27" /></view>
     <button
-      wx:if="{{canWrite}}"
+      wx:if="{{canWrite || guestMode}}"
       class="add-button"
       aria-label="新增人生节点"
       bindtap="handleAdd"
@@ -122,3 +122,5 @@
     bindconfirm="handleDeleteConfirm"
   />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

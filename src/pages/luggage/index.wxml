@@ -26,14 +26,14 @@
       bindtap="handleSceneTabsToggle"
     ><app-icon name="{{sceneTabsExpanded ? 'arrow-up' : 'chevron-down'}}" size="24" /></view>
     <view
-      wx:if="{{canWrite}}"
+      wx:if="{{canWrite || guestMode}}"
       class="scene-tool"
       role="button"
       aria-label="新增行李场景"
       bindtap="handleAddScene"
     ><app-icon name="plus" size="24" inverse="{{false}}" /></view>
     <view
-      wx:if="{{canWrite}}"
+      wx:if="{{canWrite || guestMode}}"
       class="scene-tool"
       role="button"
       aria-label="管理行李场景"
@@ -44,7 +44,7 @@
   <view wx:if="{{errorMessage && !activeScene}}" class="state">{{errorMessage}}</view>
   <view wx:elif="{{scenes.length === 0}}" class="state">
     <view>还没有行李场景</view>
-    <view wx:if="{{canWrite}}" class="state__action" role="button" bindtap="handleAddScene">新增第一个场景</view>
+    <view wx:if="{{canWrite || guestMode}}" class="state__action" role="button" bindtap="handleAddScene">新增第一个场景</view>
   </view>
 
   <view wx:elif="{{activeScene}}" class="packing-content">
@@ -351,3 +351,5 @@
     text="{{deleting ? '正在删除…' : '正在保存排序…'}}"
   />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

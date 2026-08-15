@@ -141,3 +141,4 @@
 </view>
 
 <operation-loading visible="{{footprintLoading}}" text="正在加载足迹…" />
+<login-required-dialog id="login-required-dialog" />

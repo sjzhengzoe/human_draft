@@ -113,7 +113,8 @@
   },
   "usingComponents": {
     "app-icon": "/components/app-icon/index",
-    "custom-navigation": "/components/custom-navigation/index"
+    "custom-navigation": "/components/custom-navigation/index",
+    "login-required-dialog": "/components/login-required-dialog/index"
   },
   "tabBar": {
     "custom": true,

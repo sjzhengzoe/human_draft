@@ -21,7 +21,7 @@
           <view class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}" data-type="outside" bindtap="handleRecordTypeTap">外食</view>
         </view>
       </view>
-      <button wx:if="{{canWrite && !selectionMode}}" class="add-button" bindtap="handleAddTap">
+      <button wx:if="{{(canWrite || guestMode) && !selectionMode}}" class="add-button" bindtap="handleAddTap">
         <app-icon name="plus-white" size="24" />
         <text>新增</text>
       </button>
@@ -238,6 +238,8 @@
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 </view>
+
+<login-required-dialog id="login-required-dialog" />
 
 <view wx:if="{{selectionMode}}" class="selection-basket" bindtap="handleBasketOpen">
   <text>已选 {{selectedItems.length}} 个</text>

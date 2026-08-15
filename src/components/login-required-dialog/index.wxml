@@ -1,0 +1,9 @@
+<app-dialog
+  visible="{{visible}}"
+  title="登录后继续"
+  content="这样你的记录就不会走丢啦 (｡•ᴗ•｡)"
+  cancel-text="暂不登录"
+  confirm-text="去登录"
+  bindcancel="handleCancel"
+  bindconfirm="handleConfirm"
+/>

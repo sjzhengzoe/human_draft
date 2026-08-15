@@ -37,12 +37,11 @@
           hover-start-time="20"
           hover-stay-time="80"
           role="button"
-          aria-label="{{item.title}}{{!loggedIn && item.requiresLogin ? '，需要登录' : ''}}"
+          aria-label="{{item.title}}"
           data-key="{{item.key}}"
           data-title="{{item.title}}"
           data-path="{{item.path}}"
           data-available="{{item.available}}"
-          data-requires-login="{{item.requiresLogin}}"
           bindtap="handleFeatureTap"
         >
           <image wx:if="{{item.image}}" class="feature-item__image" src="{{item.image}}" mode="aspectFill" aria-hidden="{{true}}" />
@@ -64,13 +63,4 @@
     </view>
   </scroll-view>
 
-  <app-dialog
-    visible="{{loginDialogVisible}}"
-    title="登录后使用"
-    content="{{loginDialogContent}}"
-    cancel-text="暂不登录"
-    confirm-text="去登录"
-    bindcancel="handleLoginDialogCancel"
-    bindconfirm="handleLoginDialogConfirm"
-  />
 </view>

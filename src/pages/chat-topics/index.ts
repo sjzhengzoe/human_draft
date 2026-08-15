@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../services/auth"
 import {
   addOfficialChatTopic,
   createOfficialChatTopic,
@@ -24,6 +24,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { requireLoginForAction } from "../../utils/login-required"
 
 const RANDOM_TOPIC_COUNT = 3
 const OFFICIAL_PAGE_SIZE = 5
@@ -108,6 +109,7 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     canWrite: false,
+    guestMode: false,
     isAdmin: false,
     addingOfficialId: "",
     showOfficialEditor: false,
@@ -135,6 +137,11 @@ Page({
   },
 
   onShow() {
+    if (!getCurrentUser()) {
+      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     this.loadTopics()
   },
 
@@ -143,6 +150,7 @@ Page({
   },
 
   async loadTopics() {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
@@ -213,6 +221,7 @@ Page({
   },
 
   async loadOfficialPage(page: number) {
+    if (!getCurrentUser()) return
     if (this.data.loadingOfficialPage) return
     this.setData({ loadingOfficialPage: true })
     try {
@@ -253,6 +262,7 @@ Page({
   },
 
   async loadHiddenPage(page: number) {
+    if (!getCurrentUser()) return
     if (this.data.loadingHiddenPage) return
     this.setData({ loadingHiddenPage: true })
     try {
@@ -491,6 +501,7 @@ Page({
   },
 
   handleAddMine() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading) return
     this.setData({
       showEditor: true,

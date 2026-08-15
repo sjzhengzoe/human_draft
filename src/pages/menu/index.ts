@@ -9,6 +9,7 @@ import {
   reorderDishSortOrders,
   reorderMenuPlaceSortOrders
 } from "../../services/menu"
+import { getCurrentUser } from "../../services/auth"
 import type {
   Category,
   Dish,
@@ -37,6 +38,7 @@ import {
 import {
   getMenuDataRevision
 } from "../../utils/menu-data-revision"
+import { requireLoginForAction } from "../../utils/login-required"
 
 let dragSourceIndex = -1
 let dragTargetIndex = -1
@@ -358,6 +360,7 @@ Page({
     activeFilter: "home",
     activeRecordType: "home" as RecordTypeFilter,
     canWrite: false,
+    guestMode: false,
     canReorder: false,
     sortEditing: false,
     draggingIndex: -1,
@@ -415,6 +418,19 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({
+        guestMode: true,
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        metadataLoaded: true,
+        dishes: [],
+        outsidePlaces: []
+      })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, metadataLoaded: false })
     if (this.data.selectionMode && !this.data.selectionLoaded) {
       this.loadSelectionContext()
     }
@@ -502,6 +518,7 @@ Page({
   },
 
   async refreshData(reloadMetadata: boolean, allowCache = false) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const currentRevision = getMenuDataRevision()
     if (currentRevision !== this.data.loadedRevision) menuContentCache.clear()
@@ -666,6 +683,10 @@ Page({
   },
 
   async performSearch(keyword: string) {
+    if (!getCurrentUser()) {
+      this.setData({ searching: false, contentLoading: false, dishes: [], outsidePlaces: [] })
+      return
+    }
     const requestId = ++searchRequestId
     const recordType = this.data.activeRecordType
     this.setData({ searching: true, contentLoading: true, errorMessage: "" })
@@ -742,10 +763,12 @@ Page({
   },
 
   handleFavoritesManage() {
+    if (!requireLoginForAction(this)) return
     wx.navigateTo({ url: "/pages/menu/favorites/index" })
   },
 
   async handleSelectionSave() {
+    if (!requireLoginForAction(this)) return
     if (this.data.savingSelection) return
     this.setData({ savingSelection: true })
     try {
@@ -953,6 +976,7 @@ Page({
   },
 
   handleAddTap() {
+    if (!requireLoginForAction(this)) return
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
@@ -971,6 +995,7 @@ Page({
   },
 
   handlePrintTap() {
+    if (!requireLoginForAction(this)) return
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
@@ -980,6 +1005,7 @@ Page({
   },
 
   handleDayPlanTap() {
+    if (!requireLoginForAction(this)) return
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })

@@ -2,6 +2,7 @@ import {
   listWardrobeCategories,
   listWardrobeItems
 } from "../../services/wardrobe"
+import { getCurrentUser } from "../../services/auth"
 import type {
   WardrobeCategory,
   WardrobeItem
@@ -12,6 +13,7 @@ import {
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { requireLoginForAction } from "../../utils/login-required"
 
 type DisplayValue = {
   id: string
@@ -76,11 +78,17 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     errorMessage: "",
+    guestMode: false,
     showCreateCategoryDialog: false
   },
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     this.refreshData(true)
   },
 
@@ -89,6 +97,7 @@ Page({
   },
 
   async refreshData(preserveActiveItem = true) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const activeItemId = preserveActiveItem
       ? this.data.items[this.data.activeItemIndex]?.id || ""
@@ -160,12 +169,14 @@ Page({
   },
 
   handleManageCategories() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.contentLoading) {
       wx.navigateTo({ url: "/pages/wardrobe/categories/index" })
     }
   },
 
   handleAddItem() {
+    if (!requireLoginForAction(this)) return
     if (this.data.contentLoading) return
     if (!this.data.categories.length) {
       this.setData({ showCreateCategoryDialog: true })

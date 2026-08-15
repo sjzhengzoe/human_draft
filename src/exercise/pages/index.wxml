@@ -171,3 +171,5 @@
     bindconfirm="confirmRestDialog"
   />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

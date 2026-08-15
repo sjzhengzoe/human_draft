@@ -14,12 +14,14 @@ import {
   setFootprintCityVisited
 } from "../../services/footprint"
 import { initializeUIFont } from "../../services/ui-font"
+import { getCurrentUser } from "../../services/auth"
 import {
   drawFootprintMap,
   type FootprintCanvasContext,
   type FootprintCanvasNode,
   type FootprintMapLevel
 } from "../../utils/footprint-map"
+import { requireLoginForAction } from "../../utils/login-required"
 
 type FootprintCityView = FootprintCityDefinition & {
   visited: boolean
@@ -113,7 +115,8 @@ Page({
     visitedCityCodes = new Set()
     this.setData({ activeTab: "unvisited" })
     this.rebuildLists()
-    void this.loadCloudFootprint()
+    if (getCurrentUser()) void this.loadCloudFootprint()
+    else this.setData({ footprintLoading: false })
     void initializeUIFont()
       .then(() => {
         if (pageActive) this.drawMap()
@@ -277,6 +280,7 @@ Page({
   },
 
   async handleCityTap(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const cityCode = String(event.currentTarget.dataset.code || "")
     const provinceCode = String(event.currentTarget.dataset.provinceCode || "")
     const provinceName = String(event.currentTarget.dataset.provinceName || "")

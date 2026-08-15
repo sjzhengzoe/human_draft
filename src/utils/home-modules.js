@@ -12,8 +12,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/menu-bold.png",
         decoration: "/assets/home-modules/decor-cat.png",
         path: "/pages/menu/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "media",
@@ -22,8 +21,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/media-bold.png",
         decoration: "/assets/home-modules/decor-cat-belly-up.png",
         path: "/pages/media/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "activities",
@@ -31,8 +29,7 @@ const HOME_FEATURE_GROUPS = [
         title: "活动清单",
         image: "/assets/home-modules/activities-bold.png",
         path: "/pages/activities/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "chat-topics",
@@ -40,8 +37,7 @@ const HOME_FEATURE_GROUPS = [
         title: "聊天话题",
         image: "/assets/home-modules/chat-topics-bold.png",
         path: "/pages/chat-topics/index",
-        available: true,
-        requiresLogin: true
+        available: true
       }
     ]
   },
@@ -56,8 +52,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/text-card-bold.png",
         decoration: "/assets/home-modules/decor-flora.png",
         path: "/pages/text-card/index",
-        available: true,
-        requiresLogin: false
+        available: true
       },
       {
         key: "exercise",
@@ -66,8 +61,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/exercise-bold.png",
         decoration: "/assets/home-modules/decor-frenchie-sleeping.png",
         path: "/exercise/pages/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "luggage",
@@ -75,8 +69,7 @@ const HOME_FEATURE_GROUPS = [
         title: "行李清单",
         image: "/assets/home-modules/luggage-bold.png",
         path: "/pages/luggage/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "wardrobe",
@@ -84,8 +77,7 @@ const HOME_FEATURE_GROUPS = [
         title: "衣物尺寸",
         image: "/assets/home-modules/wardrobe-bold.png",
         path: "/pages/wardrobe/index",
-        available: true,
-        requiresLogin: true
+        available: true
       }
     ]
   },
@@ -100,8 +92,7 @@ const HOME_FEATURE_GROUPS = [
         image: "/assets/home-modules/key-moments-bold.png",
         decoration: "/assets/home-modules/decor-cat-stretched.png",
         path: "/pages/key-moments/index",
-        available: true,
-        requiresLogin: true
+        available: true
       },
       {
         key: "footprint",
@@ -109,8 +100,7 @@ const HOME_FEATURE_GROUPS = [
         title: "全国足迹",
         image: "/assets/home-modules/footprint-bold.png",
         path: "/pages/footprint/index",
-        available: true,
-        requiresLogin: true
+        available: true
       }
     ]
   }

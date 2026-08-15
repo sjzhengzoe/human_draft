@@ -19,7 +19,7 @@
       >{{item}}</view>
     </view>
 
-    <view wx:if="{{canWrite}}" class="activity-toolbar">
+    <view wx:if="{{canWrite || guestMode}}" class="activity-toolbar">
       <view
         class="icon-button"
         role="button"
@@ -37,7 +37,7 @@
 
   <view wx:if="{{items.length === 0}}" class="content-state empty-state">
     <view>当前场景还没有活动</view>
-    <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增活动</view>
+    <view wx:if="{{canWrite || guestMode}}" class="empty-action" bindtap="handleAdd">新增活动</view>
   </view>
 
   <scroll-view wx:else class="activity-list-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
@@ -65,3 +65,5 @@
   </scroll-view>
 
 </view>
+
+<login-required-dialog id="login-required-dialog" />

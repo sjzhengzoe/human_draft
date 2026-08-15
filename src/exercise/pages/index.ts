@@ -13,6 +13,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
+import { requireLoginForAction } from "../../utils/login-required"
 
 const PET_IMAGES: Record<ExerciseBowlLevel, readonly string[]> = {
   full: [
@@ -163,6 +164,7 @@ Page({
   data: {
     loading: true,
     hasLoaded: false,
+    guestMode: false,
     busy: false,
     busyAction: "",
     selectedDate: "",
@@ -218,6 +220,11 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ guestMode: true, loading: false, hasLoaded: true, calendarLoading: false })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     this.loadDashboard()
   },
 
@@ -356,6 +363,7 @@ Page({
   },
 
   async loadDashboard(month?: string) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const requestedMonth = month ?? this.data.calendarMonthValue
     if (!this.data.hasLoaded) {
@@ -406,11 +414,13 @@ Page({
   },
 
   handleSettings() {
+    if (!requireLoginForAction(this)) return
     if (this.data.busy) return
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },
 
   handleComplete() {
+    if (!requireLoginForAction(this)) return
     if (this.data.busy) return
     if (this.data.selectedRestUsed) {
       if (!this.data.selectedCanRevokeRestDay) return
@@ -445,6 +455,7 @@ Page({
   },
 
   handleUseRestDay() {
+    if (!requireLoginForAction(this)) return
     if (this.data.busy || !this.data.selectedCanUseRestDay) return
     const remaining = Math.max(0, this.data.restCreditBalance - 1)
     this.setData({

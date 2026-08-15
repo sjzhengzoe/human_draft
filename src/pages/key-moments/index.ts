@@ -19,6 +19,7 @@ import {
   DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT,
   getKeyMomentDisplayLayout
 } from "../../utils/key-moment-settings"
+import { requireLoginForAction } from "../../utils/login-required"
 import type { KeyMomentDisplayLayout } from "../../utils/key-moment-settings"
 import {
   getCachedKeyMoments,
@@ -122,6 +123,7 @@ Page({
     displayLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT as KeyMomentDisplayLayout,
     items: [] as KeyMomentTimelineItem[],
     canWrite: false,
+    guestMode: false,
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -138,6 +140,11 @@ Page({
 
   onShow() {
     const user = getCurrentUser()
+    if (!user) {
+      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true, items: [] })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     if (user) {
       const displayLayout = getKeyMomentDisplayLayout(user.uid)
       if (displayLayout !== this.data.displayLayout) this.setData({ displayLayout })
@@ -191,6 +198,7 @@ Page({
     forceRefresh?: boolean
     silent?: boolean
   } = {}) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
     const input = {
@@ -249,6 +257,7 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.loading || this.data.contentLoading) return
     const now = currentShanghaiDateTime()
     const editorDate = this.data.activeGranularity === "day"
@@ -258,6 +267,7 @@ Page({
   },
 
   handleSettings() {
+    if (!requireLoginForAction(this)) return
     if (this.data.loading) return
     wx.navigateTo({ url: "/pages/key-moments/settings/index" })
   },

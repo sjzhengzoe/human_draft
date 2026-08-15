@@ -50,7 +50,7 @@
       </view>
     </block>
 
-    <view wx:if="{{canWrite}}" class="media-toolbar">
+    <view wx:if="{{canWrite || guestMode}}" class="media-toolbar">
       <view class="media-toolbar__actions">
         <view class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
           <app-icon name="settings-2" size="24" />
@@ -104,7 +104,7 @@
         </view>
         <view wx:else class="section-empty">
           <text>{{overviewStatus === 'in_progress' ? '没有在看的作品' : '还没有想看的作品'}}</text>
-          <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增</view>
+          <view wx:if="{{canWrite || guestMode}}" class="empty-action" bindtap="handleAdd">新增</view>
         </view>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
@@ -138,9 +138,11 @@
       </view>
       <view wx:else class="state-block">
         <text>{{appliedKeyword || selectedRating ? '没有找到符合筛选的作品' : '这个分类还没有记录'}}</text>
-        <view wx:if="{{canWrite && !appliedKeyword && !selectedRating}}" class="empty-action" bindtap="handleAdd">新增</view>
+        <view wx:if="{{(canWrite || guestMode) && !appliedKeyword && !selectedRating}}" class="empty-action" bindtap="handleAdd">新增</view>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>
   </scroll-view>
 </view>
+
+<login-required-dialog id="login-required-dialog" />
