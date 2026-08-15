@@ -103,15 +103,45 @@ export async function createKeyMoment(input: {
 
 export async function updateKeyMoment(
   id: string,
-  input: { content: string }
+  input: { content: string; imagePaths?: string[] }
 ): Promise<KeyMoment> {
   const data = await request<{ item: KeyMoment }>({
     path: `/api/key-moments/${id}`,
     method: "PUT",
-    data: { content: input.content }
+    data: {
+      content: input.content,
+      ...(input.imagePaths ? { image_paths: input.imagePaths } : {})
+    }
   })
   updateCachedKeyMoment(data.item)
   return data.item
+}
+
+export async function stageKeyMomentImage(
+  id: string,
+  imagePath: string,
+  replacedImagePaths: string[] = []
+): Promise<string> {
+  const data = await upload<{ image_path: string }>({
+    path: `/api/key-moments/${id}/images/stage`,
+    filePath: imagePath,
+    formData: replacedImagePaths.length
+      ? { replaced_paths: JSON.stringify(replacedImagePaths) }
+      : undefined
+  })
+  return data.image_path
+}
+
+export async function discardStagedKeyMomentImages(
+  id: string,
+  imagePaths: string[]
+): Promise<void> {
+  if (!imagePaths.length) return
+  await request<{ discarded: boolean }>({
+    path: `/api/key-moments/${id}/images/staged`,
+    method: "DELETE",
+    data: { image_paths: imagePaths }
+  })
 }
 
 export async function appendKeyMomentImage(
@@ -123,25 +153,6 @@ export async function appendKeyMomentImage(
     path: `/api/key-moments/${id}/images`,
     filePath: imagePath,
     imageCrop
-  })
-  updateCachedKeyMoment(data.item)
-  return data.item
-}
-
-export async function deleteKeyMomentImage(id: string, index: number): Promise<KeyMoment> {
-  const data = await request<{ item: KeyMoment }>({
-    path: `/api/key-moments/${id}/images/${index}`,
-    method: "DELETE"
-  })
-  updateCachedKeyMoment(data.item)
-  return data.item
-}
-
-export async function reorderKeyMomentImages(id: string, order: number[]): Promise<KeyMoment> {
-  const data = await request<{ item: KeyMoment }>({
-    path: `/api/key-moments/${id}/images/order`,
-    method: "PUT",
-    data: { order }
   })
   updateCachedKeyMoment(data.item)
   return data.item

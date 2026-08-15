@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { config } from "../../config.mjs";
+import { cosObjectKey } from "../../lib/cos-storage.mjs";
 import { assertCondition } from "../../lib/errors.mjs";
 import { throwSupabaseError } from "../../lib/supabase.mjs";
 import {
@@ -17,6 +18,7 @@ const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const GRANULARITIES = new Set(["year", "month", "day"]);
 const SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
 const MAX_CONTENT_LENGTH = 2_000;
+const MAX_IMAGE_COUNT = 9;
 
 function assertUuid(value) {
   assertCondition(
@@ -47,6 +49,28 @@ function normalizeOccurredAt(value) {
   const year = new Date(occurredAt.getTime() + 8 * 60 * 60 * 1000).getUTCFullYear();
   assertCondition(year >= 1900 && year <= 2100, 400, "INVALID_TIME", "节点时间需在 1900 至 2100 年之间。");
   return occurredAt.toISOString();
+}
+
+function normalizeImagePaths(value, fieldName = "图片列表") {
+  let paths = value;
+  if (typeof paths === "string") {
+    try {
+      paths = JSON.parse(paths);
+    } catch (_error) {
+      paths = null;
+    }
+  }
+  assertCondition(Array.isArray(paths), 400, "INVALID_IMAGE_PATHS", `${fieldName}格式无效。`);
+  const normalized = paths.map((path) => String(path || "").trim());
+  assertCondition(
+    normalized.length <= MAX_IMAGE_COUNT &&
+      normalized.every(Boolean) &&
+      new Set(normalized).size === normalized.length,
+    400,
+    "INVALID_IMAGE_PATHS",
+    `最多保留 ${MAX_IMAGE_COUNT} 张图片，且图片不能重复。`,
+  );
+  return normalized;
 }
 
 function shanghaiIso(year, month, day) {
@@ -95,6 +119,31 @@ async function requireMoment(supabase, uid, momentId) {
   throwSupabaseError(error, "读取关键节点失败。");
   assertCondition(data, 404, "KEY_MOMENT_NOT_FOUND", "关键节点不存在。");
   return data;
+}
+
+async function assertOwnedMomentImagePaths(supabase, uid, momentId, paths) {
+  if (!paths.length) return;
+  const pathPrefix = `users/${uid}/moments/${momentId}/`;
+  assertCondition(
+    paths.every((path) => path.startsWith(pathPrefix)),
+    400,
+    "INVALID_IMAGE_PATHS",
+    "图片不属于当前关键节点。",
+  );
+  const objectKeys = paths.map((path) => cosObjectKey(config.keyMomentBucket, path));
+  const { data, error } = await supabase
+    .from("image_assets")
+    .select("object_key")
+    .eq("uid", uid)
+    .in("object_key", objectKeys);
+  throwSupabaseError(error, "校验关键节点图片失败。");
+  const ownedKeys = new Set((data || []).map((item) => item.object_key));
+  assertCondition(
+    objectKeys.every((key) => ownedKeys.has(key)),
+    400,
+    "INVALID_IMAGE_PATHS",
+    "图片不存在或不属于当前账号。",
+  );
 }
 
 async function signedUrlsFor(supabase, moments) {
@@ -230,14 +279,20 @@ export async function updateKeyMoment(supabase, uid, momentId, body, options = {
     }
   }
   if (body.occurred_at !== undefined) changes.occurred_at = normalizeOccurredAt(body.occurred_at);
+  if (body.image_paths !== undefined) {
+    changes.image_paths = normalizeImagePaths(body.image_paths);
+    await assertOwnedMomentImagePaths(supabase, uid, current.id, changes.image_paths);
+  }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。");
   const nextContent = changes.content ?? current.content;
+  const nextImagePaths = changes.image_paths ?? current.image_paths;
   assertCondition(
-    nextContent || current.image_paths.length,
+    nextContent || nextImagePaths.length,
     400,
     "CONTENT_REQUIRED",
     "请填写文案或保留图片。",
   );
+  const removedPaths = current.image_paths.filter((path) => !nextImagePaths.includes(path));
   const { data, error } = await supabase
     .from("key_moments")
     .update(changes)
@@ -246,7 +301,36 @@ export async function updateKeyMoment(supabase, uid, momentId, body, options = {
     .select("*")
     .single();
   throwSupabaseError(error, "更新关键节点失败。");
+  await removeImages(supabase, uid, removedPaths);
   return (await toResponses(supabase, [data]))[0];
+}
+
+export async function stageKeyMomentImage(supabase, uid, momentId, image, body = {}) {
+  const current = await requireMoment(supabase, uid, momentId);
+  const replacedPaths = body.replaced_paths === undefined
+    ? []
+    : normalizeImagePaths(body.replaced_paths, "待替换图片列表");
+  assertCondition(
+    replacedPaths.every((path) => current.image_paths.includes(path)),
+    400,
+    "INVALID_IMAGE_PATHS",
+    "待替换图片不属于当前关键节点。",
+  );
+  const paths = await uploadImage(supabase, uid, current.id, image, replacedPaths);
+  return { image_path: paths.imagePath };
+}
+
+export async function discardStagedKeyMomentImages(supabase, uid, momentId, body = {}) {
+  const current = await requireMoment(supabase, uid, momentId);
+  const paths = normalizeImagePaths(body.image_paths, "暂存图片列表");
+  await assertOwnedMomentImagePaths(supabase, uid, current.id, paths);
+  assertCondition(
+    paths.every((path) => !current.image_paths.includes(path)),
+    400,
+    "IMAGE_ALREADY_COMMITTED",
+    "已保存的图片不能作为暂存图片清理。",
+  );
+  await removeImages(supabase, uid, paths);
 }
 
 export async function appendKeyMomentImage(supabase, uid, momentId, image) {
@@ -265,59 +349,6 @@ export async function appendKeyMomentImage(supabase, uid, momentId, image) {
     await removeImages(supabase, uid, [paths.imagePath]);
     throwSupabaseError(error, "添加关键节点图片失败。");
   }
-  return (await toResponses(supabase, [data]))[0];
-}
-
-export async function reorderKeyMomentImages(supabase, uid, momentId, imageOrder) {
-  const current = await requireMoment(supabase, uid, momentId);
-  assertCondition(
-    Array.isArray(imageOrder) &&
-      imageOrder.length === current.image_paths.length &&
-      imageOrder.every((index) => Number.isInteger(index)) &&
-      new Set(imageOrder).size === current.image_paths.length &&
-      imageOrder.every((index) => index >= 0 && index < current.image_paths.length),
-    400,
-    "INVALID_IMAGE_ORDER",
-    "图片顺序无效。",
-  );
-  const nextImagePaths = imageOrder.map((index) => current.image_paths[index]);
-  const { data, error } = await supabase
-    .from("key_moments")
-    .update({ image_paths: nextImagePaths })
-    .eq("id", current.id)
-    .eq("uid", uid)
-    .select("*")
-    .single();
-  throwSupabaseError(error, "调整关键节点图片顺序失败。");
-  return (await toResponses(supabase, [data]))[0];
-}
-
-export async function deleteKeyMomentImage(supabase, uid, momentId, imageIndex) {
-  const current = await requireMoment(supabase, uid, momentId);
-  const index = Number(imageIndex);
-  assertCondition(
-    Number.isInteger(index) && index >= 0 && index < current.image_paths.length,
-    400,
-    "INVALID_IMAGE_INDEX",
-    "图片编号无效。",
-  );
-  const removedPath = current.image_paths[index];
-  const nextImagePaths = current.image_paths.filter((_path, currentIndex) => currentIndex !== index);
-  assertCondition(
-    current.content.trim() || nextImagePaths.length,
-    400,
-    "CONTENT_REQUIRED",
-    "删除图片前请先填写文案。",
-  );
-  const { data, error } = await supabase
-    .from("key_moments")
-    .update({ image_paths: nextImagePaths })
-    .eq("id", current.id)
-    .eq("uid", uid)
-    .select("*")
-    .single();
-  throwSupabaseError(error, "删除关键节点图片失败。");
-  await removeImages(supabase, uid, [removedPath]);
   return (await toResponses(supabase, [data]))[0];
 }
 

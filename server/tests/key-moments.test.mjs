@@ -120,7 +120,7 @@ test("key moment editor selects up to nine original images and displays a WeChat
   assert.match(editorLogic, /sizeType: \["original"\]/);
 });
 
-test("key moment editor supports long-press drag sorting and persists the final image order", async () => {
+test("key moment editor saves the complete ordered gallery instead of incremental mutations", async () => {
   const [editorPage, editorStyles, editorLogic, clientService, routes, serverService] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.less", import.meta.url), "utf8"),
@@ -132,17 +132,49 @@ test("key moment editor supports long-press drag sorting and persists the final 
 
   assert.match(editorPage, /catchlongpress="handleImageLongPress"/);
   assert.match(editorPage, /catchtouchmove="handleImageTouchMove"/);
-  assert.match(editorPage, /长按图片可拖动排序/);
+  assert.doesNotMatch(editorPage, /长按图片可拖动排序|image-sort-hint/);
   assert.match(editorPage, /class="image-drag-ghost"/);
   assert.match(editorStyles, /\.image-grid__item--dragging[\s\S]*?opacity/);
   assert.match(editorStyles, /\.image-drag-ghost[\s\S]*?position: fixed/);
   assert.match(editorLogic, /handleImageLongPress[\s\S]*?wx\.vibrateShort/);
   assert.match(editorLogic, /handleImageTouchMove[\s\S]*?editorImages\.splice\(targetIndex, 0, draggedImage\)/);
-  assert.match(editorLogic, /reorderKeyMomentImages\(this\.data\.editingId, imageOrder\)/);
-  assert.match(clientService, /path: `\/api\/key-moments\/\$\{id\}\/images\/order`/);
-  assert.match(routes, /app\.put\("\/api\/key-moments\/:id\/images\/order"/);
-  assert.match(serverService, /new Set\(imageOrder\)\.size === current\.image_paths\.length/);
-  assert.match(serverService, /const nextImagePaths = imageOrder\.map/);
+  assert.match(editorLogic, /stageKeyMomentImage\([\s\S]*?stagedPathByImageKey\.set/);
+  assert.match(editorLogic, /const imagePaths = this\.data\.editorImages\.map\([\s\S]*?await updateKeyMoment\(this\.data\.editingId, \{ content, imagePaths \}\)/);
+  assert.match(editorLogic, /discardStagedKeyMomentImages\(this\.data\.editingId, stagedImagePaths\)/);
+  assert.match(clientService, /path: `\/api\/key-moments\/\$\{id\}\/images\/stage`/);
+  assert.match(clientService, /image_paths: input\.imagePaths/);
+  assert.match(routes, /app\.post\("\/api\/key-moments\/:id\/images\/stage"/);
+  assert.match(routes, /app\.delete\("\/api\/key-moments\/:id\/images\/staged"/);
+  assert.match(serverService, /changes\.image_paths = normalizeImagePaths\(body\.image_paths\)/);
+  assert.match(serverService, /const removedPaths = current\.image_paths\.filter[\s\S]*?\.update\(changes\)/);
+  assert.doesNotMatch(editorLogic, /deleteKeyMomentImage|reorderKeyMomentImages/);
+  assert.doesNotMatch(clientService, /images\/order|images\/\$\{index\}/);
+  assert.doesNotMatch(routes, /images\/order|images\/:index/);
+});
+
+test("key moment editor prevents duplicate save queues before the loading state renders", async () => {
+  const editorLogic = await readFile(
+    new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(editorLogic, /let saveEditorInFlight = false/);
+  assert.match(
+    editorLogic,
+    /async saveEditor\(\) \{[\s\S]*?if \(saveEditorInFlight \|\| this\.data\.saving \|\| this\.data\.selectingImage\) return/,
+  );
+  assert.match(
+    editorLogic,
+    /saveEditorInFlight = true[\s\S]*?this\.setData\(\{ saving: true \}\)/,
+  );
+  assert.match(
+    editorLogic,
+    /finally \{[\s\S]*?saveEditorInFlight = false[\s\S]*?this\.setData\(\{ saving: false \}\)/,
+  );
+  assert.match(
+    editorLogic,
+    /listKeyMoments\([\s\S]*?\{ forceRefresh: true \}[\s\S]*?const item = items\.find/,
+  );
 });
 
 test("key moment editor uses direct borderless text input and a read-only time", async () => {
@@ -171,8 +203,8 @@ test("key moment editor uses direct borderless text input and a read-only time",
   assert.match(editorLogic, /maxContentLength: MAX_CONTENT_LENGTH/);
   assert.match(editorLogic, /handleEditorContentInput\([\s\S]*?editorContent: event\.detail\.value/);
   assert.doesNotMatch(editorLogic, /handleEditorDateChange|handleEditorTimeChange|contentEditorVisible/);
-  assert.match(editorLogic, /updateKeyMoment\(this\.data\.editingId, \{ content \}\)/);
-  assert.match(clientService, /export async function updateKeyMoment\([\s\S]*?input: \{ content: string \}[\s\S]*?data: \{ content: input\.content \}/);
+  assert.match(editorLogic, /updateKeyMoment\(this\.data\.editingId, \{ content, imagePaths \}\)/);
+  assert.match(clientService, /input: \{ content: string; imagePaths\?: string\[\] \}[\s\S]*?content: input\.content[\s\S]*?image_paths: input\.imagePaths/);
   assert.match(serverService, /const MAX_CONTENT_LENGTH = 2_000/);
   assert.match(serverService, /content\.length <= MAX_CONTENT_LENGTH/);
   assert.match(serverService, /文案不能超过 2000 个字/);

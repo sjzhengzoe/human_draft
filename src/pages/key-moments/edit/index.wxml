@@ -59,7 +59,6 @@
           <app-icon name="image-plus" size="30" />
         </view>
       </view>
-      <view wx:if="{{editorImages.length > 1}}" class="image-sort-hint">长按图片可拖动排序</view>
 
       <view class="readonly-time">{{editorDateTimeLabel}}</view>
     </view>

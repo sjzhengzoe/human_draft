@@ -1670,46 +1670,139 @@ test("key moment edits only check text when the content actually changes", async
   assert.deepEqual(checked, [{ openId: "test-openid", content: "小狗" }]);
 });
 
-test("key moment images can be reordered only as an exact permutation", async (t) => {
+test("key moment edits atomically replace the complete ordered image list", async (t) => {
   const momentId = "30000000-0000-4000-8000-000000000011";
   const paths = [
-    "users/10000/moments/one.webp",
-    "users/10000/moments/two.webp",
-    "users/10000/moments/three.webp",
+    `users/10000/moments/${momentId}/one-master-v1.webp`,
+    `users/10000/moments/${momentId}/two-master-v1.webp`,
+    `users/10000/moments/${momentId}/three-master-v1.webp`,
   ];
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      key_moments: [{
+        id: momentId,
+        uid: UID,
+        content: "三张图片",
+        occurred_at: "2026-08-02T04:30:00.000Z",
+        image_paths: [...paths],
+      }],
+      image_assets: paths.map((path) => ({
+        object_key: `key-moment-images/${path}`,
+        uid: UID,
+      })),
+    }),
+  });
   const app = buildServer({
     logger: false,
-    supabase: createFakeSupabase({
-      tables: authenticatedTables({
-        key_moments: [{
-          id: momentId,
-          uid: UID,
-          content: "三张图片",
-          occurred_at: "2026-08-02T04:30:00.000Z",
-          image_paths: [...paths],
-        }],
-      }),
-    }),
+    supabase,
   });
   t.after(() => app.close());
 
   const response = await app.inject({
     method: "PUT",
-    url: `/api/key-moments/${momentId}/images/order`,
+    url: `/api/key-moments/${momentId}`,
     headers: authHeaders,
-    payload: { order: [2, 0, 1] },
+    payload: { content: "保留两张图片", image_paths: [paths[2], paths[0]] },
   });
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.json().data.item.image_paths, [paths[2], paths[0], paths[1]]);
+  assert.equal(response.json().data.item.content, "保留两张图片");
+  assert.deepEqual(response.json().data.item.image_paths, [paths[2], paths[0]]);
+  assert.deepEqual(supabase.cosRemovals, [{
+    bucket: "key-moment-images",
+    paths: [paths[1]],
+  }]);
 
   const invalidResponse = await app.inject({
     method: "PUT",
-    url: `/api/key-moments/${momentId}/images/order`,
+    url: `/api/key-moments/${momentId}`,
     headers: authHeaders,
-    payload: { order: [0, 0, 1] },
+    payload: {
+      content: "非法图片",
+      image_paths: ["users/10000/moments/another-record/image-master-v1.webp"],
+    },
   });
   assert.equal(invalidResponse.statusCode, 400);
-  assert.equal(invalidResponse.json().error.code, "INVALID_IMAGE_ORDER");
+  assert.equal(invalidResponse.json().error.code, "INVALID_IMAGE_PATHS");
+});
+
+test("key moment staged uploads do not change the gallery before the final save", async (t) => {
+  const momentId = "30000000-0000-4000-8000-000000000012";
+  const originalPath = `users/10000/moments/${momentId}/original-master-v1.webp`;
+  const moment = {
+    id: momentId,
+    uid: UID,
+    content: "原始内容",
+    occurred_at: "2026-08-02T04:30:00.000Z",
+    image_paths: [originalPath],
+  };
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      key_moments: [moment],
+      image_assets: [{
+        object_key: `key-moment-images/${originalPath}`,
+        uid: UID,
+        size_bytes: 1_000,
+      }],
+    }),
+  });
+  const app = buildServer({
+    logger: false,
+    supabase,
+    contentSecurity: {
+      async checkText() {},
+      async checkImage() {},
+    },
+  });
+  t.after(() => app.close());
+
+  const sourceImage = await sharp({
+    create: {
+      width: 240,
+      height: 180,
+      channels: 3,
+      background: { r: 180, g: 120, b: 60 },
+    },
+  }).png().toBuffer();
+  const boundary = "key-moment-stage-boundary";
+  const payload = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="replaced_paths"\r\n\r\n${JSON.stringify([originalPath])}\r\n`,
+    ),
+    Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="new.png"\r\nContent-Type: image/png\r\n\r\n`,
+    ),
+    sourceImage,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  const stageResponse = await app.inject({
+    method: "POST",
+    url: `/api/key-moments/${momentId}/images/stage`,
+    headers: {
+      ...authHeaders,
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+    },
+    payload,
+  });
+
+  assert.equal(stageResponse.statusCode, 200);
+  const stagedPath = stageResponse.json().data.image_path;
+  assert.match(stagedPath, new RegExp(`^users/${UID}/moments/${momentId}/.+-master-v1\\.webp$`));
+  assert.deepEqual(moment.image_paths, [originalPath]);
+  assert.equal(supabase.cosUploads.length, 1);
+
+  const saveResponse = await app.inject({
+    method: "PUT",
+    url: `/api/key-moments/${momentId}`,
+    headers: authHeaders,
+    payload: { content: "最终内容", image_paths: [stagedPath] },
+  });
+  assert.equal(saveResponse.statusCode, 200);
+  assert.equal(saveResponse.json().data.item.content, "最终内容");
+  assert.deepEqual(saveResponse.json().data.item.image_paths, [stagedPath]);
+  assert.deepEqual(supabase.cosRemovals, [{
+    bucket: "key-moment-images",
+    paths: [originalPath],
+  }]);
 });
 
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {
