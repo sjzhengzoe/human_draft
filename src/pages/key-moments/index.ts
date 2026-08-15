@@ -71,33 +71,17 @@ function editorDateTime(value: string): { date: string; time: string } {
   }
 }
 
-function isSameShanghaiDate(
-  left: ReturnType<typeof shanghaiParts> | null,
-  right: ReturnType<typeof shanghaiParts> | null
-): boolean {
-  return Boolean(
-    left
-    && right
-    && left.year === right.year
-    && left.month === right.month
-    && left.day === right.day
-  )
-}
-
 function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
   return items.map((item, index) => {
     const parts = shanghaiParts(item.occurred_at)
     const previousParts = index > 0 ? shanghaiParts(items[index - 1].occurred_at) : null
-    const nextParts = index < items.length - 1
-      ? shanghaiParts(items[index + 1].occurred_at)
-      : null
     return {
       ...item,
       show_year_heading: !previousParts || previousParts.year !== parts.year,
-      show_date_heading: !isSameShanghaiDate(previousParts, parts),
-      show_date_divider: Boolean(nextParts && !isSameShanghaiDate(parts, nextParts)),
+      show_item_divider: index < items.length - 1,
       heading_day: pad(parts.day),
       heading_month: CHINESE_MONTHS[parts.month - 1],
+      heading_time: `${pad(parts.hour)}:${pad(parts.minute)}`,
       heading_year: `${parts.year}年`
     }
   })

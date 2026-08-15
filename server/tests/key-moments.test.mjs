@@ -153,22 +153,26 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(page, /activeGranularity === 'year'[\s\S]*?class="today-publisher"/);
   assert.match(page, /class="today-publisher__label">今天<\/view>/);
   assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
-  assert.match(page, /class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
+  assert.match(page, /class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day[\s\S]*?timeline-date__time/);
   assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
-  assert.match(page, /item\.show_date_divider[\s\S]*?class="date-divider"/);
+  assert.match(page, /item\.show_item_divider[\s\S]*?class="item-divider"/);
   assert.doesNotMatch(page, /interval_after|timeline-gap/);
   assert.match(
     page,
     /class="add-button"[\s\S]*?aria-label="新增人生节点"[\s\S]*?<app-icon name="plus-white"/,
   );
-  assert.match(page, /class="moment-card"/);
+  assert.match(page, /class="moment-card \{\{item\.image_count === 0 \? 'moment-card--text-only' : ''\}\}"/);
   assert.match(styles, /\.moment-card\s*\{[\s\S]*?display: block;/);
+  assert.match(styles, /\.moment-card--text-only[\s\S]*?min-height: 142rpx[\s\S]*?padding-bottom: 40rpx/);
   assert.match(styles, /\.timeline-entry[\s\S]*?grid-template-columns: 116rpx minmax\(0, 1fr\)/);
   assert.match(styles, /\.moment-image\s*\{[\s\S]*?width: 100%;[\s\S]*?height: 166rpx/);
   assert.doesNotMatch(styles, /moment-card--vertical|moment-card--horizontal/);
   assert.doesNotMatch(logic, /getKeyMomentDisplayLayout|handleSettings|displayLayout/);
   assert.match(logic, /activeGranularity: "year" as KeyMomentGranularity/);
   assert.match(logic, /periodLabel: periodLabel\("year", INITIAL_DATE_TIME\.date\)/);
+  assert.match(logic, /show_item_divider: index < items\.length - 1/);
+  assert.match(logic, /heading_time: `\$\{pad\(parts\.hour\)\}:\$\{pad\(parts\.minute\)\}`/);
+  assert.doesNotMatch(logic, /show_date_heading|show_date_divider|isSameShanghaiDate/);
   assert.doesNotMatch(logic, /intervalLabel|interval_after/);
   const parsedAppConfig = JSON.parse(appConfig);
   const registeredPages = [

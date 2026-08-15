@@ -20,9 +20,9 @@ export type KeyMomentDetailItem = KeyMoment & {
 
 export type KeyMomentTimelineItem = KeyMoment & {
   show_year_heading: boolean
-  show_date_heading: boolean
-  show_date_divider: boolean
+  show_item_divider: boolean
   heading_day: string
   heading_month: string
+  heading_time: string
   heading_year: string
 }

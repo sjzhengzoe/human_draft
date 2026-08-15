@@ -148,6 +148,14 @@
   line-height: 1.2;
 }
 
+.timeline-date__time {
+  margin-top: 8rpx;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-small);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
 .timeline-main {
   min-width: 0;
 }
@@ -155,6 +163,17 @@
 .moment-card {
   display: block;
   padding: 0 0 28rpx;
+}
+
+.moment-card--text-only {
+  min-height: 142rpx;
+  box-sizing: border-box;
+  padding-top: 8rpx;
+  padding-bottom: 40rpx;
+}
+
+.moment-card--text-only .moment-content {
+  line-height: 1.8;
 }
 
 .moment-gallery {
@@ -209,7 +228,7 @@
   word-break: break-word;
 }
 
-.date-divider {
+.item-divider {
   height: 1rpx;
   margin: 0 0 30rpx 138rpx;
   background: var(--ui-color-border-subtle);

@@ -72,13 +72,12 @@
           bindtap="handleMomentTap"
         >
           <view class="timeline-date">
-            <block wx:if="{{item.show_date_heading}}">
-              <view class="timeline-date__month">{{item.heading_month}}</view>
-              <view class="timeline-date__day">{{item.heading_day}}</view>
-            </block>
+            <view class="timeline-date__month">{{item.heading_month}}</view>
+            <view class="timeline-date__day">{{item.heading_day}}</view>
+            <view class="timeline-date__time">{{item.heading_time}}</view>
           </view>
           <view class="timeline-main">
-            <view class="moment-card">
+            <view class="moment-card {{item.image_count === 0 ? 'moment-card--text-only' : ''}}">
               <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
               <view
                 wx:if="{{item.image_count}}"
@@ -102,7 +101,7 @@
             </view>
           </view>
         </view>
-        <view wx:if="{{item.show_date_divider}}" class="date-divider" />
+        <view wx:if="{{item.show_item_divider}}" class="item-divider" />
       </block>
     </view>
     <view class="scroll-safe-area" />
