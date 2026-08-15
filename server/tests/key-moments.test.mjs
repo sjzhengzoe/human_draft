@@ -120,6 +120,31 @@ test("key moment editor selects up to nine original images and displays a WeChat
   assert.match(editorLogic, /sizeType: \["original"\]/);
 });
 
+test("key moment editor supports long-press drag sorting and persists the final image order", async () => {
+  const [editorPage, editorStyles, editorLogic, clientService, routes, serverService] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(editorPage, /catchlongpress="handleImageLongPress"/);
+  assert.match(editorPage, /catchtouchmove="handleImageTouchMove"/);
+  assert.match(editorPage, /长按图片可拖动排序/);
+  assert.match(editorPage, /class="image-drag-ghost"/);
+  assert.match(editorStyles, /\.image-grid__item--dragging[\s\S]*?opacity/);
+  assert.match(editorStyles, /\.image-drag-ghost[\s\S]*?position: fixed/);
+  assert.match(editorLogic, /handleImageLongPress[\s\S]*?wx\.vibrateShort/);
+  assert.match(editorLogic, /handleImageTouchMove[\s\S]*?editorImages\.splice\(targetIndex, 0, draggedImage\)/);
+  assert.match(editorLogic, /reorderKeyMomentImages\(this\.data\.editingId, imageOrder\)/);
+  assert.match(clientService, /path: `\/api\/key-moments\/\$\{id\}\/images\/order`/);
+  assert.match(routes, /app\.put\("\/api\/key-moments\/:id\/images\/order"/);
+  assert.match(serverService, /new Set\(imageOrder\)\.size === current\.image_paths\.length/);
+  assert.match(serverService, /const nextImagePaths = imageOrder\.map/);
+});
+
 test("key moment editor uses direct borderless text input and a read-only time", async () => {
   const [editorPage, editorConfig, editorLogic, clientService, serverService] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),

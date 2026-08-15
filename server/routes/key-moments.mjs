@@ -6,6 +6,7 @@ import {
   listKeyMomentFeed,
   listKeyMoments,
   readKeyMomentMultipart,
+  reorderKeyMomentImages,
   updateKeyMoment,
 } from "../domains/key-moments/service.mjs";
 
@@ -86,6 +87,18 @@ export function registerKeyMomentRoutes(app, context) {
       },
     };
   });
+
+  app.put("/api/key-moments/:id/images/order", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await reorderKeyMomentImages(
+        getSupabaseAdmin(),
+        request.auth.user.uid,
+        request.params.id,
+        request.body?.order,
+      ),
+    },
+  }));
 
   app.delete("/api/key-moments/:id/images/:index", { preHandler: authenticated }, async (request) => ({
     ok: true,

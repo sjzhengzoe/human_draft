@@ -1670,6 +1670,48 @@ test("key moment edits only check text when the content actually changes", async
   assert.deepEqual(checked, [{ openId: "test-openid", content: "小狗" }]);
 });
 
+test("key moment images can be reordered only as an exact permutation", async (t) => {
+  const momentId = "30000000-0000-4000-8000-000000000011";
+  const paths = [
+    "users/10000/moments/one.webp",
+    "users/10000/moments/two.webp",
+    "users/10000/moments/three.webp",
+  ];
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({
+        key_moments: [{
+          id: momentId,
+          uid: UID,
+          content: "三张图片",
+          occurred_at: "2026-08-02T04:30:00.000Z",
+          image_paths: [...paths],
+        }],
+      }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/key-moments/${momentId}/images/order`,
+    headers: authHeaders,
+    payload: { order: [2, 0, 1] },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().data.item.image_paths, [paths[2], paths[0], paths[1]]);
+
+  const invalidResponse = await app.inject({
+    method: "PUT",
+    url: `/api/key-moments/${momentId}/images/order`,
+    headers: authHeaders,
+    payload: { order: [0, 0, 1] },
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_IMAGE_ORDER");
+});
+
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {
   const episode = {
     id: EPISODE_ID,

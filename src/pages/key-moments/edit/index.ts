@@ -3,6 +3,7 @@ import {
   createKeyMoment,
   deleteKeyMomentImage,
   listKeyMoments,
+  reorderKeyMomentImages,
   updateKeyMoment
 } from "../../../services/key-moments"
 import { ensureLogin } from "../../../services/auth"
@@ -23,7 +24,24 @@ type EditorImage = {
   persistedIndex: number | null
 }
 
+type DragRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+type ActiveImageDrag = {
+  key: string
+  touchOffsetX: number
+  touchOffsetY: number
+  itemRects: DragRect[]
+}
+
 let editorImageSequence = 0
+let imageDragSequence = 0
+let activeImageDrag: ActiveImageDrag | null = null
+let suppressPreviewUntil = 0
 
 function localEditorImage(path: string): EditorImage {
   editorImageSequence += 1
@@ -72,13 +90,19 @@ Page({
     editorTime: INITIAL_DATE_TIME.time,
     editorDateTimeLabel: editorDateTimeLabel(INITIAL_DATE_TIME.date, INITIAL_DATE_TIME.time),
     editorImages: [] as EditorImage[],
+    originalImageCount: 0,
     removedPersistedIndexes: [] as number[],
     canAddImage: true,
     selectingImage: false,
+    draggingImageKey: "",
+    dragGhostUrl: "",
+    dragGhostStyle: "",
     saving: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
+    activeImageDrag = null
+    imageDragSequence += 1
     activateAsyncPage(this)
     const editingId = String(query.id || "")
     const editorDate = String(query.date || INITIAL_DATE_TIME.date)
@@ -93,6 +117,8 @@ Page({
   },
 
   onUnload() {
+    activeImageDrag = null
+    imageDragSequence += 1
     deactivateAsyncPage(this)
   },
 
@@ -127,6 +153,7 @@ Page({
           selectedImageUploadPath: "",
           persistedIndex
         })),
+        originalImageCount: item.image_urls.length,
         canAddImage: item.image_urls.length < MAX_IMAGE_COUNT,
         loading: false
       })
@@ -182,7 +209,7 @@ Page({
   },
 
   handleRemoveEditorImage(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.saving) return
+    if (this.data.saving || this.data.draggingImageKey) return
     const index = Number(event.currentTarget.dataset.index)
     const image = this.data.editorImages[index]
     if (!image) return
@@ -194,9 +221,81 @@ Page({
   },
 
   handlePreviewEditorImage(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.draggingImageKey || Date.now() < suppressPreviewUntil) return
     const current = String(event.currentTarget.dataset.url || "")
     const urls = this.data.editorImages.map((image) => image.previewUrl)
     if (current && urls.length) wx.previewImage({ current, urls })
+  },
+
+  handleImageLongPress(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.saving || this.data.selectingImage || this.data.editorImages.length < 2) return
+    const index = Number(event.currentTarget.dataset.index)
+    const image = this.data.editorImages[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!image || !touch) return
+    const sequence = ++imageDragSequence
+    wx.createSelectorQuery()
+      .in(this)
+      .selectAll(".image-grid__item")
+      .boundingClientRect()
+      .exec((results) => {
+        if (sequence !== imageDragSequence || !isAsyncPageActive(this)) return
+        const itemRects = (results[0] || []) as DragRect[]
+        const rect = itemRects[index]
+        if (!rect) return
+        activeImageDrag = {
+          key: image.key,
+          touchOffsetX: touch.clientX - rect.left,
+          touchOffsetY: touch.clientY - rect.top,
+          itemRects
+        }
+        suppressPreviewUntil = Date.now() + 600
+        this.setData({
+          draggingImageKey: image.key,
+          dragGhostUrl: image.previewUrl,
+          dragGhostStyle: imageDragStyle(
+            touch.clientX - activeImageDrag.touchOffsetX,
+            touch.clientY - activeImageDrag.touchOffsetY,
+            rect
+          )
+        })
+        wx.vibrateShort({ type: "light" })
+      })
+  },
+
+  handleImageTouchMove(event: WechatMiniprogram.TouchEvent) {
+    const drag = activeImageDrag
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!drag || !touch) return
+    const currentIndex = this.data.editorImages.findIndex((image) => image.key === drag.key)
+    if (currentIndex < 0) return
+    const targetIndex = closestImageIndex(touch.clientX, touch.clientY, drag.itemRects)
+    const changes: Record<string, unknown> = {
+      dragGhostStyle: imageDragStyle(
+        touch.clientX - drag.touchOffsetX,
+        touch.clientY - drag.touchOffsetY,
+        drag.itemRects[currentIndex]
+      )
+    }
+    if (targetIndex >= 0 && targetIndex !== currentIndex) {
+      const editorImages = [...this.data.editorImages]
+      const [draggedImage] = editorImages.splice(currentIndex, 1)
+      editorImages.splice(targetIndex, 0, draggedImage)
+      changes.editorImages = editorImages
+    }
+    this.setData(changes)
+  },
+
+  handleImageTouchEnd() {
+    imageDragSequence += 1
+    activeImageDrag = null
+    if (!this.data.draggingImageKey) return
+    suppressPreviewUntil = Date.now() + 400
+    this.setData({
+      draggingImageKey: "",
+      dragGhostUrl: "",
+      dragGhostStyle: ""
+    })
   },
 
   async saveEditor() {
@@ -211,33 +310,38 @@ Page({
     this.setData({ saving: true })
     try {
       if (this.data.editingId) {
+        const pendingImages = this.data.editorImages.filter((item) => item.selectedImageUploadPath)
+        const pendingQueue = [...pendingImages]
+        const serverImageKeys = Array.from(
+          { length: this.data.originalImageCount },
+          (_item, index) => `persisted_${index}`
+        )
+        if (!content && serverImageKeys.length === 0 && pendingQueue.length) {
+          const firstImage = pendingQueue.shift()!
+          await appendKeyMomentImage(this.data.editingId, firstImage.selectedImageUploadPath)
+          serverImageKeys.push(firstImage.key)
+        }
         await updateKeyMoment(this.data.editingId, { content })
         const removedIndexes = [...this.data.removedPersistedIndexes].sort((left, right) => right - left)
-        const pendingImages = this.data.editorImages.filter((item) => item.selectedImageUploadPath)
-        const retainedImageCount = this.data.editorImages.length - pendingImages.length
-        if (!content && retainedImageCount === 0 && pendingImages.length) {
-          if (removedIndexes.length >= MAX_IMAGE_COUNT) {
-            const lastOriginalIndex = removedIndexes.pop()
-            for (const index of removedIndexes) {
-              await deleteKeyMomentImage(this.data.editingId, index)
-            }
-            await appendKeyMomentImage(this.data.editingId, pendingImages.shift()!.selectedImageUploadPath)
-            if (lastOriginalIndex !== undefined) {
-              await deleteKeyMomentImage(this.data.editingId, 0)
-            }
-          } else {
-            await appendKeyMomentImage(this.data.editingId, pendingImages.shift()!.selectedImageUploadPath)
-            for (const index of removedIndexes) {
-              await deleteKeyMomentImage(this.data.editingId, index)
-            }
+        for (const originalIndex of removedIndexes) {
+          if (!content && serverImageKeys.length === 1 && pendingQueue.length) {
+            const replacement = pendingQueue.shift()!
+            await appendKeyMomentImage(this.data.editingId, replacement.selectedImageUploadPath)
+            serverImageKeys.push(replacement.key)
           }
-        } else {
-          for (const index of removedIndexes) {
-            await deleteKeyMomentImage(this.data.editingId, index)
-          }
+          const serverIndex = serverImageKeys.indexOf(`persisted_${originalIndex}`)
+          if (serverIndex < 0) continue
+          await deleteKeyMomentImage(this.data.editingId, serverIndex)
+          serverImageKeys.splice(serverIndex, 1)
         }
-        for (const image of pendingImages) {
+        for (const image of pendingQueue) {
           await appendKeyMomentImage(this.data.editingId, image.selectedImageUploadPath)
+          serverImageKeys.push(image.key)
+        }
+        const desiredImageKeys = this.data.editorImages.map((image) => image.key)
+        const imageOrder = desiredImageKeys.map((key) => serverImageKeys.indexOf(key))
+        if (imageOrder.some((index, position) => index !== position)) {
+          await reorderKeyMomentImages(this.data.editingId, imageOrder)
         }
       } else {
         const pendingImages = this.data.editorImages.filter((image) => image.selectedImageUploadPath)
@@ -267,3 +371,22 @@ Page({
     }
   }
 })
+
+function imageDragStyle(left: number, top: number, rect: DragRect): string {
+  return `left: ${left}px; top: ${top}px; width: ${rect.width}px; height: ${rect.height}px;`
+}
+
+function closestImageIndex(clientX: number, clientY: number, rects: DragRect[]): number {
+  let closestIndex = -1
+  let closestDistance = Number.POSITIVE_INFINITY
+  rects.forEach((rect, index) => {
+    const distanceX = clientX - (rect.left + rect.width / 2)
+    const distanceY = clientY - (rect.top + rect.height / 2)
+    const distance = distanceX * distanceX + distanceY * distanceY
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestIndex = index
+    }
+  })
+  return closestIndex
+}

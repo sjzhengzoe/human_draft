@@ -137,6 +137,16 @@ export async function deleteKeyMomentImage(id: string, index: number): Promise<K
   return data.item
 }
 
+export async function reorderKeyMomentImages(id: string, order: number[]): Promise<KeyMoment> {
+  const data = await request<{ item: KeyMoment }>({
+    path: `/api/key-moments/${id}/images/order`,
+    method: "PUT",
+    data: { order }
+  })
+  updateCachedKeyMoment(data.item)
+  return data.item
+}
+
 export async function deleteKeyMoment(id: string): Promise<void> {
   await request<void>({ path: `/api/key-moments/${id}`, method: "DELETE" })
   removeCachedKeyMoment(id)

@@ -10,7 +10,7 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <scroll-view class="editor-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+  <scroll-view class="editor-scroll" scroll-y="{{!draggingImageKey}}" enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="editor-card">
       <textarea
         class="content-editor"
@@ -27,7 +27,12 @@
         <view
           wx:for="{{editorImages}}"
           wx:key="key"
-          class="image-grid__item"
+          class="image-grid__item {{draggingImageKey === item.key ? 'image-grid__item--dragging' : ''}}"
+          data-index="{{index}}"
+          catchlongpress="handleImageLongPress"
+          catchtouchmove="handleImageTouchMove"
+          catchtouchend="handleImageTouchEnd"
+          catchtouchcancel="handleImageTouchEnd"
         >
           <image
             class="image-grid__preview"
@@ -54,6 +59,7 @@
           <app-icon name="image-plus" size="30" />
         </view>
       </view>
+      <view wx:if="{{editorImages.length > 1}}" class="image-sort-hint">长按图片可拖动排序</view>
 
       <view class="readonly-time">{{editorDateTimeLabel}}</view>
     </view>
@@ -63,5 +69,9 @@
   <view class="editor-actions">
     <button class="cancel-button" disabled="{{saving || selectingImage}}" bindtap="handleBack">取消</button>
     <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>
+  </view>
+
+  <view wx:if="{{draggingImageKey}}" class="image-drag-ghost" style="{{dragGhostStyle}}">
+    <image class="image-drag-ghost__preview" src="{{dragGhostUrl}}" mode="aspectFill" />
   </view>
 </view>

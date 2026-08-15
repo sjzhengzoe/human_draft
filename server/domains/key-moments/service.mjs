@@ -268,6 +268,30 @@ export async function appendKeyMomentImage(supabase, uid, momentId, image) {
   return (await toResponses(supabase, [data]))[0];
 }
 
+export async function reorderKeyMomentImages(supabase, uid, momentId, imageOrder) {
+  const current = await requireMoment(supabase, uid, momentId);
+  assertCondition(
+    Array.isArray(imageOrder) &&
+      imageOrder.length === current.image_paths.length &&
+      imageOrder.every((index) => Number.isInteger(index)) &&
+      new Set(imageOrder).size === current.image_paths.length &&
+      imageOrder.every((index) => index >= 0 && index < current.image_paths.length),
+    400,
+    "INVALID_IMAGE_ORDER",
+    "图片顺序无效。",
+  );
+  const nextImagePaths = imageOrder.map((index) => current.image_paths[index]);
+  const { data, error } = await supabase
+    .from("key_moments")
+    .update({ image_paths: nextImagePaths })
+    .eq("id", current.id)
+    .eq("uid", uid)
+    .select("*")
+    .single();
+  throwSupabaseError(error, "调整关键节点图片顺序失败。");
+  return (await toResponses(supabase, [data]))[0];
+}
+
 export async function deleteKeyMomentImage(supabase, uid, momentId, imageIndex) {
   const current = await requireMoment(supabase, uid, momentId);
   const index = Number(imageIndex);

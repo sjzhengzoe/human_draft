@@ -38,6 +38,14 @@
   background: var(--ui-color-background-page);
 }
 
+.image-grid__item {
+  transition: transform 160ms ease;
+}
+
+.image-grid__item--dragging {
+  opacity: .28;
+}
+
 .image-grid__add {
   display: flex;
   box-sizing: border-box;
@@ -66,6 +74,28 @@
   border-radius: 50%;
   background: var(--ui-color-overlay-strong);
   box-shadow: 0 3rpx 12rpx var(--ui-color-overlay-soft);
+}
+
+.image-sort-hint {
+  margin-top: 12rpx;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+}
+
+.image-drag-ghost {
+  position: fixed;
+  z-index: 100;
+  overflow: hidden;
+  border-radius: var(--ui-radius-small);
+  box-shadow: 0 12rpx 30rpx var(--ui-color-shadow-strong);
+  pointer-events: none;
+  transform: scale(1.06);
+}
+
+.image-drag-ghost__preview {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .content-editor {
