@@ -213,25 +213,45 @@
   padding: 14rpx 24rpx 30rpx 18rpx;
 }
 
-.moment-image {
-  display: block;
+.moment-gallery {
+  display: grid;
   width: 236rpx;
-  height: auto;
   box-sizing: border-box;
   flex: 0 0 236rpx;
-  border-radius: var(--ui-radius-small);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6rpx;
+}
+
+.moment-gallery--count-2,
+.moment-gallery--count-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.moment-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6rpx;
   background: var(--ui-color-background-subtle);
+}
+
+.moment-image--single {
+  width: 236rpx;
+  height: auto;
+  max-height: 360rpx;
+  aspect-ratio: auto;
 }
 
 .moment-card--vertical {
   display: block;
 }
 
-.moment-card--vertical .moment-image {
+.moment-card--vertical .moment-gallery {
   width: 100%;
+  max-width: 510rpx;
 }
 
-.moment-card--vertical .moment-image + .moment-content {
+.moment-card--vertical .moment-gallery + .moment-content {
   margin-top: 18rpx;
 }
 

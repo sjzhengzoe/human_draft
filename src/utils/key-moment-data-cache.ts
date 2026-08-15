@@ -19,7 +19,11 @@ const cachedQueries = new Map<string, CachedKeyMomentQuery>()
 let keyMomentDataRevision = 0
 
 function cloneKeyMoment(item: KeyMoment): KeyMoment {
-  return { ...item }
+  return {
+    ...item,
+    image_paths: [...item.image_paths],
+    image_urls: [...item.image_urls]
+  }
 }
 
 function cloneKeyMoments(items: KeyMoment[]): KeyMoment[] {

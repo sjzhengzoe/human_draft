@@ -43,7 +43,7 @@ test("key moment creation uses the previewed date only for day view", async () =
   assert.match(editor, /editorTime: INITIAL_DATE_TIME\.time/);
 });
 
-test("key moment items own the edit hit area and isolate the corner delete control", async () => {
+test("day-view key moment items open detail while other views keep the edit flow", async () => {
   const [page, styles, logic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
@@ -51,9 +51,9 @@ test("key moment items own the edit hit area and isolate the corner delete contr
   ]);
   assert.match(
     page,
-    /class="timeline-entry[^\n]*"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?bindtap="handleEdit"/,
+    /class="timeline-entry[^\n]*"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?bindtap="handleMomentTap"/,
   );
-  assert.match(page, /class="moment-image"[\s\S]*?catchtap="handlePreview"/);
+  assert.match(page, /class="moment-image[^\n]*"[\s\S]*?catchtap="handlePreview"/);
   assert.match(
     page,
     /class="timeline-delete-button"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?catchtap="handleDelete"/,
@@ -68,6 +68,10 @@ test("key moment items own the edit hit area and isolate the corner delete contr
   assert.match(
     logic,
     /handleDeleteConfirmCancel\(\)[\s\S]*?showDeleteConfirm: false, editingId: ""/,
+  );
+  assert.match(
+    logic,
+    /handleMomentTap\([\s\S]*?activeGranularity === "day"[\s\S]*?pages\/key-moments\/detail\/index\?id=/,
   );
 });
 
@@ -88,7 +92,7 @@ test("tapping the key moment page title scrolls the timeline back to the top", a
   assert.match(navigationLogic, /handleTitleTap\(\)[\s\S]*?triggerEvent\("titletap"\)/);
 });
 
-test("key moment images keep their source ratio and make the shared crop step optional", async () => {
+test("key moment editor selects up to nine original images and displays a WeChat-style grid", async () => {
   const [page, styles, editorPage, editorStyles, editorLogic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
@@ -97,20 +101,19 @@ test("key moment images keep their source ratio and make the shared crop step op
     readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /class="moment-image"[\s\S]*?mode="widthFix"/);
-  assert.match(editorPage, /class="image-editor__preview"[\s\S]*?mode="aspectFit"[\s\S]*?bindtap="handleChooseImage"/);
-  assert.match(editorPage, /<image-cropper[\s\S]*?shape="rectangle"[\s\S]*?title="调整节点图片"/);
-  assert.doesNotMatch(editorPage, /<image-cropper[\s\S]*?output-(?:size|type|quality)=/);
-  assert.doesNotMatch(editorPage, /<image-cropper[\s\S]*?aspect-ratio=/);
-  assert.doesNotMatch(editorPage, /image-editor__action|可直接使用|>裁剪<|bind:original|free-ratio|allow-original/);
-  assert.doesNotMatch(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 4 \/ 3;/);
-  assert.match(editorStyles, /\.image-editor\s*\{/);
+  assert.match(page, /class="moment-gallery moment-gallery--count-\{\{item\.image_count\}\}"/);
+  assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="\{\{item\.image_count === 1 \? 'widthFix' : 'aspectFill'\}\}"/);
+  assert.match(editorPage, /wx:for="\{\{editorImages\}\}"[\s\S]*?class="image-grid__preview"[\s\S]*?mode="aspectFill"/);
+  assert.match(editorPage, /\{\{editorImages\.length\}\} \/ 9/);
+  assert.doesNotMatch(editorPage, /<image-cropper/);
+  assert.match(styles, /\.moment-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(editorStyles, /\.image-grid[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(
     editorLogic,
-    /showImageCropper: true,[\s\S]*?cropSourcePath: file\.tempFilePath/,
+    /const remaining = MAX_IMAGE_COUNT - this\.data\.editorImages\.length[\s\S]*?count: remaining/,
   );
-  assert.match(editorLogic, /handleImageCropConfirm\([\s\S]*?selectedImagePath: tempFilePath/);
-  assert.doesNotMatch(editorLogic, /handleOpenImageCropper|handleImageOriginal/);
+  assert.match(editorLogic, /MAX_IMAGE_COUNT = 9/);
+  assert.match(editorLogic, /sizeType: \["original"\]/);
 });
 
 test("key moment text editing uses the shared bottom dialog", async () => {
@@ -157,7 +160,7 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
   );
   assert.match(page, /moment-card--\{\{displayLayout\}\}/);
   assert.match(styles, /\.moment-card--vertical\s*\{[\s\S]*?display: block;/);
-  assert.match(styles, /\.moment-card--vertical \.moment-image\s*\{[\s\S]*?width: 100%;/);
+  assert.match(styles, /\.moment-card--vertical \.moment-gallery\s*\{[\s\S]*?width: 100%;/);
   assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.uid\)/);
   assert.match(logic, /wx\.navigateTo\(\{ url: "\/pages\/key-moments\/settings\/index" \}\)/);
   assert.match(settingsPage, /默认图文布局/);
@@ -200,20 +203,45 @@ test("key moments reuse cached periods and update cached lists after writes", as
   assert.match(auth, /clearKeyMomentDataCache\(\)/);
 });
 
-test("key moment image loading uses one stored image", async () => {
+test("key moment image loading uses ordered image arrays and shared storage processing", async () => {
   const [page, routes, storage, imageProcessing] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
     readFile(new URL("../domains/shared/image-storage.mjs", import.meta.url), "utf8"),
     readFile(new URL("../lib/image-processing.mjs", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /src="\{\{item\.image_url\}\}"[\s\S]*?lazy-load/);
+  assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?src="\{\{imageUrl\}\}"[\s\S]*?lazy-load/);
   assert.doesNotMatch(page, /thumbnail_/);
   assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
   assert.match(storage, /uploadStandardImage/);
   assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);
   assert.match(imageProcessing, /STANDARD_IMAGE_PROFILE[\s\S]*?width: 2_560[\s\S]*?quality: 88/);
   assert.doesNotMatch(imageProcessing, /thumbnail:/);
+});
+
+test("key moment detail uses a vertical full-page swiper and multi-image preview", async () => {
+  const [page, logic, appConfig] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/detail/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /<swiper[\s\S]*?vertical="\{\{true\}\}"[\s\S]*?bindchange="handleSwiperChange"/);
+  assert.match(page, /wx:for="\{\{item\.image_urls\}\}"/);
+  assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
+  assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);
+  const keyMomentPackage = JSON.parse(appConfig).subPackages.find((entry) => entry.root === "pages/key-moments");
+  assert.ok(keyMomentPackage.pages.includes("detail/index"));
+});
+
+test("key moment gallery migration preserves the former image and enforces nine images", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/20260815042027_key_moment_image_gallery.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /set image_paths = array\[image_path\]/i);
+  assert.match(migration, /cardinality\(image_paths\) between 0 and 9/i);
+  assert.match(migration, /drop column if exists image_path/i);
+  assert.match(migration, /char_length\(btrim\(content\)\) > 0[\s\S]*?cardinality\(image_paths\) > 0/i);
 });
 
 test("key moments migration creates user-owned records and a private image bucket", async () => {

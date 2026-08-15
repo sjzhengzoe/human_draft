@@ -22,26 +22,41 @@
         </picker>
       </view>
 
-      <view class="field-label field-label--spaced">节点图片</view>
-      <view class="image-editor {{selectingImage ? 'image-editor--loading' : ''}}">
-        <image
-          wx:if="{{selectedImagePath || currentImageUrl}}"
-          class="image-editor__preview"
-          src="{{selectedImagePath || currentImageUrl}}"
-          mode="aspectFit"
-          bindtap="handleChooseImage"
-        />
-        <view wx:else class="image-editor__empty" bindtap="handleChooseImage">
-          <app-icon name="image-plus" size="30" />
-          <text>{{selectingImage ? '选择中…' : '添加图片'}}</text>
+      <view class="field-heading field-label--spaced">
+        <view class="field-label">节点图片</view>
+        <view class="field-heading__count">{{editorImages.length}} / 9</view>
+      </view>
+      <view class="image-grid {{selectingImage ? 'image-grid--loading' : ''}}">
+        <view
+          wx:for="{{editorImages}}"
+          wx:key="key"
+          class="image-grid__item"
+        >
+          <image
+            class="image-grid__preview"
+            src="{{item.previewUrl}}"
+            mode="aspectFill"
+            data-url="{{item.previewUrl}}"
+            bindtap="handlePreviewEditorImage"
+          />
+          <view
+            class="image-grid__remove-button"
+            data-index="{{index}}"
+            role="button"
+            aria-label="移除第 {{index + 1}} 张图片"
+            catchtap="handleRemoveEditorImage"
+          ><app-icon name="x-muted" size="24" inverse="{{true}}" /></view>
         </view>
         <view
-          wx:if="{{selectedImagePath || currentImageUrl}}"
-          class="image-editor__remove-button"
+          wx:if="{{canAddImage}}"
+          class="image-grid__add"
           role="button"
-          aria-label="移除图片"
-          catchtap="handleRemoveEditorImage"
-        ><app-icon name="x-muted" size="24" inverse="{{true}}" /></view>
+          aria-label="添加图片，最多九张"
+          bindtap="handleChooseImage"
+        >
+          <app-icon name="image-plus" size="30" />
+          <text>{{selectingImage ? '选择中…' : '添加'}}</text>
+        </view>
       </view>
 
       <view class="field-label field-label--spaced">节点文字</view>
@@ -66,16 +81,6 @@
     <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>
   </view>
 </view>
-
-<image-cropper
-  wx:if="{{showImageCropper}}"
-  src="{{cropSourcePath}}"
-  shape="rectangle"
-  title="调整节点图片"
-  bind:cancel="handleImageCropCancel"
-  bind:confirm="handleImageCropConfirm"
-  bind:error="handleImageCropError"
-/>
 
 <app-dialog
   wx:if="{{contentEditorVisible}}"

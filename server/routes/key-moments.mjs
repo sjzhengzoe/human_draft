@@ -1,10 +1,11 @@
 import {
+  appendKeyMomentImage,
   createKeyMoment,
   deleteKeyMoment,
   deleteKeyMomentImage,
+  listKeyMomentFeed,
   listKeyMoments,
   readKeyMomentMultipart,
-  replaceKeyMomentImage,
   updateKeyMoment,
 } from "../domains/key-moments/service.mjs";
 
@@ -15,6 +16,17 @@ export function registerKeyMomentRoutes(app, context) {
     ok: true,
     data: {
       items: await listKeyMoments(
+        getSupabaseAdmin(),
+        request.auth.user.uid,
+        request.query || {},
+      ),
+    },
+  }));
+
+  app.get("/api/key-moments/feed", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      items: await listKeyMomentFeed(
         getSupabaseAdmin(),
         request.auth.user.uid,
         request.query || {},
@@ -59,13 +71,13 @@ export function registerKeyMomentRoutes(app, context) {
     },
   }));
 
-  app.post("/api/key-moments/:id/image", { preHandler: authenticated }, async (request) => {
+  app.post("/api/key-moments/:id/images", { preHandler: authenticated }, async (request) => {
     const { image } = await readKeyMomentMultipart(request);
     await contentSecurity.checkImage(image);
     return {
       ok: true,
       data: {
-        item: await replaceKeyMomentImage(
+        item: await appendKeyMomentImage(
           getSupabaseAdmin(),
           request.auth.user.uid,
           request.params.id,
@@ -75,13 +87,14 @@ export function registerKeyMomentRoutes(app, context) {
     };
   });
 
-  app.delete("/api/key-moments/:id/image", { preHandler: authenticated }, async (request) => ({
+  app.delete("/api/key-moments/:id/images/:index", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
       item: await deleteKeyMomentImage(
         getSupabaseAdmin(),
         request.auth.user.uid,
         request.params.id,
+        request.params.index,
       ),
     },
   }));

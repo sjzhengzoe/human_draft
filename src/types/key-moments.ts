@@ -4,10 +4,19 @@ export type KeyMoment = {
   id: string
   content: string
   occurred_at: string
-  image_path: string | null
-  image_url: string
+  image_paths: string[]
+  image_urls: string[]
+  image_count: number
   created_at: string
   updated_at: string
+}
+
+export type KeyMomentDetailItem = KeyMoment & {
+  date_label: string
+  day_label: string
+  month_year_label: string
+  time_label: string
+  position_label: string
 }
 
 export type KeyMomentTimelineItem = KeyMoment & {

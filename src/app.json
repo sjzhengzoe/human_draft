@@ -37,6 +37,7 @@
       "root": "pages/key-moments",
       "pages": [
         "index",
+        "detail/index",
         "edit/index",
         "settings/index"
       ]

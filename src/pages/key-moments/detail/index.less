@@ -1,0 +1,135 @@
+.page {
+  height: calc(100vh - var(--app-navigation-height));
+  overflow: hidden;
+  background: var(--ui-color-background-soft);
+}
+
+.detail-swiper,
+.detail-slide {
+  width: 100%;
+  height: 100%;
+}
+
+.detail-slide {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28rpx var(--ui-page-gutter) calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.detail-sheet {
+  width: 100%;
+  max-height: calc(100% - 72rpx);
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 30rpx;
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-color-background-surface);
+  box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
+}
+
+.detail-date {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.detail-date__day,
+.detail-date__month-year {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-large);
+  font-weight: 750;
+}
+
+.detail-date__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 3rpx;
+}
+
+.detail-date__time,
+.detail-footer__date,
+.swipe-guide {
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-small);
+}
+
+.detail-content {
+  margin-top: 24rpx;
+  color: var(--ui-color-text-strong);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-gallery {
+  display: grid;
+  width: 100%;
+  max-width: 600rpx;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8rpx;
+  margin-top: 24rpx;
+}
+
+.detail-gallery--count-1 {
+  display: block;
+  height: 600rpx;
+  max-height: 52vh;
+}
+
+.detail-gallery--count-2,
+.detail-gallery--count-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.detail-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-color-background-subtle);
+}
+
+.detail-image--single {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.detail-footer {
+  display: flex;
+  min-height: 56rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--ui-color-border-subtle);
+}
+
+.detail-edit {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.swipe-guide {
+  display: flex;
+  height: 72rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7rpx;
+}
+
+.empty-state {
+  display: flex;
+  height: calc(100vh - var(--app-navigation-height));
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+}

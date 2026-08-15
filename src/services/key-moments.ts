@@ -66,6 +66,13 @@ export async function listKeyMoments(
   }
 }
 
+export async function listKeyMomentFeed(date: string): Promise<KeyMoment[]> {
+  const data = await request<{ items: KeyMoment[] }>({
+    path: `/api/key-moments/feed${queryString({ date })}`
+  })
+  return data.items
+}
+
 export async function createKeyMoment(input: {
   content: string
   occurredAt: string
@@ -107,13 +114,13 @@ export async function updateKeyMoment(
   return data.item
 }
 
-export async function replaceKeyMomentImage(
+export async function appendKeyMomentImage(
   id: string,
   imagePath: string,
   imageCrop?: ImageCrop | null
 ): Promise<KeyMoment> {
   const data = await upload<{ item: KeyMoment }>({
-    path: `/api/key-moments/${id}/image`,
+    path: `/api/key-moments/${id}/images`,
     filePath: imagePath,
     imageCrop
   })
@@ -121,9 +128,9 @@ export async function replaceKeyMomentImage(
   return data.item
 }
 
-export async function deleteKeyMomentImage(id: string): Promise<KeyMoment> {
+export async function deleteKeyMomentImage(id: string, index: number): Promise<KeyMoment> {
   const data = await request<{ item: KeyMoment }>({
-    path: `/api/key-moments/${id}/image`,
+    path: `/api/key-moments/${id}/images/${index}`,
     method: "DELETE"
   })
   updateCachedKeyMoment(data.item)

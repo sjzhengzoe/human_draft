@@ -1,0 +1,74 @@
+<custom-navigation
+  title="节点详情"
+  custom-back="{{true}}"
+  bind:back="handleBack"
+/>
+
+<view wx:if="{{loading}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在读取节点详情…</view>
+</view>
+
+<view wx:elif="{{items.length === 0}}" class="empty-state">暂无可浏览的节点</view>
+
+<view wx:else class="page page--with-navigation">
+  <swiper
+    class="detail-swiper"
+    vertical="{{true}}"
+    current="{{swiperCurrent}}"
+    duration="280"
+    easing-function="easeOutCubic"
+    bindchange="handleSwiperChange"
+  >
+    <swiper-item wx:for="{{items}}" wx:key="id">
+      <view class="detail-slide">
+        <view class="detail-sheet">
+          <view class="detail-date">
+            <view class="detail-date__day">{{item.day_label}}</view>
+            <view class="detail-date__aside">
+              <view class="detail-date__month-year">{{item.month_year_label}}</view>
+              <view class="detail-date__time">{{item.time_label}}</view>
+            </view>
+          </view>
+
+          <view wx:if="{{item.content}}" class="detail-content">{{item.content}}</view>
+
+          <view
+            wx:if="{{item.image_count}}"
+            class="detail-gallery detail-gallery--count-{{item.image_count}}"
+          >
+            <image
+              wx:for="{{item.image_urls}}"
+              wx:for-item="imageUrl"
+              wx:for-index="imageIndex"
+              wx:key="*this"
+              class="detail-image {{item.image_count === 1 ? 'detail-image--single' : ''}}"
+              src="{{imageUrl}}"
+              mode="{{item.image_count === 1 ? 'aspectFit' : 'aspectFill'}}"
+              data-id="{{item.id}}"
+              data-url="{{imageUrl}}"
+              aria-label="预览第 {{imageIndex + 1}} 张图片"
+              bindtap="handlePreview"
+            />
+          </view>
+
+          <view class="detail-footer">
+            <view class="detail-footer__date">{{item.date_label}}</view>
+            <view
+              wx:if="{{canWrite}}"
+              class="detail-edit"
+              role="button"
+              aria-label="编辑当前人生节点"
+              bindtap="handleEdit"
+            ><app-icon name="pencil" size="24" /></view>
+          </view>
+        </view>
+
+        <view class="swipe-guide">
+          <app-icon name="arrow-up" size="24" />
+          <text>{{item.position_label}} · 上下滑动切换节点</text>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+</view>

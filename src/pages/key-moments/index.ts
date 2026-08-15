@@ -271,11 +271,19 @@ Page({
     wx.navigateTo({ url: "/pages/key-moments/settings/index" })
   },
 
-  handleEdit(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.loading || this.data.contentLoading) return
+  handleMomentTap(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.loading || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
+    if (this.data.activeGranularity === "day") {
+      const dateTime = editorDateTime(item.occurred_at)
+      wx.navigateTo({
+        url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
+      })
+      return
+    }
+    if (!this.data.canWrite) return
     const dateTime = editorDateTime(item.occurred_at)
     this.openEditor(
       `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
@@ -299,8 +307,12 @@ Page({
   },
 
   handlePreview(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || "")
     const url = String(event.currentTarget.dataset.url || "")
-    if (url) wx.previewImage({ current: url, urls: [url] })
+    const item = this.data.items.find((entry) => entry.id === id)
+    if (url && item?.image_urls.length) {
+      wx.previewImage({ current: url, urls: item.image_urls })
+    }
   },
 
   handleDelete(event: WechatMiniprogram.TouchEvent) {

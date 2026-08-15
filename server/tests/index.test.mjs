@@ -1453,7 +1453,7 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
     uid: UID,
     content: "当天的节点",
     occurred_at: "2026-08-02T04:00:00.000Z",
-    image_path: null,
+    image_paths: [],
   };
   const app = buildServer({
     logger: false,
@@ -1484,8 +1484,41 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
   });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json().data.items, [
-    { ...ownMoment, image_url: "" },
+    { ...ownMoment, image_urls: [], image_count: 0 },
   ]);
+});
+
+test("key moment detail feed keeps the selected day between newer and older nodes", async (t) => {
+  const moments = [
+    ["30000000-0000-4000-8000-000000000021", "2026-08-03T04:00:00.000Z"],
+    ["30000000-0000-4000-8000-000000000022", "2026-08-02T04:00:00.000Z"],
+    ["30000000-0000-4000-8000-000000000023", "2026-08-01T04:00:00.000Z"],
+  ].map(([id, occurredAt]) => ({
+    id,
+    uid: UID,
+    content: id,
+    occurred_at: occurredAt,
+    created_at: occurredAt,
+    image_paths: [],
+  }));
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ key_moments: moments }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/key-moments/feed?date=2026-08-02",
+    headers: authHeaders,
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(
+    response.json().data.items.map((item) => item.id),
+    moments.map((item) => item.id),
+  );
 });
 
 test("key moments can be created without an image and run text safety checks", async (t) => {
@@ -1534,8 +1567,7 @@ test("key moment edits only check text when the content actually changes", async
           uid: UID,
           content: "小猫",
           occurred_at: "2026-08-02T04:30:00.000Z",
-          image_path: null,
-          thumbnail_path: null,
+          image_paths: [],
         }],
       }),
     }),

@@ -1,12 +1,11 @@
 import {
+  appendKeyMomentImage,
   createKeyMoment,
   deleteKeyMomentImage,
   listKeyMoments,
-  replaceKeyMomentImage,
   updateKeyMoment
 } from "../../../services/key-moments"
 import { ensureLogin } from "../../../services/auth"
-import type { ImageCrop, ImageCropResult } from "../../../types/images"
 import {
   activateAsyncPage,
   deactivateAsyncPage,
@@ -14,6 +13,26 @@ import {
 } from "../../../utils/async-page"
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
+const MAX_IMAGE_COUNT = 9
+
+type EditorImage = {
+  key: string
+  previewUrl: string
+  selectedImageUploadPath: string
+  persistedIndex: number | null
+}
+
+let editorImageSequence = 0
+
+function localEditorImage(path: string): EditorImage {
+  editorImageSequence += 1
+  return {
+    key: `local_${Date.now()}_${editorImageSequence}`,
+    previewUrl: path,
+    selectedImageUploadPath: path,
+    persistedIndex: null
+  }
+}
 
 function pad(value: number): string {
   return String(value).padStart(2, "0")
@@ -46,15 +65,10 @@ Page({
     contentEditorVisible: false,
     editorDate: INITIAL_DATE_TIME.date,
     editorTime: INITIAL_DATE_TIME.time,
-    currentImageUrl: "",
-    originalImageUrl: "",
-    selectedImagePath: "",
-    selectedImageUploadPath: "",
-    selectedImageCrop: null as ImageCrop | null,
-    removeCurrentImage: false,
+    editorImages: [] as EditorImage[],
+    removedPersistedIndexes: [] as number[],
+    canAddImage: true,
     selectingImage: false,
-    showImageCropper: false,
-    cropSourcePath: "",
     saving: false
   },
 
@@ -95,8 +109,13 @@ Page({
         editorContent: item.content,
         editorDate: dateTime.date,
         editorTime: dateTime.time,
-        currentImageUrl: item.image_url,
-        originalImageUrl: item.image_url,
+        editorImages: item.image_urls.map((previewUrl, persistedIndex) => ({
+          key: `persisted_${persistedIndex}`,
+          previewUrl,
+          selectedImageUploadPath: "",
+          persistedIndex
+        })),
+        canAddImage: item.image_urls.length < MAX_IMAGE_COUNT,
         loading: false
       })
     } catch (error) {
@@ -110,7 +129,7 @@ Page({
   },
 
   handleBack() {
-    if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    if (this.data.saving || this.data.selectingImage) return
     if (this.data.contentEditorVisible) {
       this.handleContentEditorCancel()
       return
@@ -119,7 +138,7 @@ Page({
   },
 
   handleOpenContentEditor() {
-    if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    if (this.data.saving || this.data.selectingImage) return
     this.setData({
       contentDraft: this.data.editorContent,
       contentEditorVisible: true
@@ -151,25 +170,30 @@ Page({
   },
 
   handleChooseImage() {
-    if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    if (this.data.saving || this.data.selectingImage) return
+    const remaining = MAX_IMAGE_COUNT - this.data.editorImages.length
+    if (remaining <= 0) {
+      wx.showToast({ title: "最多上传 9 张图片", icon: "none" })
+      return
+    }
     this.setData({ selectingImage: true })
     wx.chooseMedia({
-      count: 1,
+      count: remaining,
       mediaType: ["image"],
       sizeType: ["original"],
       sourceType: ["album", "camera"],
       success: (result) => {
         if (!isAsyncPageActive(this)) return
-        const file = result.tempFiles[0]
-        if (file?.tempFilePath) {
-          this.setData({
-            selectingImage: false,
-            showImageCropper: true,
-            cropSourcePath: file.tempFilePath
-          })
-          return
-        }
-        this.setData({ selectingImage: false })
+        const addedImages = result.tempFiles
+          .map((file) => file.tempFilePath)
+          .filter(Boolean)
+          .map((sourceFilePath) => localEditorImage(sourceFilePath))
+        const editorImages = [...this.data.editorImages, ...addedImages].slice(0, MAX_IMAGE_COUNT)
+        this.setData({
+          editorImages,
+          canAddImage: editorImages.length < MAX_IMAGE_COUNT,
+          selectingImage: false
+        })
       },
       fail: () => {
         if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
@@ -177,51 +201,28 @@ Page({
     })
   },
 
-  handleImageCropCancel() {
+  handleRemoveEditorImage(event: WechatMiniprogram.TouchEvent) {
     if (this.data.saving) return
-    this.setData({ showImageCropper: false, cropSourcePath: "" })
+    const index = Number(event.currentTarget.dataset.index)
+    const image = this.data.editorImages[index]
+    if (!image) return
+    const editorImages = this.data.editorImages.filter((_item, currentIndex) => currentIndex !== index)
+    const removedPersistedIndexes = image.persistedIndex === null
+      ? this.data.removedPersistedIndexes
+      : [...this.data.removedPersistedIndexes, image.persistedIndex]
+    this.setData({ editorImages, removedPersistedIndexes, canAddImage: true })
   },
 
-  handleImageCropConfirm(event: WechatMiniprogram.CustomEvent<ImageCropResult>) {
-    const { tempFilePath, sourceFilePath, crop } = event.detail
-    if (!tempFilePath || !sourceFilePath) return
-    this.setData({
-      selectedImagePath: tempFilePath,
-      selectedImageUploadPath: sourceFilePath,
-      selectedImageCrop: crop || null,
-      currentImageUrl: this.data.originalImageUrl,
-      removeCurrentImage: false,
-      showImageCropper: false,
-      cropSourcePath: ""
-    })
-  },
-
-  handleImageCropError(event: WechatMiniprogram.CustomEvent<{ message?: string }>) {
-    wx.showToast({
-      title: event.detail.message || "图片裁剪失败，请重试",
-      icon: "none"
-    })
-  },
-
-  handleRemoveEditorImage() {
-    if (this.data.saving) return
-    if (this.data.selectedImagePath) {
-      this.setData({
-        selectedImagePath: "",
-        selectedImageUploadPath: "",
-        selectedImageCrop: null
-      })
-      return
-    }
-    if (this.data.currentImageUrl) {
-      this.setData({ currentImageUrl: "", removeCurrentImage: true })
-    }
+  handlePreviewEditorImage(event: WechatMiniprogram.TouchEvent) {
+    const current = String(event.currentTarget.dataset.url || "")
+    const urls = this.data.editorImages.map((image) => image.previewUrl)
+    if (current && urls.length) wx.previewImage({ current, urls })
   },
 
   async saveEditor() {
     if (this.data.saving || this.data.selectingImage) return
     const content = this.data.editorContent.trim()
-    const hasImage = Boolean(this.data.selectedImagePath || this.data.currentImageUrl)
+    const hasImage = this.data.editorImages.length > 0
     if (!content && !hasImage) {
       wx.showToast({ title: "请填写文案或上传图片", icon: "none" })
       return
@@ -231,22 +232,44 @@ Page({
     try {
       if (this.data.editingId) {
         await updateKeyMoment(this.data.editingId, { content, occurredAt })
-        if (this.data.selectedImageUploadPath) {
-          await replaceKeyMomentImage(
-            this.data.editingId,
-            this.data.selectedImageUploadPath,
-            this.data.selectedImageCrop
-          )
-        } else if (this.data.removeCurrentImage) {
-          await deleteKeyMomentImage(this.data.editingId)
+        const removedIndexes = [...this.data.removedPersistedIndexes].sort((left, right) => right - left)
+        const pendingImages = this.data.editorImages.filter((item) => item.selectedImageUploadPath)
+        const retainedImageCount = this.data.editorImages.length - pendingImages.length
+        if (!content && retainedImageCount === 0 && pendingImages.length) {
+          if (removedIndexes.length >= MAX_IMAGE_COUNT) {
+            const lastOriginalIndex = removedIndexes.pop()
+            for (const index of removedIndexes) {
+              await deleteKeyMomentImage(this.data.editingId, index)
+            }
+            await appendKeyMomentImage(this.data.editingId, pendingImages.shift()!.selectedImageUploadPath)
+            if (lastOriginalIndex !== undefined) {
+              await deleteKeyMomentImage(this.data.editingId, 0)
+            }
+          } else {
+            await appendKeyMomentImage(this.data.editingId, pendingImages.shift()!.selectedImageUploadPath)
+            for (const index of removedIndexes) {
+              await deleteKeyMomentImage(this.data.editingId, index)
+            }
+          }
+        } else {
+          for (const index of removedIndexes) {
+            await deleteKeyMomentImage(this.data.editingId, index)
+          }
+        }
+        for (const image of pendingImages) {
+          await appendKeyMomentImage(this.data.editingId, image.selectedImageUploadPath)
         }
       } else {
-        await createKeyMoment({
+        const pendingImages = this.data.editorImages.filter((image) => image.selectedImageUploadPath)
+        const firstImage = pendingImages.shift()
+        const created = await createKeyMoment({
           content,
           occurredAt,
-          imagePath: this.data.selectedImageUploadPath || undefined,
-          imageCrop: this.data.selectedImageCrop
+          imagePath: firstImage?.selectedImageUploadPath
         })
+        for (const image of pendingImages) {
+          await appendKeyMomentImage(created.id, image.selectedImageUploadPath)
+        }
       }
       if (!isAsyncPageActive(this)) return
       this.getOpenerEventChannel().emit("saved", { date: this.data.editorDate })

@@ -92,7 +92,7 @@ async function requireMoment(supabase, uid, momentId) {
 }
 
 async function signedUrlsFor(supabase, moments) {
-  const paths = [...new Set(moments.map((item) => item.image_path).filter(Boolean))];
+  const paths = [...new Set(moments.flatMap((item) => item.image_paths || []).filter(Boolean))];
   return createSignedUrlMap({
     bucketName: config.keyMomentBucket,
     paths,
@@ -103,10 +103,15 @@ async function signedUrlsFor(supabase, moments) {
 
 async function toResponses(supabase, moments) {
   const urls = await signedUrlsFor(supabase, moments);
-  return moments.map((item) => ({
-    ...item,
-    image_url: item.image_path ? urls.get(item.image_path) || "" : "",
-  }));
+  return moments.map((item) => {
+    const imagePaths = Array.isArray(item.image_paths) ? item.image_paths.filter(Boolean) : [];
+    return {
+      ...item,
+      image_paths: imagePaths,
+      image_urls: imagePaths.map((path) => urls.get(path) || ""),
+      image_count: imagePaths.length,
+    };
+  });
 }
 
 function assertImage(image) {
@@ -155,6 +160,37 @@ export async function listKeyMoments(supabase, uid, query) {
   return toResponses(supabase, data || []);
 }
 
+export async function listKeyMomentFeed(supabase, uid, query = {}) {
+  const { start, end } = periodBounds({ granularity: "day", date: query.date });
+  const baseQuery = () => supabase.from("key_moments").select("*").eq("uid", uid);
+  const [newerResult, selectedResult, olderResult] = await Promise.all([
+    baseQuery()
+      .gte("occurred_at", end)
+      .order("occurred_at", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(250),
+    baseQuery()
+      .gte("occurred_at", start)
+      .lt("occurred_at", end)
+      .order("occurred_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(500),
+    baseQuery()
+      .lt("occurred_at", start)
+      .order("occurred_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(250),
+  ]);
+  throwSupabaseError(newerResult.error, "读取较新的关键节点失败。");
+  throwSupabaseError(selectedResult.error, "读取当天关键节点失败。");
+  throwSupabaseError(olderResult.error, "读取较早的关键节点失败。");
+  return toResponses(supabase, [
+    ...(newerResult.data || []).reverse(),
+    ...(selectedResult.data || []),
+    ...(olderResult.data || []),
+  ]);
+}
+
 export async function createKeyMoment(supabase, uid, body, image) {
   const content = normalizeContent(body.content ?? "");
   assertCondition(content || image, 400, "CONTENT_REQUIRED", "请填写文案或上传图片。");
@@ -167,7 +203,7 @@ export async function createKeyMoment(supabase, uid, body, image) {
       uid: uid,
       content,
       occurred_at: normalizeOccurredAt(body.occurred_at),
-      image_path: paths.imagePath,
+      image_paths: paths.imagePath ? [paths.imagePath] : [],
     })
     .select("*")
     .single();
@@ -190,7 +226,12 @@ export async function updateKeyMoment(supabase, uid, momentId, body, options = {
   if (body.occurred_at !== undefined) changes.occurred_at = normalizeOccurredAt(body.occurred_at);
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。");
   const nextContent = changes.content ?? current.content;
-  assertCondition(nextContent || current.image_path, 400, "CONTENT_REQUIRED", "请填写文案或保留图片。");
+  assertCondition(
+    nextContent || current.image_paths.length,
+    400,
+    "CONTENT_REQUIRED",
+    "请填写文案或保留图片。",
+  );
   const { data, error } = await supabase
     .from("key_moments")
     .update(changes)
@@ -202,36 +243,51 @@ export async function updateKeyMoment(supabase, uid, momentId, body, options = {
   return (await toResponses(supabase, [data]))[0];
 }
 
-export async function replaceKeyMomentImage(supabase, uid, momentId, image) {
+export async function appendKeyMomentImage(supabase, uid, momentId, image) {
   const current = await requireMoment(supabase, uid, momentId);
-  const paths = await uploadImage(supabase, uid, current.id, image, [current.image_path]);
+  assertCondition(current.image_paths.length < 9, 400, "IMAGE_LIMIT_REACHED", "最多上传 9 张图片。");
+  const paths = await uploadImage(supabase, uid, current.id, image);
+  const nextImagePaths = [...current.image_paths, paths.imagePath];
   const { data, error } = await supabase
     .from("key_moments")
-    .update({ image_path: paths.imagePath })
+    .update({ image_paths: nextImagePaths })
     .eq("id", current.id)
     .eq("uid", uid)
     .select("*")
     .single();
   if (error) {
     await removeImages(supabase, uid, [paths.imagePath]);
-    throwSupabaseError(error, "更新关键节点图片失败。");
+    throwSupabaseError(error, "添加关键节点图片失败。");
   }
-  await removeImages(supabase, uid, [current.image_path]);
   return (await toResponses(supabase, [data]))[0];
 }
 
-export async function deleteKeyMomentImage(supabase, uid, momentId) {
+export async function deleteKeyMomentImage(supabase, uid, momentId, imageIndex) {
   const current = await requireMoment(supabase, uid, momentId);
-  assertCondition(current.content.trim(), 400, "CONTENT_REQUIRED", "删除图片前请先填写文案。");
+  const index = Number(imageIndex);
+  assertCondition(
+    Number.isInteger(index) && index >= 0 && index < current.image_paths.length,
+    400,
+    "INVALID_IMAGE_INDEX",
+    "图片编号无效。",
+  );
+  const removedPath = current.image_paths[index];
+  const nextImagePaths = current.image_paths.filter((_path, currentIndex) => currentIndex !== index);
+  assertCondition(
+    current.content.trim() || nextImagePaths.length,
+    400,
+    "CONTENT_REQUIRED",
+    "删除图片前请先填写文案。",
+  );
   const { data, error } = await supabase
     .from("key_moments")
-    .update({ image_path: null })
+    .update({ image_paths: nextImagePaths })
     .eq("id", current.id)
     .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "删除关键节点图片失败。");
-  await removeImages(supabase, uid, [current.image_path]);
+  await removeImages(supabase, uid, [removedPath]);
   return (await toResponses(supabase, [data]))[0];
 }
 
@@ -243,5 +299,5 @@ export async function deleteKeyMoment(supabase, uid, momentId) {
     .eq("id", current.id)
     .eq("uid", uid);
   throwSupabaseError(error, "删除关键节点失败。");
-  await removeImages(supabase, uid, [current.image_path]);
+  await removeImages(supabase, uid, current.image_paths);
 }

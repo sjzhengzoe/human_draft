@@ -67,9 +67,9 @@
         <view
           class="timeline-entry {{index === items.length - 1 ? 'timeline-entry--last' : ''}}"
           data-id="{{item.id}}"
-          role="{{canWrite ? 'button' : ''}}"
-          aria-label="{{canWrite ? '编辑关键节点' : ''}}"
-          bindtap="handleEdit"
+          role="button"
+          aria-label="{{activeGranularity === 'day' ? '查看关键节点详情' : (canWrite ? '编辑关键节点' : '关键节点')}}"
+          bindtap="handleMomentTap"
         >
           <view class="timeline-rail">
             <view class="timeline-dot" />
@@ -89,15 +89,25 @@
               </view>
             </view>
             <view class="moment-card moment-card--{{displayLayout}}">
-              <image
-                wx:if="{{item.image_url}}"
-                class="moment-image"
-                src="{{item.image_url}}"
-                mode="widthFix"
-                lazy-load
-                data-url="{{item.image_url}}"
-                catchtap="handlePreview"
-              />
+              <view
+                wx:if="{{item.image_count}}"
+                class="moment-gallery moment-gallery--count-{{item.image_count}}"
+              >
+                <image
+                  wx:for="{{item.image_urls}}"
+                  wx:for-item="imageUrl"
+                  wx:for-index="imageIndex"
+                  wx:key="*this"
+                  class="moment-image {{item.image_count === 1 ? 'moment-image--single' : ''}}"
+                  src="{{imageUrl}}"
+                  mode="{{item.image_count === 1 ? 'widthFix' : 'aspectFill'}}"
+                  lazy-load
+                  data-id="{{item.id}}"
+                  data-url="{{imageUrl}}"
+                  aria-label="预览第 {{imageIndex + 1}} 张图片"
+                  catchtap="handlePreview"
+                />
+              </view>
               <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
             </view>
           </view>
