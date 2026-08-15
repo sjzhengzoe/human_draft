@@ -314,6 +314,11 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createPage, /新增时默认为 3 星/);
   assert.match(createLogic, /personalRating: 3/);
   assert.match(createLogic, /personal_rating: this\.data\.watchStatus === "completed"/);
+  assert.match(
+    createLogic,
+    /finally \{[\s\S]*?wx\.hideLoading\(\)[\s\S]*?\}[\s\S]*?wx\.showToast\(\{/,
+  );
+  assert.match(createLogic, /toast\.icon === "none" \? ERROR_TOAST_DURATION/);
   assert.match(detailPage, /scroll-top="\{\{detailScrollTop\}\}"/);
   assert.match(detailPage, /bindscroll="handleDetailScroll"/);
   assert.match(detailPage, /scroll-top="\{\{recordsScrollTop\}\}"/);

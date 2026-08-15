@@ -329,6 +329,7 @@ Page({
       platforms: selectedPlatforms
     }
     let entryCreated = false
+    let toast: { title: string; icon: "success" | "none" } | null = null
     try {
       const savedEntry = await createMediaEntry(input)
       const id = savedEntry.id
@@ -341,23 +342,30 @@ Page({
         )
       }
       markMediaDataChanged()
-      if (!isAsyncPageActive(this)) return
-      this.clearDraft()
-      wx.showToast({ title: "已新增", icon: "success" })
-      wx.navigateBack()
+      if (isAsyncPageActive(this)) {
+        this.clearDraft()
+        toast = { title: "已新增", icon: "success" }
+      }
     } catch (error) {
       if (entryCreated) markMediaDataChanged()
       if (isAsyncPageActive(this)) {
         const message = error instanceof Error ? error.message : "保存失败"
-        showErrorToast(
-          entryCreated && this.data.selectedImagePath
+        toast = {
+          title: entryCreated && this.data.selectedImagePath
             ? `作品已新增，封面上传失败：${message}`
-            : message
-        )
+            : message,
+          icon: "none"
+        }
       }
     } finally {
       wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ saving: false })
     }
+    if (!toast || !isAsyncPageActive(this)) return
+    wx.showToast({
+      ...toast,
+      duration: toast.icon === "none" ? ERROR_TOAST_DURATION : undefined
+    })
+    if (toast.icon === "success") wx.navigateBack()
   }
 })

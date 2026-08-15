@@ -2294,6 +2294,7 @@ test("media writes accept an omitted platform and validate selected platforms be
           media_type: params.p_media_type,
           watch_status: params.p_watch_status,
           platforms: params.p_platforms,
+          personal_rating: params.p_personal_rating,
           sort_order: 1000,
         },
         error: null,
@@ -2404,6 +2405,7 @@ test("media writes accept an omitted platform and validate selected platforms be
       p_media_type: "电影",
       p_watch_status: "completed",
       p_platforms: ["猫耳", "漫播", "Books"],
+      p_personal_rating: 3,
     },
   });
 });
@@ -2487,7 +2489,14 @@ test("new completed media defaults its required rating to three", async (t) => {
       tables: authenticatedTables({ media_entries: [placeholder] }),
       rpc: {
         create_media_entry_at_end: (params) => ({
-          data: { id: MEDIA_ID, ...params },
+          data: {
+            id: MEDIA_ID,
+            title: params.p_title,
+            media_type: params.p_media_type,
+            watch_status: params.p_watch_status,
+            platforms: params.p_platforms,
+            personal_rating: params.p_personal_rating,
+          },
           error: null,
         }),
       },
@@ -2504,6 +2513,7 @@ test("new completed media defaults its required rating to three", async (t) => {
 
   assert.equal(response.statusCode, 201);
   assert.equal(response.json().data.item.personal_rating, 3);
+  assert.equal(response.json().data.item.watch_status, "completed");
 
   const missingResponse = await app.inject({
     method: "POST",
@@ -3269,6 +3279,39 @@ test("required-rating migration preserves scores and defaults only missing compl
   assert.match(migration, /new\.watch_status = 'completed'[\s\S]*new\.personal_rating := 3/i);
   assert.match(migration, /update of personal_rating, is_revisitable, watch_status/i);
   assert.doesNotMatch(migration, /delete from|drop table|drop column/i);
+});
+
+test("media create migration inserts the required rating atomically", async () => {
+  const migration = await readFile(
+    new URL(
+      "../../supabase/migrations/20260815110457_fix_media_entry_rating_insert.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    migration,
+    /create or replace function public\.create_media_entry_at_end\([\s\S]*p_personal_rating smallint default null/i,
+  );
+  assert.match(
+    migration,
+    /when p_watch_status = 'completed' then coalesce\(p_personal_rating, 3\)/i,
+  );
+  assert.match(
+    migration,
+    /insert into public\.media_entries[\s\S]*personal_rating[\s\S]*resolved_personal_rating/i,
+  );
+  assert.match(migration, /security definer[\s\S]*set search_path = public/i);
+  assert.match(
+    migration,
+    /revoke all on function public\.create_media_entry_at_end[\s\S]*from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.create_media_entry_at_end[\s\S]*to service_role/i,
+  );
+  assert.doesNotMatch(migration, /update public\.media_entries/i);
 });
 
 test("episode timeline migration stores arrays and includes notes in favorite search", async () => {

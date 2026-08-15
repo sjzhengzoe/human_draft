@@ -358,27 +358,17 @@ export async function createMediaEntry(supabase, uid, body) {
     );
   }
   await assertMediaTitleAvailable(supabase, uid, title, mediaType);
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .rpc("create_media_entry_at_end", {
       p_uid: uid,
       p_title: title,
       p_media_type: mediaType,
       p_watch_status: watchStatusValue,
       p_platforms: platforms,
+      p_personal_rating: personalRatingValue ?? null,
     })
     .single();
   throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  if (personalRatingValue !== undefined) {
-    const result = await supabase
-      .from("media_entries")
-      .update({ personal_rating: personalRatingValue })
-      .eq("id", data.id)
-      .eq("uid", uid)
-      .select("*")
-      .single();
-    throwSupabaseError(result.error, "更新我的评分失败。");
-    data = result.data;
-  }
   return toSignedMediaCoverResponse(data);
 }
 
