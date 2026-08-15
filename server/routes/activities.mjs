@@ -16,7 +16,7 @@ export function registerActivityRoutes(app, context) {
     data: {
       items: await listActivityItems(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {},
       ),
     },
@@ -31,7 +31,7 @@ export function registerActivityRoutes(app, context) {
     if (image) await contentSecurity.checkImage(image);
     const item = await createActivityItem(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       fields,
       image,
     );
@@ -42,7 +42,7 @@ export function registerActivityRoutes(app, context) {
     ok: true,
     data: await swapActivityItemSortOrders(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -52,7 +52,7 @@ export function registerActivityRoutes(app, context) {
     data: {
       item: await updateActivityItem(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -67,7 +67,7 @@ export function registerActivityRoutes(app, context) {
       data: {
         item: await replaceActivityItemImage(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image,
         ),
@@ -76,7 +76,7 @@ export function registerActivityRoutes(app, context) {
   });
 
   app.delete("/api/activities/:id", { preHandler: authenticated }, async (request) => {
-    await deleteActivityItem(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteActivityItem(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 }

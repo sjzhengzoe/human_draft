@@ -7,22 +7,22 @@ import {
   UUID_PATTERN,
 } from "../shared/records.mjs";
 
-export async function listLuggageScenes(supabase, userId) {
+export async function listLuggageScenes(supabase, uid) {
   const [sceneResult, groupResult, itemResult] = await Promise.all([
     supabase
       .from("luggage_scenes")
       .select("id,name,sort_order")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .order("sort_order", { ascending: true }),
     supabase
       .from("luggage_groups")
       .select("id,scene_id,name,is_required,sort_order")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .order("sort_order", { ascending: true }),
     supabase
       .from("luggage_items")
       .select("id,group_id,name,sort_order")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .order("sort_order", { ascending: true }),
   ]);
   throwSupabaseError(sceneResult.error, "读取行李场景失败。");
@@ -55,7 +55,7 @@ function hasSameIds(left, right) {
   return left.every((id) => rightIds.has(id));
 }
 
-export async function reorderLuggageScenes(supabase, userId, body) {
+export async function reorderLuggageScenes(supabase, uid, body) {
   const sceneIds = Array.isArray(body.scene_ids) ? body.scene_ids : [];
   assertCondition(
     sceneIds.length > 0
@@ -75,7 +75,7 @@ export async function reorderLuggageScenes(supabase, userId, body) {
   const { data: scenes, error } = await supabase
     .from("luggage_scenes")
     .select("id,sort_order")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取行李场景排序失败。");
   assertCondition(
@@ -95,7 +95,7 @@ export async function reorderLuggageScenes(supabase, userId, body) {
       .from("luggage_scenes")
       .update({ sort_order: sortOrder })
       .eq("id", id)
-      .eq("user_id", userId);
+      .eq("uid", uid);
     throwSupabaseError(updateError, "保存行李场景排序失败。");
     updated += 1;
   }
@@ -103,7 +103,7 @@ export async function reorderLuggageScenes(supabase, userId, body) {
   return { updated };
 }
 
-export async function reorderLuggageScene(supabase, userId, body) {
+export async function reorderLuggageScene(supabase, uid, body) {
   const sceneId = requiredText(body.scene_id, "行李场景");
   const groupIds = Array.isArray(body.group_ids) ? body.group_ids : [];
   const itemIdsByGroup = body.item_ids_by_group;
@@ -131,7 +131,7 @@ export async function reorderLuggageScene(supabase, userId, body) {
     "行李物品排序列表无效。",
   );
 
-  const scenes = await listLuggageScenes(supabase, userId);
+  const scenes = await listLuggageScenes(supabase, uid);
   const scene = scenes.find((item) => item.id === sceneId);
   assertCondition(scene, 404, "LUGGAGE_SCENE_NOT_FOUND", "行李场景不存在。");
   const currentGroupIds = scene.groups.map((group) => group.id);
@@ -173,7 +173,7 @@ export async function reorderLuggageScene(supabase, userId, body) {
     if (workingGroupIds[index] === desiredGroupId) continue;
     const currentIndex = workingGroupIds.indexOf(desiredGroupId);
     const targetGroupId = workingGroupIds[index];
-    await moveLuggageGroup(supabase, userId, {
+    await moveLuggageGroup(supabase, uid, {
       source_id: desiredGroupId,
       target_id: targetGroupId,
       insert_after: false,
@@ -191,7 +191,7 @@ export async function reorderLuggageScene(supabase, userId, body) {
       if (workingItemIds[index] === desiredItemId) continue;
       const currentIndex = workingItemIds.indexOf(desiredItemId);
       const targetItemId = workingItemIds[index] || null;
-      await moveLuggageItem(supabase, userId, desiredItemId, {
+      await moveLuggageItem(supabase, uid, desiredItemId, {
         target_group_id: group.id,
         target_item_id: targetItemId,
         insert_after: false,
@@ -205,14 +205,14 @@ export async function reorderLuggageScene(supabase, userId, body) {
   return { updated };
 }
 
-export async function createLuggageScene(supabase, userId, body) {
+export async function createLuggageScene(supabase, uid, body) {
   const name = requiredText(body.name, "场景名称", 80);
   const { data: scene, error } = await supabase
     .from("luggage_scenes")
     .insert({
-      user_id: userId,
+      uid: uid,
       name,
-      sort_order: await nextSortOrder(supabase, userId, "luggage_scenes"),
+      sort_order: await nextSortOrder(supabase, uid, "luggage_scenes"),
     })
     .select("*")
     .single();
@@ -221,7 +221,7 @@ export async function createLuggageScene(supabase, userId, body) {
   const { data: group, error: groupError } = await supabase
     .from("luggage_groups")
     .insert({
-      user_id: userId,
+      uid: uid,
       scene_id: scene.id,
       name: "必备物品",
       is_required: true,
@@ -234,46 +234,46 @@ export async function createLuggageScene(supabase, userId, body) {
       .from("luggage_scenes")
       .delete()
       .eq("id", scene.id)
-      .eq("user_id", userId);
+      .eq("uid", uid);
     throwSupabaseError(groupError, "创建必备物品层级失败。");
   }
   return { ...scene, groups: [{ ...group, items: [] }] };
 }
 
-export async function updateLuggageScene(supabase, userId, id, body) {
-  await requireRecord(supabase, userId, "luggage_scenes", id, "id");
+export async function updateLuggageScene(supabase, uid, id, body) {
+  await requireRecord(supabase, uid, "luggage_scenes", id, "id");
   const { data, error } = await supabase
     .from("luggage_scenes")
     .update({ name: requiredText(body.name, "场景名称", 80) })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新行李场景失败。");
   return data;
 }
 
-export async function deleteLuggageScene(supabase, userId, id) {
-  await requireRecord(supabase, userId, "luggage_scenes", id, "id");
+export async function deleteLuggageScene(supabase, uid, id) {
+  await requireRecord(supabase, uid, "luggage_scenes", id, "id");
   const { error } = await supabase
     .from("luggage_scenes")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除行李场景失败。");
 }
 
-export async function createLuggageGroup(supabase, userId, body) {
+export async function createLuggageGroup(supabase, uid, body) {
   const sceneId = requiredText(body.scene_id, "场景");
-  await requireRecord(supabase, userId, "luggage_scenes", sceneId, "id");
+  await requireRecord(supabase, uid, "luggage_scenes", sceneId, "id");
   const { data, error } = await supabase
     .from("luggage_groups")
     .insert({
-      user_id: userId,
+      uid: uid,
       scene_id: sceneId,
       name: requiredText(body.name, "层级名称", 80),
       is_required: false,
-      sort_order: await nextSortOrder(supabase, userId, "luggage_groups", {
+      sort_order: await nextSortOrder(supabase, uid, "luggage_groups", {
         scene_id: sceneId,
       }),
     })
@@ -283,21 +283,21 @@ export async function createLuggageGroup(supabase, userId, body) {
   return { ...data, items: [] };
 }
 
-export async function updateLuggageGroup(supabase, userId, id, body) {
-  await requireRecord(supabase, userId, "luggage_groups", id, "id");
+export async function updateLuggageGroup(supabase, uid, id, body) {
+  await requireRecord(supabase, uid, "luggage_groups", id, "id");
   const { data, error } = await supabase
     .from("luggage_groups")
     .update({ name: requiredText(body.name, "层级名称", 80) })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新行李层级失败。");
   return data;
 }
 
-export async function deleteLuggageGroup(supabase, userId, id) {
-  const group = await requireRecord(supabase, userId, "luggage_groups", id, "id,is_required");
+export async function deleteLuggageGroup(supabase, uid, id) {
+  const group = await requireRecord(supabase, uid, "luggage_groups", id, "id,is_required");
   assertCondition(
     !group.is_required,
     400,
@@ -308,11 +308,11 @@ export async function deleteLuggageGroup(supabase, userId, id) {
     .from("luggage_groups")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除行李层级失败。");
 }
 
-export async function swapLuggageGroupSortOrders(supabase, userId, body) {
+export async function swapLuggageGroupSortOrders(supabase, uid, body) {
   const sourceId = requiredText(body.source_id, "源行李层级");
   const targetId = requiredText(body.target_id, "目标行李层级");
   assertCondition(
@@ -322,14 +322,14 @@ export async function swapLuggageGroupSortOrders(supabase, userId, body) {
     "请选择不同的行李层级。",
   );
   const { error } = await supabase.rpc("swap_luggage_group_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });
   throwSupabaseError(error, "调整行李层级顺序失败。");
 }
 
-export async function moveLuggageGroup(supabase, userId, body) {
+export async function moveLuggageGroup(supabase, uid, body) {
   const sourceId = requiredText(body.source_id, "源行李层级");
   const targetId = requiredText(body.target_id, "目标行李层级");
   assertCondition(
@@ -339,7 +339,7 @@ export async function moveLuggageGroup(supabase, userId, body) {
     "层级插入位置无效。",
   );
   const { error } = await supabase.rpc("move_luggage_group", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
     p_insert_after: body.insert_after,
@@ -347,16 +347,16 @@ export async function moveLuggageGroup(supabase, userId, body) {
   throwSupabaseError(error, "调整行李层级顺序失败。");
 }
 
-export async function createLuggageItem(supabase, userId, body) {
+export async function createLuggageItem(supabase, uid, body) {
   const groupId = requiredText(body.group_id, "行李层级");
-  await requireRecord(supabase, userId, "luggage_groups", groupId, "id");
+  await requireRecord(supabase, uid, "luggage_groups", groupId, "id");
   const { data, error } = await supabase
     .from("luggage_items")
     .insert({
-      user_id: userId,
+      uid: uid,
       group_id: groupId,
       name: requiredText(body.name, "物品名称"),
-      sort_order: await nextSortOrder(supabase, userId, "luggage_items", {
+      sort_order: await nextSortOrder(supabase, uid, "luggage_items", {
         group_id: groupId,
       }),
     })
@@ -366,20 +366,20 @@ export async function createLuggageItem(supabase, userId, body) {
   return data;
 }
 
-export async function updateLuggageItem(supabase, userId, id, body) {
-  await requireRecord(supabase, userId, "luggage_items", id, "id");
+export async function updateLuggageItem(supabase, uid, id, body) {
+  await requireRecord(supabase, uid, "luggage_items", id, "id");
   const { data, error } = await supabase
     .from("luggage_items")
     .update({ name: requiredText(body.name, "物品名称") })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新行李物品失败。");
   return data;
 }
 
-export async function moveLuggageItem(supabase, userId, id, body) {
+export async function moveLuggageItem(supabase, uid, id, body) {
   const targetGroupId = requiredText(body.target_group_id, "目标行李层级");
   const targetItemId =
     body.target_item_id == null || body.target_item_id === ""
@@ -392,7 +392,7 @@ export async function moveLuggageItem(supabase, userId, id, body) {
     "物品插入位置无效。",
   );
   const { error } = await supabase.rpc("move_luggage_item", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: id,
     p_target_group_id: targetGroupId,
     p_target_item_id: targetItemId,
@@ -401,12 +401,12 @@ export async function moveLuggageItem(supabase, userId, id, body) {
   throwSupabaseError(error, "移动行李物品失败。");
 }
 
-export async function deleteLuggageItem(supabase, userId, id) {
-  await requireRecord(supabase, userId, "luggage_items", id, "id");
+export async function deleteLuggageItem(supabase, uid, id) {
+  await requireRecord(supabase, uid, "luggage_items", id, "id");
   const { error } = await supabase
     .from("luggage_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除行李物品失败。");
 }

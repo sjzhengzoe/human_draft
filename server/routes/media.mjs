@@ -30,7 +30,7 @@ export function registerMediaRoutes(app, context) {
 
   app.get("/api/media", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await listMediaEntries(getSupabaseAdmin(), request.auth.user.id, request.query || {}),
+    data: await listMediaEntries(getSupabaseAdmin(), request.auth.user.uid, request.query || {}),
   }));
 
   app.get("/api/media-episodes/favorites", { preHandler: authenticated }, async (request) => ({
@@ -38,7 +38,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       items: await listFavoriteMediaEpisodes(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {},
       ),
     },
@@ -47,7 +47,7 @@ export function registerMediaRoutes(app, context) {
   app.get("/api/media-episodes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
-      item: await getMediaEpisode(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+      item: await getMediaEpisode(getSupabaseAdmin(), request.auth.user.uid, request.params.id),
     },
   }));
 
@@ -56,7 +56,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       item: await updateMediaEpisode(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -65,20 +65,20 @@ export function registerMediaRoutes(app, context) {
 
   app.get("/api/media-categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listMediaCategories(getSupabaseAdmin(), request.auth.user.id) },
+    data: { items: await listMediaCategories(getSupabaseAdmin(), request.auth.user.uid) },
   }));
 
   app.get("/api/media-categories/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
-      item: await getMediaCategory(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+      item: await getMediaCategory(getSupabaseAdmin(), request.auth.user.uid, request.params.id),
     },
   }));
 
   app.post("/api/media-categories", { preHandler: authenticated }, async (request, reply) => {
     const item = await createMediaCategory(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     );
     return reply.code(201).send({ ok: true, data: { item } });
@@ -88,7 +88,7 @@ export function registerMediaRoutes(app, context) {
     ok: true,
     data: await swapMediaCategorySortOrders(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -98,7 +98,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       item: await updateMediaCategory(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -106,14 +106,14 @@ export function registerMediaRoutes(app, context) {
   }));
 
   app.delete("/api/media-categories/:id", { preHandler: authenticated }, async (request) => {
-    await deleteMediaCategory(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteMediaCategory(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
   app.get("/api/media/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
-      item: await getMediaEntry(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+      item: await getMediaEntry(getSupabaseAdmin(), request.auth.user.uid, request.params.id),
     },
   }));
 
@@ -122,7 +122,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       items: await listMediaSeasons(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       ),
     },
@@ -131,7 +131,7 @@ export function registerMediaRoutes(app, context) {
   app.post("/api/media/:id/seasons", { preHandler: authenticated }, async (request, reply) => {
     const item = await createMediaSeason(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.params.id,
       request.body || {},
     );
@@ -143,7 +143,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       item: await setMediaEntryCoverFromSeason(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -158,7 +158,7 @@ export function registerMediaRoutes(app, context) {
       data: {
         item: await replaceMediaEntryCover(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image,
         ),
@@ -171,7 +171,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       item: await updateMediaSeason(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -179,7 +179,7 @@ export function registerMediaRoutes(app, context) {
   }));
 
   app.delete("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => {
-    await deleteMediaSeason(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteMediaSeason(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 
@@ -189,7 +189,7 @@ export function registerMediaRoutes(app, context) {
     async (request, reply) => {
       const item = await addNextMediaEpisode(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       );
       return reply.code(201).send({ ok: true, data: { item } });
@@ -199,7 +199,7 @@ export function registerMediaRoutes(app, context) {
   app.post("/api/media", { preHandler: authenticated }, async (request, reply) => {
     const item = await createMediaEntry(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     );
     return reply.code(201).send({ ok: true, data: { item } });
@@ -209,7 +209,7 @@ export function registerMediaRoutes(app, context) {
     ok: true,
     data: await reorderMediaEntries(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -218,7 +218,7 @@ export function registerMediaRoutes(app, context) {
     ok: true,
     data: await swapMediaEntrySortOrders(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -228,7 +228,7 @@ export function registerMediaRoutes(app, context) {
     data: {
       item: await updateMediaEntry(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -236,7 +236,7 @@ export function registerMediaRoutes(app, context) {
   }));
 
   app.delete("/api/media/:id", { preHandler: authenticated }, async (request) => {
-    await deleteMediaEntry(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteMediaEntry(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 }

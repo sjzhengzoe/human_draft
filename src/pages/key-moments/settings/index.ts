@@ -7,10 +7,10 @@ import {
 } from "../../../utils/key-moment-settings"
 import type { KeyMomentDisplayLayout } from "../../../utils/key-moment-settings"
 
-function loadUserLayout(page: WechatMiniprogram.Page.Instance<WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>, userId: string) {
+function loadUserLayout(page: WechatMiniprogram.Page.Instance<WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>, uid: string) {
   page.setData({
-    userId,
-    activeLayout: getKeyMomentDisplayLayout(userId),
+    uid,
+    activeLayout: getKeyMomentDisplayLayout(uid),
     ready: true
   })
 }
@@ -18,7 +18,7 @@ function loadUserLayout(page: WechatMiniprogram.Page.Instance<WechatMiniprogram.
 Page({
   data: {
     ready: false,
-    userId: "",
+    uid: "",
     activeLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT as KeyMomentDisplayLayout,
     layoutOptions: [
       {
@@ -37,12 +37,12 @@ Page({
   onLoad() {
     const user = getCurrentUser()
     if (user) {
-      loadUserLayout(this, user.id)
+      loadUserLayout(this, user.uid)
       return
     }
 
     ensureLogin()
-      .then((session) => loadUserLayout(this, session.user.id))
+      .then((session) => loadUserLayout(this, session.user.uid))
       .catch(() => undefined)
   },
 
@@ -50,12 +50,12 @@ Page({
     const layout = event.currentTarget.dataset.value
     if (
       !this.data.ready
-      || !this.data.userId
+      || !this.data.uid
       || !isKeyMomentDisplayLayout(layout)
       || layout === this.data.activeLayout
     ) return
 
-    if (!setKeyMomentDisplayLayout(this.data.userId, layout)) {
+    if (!setKeyMomentDisplayLayout(this.data.uid, layout)) {
       wx.showToast({ title: "保存失败，请重试", icon: "none" })
       return
     }

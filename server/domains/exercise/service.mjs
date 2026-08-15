@@ -202,7 +202,7 @@ export function calculateTodayProgress({
 
 export async function getExerciseDashboard(
   supabase,
-  userId,
+  uid,
   now = new Date(),
   requestedMonth = "",
 ) {
@@ -221,7 +221,7 @@ export async function getExerciseDashboard(
     : supabase
       .from("exercise_completion_events")
       .select("minutes,completion_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .gte("completion_date", currentYearStart)
       .lte("completion_date", currentContext.today)
       .order("created_at", { ascending: true });
@@ -230,7 +230,7 @@ export async function getExerciseDashboard(
     : supabase
       .from("exercise_daily_rest_days")
       .select("rest_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .gte("rest_date", currentYearStart)
       .lte("rest_date", currentContext.today)
       .order("rest_date", { ascending: true });
@@ -246,23 +246,23 @@ export async function getExerciseDashboard(
     supabase
       .from("exercise_profiles")
       .select("daily_minutes,monthly_rest_days")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .maybeSingle(),
     supabase
       .from("exercise_daily_goal_changes")
       .select("daily_minutes,monthly_rest_days,effective_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .lte("effective_date", currentContext.today)
       .order("effective_date", { ascending: true }),
     supabase.rpc("get_exercise_rest_credit_summary", {
-      p_user_id: userId,
+      p_uid: uid,
       p_current_date: currentContext.today,
     }),
     currentYearCompletionRequest,
     supabase
       .from("exercise_completion_events")
       .select("minutes,completion_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .gte("completion_date", activityStart)
       .lte("completion_date", activityEnd)
       .order("created_at", { ascending: true }),
@@ -270,7 +270,7 @@ export async function getExerciseDashboard(
     supabase
       .from("exercise_daily_rest_days")
       .select("rest_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .gte("rest_date", activityStart)
       .lte("rest_date", activityEnd)
       .order("rest_date", { ascending: true }),
@@ -462,7 +462,7 @@ export async function getExerciseDashboard(
   };
 }
 
-export async function saveExerciseSettings(supabase, userId, body, now = new Date()) {
+export async function saveExerciseSettings(supabase, uid, body, now = new Date()) {
   const dailyMinutes = integerValue(body.daily_minutes, "每日运动分钟数", 1, 300);
   const monthlyRestDays = integerValue(body.monthly_rest_days, "每月发放休息额度", 0, 28);
   const context = monthContext(now);
@@ -477,7 +477,7 @@ export async function saveExerciseSettings(supabase, userId, body, now = new Dat
     tomorrow.getUTCDate(),
   );
   const { error } = await supabase.rpc("save_exercise_profile_for_next_day", {
-    p_user_id: userId,
+    p_uid: uid,
     p_daily_minutes: dailyMinutes,
     p_monthly_rest_days: monthlyRestDays,
     p_current_date: context.today,
@@ -490,20 +490,20 @@ export async function saveExerciseSettings(supabase, userId, body, now = new Dat
       message: "运动设置升级尚未完成，请稍后再试。",
     },
   });
-  return getExerciseDashboard(supabase, userId, now);
+  return getExerciseDashboard(supabase, uid, now);
 }
 
-export async function resetExerciseState(supabase, userId, now = new Date()) {
+export async function resetExerciseState(supabase, uid, now = new Date()) {
   const { error } = await supabase.rpc("reset_exercise_daily_state", {
-    p_user_id: userId,
+    p_uid: uid,
   });
   throwSupabaseError(error, "重置运动状态失败。");
-  return getExerciseDashboard(supabase, userId, now);
+  return getExerciseDashboard(supabase, uid, now);
 }
 
 export async function consumeExerciseRestDay(
   supabase,
-  userId,
+  uid,
   body = {},
   now = new Date(),
 ) {
@@ -518,7 +518,7 @@ export async function consumeExerciseRestDay(
   );
   const dashboard = await getExerciseDashboard(
     supabase,
-    userId,
+    uid,
     now,
     restDate.slice(0, 7),
   );
@@ -538,7 +538,7 @@ export async function consumeExerciseRestDay(
       : "该日期的日常任务已经完成或尚未开始记录。",
   );
   const { error } = await supabase.rpc("use_exercise_daily_rest_day", {
-    p_user_id: userId,
+    p_uid: uid,
     p_rest_date: restDate,
   });
   throwSupabaseError(error, "使用休息日失败。", {
@@ -558,12 +558,12 @@ export async function consumeExerciseRestDay(
       message: "该日期尚未开始记录运动。",
     },
   });
-  return getExerciseDashboard(supabase, userId, now, restDate.slice(0, 7));
+  return getExerciseDashboard(supabase, uid, now, restDate.slice(0, 7));
 }
 
 export async function revokeExerciseRestDay(
   supabase,
-  userId,
+  uid,
   body = {},
   now = new Date(),
 ) {
@@ -575,7 +575,7 @@ export async function revokeExerciseRestDay(
     "请选择有效的休息日日期。",
   );
   const { error } = await supabase.rpc("revoke_exercise_daily_rest_day", {
-    p_user_id: userId,
+    p_uid: uid,
     p_rest_date: restDate,
   });
   throwSupabaseError(error, "撤回休息日失败。", {
@@ -585,10 +585,10 @@ export async function revokeExerciseRestDay(
       message: "该日期没有可撤回的休息日记录。",
     },
   });
-  return getExerciseDashboard(supabase, userId, now, restDate.slice(0, 7));
+  return getExerciseDashboard(supabase, uid, now, restDate.slice(0, 7));
 }
 
-export async function completeExerciseTasks(supabase, userId, body, now = new Date()) {
+export async function completeExerciseTasks(supabase, uid, body, now = new Date()) {
   const minutes = integerValue(body.minutes, "完成分钟数", 1, 10_000);
   const context = monthContext(now);
   const completionDate = body.date || context.today;
@@ -603,7 +603,7 @@ export async function completeExerciseTasks(supabase, userId, body, now = new Da
     const goalResult = await supabase
       .from("exercise_daily_goal_changes")
       .select("effective_date")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .lte("effective_date", completionDate)
       .order("effective_date", { ascending: false });
     throwSupabaseError(goalResult.error, "读取运动目标历史失败。");
@@ -616,10 +616,10 @@ export async function completeExerciseTasks(supabase, userId, body, now = new Da
   }
 
   const { error } = await supabase.rpc("record_exercise_daily_completion", {
-    p_user_id: userId,
+    p_uid: uid,
     p_completion_date: completionDate,
     p_minutes: minutes,
   });
   throwSupabaseError(error, "记录运动失败。");
-  return getExerciseDashboard(supabase, userId, now, completionDate.slice(0, 7));
+  return getExerciseDashboard(supabase, uid, now, completionDate.slice(0, 7));
 }

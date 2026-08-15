@@ -11,7 +11,7 @@ export function registerFootprintRoutes(app, context) {
     data: {
       city_codes: await listFootprintCityCodes(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
       ),
     },
   }));
@@ -23,7 +23,7 @@ export function registerFootprintRoutes(app, context) {
       ok: true,
       data: await setFootprintCityVisited(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.cityCode,
         request.body || {},
       ),

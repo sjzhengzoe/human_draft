@@ -100,11 +100,11 @@ async function findUnique(supabase, table, query, label) {
   return data[0];
 }
 
-async function listPlaceDishes(supabase, userId, placeId) {
+async function listPlaceDishes(supabase, uid, placeId) {
   const { data, error } = await supabase
     .from("dishes")
     .select("id, name, image_path, place_sort_order")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("place_id", placeId)
     .order("place_sort_order", { ascending: true });
   if (error) throw error;
@@ -113,25 +113,25 @@ async function listPlaceDishes(supabase, userId, placeId) {
 
 async function audit(supabase) {
   const ownerAnchor = await findUnique(supabase, "menu_places", {
-    select: "id, user_id",
+    select: "id, uid",
     equals: { name: OWNER_ANCHOR_PLACE_NAME, place_type: "outside" },
   }, OWNER_ANCHOR_PLACE_NAME);
   const category = await findUnique(supabase, "dining_scenes", {
     select: "id, name",
-    equals: { user_id: ownerAnchor.user_id, name: CATEGORY_NAME },
+    equals: { uid: ownerAnchor.uid, name: CATEGORY_NAME },
   }, CATEGORY_NAME);
   const { data: places, error } = await supabase
     .from("menu_places")
-    .select("id, user_id, name, outside_category_id, image_path")
-    .eq("user_id", ownerAnchor.user_id)
+    .select("id, uid, name, outside_category_id, image_path")
+    .eq("uid", ownerAnchor.uid)
     .eq("name", PLACE_NAME)
     .eq("place_type", "outside");
   if (error) throw error;
   if (places.length > 1) throw new Error(`“${PLACE_NAME}”存在重复店铺，请先人工确认。`);
   const place = places[0] || null;
-  const dishes = place ? await listPlaceDishes(supabase, ownerAnchor.user_id, place.id) : [];
+  const dishes = place ? await listPlaceDishes(supabase, ownerAnchor.uid, place.id) : [];
   return {
-    userId: ownerAnchor.user_id,
+    uid: ownerAnchor.uid,
     category,
     place,
     dishes,
@@ -161,25 +161,25 @@ async function apply(supabase, initial) {
   if (!place) {
     place = await createMenuPlace(
       supabase,
-      initial.userId,
+      initial.uid,
       { name: PLACE_NAME, outside_category_id: initial.category.id },
       await imageInput(PLACE_ASSET),
     );
   } else {
     if (place.outside_category_id !== initial.category.id) {
-      place = await updateMenuPlace(supabase, initial.userId, place.id, {
+      place = await updateMenuPlace(supabase, initial.uid, place.id, {
         outside_category_id: initial.category.id,
       });
     }
     place = await replaceMenuPlaceImage(
       supabase,
-      initial.userId,
+      initial.uid,
       place.id,
       await imageInput(PLACE_ASSET),
     );
   }
 
-  const existingDishes = await listPlaceDishes(supabase, initial.userId, place.id);
+  const existingDishes = await listPlaceDishes(supabase, initial.uid, place.id);
   const dishByName = new Map(existingDishes.map((dish) => [dish.name, dish]));
   for (const item of drinkItems) {
     const fields = {
@@ -192,10 +192,10 @@ async function apply(supabase, initial) {
     };
     const existing = dishByName.get(item.name);
     if (existing) {
-      await updateDish(supabase, initial.userId, existing.id, fields);
+      await updateDish(supabase, initial.uid, existing.id, fields);
       await replaceDishImage(
         supabase,
-        initial.userId,
+        initial.uid,
         existing.id,
         await imageInput(item.filename),
       );
@@ -203,7 +203,7 @@ async function apply(supabase, initial) {
     }
     await createDish(
       supabase,
-      initial.userId,
+      initial.uid,
       { name: item.name, place_id: place.id, ...fields },
       await imageInput(item.filename),
     );

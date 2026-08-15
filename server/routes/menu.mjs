@@ -37,7 +37,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       ...await getMenuOverview(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {}
       ),
       can_write: request.auth.user.can_write
@@ -48,7 +48,7 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await listMenuSchedule(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.query || {}
     )
   }))
@@ -58,7 +58,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       meal: await replaceMenuScheduleMeal(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     }
@@ -68,14 +68,14 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await getMenuRanking(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.query || {}
     )
   }))
 
   app.get("/api/menu-favorites", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listMenuFavorites(getSupabaseAdmin(), request.auth.user.id) }
+    data: { items: await listMenuFavorites(getSupabaseAdmin(), request.auth.user.uid) }
   }))
 
   app.put("/api/menu-favorites", { preHandler: authenticated }, async (request) => ({
@@ -83,7 +83,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       items: await replaceMenuFavorites(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     }
@@ -91,7 +91,7 @@ export function registerMenuRoutes(app, context) {
 
   app.get("/api/categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listCategories(getSupabaseAdmin(), request.auth.user.id) }
+    data: { items: await listCategories(getSupabaseAdmin(), request.auth.user.uid) }
   }))
 
   app.get("/api/menu-places", { preHandler: authenticated }, async (request) => ({
@@ -99,7 +99,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       items: await listMenuPlaces(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {}
       )
     }
@@ -110,7 +110,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       place: await getMenuPlace(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id
       )
     }
@@ -120,7 +120,7 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await reorderMenuPlaces(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {}
     )
   }))
@@ -130,7 +130,7 @@ export function registerMenuRoutes(app, context) {
     await contentSecurity.checkImage(image)
     const place = await createMenuPlace(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       fields,
       image
     )
@@ -142,7 +142,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       place: await updateMenuPlace(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {}
       )
@@ -157,7 +157,7 @@ export function registerMenuRoutes(app, context) {
       data: {
         place: await replaceMenuPlaceImage(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image
         )
@@ -166,13 +166,13 @@ export function registerMenuRoutes(app, context) {
   })
 
   app.delete("/api/menu-places/:id", { preHandler: authenticated }, async (request) => {
-    await deleteMenuPlace(getSupabaseAdmin(), request.auth.user.id, request.params.id)
+    await deleteMenuPlace(getSupabaseAdmin(), request.auth.user.uid, request.params.id)
     return { ok: true, data: { deleted: true } }
   })
 
   app.get("/api/dishes", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await listDishes(getSupabaseAdmin(), request.auth.user.id, request.query || {})
+    data: await listDishes(getSupabaseAdmin(), request.auth.user.uid, request.query || {})
   }))
 
   app.get("/api/dishes/:id", { preHandler: authenticated }, async (request) => {
@@ -182,7 +182,7 @@ export function registerMenuRoutes(app, context) {
       data: {
         dish: await getDishResponse(
           supabase,
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id
         )
       }
@@ -194,7 +194,7 @@ export function registerMenuRoutes(app, context) {
     await contentSecurity.checkImage(image)
     const dish = await createDish(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       fields,
       image
     )
@@ -204,7 +204,7 @@ export function registerMenuRoutes(app, context) {
   app.post("/api/menu-dishes", { preHandler: authenticated }, async (request, reply) => {
     const dish = await createDish(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
       undefined
     )
@@ -215,7 +215,7 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await updatePrintStatus(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {}
     )
   }))
@@ -224,7 +224,7 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await reorderDishes(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {}
     )
   }))
@@ -233,7 +233,7 @@ export function registerMenuRoutes(app, context) {
     ok: true,
     data: await swapDishSortOrders(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {}
     )
   }))
@@ -243,7 +243,7 @@ export function registerMenuRoutes(app, context) {
     data: {
       dish: await updateDish(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {}
       )
@@ -258,7 +258,7 @@ export function registerMenuRoutes(app, context) {
       data: {
         dish: await replaceDishImage(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image
         )
@@ -267,7 +267,7 @@ export function registerMenuRoutes(app, context) {
   })
 
   app.delete("/api/dishes/:id", { preHandler: authenticated }, async (request) => {
-    await deleteDish(getSupabaseAdmin(), request.auth.user.id, request.params.id)
+    await deleteDish(getSupabaseAdmin(), request.auth.user.uid, request.params.id)
     return { ok: true, data: { deleted: true } }
   })
 }

@@ -613,26 +613,26 @@ const ATTRIBUTE_PLANS = [
 function requireRuntimeConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || "";
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  const adminUserIds = new Set(
-    (process.env.ADMIN_USER_IDS || "")
+  const adminUids = new Set(
+    (process.env.ADMIN_UIDS || "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean),
   );
-  if (!supabaseUrl || !supabaseKey || !adminUserIds.size) {
+  if (!supabaseUrl || !supabaseKey || !adminUids.size) {
     throw new Error("缺少 Supabase 或可写账号配置。");
   }
-  return { supabaseUrl, supabaseKey, adminUserIds };
+  return { supabaseUrl, supabaseKey, adminUids };
 }
 
-async function findWriterAccount(client, adminUserIds) {
-  const { data, error } = await client.from("app_users").select("id");
+async function findWriterAccount(client, adminUids) {
+  const { data, error } = await client.from("app_users").select("uid");
   if (error) throw error;
-  const writers = (data || []).filter((user) => adminUserIds.has(user.id));
+  const writers = (data || []).filter((user) => adminUids.has(user.uid));
   if (writers.length !== 1) {
     throw new Error(`预期找到 1 个可写账号，实际找到 ${writers.length} 个。`);
   }
-  return writers[0].id;
+  return writers[0].uid;
 }
 
 async function downloadCover(plan) {
@@ -751,7 +751,7 @@ function buildCorrectedEntries(entries) {
   });
 }
 
-async function applyRecordCorrections(client, userId, entries) {
+async function applyRecordCorrections(client, uid, entries) {
   const results = [];
   for (const correction of RECORD_CORRECTIONS) {
     const matches = entries.filter(
@@ -793,7 +793,7 @@ async function applyRecordCorrections(client, userId, entries) {
           .from("media_entries")
           .update({ title: correction.toTitle })
           .eq("id", matches[0].id)
-          .eq("user_id", userId)
+          .eq("uid", uid)
           .eq("title", correction.fromTitle)
           .eq("media_type", correction.fromMediaType)
           .select("id")
@@ -801,7 +801,7 @@ async function applyRecordCorrections(client, userId, entries) {
       } else {
         update = await client
           .rpc("move_media_entry_to_type_at_end", {
-            p_user_id: userId,
+            p_uid: uid,
             p_entry_id: matches[0].id,
             p_title: correction.toTitle,
             p_media_type: correction.toMediaType,
@@ -836,7 +836,7 @@ function findExactEntry(entries, title, mediaType) {
   return matches[0];
 }
 
-async function applyAttributePlans(client, userId, entries) {
+async function applyAttributePlans(client, uid, entries) {
   const results = [];
   for (const plan of ATTRIBUTE_PLANS) {
     const entry = findExactEntry(entries, plan.title, plan.mediaType);
@@ -866,7 +866,7 @@ async function applyAttributePlans(client, userId, entries) {
         .from("media_entries")
         .update({ platforms: plan.toPlatforms })
         .eq("id", entry.id)
-        .eq("user_id", userId)
+        .eq("uid", uid)
         .contains("platforms", plan.fromPlatforms)
         .select("id")
         .single();
@@ -884,14 +884,14 @@ async function applyAttributePlans(client, userId, entries) {
   return results;
 }
 
-async function applySeasonRenamePlans(client, userId, entries) {
+async function applySeasonRenamePlans(client, uid, entries) {
   const results = [];
   for (const plan of SEASON_RENAME_PLANS) {
     const entry = findExactEntry(entries, plan.title, plan.mediaType);
     const query = await client
       .from("media_seasons")
       .select("id,name")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .eq("media_entry_id", entry.id);
     if (query.error) throw query.error;
     const seasons = query.data || [];
@@ -918,7 +918,7 @@ async function applySeasonRenamePlans(client, userId, entries) {
         .from("media_seasons")
         .update({ name: plan.toSeasonName })
         .eq("id", fromMatches[0].id)
-        .eq("user_id", userId)
+        .eq("uid", uid)
         .eq("name", plan.fromSeasonName)
         .select("id")
         .single();
@@ -936,7 +936,7 @@ async function applySeasonRenamePlans(client, userId, entries) {
   return results;
 }
 
-async function applyEntryMergePlans(client, userId, entries) {
+async function applyEntryMergePlans(client, uid, entries) {
   const results = [];
   for (const plan of ENTRY_MERGE_PLANS) {
     const target = findExactEntry(entries, plan.targetTitle, plan.targetMediaType);
@@ -950,7 +950,7 @@ async function applyEntryMergePlans(client, userId, entries) {
     const seasonQuery = await client
       .from("media_seasons")
       .select("id,name,cover_url,media_episodes(id,episode_number,title)")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .eq("media_entry_id", target.id)
       .eq("name", plan.seasonName);
     if (seasonQuery.error) throw seasonQuery.error;
@@ -977,7 +977,7 @@ async function applyEntryMergePlans(client, userId, entries) {
     const sourceSeasonQuery = await client
       .from("media_seasons")
       .select("id")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .eq("media_entry_id", source.id);
     if (sourceSeasonQuery.error) throw sourceSeasonQuery.error;
     if ((sourceSeasonQuery.data || []).length
@@ -996,7 +996,7 @@ async function applyEntryMergePlans(client, userId, entries) {
       if (!mergedSeason) {
         const created = await client
           .rpc("create_media_season_with_episodes", {
-            p_user_id: userId,
+            p_uid: uid,
             p_media_entry_id: target.id,
             p_name: plan.seasonName,
             p_episode_count: 1,
@@ -1007,7 +1007,7 @@ async function applyEntryMergePlans(client, userId, entries) {
           .from("media_seasons")
           .select("id,name,cover_url,media_episodes(id,episode_number,title)")
           .eq("id", created.data.id)
-          .eq("user_id", userId)
+          .eq("uid", uid)
           .single();
         if (createdQuery.error) throw createdQuery.error;
         mergedSeason = createdQuery.data;
@@ -1017,7 +1017,7 @@ async function applyEntryMergePlans(client, userId, entries) {
         .sort((left, right) => left.episode_number - right.episode_number);
       if (!episodes.length) {
         const added = await client
-          .rpc("add_next_media_episode", { p_user_id: userId, p_season_id: mergedSeason.id })
+          .rpc("add_next_media_episode", { p_uid: uid, p_season_id: mergedSeason.id })
           .single();
         if (added.error) throw added.error;
         episodes = [added.data];
@@ -1033,7 +1033,7 @@ async function applyEntryMergePlans(client, userId, entries) {
           .from("media_seasons")
           .update({ cover_url: source.cover_url })
           .eq("id", mergedSeason.id)
-          .eq("user_id", userId);
+          .eq("uid", uid);
         if (coverUpdate.error) throw coverUpdate.error;
       }
       if (!episodes[0].title) {
@@ -1041,7 +1041,7 @@ async function applyEntryMergePlans(client, userId, entries) {
           .from("media_episodes")
           .update({ title: plan.episodeTitle })
           .eq("id", episodes[0].id)
-          .eq("user_id", userId);
+          .eq("uid", uid);
         if (episodeUpdate.error) throw episodeUpdate.error;
       }
 
@@ -1049,7 +1049,7 @@ async function applyEntryMergePlans(client, userId, entries) {
         .from("media_entries")
         .delete()
         .eq("id", source.id)
-        .eq("user_id", userId)
+        .eq("uid", uid)
         .eq("title", plan.sourceTitle)
         .eq("media_type", plan.sourceMediaType)
         .select("id")
@@ -1067,14 +1067,14 @@ async function applyEntryMergePlans(client, userId, entries) {
   return results;
 }
 
-async function applyEpisodePlans(client, userId, entries) {
+async function applyEpisodePlans(client, uid, entries) {
   const results = [];
   for (const plan of EPISODE_PLANS) {
     const entry = findExactEntry(entries, plan.title, plan.mediaType);
     const seasonQuery = await client
       .from("media_seasons")
       .select("id,name,media_episodes(id,episode_number,title,plot_summary,is_favorite)")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .eq("media_entry_id", entry.id)
       .order("sort_order", { ascending: true });
     if (seasonQuery.error) throw seasonQuery.error;
@@ -1103,7 +1103,7 @@ async function applyEpisodePlans(client, userId, entries) {
       if (APPLY) {
         const created = await client
           .rpc("create_media_season_with_episodes", {
-            p_user_id: userId,
+            p_uid: uid,
             p_media_entry_id: entry.id,
             p_name: plan.seasonName,
             p_episode_count: plan.episodeCount,
@@ -1156,7 +1156,7 @@ async function applyEpisodePlans(client, userId, entries) {
     if (APPLY) {
       for (let episodeCount = episodes.length; episodeCount < plan.episodeCount; episodeCount += 1) {
         const added = await client
-          .rpc("add_next_media_episode", { p_user_id: userId, p_season_id: season.id })
+          .rpc("add_next_media_episode", { p_uid: uid, p_season_id: season.id })
           .single();
         if (added.error) throw added.error;
       }
@@ -1175,26 +1175,26 @@ async function applyEpisodePlans(client, userId, entries) {
 }
 
 async function main() {
-  const { supabaseUrl, supabaseKey, adminUserIds } = requireRuntimeConfig();
+  const { supabaseUrl, supabaseKey, adminUids } = requireRuntimeConfig();
   const client = createClient(supabaseUrl, supabaseKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const userId = await findWriterAccount(client, adminUserIds);
+  const uid = await findWriterAccount(client, adminUids);
   const { data: entries, error } = await client
     .from("media_entries")
     .select(
       "id,title,media_type,cover_url,platforms,watch_status,season_count,episode_count,"
         + "favorite_episode_count,is_revisitable",
     )
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (error) throw error;
 
-  const correctionResults = await applyRecordCorrections(client, userId, entries || []);
+  const correctionResults = await applyRecordCorrections(client, uid, entries || []);
   const correctedEntries = buildCorrectedEntries(entries || []);
-  const attributeResults = await applyAttributePlans(client, userId, correctedEntries);
-  const seasonRenameResults = await applySeasonRenamePlans(client, userId, correctedEntries);
-  const entryMergeResults = await applyEntryMergePlans(client, userId, correctedEntries);
-  const episodeResults = await applyEpisodePlans(client, userId, correctedEntries);
+  const attributeResults = await applyAttributePlans(client, uid, correctedEntries);
+  const seasonRenameResults = await applySeasonRenamePlans(client, uid, correctedEntries);
+  const entryMergeResults = await applyEntryMergePlans(client, uid, correctedEntries);
+  const episodeResults = await applyEpisodePlans(client, uid, correctedEntries);
   const results = [];
   const previews = [];
   for (const [index, plan] of COVER_PLANS.entries()) {
@@ -1214,11 +1214,11 @@ async function main() {
     previews.push({ ...plan, image: downloaded.image });
     let status = "校验通过";
     if (APPLY) {
-      const imagePath = `users/${userId}/entries/${entry.id}/backfill.webp`;
+      const imagePath = `users/${uid}/entries/${entry.id}/backfill.webp`;
       await uploadStorageImage(client, {
         bucketName: MEDIA_COVER_BUCKET,
         path: imagePath,
-        userId,
+        uid,
         buffer: downloaded.image,
         cacheControl: "3600",
         contentType: "image/webp",
@@ -1227,7 +1227,7 @@ async function main() {
         .from("media_entries")
         .update({ cover_url: imagePath })
         .eq("id", entry.id)
-        .eq("user_id", userId)
+        .eq("uid", uid)
         .eq("cover_url", "")
         .select("id")
         .single();
@@ -1235,7 +1235,7 @@ async function main() {
         await removeStorageImages(client, {
           bucketName: MEDIA_COVER_BUCKET,
           paths: [imagePath],
-          userId,
+          uid,
           errorMessage: "回滚影视封面失败:",
         });
         throw update.error;
@@ -1258,7 +1258,7 @@ async function main() {
   const { data: currentRows, error: currentError } = await client
     .from("media_entries")
     .select("id,cover_url")
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (currentError) throw currentError;
   console.log(JSON.stringify({
     mode: APPLY ? "apply" : "dry-run",

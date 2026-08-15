@@ -50,7 +50,7 @@ type LuggagePackingGroupView = LuggageScene["groups"][number] & {
 const COLLAPSED_SCENE_TAB_LIMIT = 6
 
 let luggageSortOriginalOrder: LuggageOrderSnapshot | null = null
-let luggagePackingUserId = ""
+let luggagePackingUid = ""
 let luggagePackedItemIds = new Set<string>()
 
 function getSceneCounts(scene: LuggageScene | null): {
@@ -236,7 +236,7 @@ Page({
   onUnload() {
     deactivateAsyncPage(this)
     luggageSortOriginalOrder = null
-    luggagePackingUserId = ""
+    luggagePackingUid = ""
     luggagePackedItemIds = new Set()
   },
 
@@ -259,16 +259,16 @@ Page({
       }))
       if (!isAsyncPageRequestCurrent(this, generation)) return
 
-      luggagePackingUserId = session.user.id
+      luggagePackingUid = session.user.uid
       const activeScene = scenes.find((scene) => scene.id === this.data.activeSceneId) || scenes[0] || null
       luggagePackedItemIds = activeScene
         ? validPackedItemIds(
           activeScene,
-          readLuggagePackedItemIds(luggagePackingUserId, activeScene.id)
+          readLuggagePackedItemIds(luggagePackingUid, activeScene.id)
         )
         : new Set()
       if (activeScene) {
-        saveLuggagePackedItemIds(luggagePackingUserId, activeScene.id, luggagePackedItemIds)
+        saveLuggagePackedItemIds(luggagePackingUid, activeScene.id, luggagePackedItemIds)
       }
       const counts = getSceneCounts(activeScene)
       const packing = buildPackingPresentation(
@@ -320,7 +320,7 @@ Page({
     if (!activeScene) return
     luggagePackedItemIds = validPackedItemIds(
       activeScene,
-      readLuggagePackedItemIds(luggagePackingUserId, activeScene.id)
+      readLuggagePackedItemIds(luggagePackingUid, activeScene.id)
     )
     const counts = getSceneCounts(activeScene)
     const packing = buildPackingPresentation(
@@ -437,7 +437,7 @@ Page({
     const nextPackedItemIds = new Set(luggagePackedItemIds)
     if (nextPackedItemIds.has(itemId)) nextPackedItemIds.delete(itemId)
     else nextPackedItemIds.add(itemId)
-    if (!saveLuggagePackedItemIds(luggagePackingUserId, scene.id, nextPackedItemIds)) {
+    if (!saveLuggagePackedItemIds(luggagePackingUid, scene.id, nextPackedItemIds)) {
       wx.showToast({ title: "本机装箱进度保存失败", icon: "none" })
       return
     }
@@ -458,7 +458,7 @@ Page({
   confirmPackingReset() {
     const scene = this.data.activeScene
     if (!scene) return
-    if (!clearLuggagePackedItemIds(luggagePackingUserId, scene.id)) {
+    if (!clearLuggagePackedItemIds(luggagePackingUid, scene.id)) {
       wx.showToast({ title: "本机装箱进度清空失败", icon: "none" })
       return
     }

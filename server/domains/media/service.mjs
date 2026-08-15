@@ -40,9 +40,9 @@ function mediaCoverStoragePath(url) {
   return value.includes("://") ? "" : value.replace(/^\/+/, "");
 }
 
-function managedMediaCoverPath(url, userId, mediaEntryId) {
+function managedMediaCoverPath(url, uid, mediaEntryId) {
   const path = mediaCoverStoragePath(url);
-  const expectedPrefix = `users/${userId}/entries/${mediaEntryId}/`;
+  const expectedPrefix = `users/${uid}/entries/${mediaEntryId}/`;
   return path.startsWith(expectedPrefix) ? path : "";
 }
 
@@ -72,31 +72,31 @@ async function toSignedMediaCoverResponse(record) {
   return toMediaCoverResponse(record, coverUrls);
 }
 
-async function removeManagedMediaCover(supabase, userId, path) {
+async function removeManagedMediaCover(supabase, uid, path) {
   if (!path) return;
   await removeStorageImages(supabase, {
     bucketName: config.mediaCoverBucket,
     paths: [path],
-    userId,
+    uid,
     errorMessage: "删除旧影视封面失败:",
   });
 }
 
-async function removeManagedMediaCovers(supabase, userId, paths) {
+async function removeManagedMediaCovers(supabase, uid, paths) {
   const uniquePaths = [...new Set(paths.filter(Boolean))];
-  await Promise.all(uniquePaths.map((path) => removeManagedMediaCover(supabase, userId, path)));
+  await Promise.all(uniquePaths.map((path) => removeManagedMediaCover(supabase, uid, path)));
 }
 
 async function removeMediaCoverIfUnreferenced(
   supabase,
-  userId,
+  uid,
   mediaEntryId,
   coverUrl,
   excludedSeasonId = "",
 ) {
   const path = managedMediaCoverPath(
     coverUrl,
-    userId,
+    uid,
     mediaEntryId,
   );
   if (!path) return;
@@ -105,14 +105,14 @@ async function removeMediaCoverIfUnreferenced(
     .from("media_seasons")
     .select("cover_url")
     .eq("media_entry_id", mediaEntryId)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (excludedSeasonId) seasonsQuery = seasonsQuery.neq("id", excludedSeasonId);
   const [entryResult, seasonsResult] = await Promise.all([
     supabase
       .from("media_entries")
       .select("cover_url")
       .eq("id", mediaEntryId)
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .maybeSingle(),
     seasonsQuery,
   ]);
@@ -130,7 +130,7 @@ async function removeMediaCoverIfUnreferenced(
   const stillReferenced = remainingCoverUrls.some(
     (coverUrl) => mediaCoverStoragePath(coverUrl) === path,
   );
-  if (!stillReferenced) await removeManagedMediaCover(supabase, userId, path);
+  if (!stillReferenced) await removeManagedMediaCover(supabase, uid, path);
 }
 
 function mediaPlatforms(value) {
@@ -221,11 +221,11 @@ function timelineNotes(value) {
   return notes.sort((left, right) => left.timecode.localeCompare(right.timecode));
 }
 
-async function assertMediaTitleAvailable(supabase, userId, title, mediaType, excludedId = "") {
+async function assertMediaTitleAvailable(supabase, uid, title, mediaType, excludedId = "") {
   const { data, error } = await supabase
     .from("media_entries")
     .select("id,title")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("media_type", mediaType);
   throwSupabaseError(error, "检查影视名称失败。");
   const normalizedTitle = title.toLocaleLowerCase();
@@ -248,7 +248,7 @@ const MEDIA_TITLE_UNIQUE_ERROR = {
   },
 };
 
-export async function listMediaEntries(supabase, userId, query) {
+export async function listMediaEntries(supabase, uid, query) {
   const mediaType = typeof query.media_type === "string" && query.media_type.trim()
     ? requiredText(query.media_type, "影视分类", 40)
     : "";
@@ -259,7 +259,7 @@ export async function listMediaEntries(supabase, userId, query) {
   let request = supabase
     .from("media_entries")
     .select("*", { count: "exact" })
-    .eq("user_id", userId);
+    .eq("uid", uid);
 
   if (mediaType) request = request.eq("media_type", mediaType);
 
@@ -304,14 +304,14 @@ export async function listMediaEntries(supabase, userId, query) {
   };
 }
 
-export async function getMediaEntry(supabase, userId, id) {
+export async function getMediaEntry(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
   return toSignedMediaCoverResponse(
-    await requireRecord(supabase, userId, "media_entries", id),
+    await requireRecord(supabase, uid, "media_entries", id),
   );
 }
 
-export async function createMediaEntry(supabase, userId, body) {
+export async function createMediaEntry(supabase, uid, body) {
   const mediaType = requiredText(body.media_type, "影视分类", 40);
   const title = requiredText(body.title, "名称");
   const platforms = mediaPlatforms(body.platforms || []);
@@ -340,10 +340,10 @@ export async function createMediaEntry(supabase, userId, body) {
       "只有看过或听过的作品可以评分。",
     );
   }
-  await assertMediaTitleAvailable(supabase, userId, title, mediaType);
+  await assertMediaTitleAvailable(supabase, uid, title, mediaType);
   let { data, error } = await supabase
     .rpc("create_media_entry_at_end", {
-      p_user_id: userId,
+      p_uid: uid,
       p_title: title,
       p_media_type: mediaType,
       p_watch_status: watchStatusValue,
@@ -356,7 +356,7 @@ export async function createMediaEntry(supabase, userId, body) {
       .from("media_entries")
       .update({ personal_rating: personalRatingValue })
       .eq("id", data.id)
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .select("*")
       .single();
     throwSupabaseError(result.error, "更新我的评分失败。");
@@ -365,8 +365,8 @@ export async function createMediaEntry(supabase, userId, body) {
   return toSignedMediaCoverResponse(data);
 }
 
-export async function updateMediaEntry(supabase, userId, id, body) {
-  const current = await requireRecord(supabase, userId, "media_entries", id);
+export async function updateMediaEntry(supabase, uid, id, body) {
+  const current = await requireRecord(supabase, uid, "media_entries", id);
   const changes = {};
   if (body.title !== undefined) changes.title = requiredText(body.title, "名称");
   if (body.media_type !== undefined) {
@@ -403,7 +403,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
   if (changes.title !== undefined || changes.media_type !== undefined) {
     await assertMediaTitleAvailable(
       supabase,
-      userId,
+      uid,
       changes.title ?? current.title,
       changes.media_type ?? current.media_type,
       id,
@@ -414,7 +414,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
   if (changes.media_type) {
     let { data, error } = await supabase
       .rpc("move_media_entry_to_type_at_end", {
-        p_user_id: userId,
+        p_uid: uid,
         p_entry_id: id,
         p_title: changes.title ?? null,
         p_media_type: changes.media_type,
@@ -437,7 +437,7 @@ export async function updateMediaEntry(supabase, userId, id, body) {
           personal_rating: changes.personal_rating,
         })
         .eq("id", id)
-        .eq("user_id", userId)
+        .eq("uid", uid)
         .select("*")
         .single();
       throwSupabaseError(result.error, "更新我的评分失败。");
@@ -450,17 +450,17 @@ export async function updateMediaEntry(supabase, userId, id, body) {
     .from("media_entries")
     .update(changes)
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
   return toSignedMediaCoverResponse(data);
 }
 
-export async function deleteMediaEntry(supabase, userId, id) {
+export async function deleteMediaEntry(supabase, uid, id) {
   const entry = await requireRecord(
     supabase,
-    userId,
+    uid,
     "media_entries",
     id,
     "id,cover_url",
@@ -469,30 +469,30 @@ export async function deleteMediaEntry(supabase, userId, id) {
     .from("media_seasons")
     .select("cover_url")
     .eq("media_entry_id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(seasonsError, "读取影视分季封面失败。");
   const { error } = await supabase
     .from("media_entries")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除影视条目失败。");
-  await removeManagedMediaCovers(supabase, userId, [
-    managedMediaCoverPath(entry.cover_url, userId, id),
+  await removeManagedMediaCovers(supabase, uid, [
+    managedMediaCoverPath(entry.cover_url, uid, id),
     ...(seasons || []).map((season) =>
-      managedMediaCoverPath(season.cover_url, userId, id)
+      managedMediaCoverPath(season.cover_url, uid, id)
     ),
   ]);
 }
 
-export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
+export async function setMediaEntryCoverFromSeason(supabase, uid, id, body) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
   const seasonId = typeof body.season_id === "string" ? body.season_id.trim() : "";
   assertCondition(UUID_PATTERN.test(seasonId), 400, "INVALID_ID", "季编号无效。");
-  const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
+  const current = await requireRecord(supabase, uid, "media_entries", id, "id,cover_url");
   const season = await requireRecord(
     supabase,
-    userId,
+    uid,
     "media_seasons",
     seasonId,
     "id,media_entry_id,cover_url",
@@ -513,20 +513,20 @@ export async function setMediaEntryCoverFromSeason(supabase, userId, id, body) {
     .from("media_entries")
     .update({ cover_url: season.cover_url.trim() })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "设置作品封面失败。");
   await removeMediaCoverIfUnreferenced(
     supabase,
-    userId,
+    uid,
     id,
     current.cover_url,
   );
   return toSignedMediaCoverResponse(data);
 }
 
-export async function replaceMediaEntryCover(supabase, userId, id, image) {
+export async function replaceMediaEntryCover(supabase, uid, id, image) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择影视封面。");
   assertCondition(
@@ -535,11 +535,11 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     "UNSUPPORTED_IMAGE_TYPE",
     "仅支持 PNG、JPEG 或 WebP 图片。",
   );
-  const current = await requireRecord(supabase, userId, "media_entries", id, "id,cover_url");
+  const current = await requireRecord(supabase, uid, "media_entries", id, "id,cover_url");
   const { imagePath } = await uploadStandardImage(supabase, {
     bucketName: config.mediaCoverBucket,
-    basePath: `users/${userId}/entries/${id}/${randomUUID()}`,
-    userId,
+    basePath: `users/${uid}/entries/${id}/${randomUUID()}`,
+    uid,
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传影视封面失败。",
@@ -548,14 +548,14 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
     .from("media_entries")
     .update({ cover_url: imagePath })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   if (error) {
     await removeStorageImages(supabase, {
       bucketName: config.mediaCoverBucket,
       paths: [imagePath],
-      userId,
+      uid,
       errorMessage: "回滚影视封面失败:",
     });
     throwSupabaseError(error, "更新影视封面失败。");
@@ -563,14 +563,14 @@ export async function replaceMediaEntryCover(supabase, userId, id, image) {
 
   await removeMediaCoverIfUnreferenced(
     supabase,
-    userId,
+    uid,
     id,
     current.cover_url,
   );
   return toSignedMediaCoverResponse(data);
 }
 
-export async function reorderMediaEntries(supabase, userId, body) {
+export async function reorderMediaEntries(supabase, uid, body) {
   const mediaType = requiredText(body.media_type, "影视分类", 40);
   const ids = Array.isArray(body.ids) ? body.ids : [];
   assertCondition(
@@ -581,7 +581,7 @@ export async function reorderMediaEntries(supabase, userId, body) {
   );
   assertCondition(new Set(ids).size === ids.length, 400, "DUPLICATE_IDS", "排序列表包含重复条目。" );
   const { error } = await supabase.rpc("reorder_media_entries", {
-    p_user_id: userId,
+    p_uid: uid,
     p_media_type: mediaType,
     p_entry_ids: ids,
   });
@@ -595,13 +595,13 @@ export async function reorderMediaEntries(supabase, userId, body) {
   return { updated: ids.length };
 }
 
-export async function listMediaSeasons(supabase, userId, mediaEntryId) {
+export async function listMediaSeasons(supabase, uid, mediaEntryId) {
   assertCondition(UUID_PATTERN.test(mediaEntryId), 400, "INVALID_ID", "影视条目编号无效。");
-  await requireRecord(supabase, userId, "media_entries", mediaEntryId, "id");
+  await requireRecord(supabase, uid, "media_entries", mediaEntryId, "id");
   const { data, error } = await supabase
     .from("media_seasons")
     .select("*, media_episodes(*)")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("media_entry_id", mediaEntryId)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取分季和单集失败。");
@@ -615,13 +615,13 @@ export async function listMediaSeasons(supabase, userId, mediaEntryId) {
   }));
 }
 
-export async function createMediaSeason(supabase, userId, mediaEntryId, body) {
+export async function createMediaSeason(supabase, uid, mediaEntryId, body) {
   assertCondition(UUID_PATTERN.test(mediaEntryId), 400, "INVALID_ID", "影视条目编号无效。");
   const name = requiredText(body.name, "季名称", 80);
   const episodeCount = integerValue(body.episode_count ?? 0, "总集数", 0, 500);
   const { data, error } = await supabase
     .rpc("create_media_season_with_episodes", {
-      p_user_id: userId,
+      p_uid: uid,
       p_media_entry_id: mediaEntryId,
       p_name: name,
       p_episode_count: episodeCount,
@@ -635,14 +635,14 @@ export async function createMediaSeason(supabase, userId, mediaEntryId, body) {
   return toSignedMediaCoverResponse(data);
 }
 
-export async function updateMediaSeason(supabase, userId, id, body) {
+export async function updateMediaSeason(supabase, uid, id, body) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "季编号无效。");
   const name = requiredText(body.name, "季名称", 80);
   const { data, error } = await supabase
     .from("media_seasons")
     .update({ name })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新季失败。", {
@@ -651,11 +651,11 @@ export async function updateMediaSeason(supabase, userId, id, body) {
   return toSignedMediaCoverResponse(data);
 }
 
-export async function deleteMediaSeason(supabase, userId, id) {
+export async function deleteMediaSeason(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "季编号无效。");
   const season = await requireRecord(
     supabase,
-    userId,
+    uid,
     "media_seasons",
     id,
     "id,media_entry_id,cover_url",
@@ -664,21 +664,21 @@ export async function deleteMediaSeason(supabase, userId, id) {
     .from("media_seasons")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除季失败。");
   await removeMediaCoverIfUnreferenced(
     supabase,
-    userId,
+    uid,
     season.media_entry_id,
     season.cover_url,
     season.id,
   );
 }
 
-export async function addNextMediaEpisode(supabase, userId, seasonId) {
+export async function addNextMediaEpisode(supabase, uid, seasonId) {
   assertCondition(UUID_PATTERN.test(seasonId), 400, "INVALID_ID", "季编号无效。");
   const { data, error } = await supabase
-    .rpc("add_next_media_episode", { p_user_id: userId, p_season_id: seasonId })
+    .rpc("add_next_media_episode", { p_uid: uid, p_season_id: seasonId })
     .single();
   throwSupabaseError(error, "增加下一集失败。", {
     P0002: { statusCode: 404, code: "MEDIA_SEASON_NOT_FOUND", message: "季不存在。" },
@@ -686,12 +686,12 @@ export async function addNextMediaEpisode(supabase, userId, seasonId) {
   return data;
 }
 
-export async function getMediaEpisode(supabase, userId, id) {
+export async function getMediaEpisode(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "单集编号无效。");
-  return requireRecord(supabase, userId, "media_episodes", id);
+  return requireRecord(supabase, uid, "media_episodes", id);
 }
 
-export async function updateMediaEpisode(supabase, userId, id, body) {
+export async function updateMediaEpisode(supabase, uid, id, body) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "单集编号无效。");
   const changes = {};
   if (body.title !== undefined) {
@@ -715,18 +715,18 @@ export async function updateMediaEpisode(supabase, userId, id, body) {
     .from("media_episodes")
     .update(changes)
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新单集失败。");
   return data;
 }
 
-export async function listFavoriteMediaEpisodes(supabase, userId, query) {
+export async function listFavoriteMediaEpisodes(supabase, uid, query) {
   const mediaType = requiredText(query.media_type, "影视分类", 40);
   const keyword = typeof query.keyword === "string" ? query.keyword.trim().slice(0, 80) : "";
   const { data, error } = await supabase.rpc("search_favorite_media_episodes", {
-    p_user_id: userId,
+    p_uid: uid,
     p_media_type: mediaType,
     p_keyword: keyword,
   });
@@ -734,25 +734,25 @@ export async function listFavoriteMediaEpisodes(supabase, userId, query) {
   return data || [];
 }
 
-export async function listMediaCategories(supabase, userId) {
+export async function listMediaCategories(supabase, uid) {
   const { data, error } = await supabase
     .from("media_categories")
     .select("*")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取影视分类失败。");
   return data;
 }
 
-export async function getMediaCategory(supabase, userId, id) {
+export async function getMediaCategory(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视分类编号无效。");
-  return requireRecord(supabase, userId, "media_categories", id);
+  return requireRecord(supabase, uid, "media_categories", id);
 }
 
-export async function createMediaCategory(supabase, userId, body) {
+export async function createMediaCategory(supabase, uid, body) {
   const { data, error } = await supabase
     .rpc("create_media_category_at_end", {
-      p_user_id: userId,
+      p_uid: uid,
       p_name: requiredText(body.name, "分类名称", 40),
     })
     .single();
@@ -762,13 +762,13 @@ export async function createMediaCategory(supabase, userId, body) {
   return data;
 }
 
-export async function updateMediaCategory(supabase, userId, id, body) {
-  await getMediaCategory(supabase, userId, id);
+export async function updateMediaCategory(supabase, uid, id, body) {
+  await getMediaCategory(supabase, uid, id);
   const { data, error } = await supabase
     .from("media_categories")
     .update({ name: requiredText(body.name, "分类名称", 40) })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新影视分类失败。", {
@@ -777,12 +777,12 @@ export async function updateMediaCategory(supabase, userId, id, body) {
   return data;
 }
 
-export async function deleteMediaCategory(supabase, userId, id) {
-  const category = await getMediaCategory(supabase, userId, id);
+export async function deleteMediaCategory(supabase, uid, id) {
+  const category = await getMediaCategory(supabase, uid, id);
   const { data: entry, error: entryError } = await supabase
     .from("media_entries")
     .select("id")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("media_type", category.name)
     .limit(1)
     .maybeSingle();
@@ -792,11 +792,11 @@ export async function deleteMediaCategory(supabase, userId, id) {
     .from("media_categories")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除影视分类失败。");
 }
 
-export async function swapMediaCategorySortOrders(supabase, userId, body) {
+export async function swapMediaCategorySortOrders(supabase, uid, body) {
   const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
   const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
   assertCondition(
@@ -806,7 +806,7 @@ export async function swapMediaCategorySortOrders(supabase, userId, body) {
     "请选择两个不同的影视分类。",
   );
   const { error } = await supabase.rpc("swap_media_category_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });
@@ -816,7 +816,7 @@ export async function swapMediaCategorySortOrders(supabase, userId, body) {
   return { updated: 2 };
 }
 
-export async function swapMediaEntrySortOrders(supabase, userId, body) {
+export async function swapMediaEntrySortOrders(supabase, uid, body) {
   const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
   const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
   assertCondition(
@@ -833,7 +833,7 @@ export async function swapMediaEntrySortOrders(supabase, userId, body) {
   );
 
   const { error } = await supabase.rpc("swap_media_entry_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });

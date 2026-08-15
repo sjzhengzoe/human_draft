@@ -7,7 +7,7 @@ import { resolveUserAvatarUrl } from "./profile.mjs";
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 
-const isAdminUser = (userId) => config.adminUserIds.has(userId);
+const isAdminUid = (uid) => config.adminUids.has(uid);
 
 function requiredDisplayName(value) {
   assertCondition(
@@ -111,11 +111,11 @@ function createRefreshToken() {
 
 function toAuthUser(user, avatarUrl = "") {
   return {
-    id: user.id,
+    uid: user.uid,
     display_name: user.display_name || "",
     avatar_url: avatarUrl,
     can_write: true,
-    is_admin: isAdminUser(user.id),
+    is_admin: isAdminUid(user.uid),
     created_at: user.created_at || "",
   };
 }
@@ -129,7 +129,7 @@ async function createSession(supabase, user) {
   const { data: session, error } = await supabase
     .from("app_sessions")
     .insert({
-      user_id: user.id,
+      uid: user.uid,
       token_hash: hashToken(refreshToken),
       expires_at: expiresAt,
     })
@@ -158,7 +158,7 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
   const now = new Date().toISOString();
   const { data: existingUser, error: existingError } = await supabase
     .from("app_users")
-    .select("id, display_name, avatar_url, profile_completed, created_at")
+    .select("uid, display_name, avatar_url, profile_completed, created_at")
     .eq("wechat_openid", openId)
     .maybeSingle();
   throwSupabaseError(existingError, "读取小程序账号失败。");
@@ -177,8 +177,8 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
     const { data, error } = await supabase
       .from("app_users")
       .update(changes)
-      .eq("id", existingUser.id)
-      .select("id, display_name, avatar_url, profile_completed, created_at")
+      .eq("uid", existingUser.uid)
+      .select("uid, display_name, avatar_url, profile_completed, created_at")
       .single();
     throwSupabaseError(error, "更新小程序账号失败。");
     user = data;
@@ -196,14 +196,14 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
         profile_completed: Boolean(avatarUrl),
         last_login_at: now,
       })
-      .select("id, display_name, avatar_url, profile_completed, created_at")
+      .select("uid, display_name, avatar_url, profile_completed, created_at")
       .single();
     throwSupabaseError(error, "创建小程序账号失败。");
     user = data;
   }
 
   const { error: defaultsError } = await supabase.rpc("ensure_user_defaults", {
-    p_user_id: user.id,
+    p_uid: user.uid,
   });
   throwSupabaseError(defaultsError, "初始化个人数据失败。");
 
@@ -227,12 +227,12 @@ export async function requireAuth(_supabase, request) {
   request.auth = {
     sessionId: claims.sessionId,
     user: {
-      id: claims.userId,
+      uid: claims.uid,
       display_name: "",
       avatar_url: "",
       openid: claims.openId,
       can_write: true,
-      is_admin: isAdminUser(claims.userId),
+      is_admin: isAdminUid(claims.uid),
       created_at: "",
     },
   };
@@ -252,10 +252,10 @@ export async function requireRefreshAuth(supabase, request) {
     .from("app_sessions")
     .select(`
       id,
-      user_id,
+      uid,
       expires_at,
-      user:app_users!app_sessions_user_id_fkey(
-        id,
+      user:app_users!app_sessions_uid_fkey(
+        uid,
         wechat_openid,
         display_name,
         avatar_url,
@@ -324,8 +324,8 @@ export async function logoutSession(supabase, refreshAuth) {
 export async function getAuthenticatedUser(supabase, auth) {
   const { data: user, error } = await supabase
     .from("app_users")
-    .select("id, wechat_openid, display_name, avatar_url, profile_completed, created_at")
-    .eq("id", auth.user.id)
+    .select("uid, wechat_openid, display_name, avatar_url, profile_completed, created_at")
+    .eq("uid", auth.user.uid)
     .maybeSingle();
   throwSupabaseError(error, "读取账号信息失败。");
   assertCondition(user, 401, "USER_NOT_FOUND", "账号不存在，请重新登录。" );

@@ -139,7 +139,7 @@ Page({
   onShow() {
     const user = getCurrentUser()
     if (user) {
-      const displayLayout = getKeyMomentDisplayLayout(user.id)
+      const displayLayout = getKeyMomentDisplayLayout(user.uid)
       if (displayLayout !== this.data.displayLayout) this.setData({ displayLayout })
     }
     if (!this.data.hasLoaded) {
@@ -210,7 +210,7 @@ Page({
         : await listKeyMoments(input, { forceRefresh: options.forceRefresh })
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
-        displayLayout: getKeyMomentDisplayLayout(session.user.id),
+        displayLayout: getKeyMomentDisplayLayout(session.user.uid),
         items: toTimelineItems(items),
         canWrite: session.user.can_write,
         keyMomentRevision: getKeyMomentDataRevision()

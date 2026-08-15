@@ -23,13 +23,13 @@ export function registerWardrobeRoutes(app, context) {
   app.get("/api/wardrobe/categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
-      items: await listWardrobeCategories(getSupabaseAdmin(), request.auth.user.id),
+      items: await listWardrobeCategories(getSupabaseAdmin(), request.auth.user.uid),
     },
   }));
 
   app.get("/api/wardrobe/stats", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: await getWardrobeStats(getSupabaseAdmin(), request.auth.user.id),
+    data: await getWardrobeStats(getSupabaseAdmin(), request.auth.user.uid),
   }));
 
   app.get(
@@ -40,7 +40,7 @@ export function registerWardrobeRoutes(app, context) {
       data: {
         item: await getWardrobeCategory(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
         ),
       },
@@ -53,7 +53,7 @@ export function registerWardrobeRoutes(app, context) {
     async (request, reply) => {
       const item = await createWardrobeCategory(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {},
       );
       return reply.code(201).send({ ok: true, data: { item } });
@@ -67,7 +67,7 @@ export function registerWardrobeRoutes(app, context) {
       ok: true,
       data: await swapWardrobeCategorySortOrders(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {},
       ),
     }),
@@ -81,7 +81,7 @@ export function registerWardrobeRoutes(app, context) {
       data: {
         item: await updateWardrobeCategory(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           request.body || {},
         ),
@@ -95,7 +95,7 @@ export function registerWardrobeRoutes(app, context) {
     async (request) => {
       await deleteWardrobeCategory(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       );
       return { ok: true, data: { deleted: true } };
@@ -107,7 +107,7 @@ export function registerWardrobeRoutes(app, context) {
     data: {
       items: await listWardrobeItems(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {},
       ),
     },
@@ -118,7 +118,7 @@ export function registerWardrobeRoutes(app, context) {
     data: {
       item: await getWardrobeItem(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       ),
     },
@@ -129,7 +129,7 @@ export function registerWardrobeRoutes(app, context) {
     await contentSecurity.checkImage(image);
     const item = await createWardrobeItem(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       fields,
       image,
     );
@@ -143,7 +143,7 @@ export function registerWardrobeRoutes(app, context) {
       ok: true,
       data: await swapWardrobeItemSortOrders(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {},
       ),
     }),
@@ -153,7 +153,7 @@ export function registerWardrobeRoutes(app, context) {
     ok: true,
     data: await reorderWardrobeItems(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -163,7 +163,7 @@ export function registerWardrobeRoutes(app, context) {
     data: {
       item: await updateWardrobeItem(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -178,7 +178,7 @@ export function registerWardrobeRoutes(app, context) {
       data: {
         item: await replaceWardrobeItemImage(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image,
         ),
@@ -189,7 +189,7 @@ export function registerWardrobeRoutes(app, context) {
   app.delete("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => {
     await deleteWardrobeItem(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.params.id,
     );
     return { ok: true, data: { deleted: true } };

@@ -8,7 +8,7 @@ import {
   swapWardrobeItemSortOrders,
 } from "../domains/wardrobe/service.mjs";
 
-const USER_ID = "10000000-0000-4000-8000-000000000001";
+const UID = "1000000001";
 const SOURCE_ID = "10000000-0000-4000-8000-000000000002";
 const TARGET_ID = "10000000-0000-4000-8000-000000000003";
 
@@ -22,7 +22,7 @@ function createRpcSupabase() {
         data: name === "create_wardrobe_category_at_end"
           ? {
               id: SOURCE_ID,
-              user_id: args.p_user_id,
+              uid: args.p_uid,
               name: args.p_name,
               fields: args.p_fields,
               sort_order: 1000,
@@ -40,14 +40,14 @@ function createRpcSupabase() {
 
 test("wardrobe category creation scopes data to the authenticated user", async () => {
   const supabase = createRpcSupabase();
-  const category = await createWardrobeCategory(supabase, USER_ID, {
+  const category = await createWardrobeCategory(supabase, UID, {
     name: " T 恤 ",
     fields: [{ name: "肩宽" }, { name: "胸围" }],
   });
 
   assert.equal(supabase.calls.length, 1);
   assert.equal(supabase.calls[0].name, "create_wardrobe_category_at_end");
-  assert.equal(supabase.calls[0].args.p_user_id, USER_ID);
+  assert.equal(supabase.calls[0].args.p_uid, UID);
   assert.equal(supabase.calls[0].args.p_name, "T 恤");
   assert.deepEqual(category.fields.map((field) => field.name), ["肩宽", "胸围"]);
   category.fields.forEach((field) => {
@@ -58,7 +58,7 @@ test("wardrobe category creation scopes data to the authenticated user", async (
 test("wardrobe category fields reject duplicate names", async () => {
   const supabase = createRpcSupabase();
   await assert.rejects(
-    createWardrobeCategory(supabase, USER_ID, {
+    createWardrobeCategory(supabase, UID, {
       name: "长裤",
       fields: [{ name: "裤长" }, { name: "裤长" }],
     }),
@@ -69,20 +69,20 @@ test("wardrobe category fields reject duplicate names", async () => {
 
 test("wardrobe sort swaps always include the authenticated user scope", async () => {
   const supabase = createRpcSupabase();
-  await swapWardrobeCategorySortOrders(supabase, USER_ID, {
+  await swapWardrobeCategorySortOrders(supabase, UID, {
     source_id: SOURCE_ID,
     target_id: TARGET_ID,
   });
-  await swapWardrobeItemSortOrders(supabase, USER_ID, {
+  await swapWardrobeItemSortOrders(supabase, UID, {
     source_id: SOURCE_ID,
     target_id: TARGET_ID,
   });
 
   assert.deepEqual(
-    supabase.calls.map((call) => [call.name, call.args.p_user_id]),
+    supabase.calls.map((call) => [call.name, call.args.p_uid]),
     [
-      ["swap_wardrobe_category_sort_orders", USER_ID],
-      ["swap_wardrobe_item_sort_orders", USER_ID],
+      ["swap_wardrobe_category_sort_orders", UID],
+      ["swap_wardrobe_item_sort_orders", UID],
     ],
   );
 });

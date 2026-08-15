@@ -51,7 +51,7 @@ export const config = {
   cosImageDomain: normalizeHostname(process.env.COS_IMAGE_DOMAIN),
   wechatAppId: process.env.WECHAT_APP_ID || "",
   wechatAppSecret: process.env.WECHAT_APP_SECRET || "",
-  adminUserIds: new Set(splitCsv(process.env.ADMIN_USER_IDS)),
+  adminUids: new Set(splitCsv(process.env.ADMIN_UIDS)),
   sessionTtlDays: toPositiveInteger(process.env.SESSION_TTL_DAYS, 30),
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || "",
   accessTokenTtlMinutes: toPositiveInteger(process.env.ACCESS_TOKEN_TTL_MINUTES, 60),

@@ -95,26 +95,26 @@ function normalizeValues(value, fields) {
   return result;
 }
 
-async function requireCategory(supabase, userId, categoryId) {
+async function requireCategory(supabase, uid, categoryId) {
   assertUuid(categoryId, "分类编号");
   const { data, error } = await supabase
     .from("wardrobe_categories")
     .select("*")
     .eq("id", categoryId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取衣物分类失败。");
   assertCondition(data, 404, "WARDROBE_CATEGORY_NOT_FOUND", "衣物分类不存在。");
   return data;
 }
 
-async function requireItem(supabase, userId, itemId) {
+async function requireItem(supabase, uid, itemId) {
   assertUuid(itemId, "衣物编号");
   const { data, error } = await supabase
     .from("wardrobe_items")
     .select("*")
     .eq("id", itemId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取衣物失败。");
   assertCondition(data, 404, "WARDROBE_ITEM_NOT_FOUND", "衣物不存在。");
@@ -149,42 +149,42 @@ async function toItemResponse(supabase, item, category, signedUrls) {
   };
 }
 
-async function uploadImage(supabase, userId, itemId, image) {
+async function uploadImage(supabase, uid, itemId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择衣物图片。");
   assertCondition(STANDARD_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
   const revision = randomUUID();
-  const basePath = `users/${userId}/items/${itemId}/${revision}`;
+  const basePath = `users/${uid}/items/${itemId}/${revision}`;
   return uploadStandardImage(supabase, {
     bucketName: config.wardrobeBucket,
     basePath,
-    userId,
+    uid,
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传衣物图片失败。",
   });
 }
 
-async function removeImages(supabase, userId, paths) {
+async function removeImages(supabase, uid, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.wardrobeBucket,
     paths,
-    userId,
+    uid,
     errorMessage: "删除衣物图片失败:",
   });
 }
 
-export async function listWardrobeCategories(supabase, userId) {
+export async function listWardrobeCategories(supabase, uid) {
   const { data, error } = await supabase
     .from("wardrobe_categories")
     .select("*")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   throwSupabaseError(error, "读取衣物分类失败。");
   return data;
 }
 
-export async function getWardrobeStats(supabase, userId) {
+export async function getWardrobeStats(supabase, uid) {
   const now = new Date();
   const shanghaiNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const monthStart = new Date(
@@ -195,15 +195,15 @@ export async function getWardrobeStats(supabase, userId) {
     supabase
       .from("wardrobe_categories")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("uid", uid),
     supabase
       .from("wardrobe_items")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("uid", uid),
     supabase
       .from("wardrobe_items")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .gte("created_at", monthStart),
   ]);
   throwSupabaseError(categoryResult.error, "统计衣物分类失败。");
@@ -216,15 +216,15 @@ export async function getWardrobeStats(supabase, userId) {
   };
 }
 
-export async function getWardrobeCategory(supabase, userId, categoryId) {
-  return requireCategory(supabase, userId, categoryId);
+export async function getWardrobeCategory(supabase, uid, categoryId) {
+  return requireCategory(supabase, uid, categoryId);
 }
 
-export async function createWardrobeCategory(supabase, userId, body) {
+export async function createWardrobeCategory(supabase, uid, body) {
   const fields = normalizeFields(body.fields || []);
   const { data, error } = await supabase
     .rpc("create_wardrobe_category_at_end", {
-      p_user_id: userId,
+      p_uid: uid,
       p_name: requiredText(body.name, "分类名称", 40),
       p_fields: fields,
     })
@@ -233,8 +233,8 @@ export async function createWardrobeCategory(supabase, userId, body) {
   return data;
 }
 
-export async function updateWardrobeCategory(supabase, userId, categoryId, body) {
-  const current = await requireCategory(supabase, userId, categoryId);
+export async function updateWardrobeCategory(supabase, uid, categoryId, body) {
+  const current = await requireCategory(supabase, uid, categoryId);
   const changes = {};
   if (body.name !== undefined) changes.name = requiredText(body.name, "分类名称", 40);
   if (body.fields !== undefined) changes.fields = normalizeFields(body.fields, current.fields || []);
@@ -243,19 +243,19 @@ export async function updateWardrobeCategory(supabase, userId, categoryId, body)
     .from("wardrobe_categories")
     .update(changes)
     .eq("id", categoryId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新衣物分类失败。", DUPLICATE_CATEGORY_ERROR);
   return data;
 }
 
-export async function deleteWardrobeCategory(supabase, userId, categoryId) {
-  await requireCategory(supabase, userId, categoryId);
+export async function deleteWardrobeCategory(supabase, uid, categoryId) {
+  await requireCategory(supabase, uid, categoryId);
   const { data: items, error: itemError } = await supabase
     .from("wardrobe_items")
     .select("id")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("category_id", categoryId)
     .limit(1);
   throwSupabaseError(itemError, "检查分类衣物失败。");
@@ -264,7 +264,7 @@ export async function deleteWardrobeCategory(supabase, userId, categoryId) {
     .from("wardrobe_categories")
     .delete()
     .eq("id", categoryId)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除衣物分类失败。", {
     23503: {
       statusCode: 409,
@@ -274,12 +274,12 @@ export async function deleteWardrobeCategory(supabase, userId, categoryId) {
   });
 }
 
-export async function swapWardrobeCategorySortOrders(supabase, userId, body) {
+export async function swapWardrobeCategorySortOrders(supabase, uid, body) {
   const sourceId = assertUuid(body.source_id, "来源分类");
   const targetId = assertUuid(body.target_id, "目标分类");
   assertCondition(sourceId !== targetId, 400, "DUPLICATE_IDS", "请选择两个不同的分类。");
   const { error } = await supabase.rpc("swap_wardrobe_category_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });
@@ -298,10 +298,10 @@ export async function swapWardrobeCategorySortOrders(supabase, userId, body) {
   return { updated: 2 };
 }
 
-export async function listWardrobeItems(supabase, userId, query) {
-  const categories = await listWardrobeCategories(supabase, userId);
+export async function listWardrobeItems(supabase, uid, query) {
+  const categories = await listWardrobeCategories(supabase, uid);
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
-  let request = supabase.from("wardrobe_items").select("*").eq("user_id", userId);
+  let request = supabase.from("wardrobe_items").select("*").eq("uid", uid);
   if (query.category_id) {
     const categoryId = assertUuid(query.category_id, "分类编号");
     assertCondition(categoryMap.has(categoryId), 404, "WARDROBE_CATEGORY_NOT_FOUND", "衣物分类不存在。");
@@ -327,22 +327,22 @@ export async function listWardrobeItems(supabase, userId, query) {
   );
 }
 
-export async function getWardrobeItem(supabase, userId, itemId) {
-  const item = await requireItem(supabase, userId, itemId);
-  const category = await requireCategory(supabase, userId, item.category_id);
+export async function getWardrobeItem(supabase, uid, itemId) {
+  const item = await requireItem(supabase, uid, itemId);
+  const category = await requireCategory(supabase, uid, item.category_id);
   return toItemResponse(supabase, item, category);
 }
 
-export async function createWardrobeItem(supabase, userId, fields, image) {
-  const category = await requireCategory(supabase, userId, fields.category_id);
+export async function createWardrobeItem(supabase, uid, fields, image) {
+  const category = await requireCategory(supabase, uid, fields.category_id);
   const name = requiredText(fields.name, "衣物名称", 80);
   const values = normalizeValues(fields.values || {}, category.fields || []);
   const itemId = randomUUID();
-  const paths = await uploadImage(supabase, userId, itemId, image);
+  const paths = await uploadImage(supabase, uid, itemId, image);
   const { data, error } = await supabase
     .rpc("create_wardrobe_item_at_end", {
       p_id: itemId,
-      p_user_id: userId,
+      p_uid: uid,
       p_category_id: category.id,
       p_name: name,
       p_image_path: paths.imagePath,
@@ -350,16 +350,16 @@ export async function createWardrobeItem(supabase, userId, fields, image) {
     })
     .single();
   if (error) {
-    await removeImages(supabase, userId, [paths.imagePath]);
+    await removeImages(supabase, uid, [paths.imagePath]);
     throwSupabaseError(error, "新增衣物失败。");
   }
   return toItemResponse(supabase, data, category);
 }
 
-export async function updateWardrobeItem(supabase, userId, itemId, body) {
-  const current = await requireItem(supabase, userId, itemId);
+export async function updateWardrobeItem(supabase, uid, itemId, body) {
+  const current = await requireItem(supabase, uid, itemId);
   const categoryId = body.category_id ?? current.category_id;
-  const category = await requireCategory(supabase, userId, categoryId);
+  const category = await requireCategory(supabase, uid, categoryId);
   const changes = {};
   if (body.name !== undefined) changes.name = requiredText(body.name, "衣物名称", 80);
   if (body.category_id !== undefined) changes.category_id = category.id;
@@ -374,49 +374,49 @@ export async function updateWardrobeItem(supabase, userId, itemId, body) {
     .from("wardrobe_items")
     .update(changes)
     .eq("id", itemId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新衣物失败。");
   return toItemResponse(supabase, data, category);
 }
 
-export async function replaceWardrobeItemImage(supabase, userId, itemId, image) {
-  const current = await requireItem(supabase, userId, itemId);
-  const category = await requireCategory(supabase, userId, current.category_id);
-  const paths = await uploadImage(supabase, userId, itemId, image);
+export async function replaceWardrobeItemImage(supabase, uid, itemId, image) {
+  const current = await requireItem(supabase, uid, itemId);
+  const category = await requireCategory(supabase, uid, current.category_id);
+  const paths = await uploadImage(supabase, uid, itemId, image);
   const { data, error } = await supabase
     .from("wardrobe_items")
     .update({ image_path: paths.imagePath })
     .eq("id", itemId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   if (error) {
-    await removeImages(supabase, userId, [paths.imagePath]);
+    await removeImages(supabase, uid, [paths.imagePath]);
     throwSupabaseError(error, "更新衣物图片失败。");
   }
-  await removeImages(supabase, userId, [current.image_path]);
+  await removeImages(supabase, uid, [current.image_path]);
   return toItemResponse(supabase, data, category);
 }
 
-export async function deleteWardrobeItem(supabase, userId, itemId) {
-  const item = await requireItem(supabase, userId, itemId);
+export async function deleteWardrobeItem(supabase, uid, itemId) {
+  const item = await requireItem(supabase, uid, itemId);
   const { error } = await supabase
     .from("wardrobe_items")
     .delete()
     .eq("id", itemId)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除衣物失败。");
-  await removeImages(supabase, userId, [item.image_path]);
+  await removeImages(supabase, uid, [item.image_path]);
 }
 
-export async function swapWardrobeItemSortOrders(supabase, userId, body) {
+export async function swapWardrobeItemSortOrders(supabase, uid, body) {
   const sourceId = assertUuid(body.source_id, "来源衣物");
   const targetId = assertUuid(body.target_id, "目标衣物");
   assertCondition(sourceId !== targetId, 400, "DUPLICATE_IDS", "请选择两件不同的衣物。");
   const { error } = await supabase.rpc("swap_wardrobe_item_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });
@@ -435,12 +435,12 @@ export async function swapWardrobeItemSortOrders(supabase, userId, body) {
   return { updated: 2 };
 }
 
-export async function reorderWardrobeItems(supabase, userId, body) {
+export async function reorderWardrobeItems(supabase, uid, body) {
   const ids = Array.isArray(body.ids) ? body.ids.map((id) => assertUuid(id, "衣物")) : [];
   assertCondition(ids.length > 0 && ids.length <= 500, 400, "INVALID_IDS", "排序列表不能为空。" );
   assertCondition(new Set(ids).size === ids.length, 400, "DUPLICATE_IDS", "排序列表包含重复衣物。" );
   const { error } = await supabase.rpc("reorder_wardrobe_items", {
-    p_user_id: userId,
+    p_uid: uid,
     p_item_ids: ids,
   });
   throwSupabaseError(error, "调整衣物顺序失败。");

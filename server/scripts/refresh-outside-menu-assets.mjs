@@ -102,7 +102,7 @@ async function imageInput(filename) {
 async function findSingleCompanyPlace(supabase) {
   const { data, error } = await supabase
     .from("menu_places")
-    .select("id, user_id, name, place_type, outside_category_id, image_path")
+    .select("id, uid, name, place_type, outside_category_id, image_path")
     .eq("name", COMPANY_PLACE_NAME)
     .eq("place_type", "outside");
   if (error) throw error;
@@ -112,11 +112,11 @@ async function findSingleCompanyPlace(supabase) {
   return data[0];
 }
 
-async function findSingleCategory(supabase, userId) {
+async function findSingleCategory(supabase, uid) {
   const { data, error } = await supabase
     .from("dining_scenes")
     .select("id, name")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("name", SNACK_CATEGORY_NAME);
   if (error) throw error;
   if (data.length !== 1) {
@@ -125,11 +125,11 @@ async function findSingleCategory(supabase, userId) {
   return data[0];
 }
 
-async function findPlaceByName(supabase, userId, name) {
+async function findPlaceByName(supabase, uid, name) {
   const { data, error } = await supabase
     .from("menu_places")
-    .select("id, user_id, name, place_type, outside_category_id, image_path")
-    .eq("user_id", userId)
+    .select("id, uid, name, place_type, outside_category_id, image_path")
+    .eq("uid", uid)
     .eq("name", name)
     .eq("place_type", "outside");
   if (error) throw error;
@@ -137,11 +137,11 @@ async function findPlaceByName(supabase, userId, name) {
   return data[0] || null;
 }
 
-async function listPlaceDishes(supabase, userId, placeId) {
+async function listPlaceDishes(supabase, uid, placeId) {
   const { data, error } = await supabase
     .from("dishes")
     .select("id, name, image_path, place_sort_order")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("place_id", placeId)
     .order("place_sort_order", { ascending: true });
   if (error) throw error;
@@ -150,9 +150,9 @@ async function listPlaceDishes(supabase, userId, placeId) {
 
 async function audit(supabase) {
   const companyPlace = await findSingleCompanyPlace(supabase);
-  const category = await findSingleCategory(supabase, companyPlace.user_id);
-  const snackPlace = await findPlaceByName(supabase, companyPlace.user_id, SNACK_PLACE_NAME);
-  const companyDishes = await listPlaceDishes(supabase, companyPlace.user_id, companyPlace.id);
+  const category = await findSingleCategory(supabase, companyPlace.uid);
+  const snackPlace = await findPlaceByName(supabase, companyPlace.uid, SNACK_PLACE_NAME);
+  const companyDishes = await listPlaceDishes(supabase, companyPlace.uid, companyPlace.id);
   const companyDishByName = new Map(companyDishes.map((dish) => [dish.name, dish]));
   const missingCompanyDishes = [...companyDishAssets.keys()]
     .filter((name) => !companyDishByName.has(name));
@@ -161,7 +161,7 @@ async function audit(supabase) {
   }
 
   const snackDishes = snackPlace
-    ? await listPlaceDishes(supabase, companyPlace.user_id, snackPlace.id)
+    ? await listPlaceDishes(supabase, companyPlace.uid, snackPlace.id)
     : [];
 
   return {
@@ -255,11 +255,11 @@ async function verifyStoredImages(supabase, state) {
 
 async function apply(supabase, initial) {
   await validateAllAssets();
-  const userId = initial.companyPlace.user_id;
+  const uid = initial.companyPlace.uid;
 
   await replaceMenuPlaceImage(
     supabase,
-    userId,
+    uid,
     initial.companyPlace.id,
     await imageInput("店铺 · 公司饭堂.png"),
   );
@@ -268,7 +268,7 @@ async function apply(supabase, initial) {
   for (const [name, filename] of companyDishAssets) {
     await replaceDishImage(
       supabase,
-      userId,
+      uid,
       companyDishByName.get(name).id,
       await imageInput(filename),
     );
@@ -278,7 +278,7 @@ async function apply(supabase, initial) {
   if (!snackPlace) {
     snackPlace = await createMenuPlace(
       supabase,
-      userId,
+      uid,
       {
         name: SNACK_PLACE_NAME,
         outside_category_id: initial.category.id,
@@ -287,19 +287,19 @@ async function apply(supabase, initial) {
     );
   } else {
     if (snackPlace.outside_category_id !== initial.category.id) {
-      snackPlace = await updateMenuPlace(supabase, userId, snackPlace.id, {
+      snackPlace = await updateMenuPlace(supabase, uid, snackPlace.id, {
         outside_category_id: initial.category.id,
       });
     }
     snackPlace = await replaceMenuPlaceImage(
       supabase,
-      userId,
+      uid,
       snackPlace.id,
       await imageInput("店铺 · 零食小卖部.png"),
     );
   }
 
-  const existingSnackDishes = await listPlaceDishes(supabase, userId, snackPlace.id);
+  const existingSnackDishes = await listPlaceDishes(supabase, uid, snackPlace.id);
   const snackDishByName = new Map(existingSnackDishes.map((dish) => [dish.name, dish]));
   for (const item of snackItems) {
     const existing = snackDishByName.get(item.name);
@@ -312,10 +312,10 @@ async function apply(supabase, initial) {
       flavor_options: [],
     };
     if (existing) {
-      await updateDish(supabase, userId, existing.id, fields);
+      await updateDish(supabase, uid, existing.id, fields);
       await replaceDishImage(
         supabase,
-        userId,
+        uid,
         existing.id,
         await imageInput(item.filename),
       );
@@ -323,7 +323,7 @@ async function apply(supabase, initial) {
     }
     await createDish(
       supabase,
-      userId,
+      uid,
       {
         name: item.name,
         place_id: snackPlace.id,

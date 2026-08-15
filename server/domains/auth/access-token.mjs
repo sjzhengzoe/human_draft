@@ -28,7 +28,7 @@ export async function issueAccessToken({ sessionId, user }) {
     .setProtectedHeader({ alg: ALGORITHM, typ: "JWT" })
     .setIssuer(ISSUER)
     .setAudience(AUDIENCE)
-    .setSubject(user.id)
+    .setSubject(user.uid)
     .setIssuedAt()
     .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
     .sign(signingKey());
@@ -52,7 +52,7 @@ export async function verifyAccessToken(token) {
     }
     return {
       sessionId: payload.sid,
-      userId: payload.sub,
+      uid: payload.sub,
       openId: payload.openid,
     };
   } catch (error) {

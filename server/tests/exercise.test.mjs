@@ -9,8 +9,8 @@ import {
   revokeExerciseRestDay,
 } from "../domains/exercise/service.mjs";
 
-const USER_ID = "10000000-0000-4000-8000-000000000002";
-const OTHER_USER_ID = "10000000-0000-4000-8000-000000000003";
+const UID = "1000000001";
+const OTHER_UID = "1000000102";
 const AUGUST_THIRD_CHINA = new Date("2026-08-02T16:00:00.000Z");
 
 function createSupabaseMock(tables) {
@@ -23,7 +23,7 @@ function createSupabaseMock(tables) {
       if (name === "get_exercise_rest_credit_summary") {
         const configured = tables.exercise_rest_credit_summary?.[0];
         const profile = (tables.exercise_profiles || []).find(
-          (item) => item.user_id === args.p_user_id,
+          (item) => item.uid === args.p_uid,
         );
         return {
           data: [{
@@ -37,7 +37,7 @@ function createSupabaseMock(tables) {
       if (name === "use_exercise_daily_rest_day") {
         tables.exercise_daily_rest_days ||= [];
         tables.exercise_daily_rest_days.push({
-          user_id: args.p_user_id,
+          uid: args.p_uid,
           rest_date: args.p_rest_date,
         });
         if (tables.exercise_rest_credit_summary?.[0]) {
@@ -46,7 +46,7 @@ function createSupabaseMock(tables) {
       }
       if (name === "revoke_exercise_daily_rest_day") {
         const restDayIndex = (tables.exercise_daily_rest_days || []).findIndex(
-          (item) => item.user_id === args.p_user_id && item.rest_date === args.p_rest_date,
+          (item) => item.uid === args.p_uid && item.rest_date === args.p_rest_date,
         );
         if (restDayIndex < 0) return { error: { code: "P0007", message: "not used" } };
         tables.exercise_daily_rest_days.splice(restDayIndex, 1);
@@ -162,27 +162,27 @@ test("using a rest day completes the selected daily task", () => {
 test("dashboard reads the current month and builds daily calendar states", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 40, monthly_rest_days: 3 },
-      { user_id: OTHER_USER_ID, daily_minutes: 90, monthly_rest_days: 9 },
+      { uid: UID, daily_minutes: 40, monthly_rest_days: 3 },
+      { uid: OTHER_UID, daily_minutes: 90, monthly_rest_days: 9 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-08-03", daily_minutes: 20 },
-      { user_id: USER_ID, effective_date: "2026-08-04", daily_minutes: 40 },
-      { user_id: OTHER_USER_ID, effective_date: "2026-08-03", daily_minutes: 90 },
+      { uid: UID, effective_date: "2026-08-03", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-08-04", daily_minutes: 40 },
+      { uid: OTHER_UID, effective_date: "2026-08-03", daily_minutes: 90 },
     ],
     exercise_completion_events: [
-      { user_id: USER_ID, completion_date: "2026-08-01", minutes: 20 },
-      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 8 },
-      { user_id: OTHER_USER_ID, completion_date: "2026-08-03", minutes: 90 },
+      { uid: UID, completion_date: "2026-08-01", minutes: 20 },
+      { uid: UID, completion_date: "2026-08-03", minutes: 8 },
+      { uid: OTHER_UID, completion_date: "2026-08-03", minutes: 90 },
     ],
     exercise_daily_rest_days: [
-      { user_id: USER_ID, rest_date: "2026-07-31" },
-      { user_id: USER_ID, rest_date: "2026-08-02" },
-      { user_id: OTHER_USER_ID, rest_date: "2026-08-03" },
+      { uid: UID, rest_date: "2026-07-31" },
+      { uid: UID, rest_date: "2026-08-02" },
+      { uid: OTHER_UID, rest_date: "2026-08-03" },
     ],
   });
 
-  const dashboard = await getExerciseDashboard(supabase, USER_ID, AUGUST_THIRD_CHINA);
+  const dashboard = await getExerciseDashboard(supabase, UID, AUGUST_THIRD_CHINA);
 
   assert.deepEqual(dashboard.profile, {
     daily_minutes: 40,
@@ -259,7 +259,7 @@ test("dashboard reads the current month and builds daily calendar states", async
   for (const read of supabase.reads) {
     assert.ok(
       read.filters.some(([operator, field, value]) =>
-        operator === "eq" && field === "user_id" && value === USER_ID
+        operator === "eq" && field === "uid" && value === UID
       ),
       `${read.table} must be filtered with the authenticated user`,
     );
@@ -269,24 +269,24 @@ test("dashboard reads the current month and builds daily calendar states", async
 test("dashboard can display a historical month without changing today's progress", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 3 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-07-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-07-01", daily_minutes: 20 },
     ],
     exercise_completion_events: [
-      { user_id: USER_ID, completion_date: "2026-07-01", minutes: 20 },
-      { user_id: USER_ID, completion_date: "2026-07-02", minutes: 5 },
-      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 10 },
+      { uid: UID, completion_date: "2026-07-01", minutes: 20 },
+      { uid: UID, completion_date: "2026-07-02", minutes: 5 },
+      { uid: UID, completion_date: "2026-08-03", minutes: 10 },
     ],
     exercise_daily_rest_days: [
-      { user_id: USER_ID, rest_date: "2026-07-02" },
+      { uid: UID, rest_date: "2026-07-02" },
     ],
   });
 
   const dashboard = await getExerciseDashboard(
     supabase,
-    USER_ID,
+    UID,
     AUGUST_THIRD_CHINA,
     "2026-07",
   );
@@ -322,7 +322,7 @@ test("dashboard rejects future calendar months", async () => {
   const supabase = createSupabaseMock({});
 
   await assert.rejects(
-    getExerciseDashboard(supabase, USER_ID, AUGUST_THIRD_CHINA, "2026-09"),
+    getExerciseDashboard(supabase, UID, AUGUST_THIRD_CHINA, "2026-09"),
     { code: "FUTURE_EXERCISE_MONTH" },
   );
   assert.equal(supabase.reads.length, 0);
@@ -331,22 +331,22 @@ test("dashboard rejects future calendar months", async () => {
 test("calendar counts days whose daily task is complete", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 3 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-08-01", daily_minutes: 20 },
     ],
     exercise_completion_events: [
-      { user_id: USER_ID, completion_date: "2026-08-01", minutes: 20 },
-      { user_id: USER_ID, completion_date: "2026-08-02", minutes: 5 },
-      { user_id: USER_ID, completion_date: "2026-08-03", minutes: 10 },
+      { uid: UID, completion_date: "2026-08-01", minutes: 20 },
+      { uid: UID, completion_date: "2026-08-02", minutes: 5 },
+      { uid: UID, completion_date: "2026-08-03", minutes: 10 },
     ],
     exercise_daily_rest_days: [
-      { user_id: USER_ID, rest_date: "2026-08-02" },
+      { uid: UID, rest_date: "2026-08-02" },
     ],
   });
 
-  const dashboard = await getExerciseDashboard(supabase, USER_ID, AUGUST_THIRD_CHINA);
+  const dashboard = await getExerciseDashboard(supabase, UID, AUGUST_THIRD_CHINA);
 
   assert.equal(dashboard.month.completed_days, 2);
   assert.deepEqual(
@@ -358,23 +358,23 @@ test("calendar counts days whose daily task is complete", async () => {
 test("a rest day can be applied to a selected tracked date in the current month", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 3 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-08-01", daily_minutes: 20 },
     ],
   });
 
   const dashboard = await consumeExerciseRestDay(
     supabase,
-    USER_ID,
+    UID,
     { date: "2026-08-02" },
     AUGUST_THIRD_CHINA,
   );
 
   assert.deepEqual(supabase.rpcCalls, [{
     name: "use_exercise_daily_rest_day",
-    args: { p_user_id: USER_ID, p_rest_date: "2026-08-02" },
+    args: { p_uid: UID, p_rest_date: "2026-08-02" },
   }]);
   assert.equal(dashboard.month.value, "2026-08");
 });
@@ -382,37 +382,37 @@ test("a rest day can be applied to a selected tracked date in the current month"
 test("a historical rest day consumes the user's cumulative balance", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 5 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 5 },
     ],
     exercise_daily_goal_changes: [
       {
-        user_id: USER_ID,
+        uid: UID,
         effective_date: "2026-07-01",
         daily_minutes: 20,
         monthly_rest_days: 2,
       },
       {
-        user_id: USER_ID,
+        uid: UID,
         effective_date: "2026-08-01",
         daily_minutes: 20,
         monthly_rest_days: 5,
       },
     ],
     exercise_daily_rest_days: [
-      { user_id: USER_ID, rest_date: "2026-07-01" },
+      { uid: UID, rest_date: "2026-07-01" },
     ],
   });
 
   const dashboard = await consumeExerciseRestDay(
     supabase,
-    USER_ID,
+    UID,
     { date: "2026-07-02" },
     AUGUST_THIRD_CHINA,
   );
 
   assert.deepEqual(supabase.rpcCalls, [{
     name: "use_exercise_daily_rest_day",
-    args: { p_user_id: USER_ID, p_rest_date: "2026-07-02" },
+    args: { p_uid: UID, p_rest_date: "2026-07-02" },
   }]);
   assert.equal(dashboard.month.value, "2026-07");
 });
@@ -423,7 +423,7 @@ test("a rest day cannot be applied to a future date", async () => {
   await assert.rejects(
     consumeExerciseRestDay(
       supabase,
-      USER_ID,
+      UID,
       { date: "2026-08-04" },
       AUGUST_THIRD_CHINA,
     ),
@@ -435,22 +435,22 @@ test("a rest day cannot be applied to a future date", async () => {
 test("a used rest day can be revoked and refunded", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 3 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-08-01", daily_minutes: 20 },
     ],
     exercise_completion_events: [],
     exercise_daily_rest_days: [
-      { user_id: USER_ID, rest_date: "2026-08-02" },
-      { user_id: OTHER_USER_ID, rest_date: "2026-08-02" },
+      { uid: UID, rest_date: "2026-08-02" },
+      { uid: OTHER_UID, rest_date: "2026-08-02" },
     ],
     exercise_rest_credit_summary: [{ balance: 2, monthly_grant: 3 }],
   });
 
   const dashboard = await revokeExerciseRestDay(
     supabase,
-    USER_ID,
+    UID,
     { date: "2026-08-02" },
     AUGUST_THIRD_CHINA,
   );
@@ -458,21 +458,21 @@ test("a used rest day can be revoked and refunded", async () => {
   assert.equal(dashboard.rest_days.balance, 3);
   assert.deepEqual(supabase.rpcCalls, [{
     name: "revoke_exercise_daily_rest_day",
-    args: { p_user_id: USER_ID, p_rest_date: "2026-08-02" },
+    args: { p_uid: UID, p_rest_date: "2026-08-02" },
   }]);
 });
 
 test("rest-day revocation supports historical dates and rejects unused dates", async () => {
   const historicalSupabase = createSupabaseMock({
-    exercise_profiles: [{ user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 }],
+    exercise_profiles: [{ uid: UID, daily_minutes: 20, monthly_rest_days: 3 }],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-07-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-07-01", daily_minutes: 20 },
     ],
-    exercise_daily_rest_days: [{ user_id: USER_ID, rest_date: "2026-07-31" }],
+    exercise_daily_rest_days: [{ uid: UID, rest_date: "2026-07-31" }],
   });
   const historicalDashboard = await revokeExerciseRestDay(
     historicalSupabase,
-    USER_ID,
+    UID,
     { date: "2026-07-31" },
     AUGUST_THIRD_CHINA,
   );
@@ -484,7 +484,7 @@ test("rest-day revocation supports historical dates and rejects unused dates", a
   await assert.rejects(
     revokeExerciseRestDay(
       unusedSupabase,
-      USER_ID,
+      UID,
       { date: "2026-08-02" },
       AUGUST_THIRD_CHINA,
     ),
@@ -495,10 +495,10 @@ test("rest-day revocation supports historical dates and rejects unused dates", a
 test("a tracked past date can receive a missed exercise completion", async () => {
   const supabase = createSupabaseMock({
     exercise_profiles: [
-      { user_id: USER_ID, daily_minutes: 20, monthly_rest_days: 3 },
+      { uid: UID, daily_minutes: 20, monthly_rest_days: 3 },
     ],
     exercise_daily_goal_changes: [
-      { user_id: USER_ID, effective_date: "2026-08-01", daily_minutes: 20 },
+      { uid: UID, effective_date: "2026-08-01", daily_minutes: 20 },
     ],
     exercise_completion_events: [],
     exercise_daily_rest_days: [],
@@ -506,7 +506,7 @@ test("a tracked past date can receive a missed exercise completion", async () =>
 
   const dashboard = await completeExerciseTasks(
     supabase,
-    USER_ID,
+    UID,
     { date: "2026-08-02", minutes: 20 },
     AUGUST_THIRD_CHINA,
   );
@@ -514,7 +514,7 @@ test("a tracked past date can receive a missed exercise completion", async () =>
   assert.deepEqual(supabase.rpcCalls, [{
     name: "record_exercise_daily_completion",
     args: {
-      p_user_id: USER_ID,
+      p_uid: UID,
       p_completion_date: "2026-08-02",
       p_minutes: 20,
     },
@@ -528,7 +528,7 @@ test("exercise completion rejects future, invalid, and untracked dates", async (
     await assert.rejects(
       completeExerciseTasks(
         supabase,
-        USER_ID,
+        UID,
         { date, minutes: 20 },
         AUGUST_THIRD_CHINA,
       ),
@@ -543,7 +543,7 @@ test("exercise completion rejects future, invalid, and untracked dates", async (
   await assert.rejects(
     completeExerciseTasks(
       untrackedSupabase,
-      USER_ID,
+      UID,
       { date: "2026-08-02", minutes: 20 },
       AUGUST_THIRD_CHINA,
     ),

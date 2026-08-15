@@ -27,7 +27,7 @@ test("luggage exposes wrapped scene tabs and a reusable local packing flow", asy
   assert.match(logic, /handlePackingItemToggle/);
   assert.match(logic, /packingView === "packed"/);
   assert.match(storage, /LUGGAGE_PACKED_ITEM_IDS_V1/);
-  assert.match(storage, /STORAGE_KEY_PREFIX\}:\$\{userId\}:\$\{sceneId\}/);
+  assert.match(storage, /STORAGE_KEY_PREFIX\}:\$\{uid\}:\$\{sceneId\}/);
   assert.doesNotMatch(page, /可复用清单模板|选择场景后开始收拾|装箱状态只在本机保存/);
   assert.doesNotMatch(page, /type="search"|placeholder="搜索场景"/);
   assert.match(page, /wx:for="\{\{visibleScenes\}\}"/);
@@ -53,7 +53,7 @@ test("luggage overview uses a full-height charcoal surface and reset only appear
   assert.match(icon, /(?:fill|stroke)="#ffffff"/);
   assert.match(page, /title="重新开始收拾"/);
   assert.match(page, /清单内容不会改变/);
-  assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUserId, scene\.id\)/);
+  assert.match(logic, /clearLuggagePackedItemIds\(luggagePackingUid, scene\.id\)/);
 });
 
 test("luggage item rows edit while only the square checkbox changes packing state", async () => {

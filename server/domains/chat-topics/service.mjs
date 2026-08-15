@@ -25,12 +25,12 @@ export function normalizeTopicContent(value) {
   return content;
 }
 
-async function requireUserTopic(supabase, userId, topicId) {
+async function requireUserTopic(supabase, uid, topicId) {
   const { data, error } = await supabase
     .from("user_chat_topics")
     .select(USER_FIELDS)
     .eq("id", topicId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取个人话题失败。");
   assertCondition(data, 404, "CHAT_TOPIC_NOT_FOUND", "个人话题不存在。");
@@ -79,7 +79,7 @@ function paginateTopics(items, query = {}) {
   };
 }
 
-async function listVisibleOfficialTopics(supabase, userId) {
+async function listVisibleOfficialTopics(supabase, uid) {
   const [officialResult, hiddenResult, collectedResult] = await Promise.all([
     supabase
       .from("official_chat_topics")
@@ -91,11 +91,11 @@ async function listVisibleOfficialTopics(supabase, userId) {
     supabase
       .from("user_hidden_official_chat_topics")
       .select("official_topic_id")
-      .eq("user_id", userId),
+      .eq("uid", uid),
     supabase
       .from("user_chat_topics")
       .select("official_topic_id")
-      .eq("user_id", userId),
+      .eq("uid", uid),
   ]);
   throwSupabaseError(officialResult.error, "读取官方话题失败。");
   throwSupabaseError(hiddenResult.error, "读取话题偏好失败。");
@@ -111,13 +111,13 @@ async function listVisibleOfficialTopics(supabase, userId) {
   );
 }
 
-export async function listChatTopics(supabase, userId, query = {}) {
+export async function listChatTopics(supabase, uid, query = {}) {
   const [officialItems, mineResult] = await Promise.all([
-    listVisibleOfficialTopics(supabase, userId),
+    listVisibleOfficialTopics(supabase, uid),
     supabase
       .from("user_chat_topics")
       .select(USER_FIELDS)
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .order("created_at", { ascending: false }),
   ]);
   throwSupabaseError(mineResult.error, "读取个人话题失败。");
@@ -129,7 +129,7 @@ export async function listChatTopics(supabase, userId, query = {}) {
   };
 }
 
-export async function listHiddenOfficialChatTopics(supabase, userId, query = {}) {
+export async function listHiddenOfficialChatTopics(supabase, uid, query = {}) {
   const [officialResult, hiddenResult] = await Promise.all([
     supabase
       .from("official_chat_topics")
@@ -141,7 +141,7 @@ export async function listHiddenOfficialChatTopics(supabase, userId, query = {})
     supabase
       .from("user_hidden_official_chat_topics")
       .select("official_topic_id")
-      .eq("user_id", userId),
+      .eq("uid", uid),
   ]);
   throwSupabaseError(officialResult.error, "读取官方话题失败。");
   throwSupabaseError(hiddenResult.error, "读取隐藏话题失败。");
@@ -152,11 +152,11 @@ export async function listHiddenOfficialChatTopics(supabase, userId, query = {})
   );
 }
 
-export async function createUserChatTopic(supabase, userId, body) {
+export async function createUserChatTopic(supabase, uid, body) {
   const content = normalizeTopicContent(body.content);
   const { data, error } = await supabase
     .from("user_chat_topics")
-    .insert({ user_id: userId, content })
+    .insert({ uid: uid, content })
     .select(USER_FIELDS)
     .single();
   throwSupabaseError(error, "新增个人话题失败。");
@@ -207,39 +207,39 @@ export async function deleteOfficialChatTopic(supabase, topicId) {
   throwSupabaseError(error, "删除官方话题失败。");
 }
 
-export async function hideOfficialChatTopic(supabase, userId, topicId) {
+export async function hideOfficialChatTopic(supabase, uid, topicId) {
   const current = await requireOfficialTopic(supabase, topicId);
   const { data: existing, error: existingError } = await supabase
     .from("user_hidden_official_chat_topics")
     .select("official_topic_id")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("official_topic_id", current.id)
     .maybeSingle();
   throwSupabaseError(existingError, "读取话题偏好失败。");
   if (existing) return;
   const { error } = await supabase
     .from("user_hidden_official_chat_topics")
-    .insert({ user_id: userId, official_topic_id: current.id });
+    .insert({ uid: uid, official_topic_id: current.id });
   if (error?.code === "23505") return;
   throwSupabaseError(error, "隐藏话题失败。");
 }
 
-export async function restoreOfficialChatTopic(supabase, userId, topicId) {
+export async function restoreOfficialChatTopic(supabase, uid, topicId) {
   const { error } = await supabase
     .from("user_hidden_official_chat_topics")
     .delete()
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("official_topic_id", topicId);
   throwSupabaseError(error, "恢复话题失败。");
 }
 
-export async function addOfficialChatTopic(supabase, userId, officialTopicId) {
+export async function addOfficialChatTopic(supabase, uid, officialTopicId) {
   const officialTopic = await requireOfficialTopic(supabase, officialTopicId);
 
   const { data: existing, error: existingError } = await supabase
     .from("user_chat_topics")
     .select(USER_FIELDS)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("official_topic_id", officialTopic.id)
     .maybeSingle();
   throwSupabaseError(existingError, "读取个人话题失败。");
@@ -248,7 +248,7 @@ export async function addOfficialChatTopic(supabase, userId, officialTopicId) {
   const { data, error } = await supabase
     .from("user_chat_topics")
     .insert({
-      user_id: userId,
+      uid: uid,
       official_topic_id: officialTopic.id,
       content: officialTopic.content,
     })
@@ -261,8 +261,8 @@ export async function addOfficialChatTopic(supabase, userId, officialTopicId) {
   return { item: data, created: true };
 }
 
-export async function updateUserChatTopic(supabase, userId, topicId, body, options = {}) {
-  const current = await requireUserTopic(supabase, userId, topicId);
+export async function updateUserChatTopic(supabase, uid, topicId, body, options = {}) {
+  const current = await requireUserTopic(supabase, uid, topicId);
   assertCondition(
     !current.official_topic_id,
     403,
@@ -275,19 +275,19 @@ export async function updateUserChatTopic(supabase, userId, topicId, body, optio
     .from("user_chat_topics")
     .update({ content })
     .eq("id", current.id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select(USER_FIELDS)
     .single();
   throwSupabaseError(error, "更新个人话题失败。");
   return data;
 }
 
-export async function deleteUserChatTopic(supabase, userId, topicId) {
-  const current = await requireUserTopic(supabase, userId, topicId);
+export async function deleteUserChatTopic(supabase, uid, topicId) {
+  const current = await requireUserTopic(supabase, uid, topicId);
   const { error } = await supabase
     .from("user_chat_topics")
     .delete()
     .eq("id", current.id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除个人话题失败。");
 }

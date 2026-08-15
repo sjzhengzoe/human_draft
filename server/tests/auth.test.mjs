@@ -89,7 +89,8 @@ class FakeQuery {
 
     if (this.operation === "insert") {
       const user = {
-        id: `user-${this.state.users.length + 1}`,
+        id: `internal-user-${this.state.users.length + 1}`,
+        uid: String(1_000_000_001 + this.state.users.length),
         created_at: "2026-07-11T00:00:00.000Z",
         ...this.values,
       };
@@ -198,7 +199,8 @@ test("a migrated completed user can still log in without an avatar", async (cont
   mockWechatLogin(context, "openid-existing");
   const supabase = createFakeSupabase([
     {
-      id: "existing-user",
+      id: "internal-existing-user",
+      uid: "1000000001",
       wechat_openid: "openid-existing",
       display_name: "旧用户",
       avatar_url: "",
@@ -209,7 +211,7 @@ test("a migrated completed user can still log in without an avatar", async (cont
 
   const session = await loginWithWechatCode(supabase, "login-code");
 
-  assert.equal(session.user.id, "existing-user");
+  assert.equal(session.user.uid, "1000000001");
   assert.equal("openid" in session.user, false);
   assert.equal(session.user.avatar_url, "");
   assert.equal(supabase.state.sessions.length, 1);
@@ -218,7 +220,8 @@ test("a migrated completed user can still log in without an avatar", async (cont
 test("a successful local avatar update completes the user profile", async () => {
   const supabase = createFakeSupabase([
     {
-      id: "pending-user",
+      id: "internal-pending-user",
+      uid: "1000000002",
       wechat_openid: "openid-pending",
       display_name: "待完善用户",
       avatar_url: "",
@@ -230,7 +233,7 @@ test("a successful local avatar update completes the user profile", async () => 
     '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="red"/></svg>',
   );
 
-  const avatarUrl = await updateUserAvatar(supabase, "pending-user", {
+  const avatarUrl = await updateUserAvatar(supabase, "1000000002", {
     buffer: image,
     mimetype: "image/png",
     filename: "avatar.png",
@@ -238,12 +241,12 @@ test("a successful local avatar update completes the user profile", async () => 
 
   assert.match(
     avatarUrl,
-    /^https:\/\/assets\.example\/user-avatars\/users\/pending-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp\?expires=21600$/,
+    /^https:\/\/assets\.example\/user-avatars\/users\/1000000002\/avatar-\d+-[0-9a-f-]+-master-v1\.webp\?expires=21600$/,
   );
   assert.equal(supabase.state.users[0].profile_completed, true);
   assert.match(
     supabase.state.users[0].avatar_url,
-    /^users\/pending-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
+    /^users\/1000000002\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
   );
   assert.equal(supabase.state.uploads.length, 1);
   assert.equal(supabase.state.uploads[0].options.contentType, "image/webp");
@@ -255,7 +258,8 @@ test("a successful local avatar update completes the user profile", async () => 
 test("updating a nickname preserves the account and completes its profile", async () => {
   const supabase = createFakeSupabase([
     {
-      id: "profile-user",
+      id: "internal-profile-user",
+      uid: "1000000003",
       wechat_openid: "openid-profile",
       display_name: "旧昵称",
       avatar_url: "users/profile-user/avatar-old.webp",
@@ -266,7 +270,7 @@ test("updating a nickname preserves the account and completes its profile", asyn
 
   const displayName = await updateUserDisplayName(
     supabase,
-    "profile-user",
+    "1000000003",
     "  新昵称  ",
   );
 
@@ -279,7 +283,8 @@ test("updating a nickname preserves the account and completes its profile", asyn
 test("replacing an avatar switches to a versioned path before removing the old object", async () => {
   const supabase = createFakeSupabase([
     {
-      id: "avatar-user",
+      id: "internal-avatar-user",
+      uid: "1000000004",
       wechat_openid: "openid-avatar",
       display_name: "头像用户",
       avatar_url: "users/avatar-user/avatar-old.webp",
@@ -291,7 +296,7 @@ test("replacing an avatar switches to a versioned path before removing the old o
     '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="blue"/></svg>',
   );
 
-  await updateUserAvatar(supabase, "avatar-user", {
+  await updateUserAvatar(supabase, "1000000004", {
     buffer: image,
     mimetype: "image/png",
     filename: "avatar.png",
@@ -299,7 +304,7 @@ test("replacing an avatar switches to a versioned path before removing the old o
 
   assert.match(
     supabase.state.users[0].avatar_url,
-    /^users\/avatar-user\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
+    /^users\/1000000004\/avatar-\d+-[0-9a-f-]+-master-v1\.webp$/,
   );
   assert.deepEqual(supabase.state.removals, [{
     bucket: "user-avatars",
@@ -333,8 +338,8 @@ test("incomplete profile sessions can authenticate normal routes", async (contex
 
   const request = { headers };
   const auth = await requireAuth(supabase, request);
-  assert.equal(auth.user.id, supabase.state.users[0].id);
-  assert.equal(request.auth.user.id, supabase.state.users[0].id);
+  assert.equal(auth.user.uid, supabase.state.users[0].uid);
+  assert.equal(request.auth.user.uid, supabase.state.users[0].uid);
 });
 
 test("new users can sign up without avatar or nickname", async (context) => {

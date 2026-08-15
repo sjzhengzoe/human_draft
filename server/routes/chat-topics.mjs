@@ -19,7 +19,7 @@ export function registerChatTopicRoutes(app, context) {
     ok: true,
     data: await listChatTopics(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.query || {},
     ),
   }));
@@ -31,7 +31,7 @@ export function registerChatTopicRoutes(app, context) {
       ok: true,
       data: await listHiddenOfficialChatTopics(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {},
       ),
     }),
@@ -84,7 +84,7 @@ export function registerChatTopicRoutes(app, context) {
     async (request) => {
       await hideOfficialChatTopic(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       );
       return { ok: true, data: { hidden: true } };
@@ -97,7 +97,7 @@ export function registerChatTopicRoutes(app, context) {
     async (request) => {
       await restoreOfficialChatTopic(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       );
       return { ok: true, data: { restored: true } };
@@ -111,7 +111,7 @@ export function registerChatTopicRoutes(app, context) {
     }
     const item = await createUserChatTopic(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     );
     return reply.code(201).send({ ok: true, data: { item } });
@@ -123,7 +123,7 @@ export function registerChatTopicRoutes(app, context) {
     async (request, reply) => {
       const result = await addOfficialChatTopic(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body?.official_topic_id,
       );
       return reply.code(result.created ? 201 : 200).send({ ok: true, data: result });
@@ -135,7 +135,7 @@ export function registerChatTopicRoutes(app, context) {
     data: {
       item: await updateUserChatTopic(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
         {
@@ -149,7 +149,7 @@ export function registerChatTopicRoutes(app, context) {
   app.delete("/api/chat-topics/mine/:id", { preHandler: authenticated }, async (request) => {
     await deleteUserChatTopic(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.params.id,
     );
     return { ok: true, data: { deleted: true } };

@@ -9,6 +9,10 @@ const migrationUrl = new URL(
   "../../supabase/migrations/202607280002_all_modules_user_isolation.sql",
   import.meta.url,
 );
+const uidMigrationUrl = new URL(
+  "../../supabase/migrations/20260814160545_user_uid_identity.sql",
+  import.meta.url,
+);
 
 const userOwnedTables = new Set([
   "activity_items",
@@ -86,6 +90,19 @@ test("all personal modules are migrated to user-owned rows", async () => {
   assert.match(migration, /create or replace function public\.search_favorite_media_episodes\(\s*p_user_id uuid/i);
 });
 
+test("public UID migration reserves special accounts and generates increasing ten-digit IDs", async () => {
+  const migration = await readFile(uidMigrationUrl, "utf8");
+
+  assert.match(migration, /set uid = '10000'[\s\S]*where display_name = '顾飞飞'/i);
+  assert.match(migration, /set uid = '20000'[\s\S]*where display_name <> '顾飞飞'/i);
+  assert.match(migration, /1000000000::bigint[\s\S]*nextval\([^)]*app_user_uid_sequence[^)]*\) \* 100[\s\S]*floor\(random\(\) \* 100\)/i);
+  assert.match(migration, /check \(uid in \('10000', '20000'\) or uid ~ '\^\[1-9\]\[0-9\]\{9\}\$'\)/i);
+  assert.match(migration, /rename column user_id to uid/i);
+  assert.match(migration, /REFERENCES public\.app_users\(uid\)/i);
+  assert.match(migration, /delete from public\.app_sessions/i);
+  assert.match(migration, /left business rows referencing the internal app_users id/i);
+});
+
 test("every business API route requires an authenticated session", async () => {
   const routeFiles = await readSourceFiles(join(projectRoot, "server/routes"));
   const publicRoutes = new Set([
@@ -133,8 +150,8 @@ test("service-role table access always carries authenticated user ownership", as
       );
       assert.match(
         statement,
-        /(?:\.eq\(\s*["']user_id["']\s*,\s*userId\s*\)|user_id\s*:\s*userId)/,
-        `${match[1]} access in ${path} must be scoped to userId`,
+        /(?:\.eq\(\s*["']uid["']\s*,\s*uid\s*\)|uid\s*:\s*uid)/,
+        `${match[1]} access in ${path} must be scoped to uid`,
       );
     }
   }
@@ -153,7 +170,7 @@ test("all personal RPC calls receive the authenticated user id", async () => {
       const call = source.slice(match.index, match.index + 1200);
       assert.match(
         call,
-        /p_user_id\s*:\s*(?:userId|user\.id)/,
+        /p_uid\s*:\s*(?:uid|user\.uid)/,
         `${match[1]} in ${path} must receive the authenticated user id`,
       );
     }

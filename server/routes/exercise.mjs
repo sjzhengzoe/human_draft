@@ -14,7 +14,7 @@ export function registerExerciseRoutes(app, context) {
     ok: true,
     data: await getExerciseDashboard(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       new Date(),
       request.query?.month
     )
@@ -27,7 +27,7 @@ export function registerExerciseRoutes(app, context) {
       ok: true,
       data: await saveExerciseSettings(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     })
@@ -37,7 +37,7 @@ export function registerExerciseRoutes(app, context) {
     ok: true,
       data: await resetExerciseState(
         getSupabaseAdmin(),
-        request.auth.user.id
+        request.auth.user.uid
     )
   }))
 
@@ -48,7 +48,7 @@ export function registerExerciseRoutes(app, context) {
       ok: true,
       data: await consumeExerciseRestDay(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     })
@@ -61,7 +61,7 @@ export function registerExerciseRoutes(app, context) {
       ok: true,
       data: await revokeExerciseRestDay(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     })
@@ -74,7 +74,7 @@ export function registerExerciseRoutes(app, context) {
       ok: true,
       data: await completeExerciseTasks(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.body || {}
       )
     })

@@ -29,9 +29,9 @@ const numericObjectSize = (value) => {
   return Number.isFinite(size) && size > 0 ? Math.round(size) : 0;
 };
 
-export async function getUserImageStorageUsage(supabase, userId) {
+export async function getUserImageStorageUsage(supabase, uid) {
   const { data, error } = await supabase.rpc("get_user_image_storage_usage", {
-    p_user_id: userId,
+    p_uid: uid,
   });
   if (error) throw error;
   const modules = (data || []).map((row) => ({
@@ -51,7 +51,7 @@ export async function getUserImageStorageUsage(supabase, userId) {
 
 export async function uploadStorageImage(
   supabase,
-  { bucketName, path, userId, buffer, contentType, cacheControl },
+  { bucketName, path, uid, buffer, contentType, cacheControl },
 ) {
   const module = IMAGE_MODULE_BY_BUCKET.get(bucketName);
   if (!module) throw new Error(`Unknown image bucket: ${bucketName}`);
@@ -59,7 +59,7 @@ export async function uploadStorageImage(
   await putCosObject({ key: objectKey, buffer, contentType, cacheControl });
   const { error } = await supabase.from("image_assets").upsert({
     object_key: objectKey,
-    user_id: userId,
+    uid: uid,
     module,
     size_bytes: buffer.length,
     mime_type: contentType,
@@ -75,7 +75,7 @@ export async function uploadStorageImage(
 
 export async function uploadStandardImage(
   supabase,
-  { bucketName, basePath, userId, buffer, crop, cacheControl, uploadErrorMessage },
+  { bucketName, basePath, uid, buffer, crop, cacheControl, uploadErrorMessage },
 ) {
   let optimized;
   try {
@@ -92,7 +92,7 @@ export async function uploadStandardImage(
     await uploadStorageImage(supabase, {
       bucketName,
       path: imagePath,
-      userId,
+      uid,
       buffer: optimized.buffer,
       cacheControl: cacheControl ?? PRIVATE_IMAGE_CACHE_CONTROL_SECONDS,
       contentType: optimized.contentType,
@@ -124,7 +124,7 @@ export async function createSignedUrlMap({ bucketName, paths, expiresIn, errorMe
 
 export async function removeStorageImages(
   supabase,
-  { bucketName, paths, userId, errorMessage },
+  { bucketName, paths, uid, errorMessage },
 ) {
   const validPaths = paths.filter(Boolean);
   if (!validPaths.length) return;
@@ -136,7 +136,7 @@ export async function removeStorageImages(
         .from("image_assets")
         .delete()
         .eq("object_key", objectKey)
-        .eq("user_id", userId);
+        .eq("uid", uid);
       if (error) throw error;
     } catch (error) {
       console.error(errorMessage, error);
@@ -146,7 +146,7 @@ export async function removeStorageImages(
 
 export async function copyStorageImage(
   supabase,
-  { bucketName, sourcePath, destinationPath, userId, errorMessage },
+  { bucketName, sourcePath, destinationPath, uid, errorMessage },
 ) {
   const destinationKey = cosObjectKey(bucketName, destinationPath);
   try {
@@ -159,7 +159,7 @@ export async function copyStorageImage(
     if (!module) throw new Error(`Unknown image bucket: ${bucketName}`);
     const { error } = await supabase.from("image_assets").upsert({
       object_key: destinationKey,
-      user_id: userId,
+      uid: uid,
       module,
       size_bytes: buffer.length,
       mime_type: "image/webp",

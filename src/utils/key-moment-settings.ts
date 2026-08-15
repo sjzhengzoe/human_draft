@@ -4,18 +4,18 @@ export const DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT: KeyMomentDisplayLayout = "horizo
 
 const STORAGE_KEY_PREFIX = "KEY_MOMENT_DISPLAY_LAYOUT_V1"
 
-function storageKey(userId: string): string {
-  return `${STORAGE_KEY_PREFIX}:${userId}`
+function storageKey(uid: string): string {
+  return `${STORAGE_KEY_PREFIX}:${uid}`
 }
 
 export function isKeyMomentDisplayLayout(value: unknown): value is KeyMomentDisplayLayout {
   return value === "horizontal" || value === "vertical"
 }
 
-export function getKeyMomentDisplayLayout(userId: string): KeyMomentDisplayLayout {
-  if (!userId) return DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT
+export function getKeyMomentDisplayLayout(uid: string): KeyMomentDisplayLayout {
+  if (!uid) return DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT
   try {
-    const stored = wx.getStorageSync(storageKey(userId))
+    const stored = wx.getStorageSync(storageKey(uid))
     return isKeyMomentDisplayLayout(stored)
       ? stored
       : DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT
@@ -25,12 +25,12 @@ export function getKeyMomentDisplayLayout(userId: string): KeyMomentDisplayLayou
 }
 
 export function setKeyMomentDisplayLayout(
-  userId: string,
+  uid: string,
   layout: KeyMomentDisplayLayout
 ): boolean {
-  if (!userId || !isKeyMomentDisplayLayout(layout)) return false
+  if (!uid || !isKeyMomentDisplayLayout(layout)) return false
   try {
-    wx.setStorageSync(storageKey(userId), layout)
+    wx.setStorageSync(storageKey(uid), layout)
     return true
   } catch {
     return false

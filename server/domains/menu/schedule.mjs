@@ -73,7 +73,7 @@ function toScheduleItem(item, dishesById, placesById, imageUrls) {
   };
 }
 
-async function selectSourcesByIds(supabase, table, userId, ids, columns, errorMessage) {
+async function selectSourcesByIds(supabase, table, uid, ids, columns, errorMessage) {
   const uniqueIds = [...new Set(ids.filter(Boolean))];
   if (!uniqueIds.length) return [];
   const chunks = [];
@@ -84,19 +84,19 @@ async function selectSourcesByIds(supabase, table, userId, ids, columns, errorMe
     supabase
       .from(table)
       .select(columns)
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .in("id", chunk)
   ));
   for (const result of results) throwSupabaseError(result.error, errorMessage);
   return results.flatMap((result) => result.data || []);
 }
 
-export async function listMenuSchedule(supabase, userId, query = {}) {
+export async function listMenuSchedule(supabase, uid, query = {}) {
   const { start, end } = normalizeRange(query);
   const { data: meals, error } = await supabase
     .from("menu_schedule_meals")
     .select("id, meal_date, meal_period, slot_count, created_at, updated_at")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .gte("meal_date", start)
     .lte("meal_date", end)
     .order("meal_date", { ascending: true })
@@ -108,7 +108,7 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
   const { data: items, error: itemError } = await supabase
     .from("menu_schedule_items")
     .select("id, meal_id, source_kind, record_type, dish_id, place_id, snapshot_name, snapshot_place_name, snapshot_image_path, snapshot_place_image_path, position")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .in("meal_id", mealIds)
     .order("position", { ascending: true });
   throwSupabaseError(itemError, "读取菜单内容失败。" );
@@ -116,7 +116,7 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
   const liveDishes = await selectSourcesByIds(
     supabase,
     "dishes",
-    userId,
+    uid,
     (items || []).map((item) => item.dish_id),
     "id, name, record_type, place_id, image_path",
     "读取菜单菜品失败。",
@@ -124,7 +124,7 @@ export async function listMenuSchedule(supabase, userId, query = {}) {
   const livePlaces = await selectSourcesByIds(
     supabase,
     "menu_places",
-    userId,
+    uid,
     [
       ...(items || []).map((item) => item.place_id),
       ...liveDishes.map((dish) => dish.place_id),
@@ -196,14 +196,14 @@ function normalizeScheduleItems(items, slotCount) {
   });
 }
 
-export async function replaceMenuScheduleMeal(supabase, userId, body = {}) {
+export async function replaceMenuScheduleMeal(supabase, uid, body = {}) {
   assertCondition(isDate(body.meal_date), 400, "INVALID_MEAL_DATE", "用餐日期无效。" );
   assertCondition(MEAL_PERIODS.has(body.meal_period), 400, "INVALID_MEAL_PERIOD", "餐次无效。" );
   const slotCount = Number(body.slot_count);
   assertCondition(Number.isInteger(slotCount) && slotCount >= 1 && slotCount <= 12, 400, "INVALID_SLOT_COUNT", "菜品档位应在 1 到 12 个之间。" );
   const items = normalizeScheduleItems(body.items, slotCount);
   const { error } = await supabase.rpc("replace_menu_schedule_meal", {
-    p_user_id: userId,
+    p_uid: uid,
     p_meal_date: body.meal_date,
     p_meal_period: body.meal_period,
     p_slot_count: slotCount,
@@ -213,21 +213,21 @@ export async function replaceMenuScheduleMeal(supabase, userId, body = {}) {
     P0002: { statusCode: 404, code: "MENU_SOURCE_NOT_FOUND", message: "所选菜品或店铺已不存在。" },
     "22023": { statusCode: 400, code: "INVALID_MENU_SCHEDULE", message: "菜单记录无效。" },
   });
-  const result = await listMenuSchedule(supabase, userId, {
+  const result = await listMenuSchedule(supabase, uid, {
     start: body.meal_date,
     end: body.meal_date,
   });
   return result.meals.find((meal) => meal.meal_period === body.meal_period) || null;
 }
 
-export async function getMenuRanking(supabase, userId, query = {}) {
+export async function getMenuRanking(supabase, uid, query = {}) {
   const range = normalizeRange(query);
   const today = todayInShanghai();
   const effectiveEnd = range.end < today ? range.end : today;
   if (effectiveEnd < range.start) {
     return { ...range, effective_end: effectiveEnd, items: [] };
   }
-  const schedule = await listMenuSchedule(supabase, userId, {
+  const schedule = await listMenuSchedule(supabase, uid, {
     start: range.start,
     end: effectiveEnd,
   });
@@ -264,11 +264,11 @@ export async function getMenuRanking(supabase, userId, query = {}) {
   return { ...range, effective_end: effectiveEnd, items };
 }
 
-export async function listMenuFavorites(supabase, userId) {
+export async function listMenuFavorites(supabase, uid) {
   const { data: favorites, error } = await supabase
     .from("menu_favorites")
     .select("id, source_kind, dish_id, place_id, sort_order")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取常吃清单失败。" );
   if (!favorites?.length) return [];
@@ -277,10 +277,10 @@ export async function listMenuFavorites(supabase, userId) {
   const placeIds = favorites.filter((item) => item.source_kind === "place").map((item) => item.place_id);
   const [{ data: dishes, error: dishError }, { data: places, error: placeError }] = await Promise.all([
     dishIds.length
-      ? supabase.from("dishes").select("id, name, record_type, place_id, image_path").eq("user_id", userId).in("id", dishIds)
+      ? supabase.from("dishes").select("id, name, record_type, place_id, image_path").eq("uid", uid).in("id", dishIds)
       : Promise.resolve({ data: [], error: null }),
     placeIds.length
-      ? supabase.from("menu_places").select("id, name, place_type, image_path").eq("user_id", userId).in("id", placeIds)
+      ? supabase.from("menu_places").select("id, name, place_type, image_path").eq("uid", uid).in("id", placeIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   throwSupabaseError(dishError, "读取常吃菜品失败。" );
@@ -312,17 +312,17 @@ export async function listMenuFavorites(supabase, userId) {
   });
 }
 
-export async function replaceMenuFavorites(supabase, userId, body = {}) {
+export async function replaceMenuFavorites(supabase, uid, body = {}) {
   const items = Array.isArray(body.items) ? body.items : null;
   assertCondition(items && items.length <= 100, 400, "INVALID_FAVORITES", "常吃清单无效。" );
   const normalized = normalizeScheduleItems(items, Math.max(1, items.length));
   const { error } = await supabase.rpc("replace_menu_favorites", {
-    p_user_id: userId,
+    p_uid: uid,
     p_items: normalized,
   });
   throwSupabaseError(error, "保存常吃清单失败。", {
     P0002: { statusCode: 404, code: "MENU_SOURCE_NOT_FOUND", message: "部分菜品或店铺已不存在。" },
     "22023": { statusCode: 400, code: "INVALID_FAVORITES", message: "常吃清单无效。" },
   });
-  return listMenuFavorites(supabase, userId);
+  return listMenuFavorites(supabase, uid);
 }

@@ -11,7 +11,7 @@ export type ApiEnvelope<T> = {
 }
 
 export type AppUser = {
-  id: string
+  uid: string
   display_name: string
   avatar_url: string
   can_write: boolean

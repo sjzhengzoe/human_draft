@@ -45,7 +45,7 @@ export function registerAuthRoutes(app, context) {
       await contentSecurity.checkText(request.auth.user.openid, displayName)
       await updateUserDisplayName(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         displayName
       )
       return {
@@ -65,7 +65,7 @@ export function registerAuthRoutes(app, context) {
       await contentSecurity.checkImage(avatar)
       const avatarUrl = await updateUserAvatar(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         avatar
       )
       const user = await getAuthenticatedUser(getSupabaseAdmin(), request.auth)
@@ -88,7 +88,7 @@ export function registerAuthRoutes(app, context) {
       ok: true,
       data: await getUserImageStorageUsage(
         getSupabaseAdmin(),
-        request.auth.user.id
+        request.auth.user.uid
       )
     })
   )

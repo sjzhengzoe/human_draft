@@ -13,17 +13,17 @@ export function normalizeFootprintCityCode(value) {
   return value;
 }
 
-export async function listFootprintCityCodes(supabase, userId) {
+export async function listFootprintCityCodes(supabase, uid) {
   const { data, error } = await supabase
     .from("user_footprint_cities")
     .select("city_code")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("city_code", { ascending: true });
   throwSupabaseError(error, "读取全国足迹失败。");
   return (data || []).map((item) => item.city_code);
 }
 
-export async function setFootprintCityVisited(supabase, userId, cityCode, body = {}) {
+export async function setFootprintCityVisited(supabase, uid, cityCode, body = {}) {
   const normalizedCityCode = normalizeFootprintCityCode(cityCode);
   assertCondition(
     typeof body.visited === "boolean",
@@ -32,7 +32,7 @@ export async function setFootprintCityVisited(supabase, userId, cityCode, body =
     "请指定城市足迹状态。",
   );
   const { error } = await supabase.rpc("set_user_footprint_city", {
-    p_user_id: userId,
+    p_uid: uid,
     p_city_code: normalizedCityCode,
     p_visited: body.visited,
   });

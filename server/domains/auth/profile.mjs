@@ -34,11 +34,11 @@ export async function readAvatarImage(request) {
   return image;
 }
 
-export async function updateUserAvatar(supabase, userId, image) {
+export async function updateUserAvatar(supabase, uid, image) {
   const { data: currentUser, error: currentUserError } = await supabase
     .from("app_users")
     .select("avatar_url")
-    .eq("id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(currentUserError, "读取当前头像失败。" );
   assertCondition(currentUser, 404, "USER_NOT_FOUND", "账号不存在。" );
@@ -46,8 +46,8 @@ export async function updateUserAvatar(supabase, userId, image) {
   const previousPath = avatarStoragePath(currentUser.avatar_url);
   const { imagePath: path } = await uploadStandardImage(supabase, {
     bucketName: config.avatarBucket,
-    basePath: `users/${userId}/avatar-${Date.now()}-${randomUUID()}`,
-    userId,
+    basePath: `users/${uid}/avatar-${Date.now()}-${randomUUID()}`,
+    uid,
     buffer: image.buffer,
     crop: image.crop,
     cacheControl: "0",
@@ -64,12 +64,12 @@ export async function updateUserAvatar(supabase, userId, image) {
   const { error: updateError } = await supabase
     .from("app_users")
     .update({ avatar_url: path, profile_completed: true })
-    .eq("id", userId);
+    .eq("uid", uid);
   if (updateError) {
     await removeStorageImages(supabase, {
       bucketName: config.avatarBucket,
       paths: [path],
-      userId,
+      uid,
       errorMessage: "清理未完成上传的头像失败。",
     });
     throwSupabaseError(updateError, "更新头像失败。" );
@@ -78,14 +78,14 @@ export async function updateUserAvatar(supabase, userId, image) {
     await removeStorageImages(supabase, {
       bucketName: config.avatarBucket,
       paths: [previousPath],
-      userId,
+      uid,
       errorMessage: "清理旧头像失败。",
     });
   }
   return avatarUrl;
 }
 
-export async function updateUserDisplayName(supabase, userId, value) {
+export async function updateUserDisplayName(supabase, uid, value) {
   assertCondition(
     typeof value === "string" && value.trim().length > 0,
     400,
@@ -102,8 +102,8 @@ export async function updateUserDisplayName(supabase, userId, value) {
   const { data: user, error } = await supabase
     .from("app_users")
     .update({ display_name: displayName, profile_completed: true })
-    .eq("id", userId)
-    .select("id")
+    .eq("uid", uid)
+    .select("uid")
     .maybeSingle();
   throwSupabaseError(error, "更新昵称失败。" );
   assertCondition(user, 404, "USER_NOT_FOUND", "账号不存在。" );

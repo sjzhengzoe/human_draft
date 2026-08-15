@@ -13,7 +13,7 @@ function resolveCategoryId(requestedId, categories) {
   return categories[0]?.id || "";
 }
 
-export async function getMenuOverview(supabase, userId, query = {}) {
+export async function getMenuOverview(supabase, uid, query = {}) {
   const recordType = query.record_type || "home";
   assertCondition(
     recordType === "home" || recordType === "outside",
@@ -23,9 +23,9 @@ export async function getMenuOverview(supabase, userId, query = {}) {
   );
 
   const [categories, outsideCategories, homePlaces] = await Promise.all([
-    listCategories(supabase, userId),
-    listDiningScenes(supabase, userId),
-    listMenuPlaces(supabase, userId, {
+    listCategories(supabase, uid),
+    listDiningScenes(supabase, uid),
+    listMenuPlaces(supabase, uid, {
       place_type: "home",
       include_dishes: false,
     }),
@@ -37,7 +37,7 @@ export async function getMenuOverview(supabase, userId, query = {}) {
     : resolveCategoryId(query.category_id, activeCategories);
   const [dishes, outsidePlaces] = recordType === "home"
     ? [
-      (await listDishes(supabase, userId, {
+      (await listDishes(supabase, uid, {
         place_id: homePlaceId || undefined,
         category_id: categoryId || undefined,
         record_type: "home",
@@ -48,7 +48,7 @@ export async function getMenuOverview(supabase, userId, query = {}) {
     ]
     : [
       [],
-      await listMenuPlaces(supabase, userId, {
+      await listMenuPlaces(supabase, uid, {
         place_type: "outside",
         outside_category_id: categoryId || undefined,
       }),

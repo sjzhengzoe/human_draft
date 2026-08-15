@@ -136,13 +136,13 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
   assert.match(page, /moment-card--\{\{displayLayout\}\}/);
   assert.match(styles, /\.moment-card--vertical\s*\{[\s\S]*?display: block;/);
   assert.match(styles, /\.moment-card--vertical \.moment-image\s*\{[\s\S]*?width: 100%;/);
-  assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.id\)/);
+  assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.uid\)/);
   assert.match(logic, /wx\.navigateTo\(\{ url: "\/pages\/key-moments\/settings\/index" \}\)/);
   assert.match(settingsPage, /默认图文布局/);
   assert.match(settingsPage, /layout-preview--\{\{item\.value\}\}/);
-  assert.match(settingsLogic, /setKeyMomentDisplayLayout\(this\.data\.userId, layout\)/);
+  assert.match(settingsLogic, /setKeyMomentDisplayLayout\(this\.data\.uid, layout\)/);
   assert.match(storage, /KEY_MOMENT_DISPLAY_LAYOUT_V1/);
-  assert.match(storage, /storageKey\(userId\)/);
+  assert.match(storage, /storageKey\(uid\)/);
   const parsedAppConfig = JSON.parse(appConfig);
   const registeredPages = [
     ...parsedAppConfig.pages,

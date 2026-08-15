@@ -16,7 +16,7 @@ export function registerKeyMomentRoutes(app, context) {
     data: {
       items: await listKeyMoments(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.query || {},
       ),
     },
@@ -36,7 +36,7 @@ export function registerKeyMomentRoutes(app, context) {
     ]);
     const item = await createKeyMoment(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       fields,
       image,
     );
@@ -48,7 +48,7 @@ export function registerKeyMomentRoutes(app, context) {
     data: {
       item: await updateKeyMoment(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
         {
@@ -67,7 +67,7 @@ export function registerKeyMomentRoutes(app, context) {
       data: {
         item: await replaceKeyMomentImage(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.params.id,
           image,
         ),
@@ -80,14 +80,14 @@ export function registerKeyMomentRoutes(app, context) {
     data: {
       item: await deleteKeyMomentImage(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
       ),
     },
   }));
 
   app.delete("/api/key-moments/:id", { preHandler: authenticated }, async (request) => {
-    await deleteKeyMoment(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteKeyMoment(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 }

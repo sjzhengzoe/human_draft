@@ -12,13 +12,13 @@ export function registerDiningRoutes(app, context) {
 
   app.get("/api/dining-scenes", { preHandler: authenticated }, async (request) => ({
     ok: true,
-    data: { items: await listDiningScenes(getSupabaseAdmin(), request.auth.user.id) },
+    data: { items: await listDiningScenes(getSupabaseAdmin(), request.auth.user.uid) },
   }));
 
   app.get("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => ({
     ok: true,
     data: {
-      item: await getDiningScene(getSupabaseAdmin(), request.auth.user.id, request.params.id),
+      item: await getDiningScene(getSupabaseAdmin(), request.auth.user.uid, request.params.id),
     },
   }));
 
@@ -28,7 +28,7 @@ export function registerDiningRoutes(app, context) {
       data: {
         item: await createDiningScene(
           getSupabaseAdmin(),
-          request.auth.user.id,
+          request.auth.user.uid,
           request.body || {},
         ),
       },
@@ -39,7 +39,7 @@ export function registerDiningRoutes(app, context) {
     ok: true,
     data: await swapDiningSceneSortOrders(
       getSupabaseAdmin(),
-      request.auth.user.id,
+      request.auth.user.uid,
       request.body || {},
     ),
   }));
@@ -49,7 +49,7 @@ export function registerDiningRoutes(app, context) {
     data: {
       item: await updateDiningScene(
         getSupabaseAdmin(),
-        request.auth.user.id,
+        request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
@@ -57,7 +57,7 @@ export function registerDiningRoutes(app, context) {
   }));
 
   app.delete("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => {
-    await deleteDiningScene(getSupabaseAdmin(), request.auth.user.id, request.params.id);
+    await deleteDiningScene(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
     return { ok: true, data: { deleted: true } };
   });
 }

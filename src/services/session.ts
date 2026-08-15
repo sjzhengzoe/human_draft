@@ -11,6 +11,8 @@ export function getStoredSession(): AuthSession | null {
     || !stored.refresh_token.startsWith("r1.")
     || typeof stored.refresh_expires_at !== "string"
     || !stored.user
+    || typeof stored.user.uid !== "string"
+    || !/^(?:10000|20000|[1-9]\d{9})$/.test(stored.user.uid)
   ) {
     clearStoredSession()
     return null

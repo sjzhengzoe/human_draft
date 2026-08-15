@@ -22,7 +22,7 @@ test("home module settings uses an independent page route", async () => {
   assert.notEqual(moduleSettingsConfig.disableScroll, true);
 });
 
-test("account section displays and copies the internal user UUID", async () => {
+test("account section displays and copies the public UID", async () => {
   const [markup, styles, logic, profileMarkup, profileLogic] = await Promise.all([
     readFile(new URL("../../src/pages/settings/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/settings/index.less", import.meta.url), "utf8"),
@@ -33,8 +33,8 @@ test("account section displays and copies the internal user UUID", async () => {
 
   assert.match(markup, /class="settings-logout-button"[\s\S]*?>退出登录</);
   assert.match(markup, /class="settings-section__title">账号</);
-  assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{userId\}\}/);
-  assert.match(markup, /aria-label="复制用户 ID"[\s\S]*?bindtap="handleCopyUserIdTap"/);
+  assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{uid\}\}/);
+  assert.match(markup, /aria-label="复制 UID"[\s\S]*?bindtap="handleCopyUidTap"/);
   assert.match(markup, /aria-label="修改头像和昵称"[\s\S]*?bindtap="handleEditProfileTap"/);
   assert.doesNotMatch(markup, /<app-dialog|<image-cropper/);
   assert.match(logic, /pages\/settings\/profile-edit\/index/);
@@ -44,8 +44,8 @@ test("account section displays and copies the internal user UUID", async () => {
   assert.match(styles, /\.profile-card\s*\{[\s\S]*?min-height: 152rpx/);
   assert.match(styles, /\.account-id-item__copy\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
   assert.match(styles, /\.profile-edit-button\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
-  assert.match(logic, /userId: user\.id/);
-  assert.match(logic, /handleCopyUserIdTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
+  assert.match(logic, /uid: user\.uid/);
+  assert.match(logic, /handleCopyUidTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
   assert.doesNotMatch(logic, /handleCopyOpenIdTap|accountIdText/);
   assert.match(profileLogic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);
   assert.match(profileLogic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
@@ -84,7 +84,7 @@ test("profile avatar falls back to the user initial after an image error", async
   assert.match(markup, /wx:if="\{\{avatarUrl\}\}"[\s\S]*?binderror="handleAvatarError"/);
   assert.match(markup, /wx:else class="profile-avatar-fallback">\{\{avatarInitial\}\}/);
   assert.match(logic, /handleAvatarError\(\)[\s\S]*?this\.setData\(\{ avatarUrl: "" \}\)/);
-  assert.match(logic, /page\.failedAvatarSignature = `\$\{user\.id\}\|\$\{this\.data\.avatarUrl\}`/);
+  assert.match(logic, /page\.failedAvatarSignature = `\$\{user\.uid\}\|\$\{this\.data\.avatarUrl\}`/);
   assert.match(logic, /avatarSignature === failedAvatarSignature \? "" : user\.avatar_url/);
 });
 

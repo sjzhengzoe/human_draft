@@ -27,18 +27,18 @@ function getSettingsAccountState(failedAvatarSignature = "") {
       displayName: "未登录",
       avatarUrl: "",
       avatarInitial: "E",
-      userId: "",
+      uid: "",
       isAdmin: false
     }
   }
 
-  const avatarSignature = `${user.id}|${user.avatar_url}`
+  const avatarSignature = `${user.uid}|${user.avatar_url}`
   return {
     loggedIn: true,
     displayName: user.display_name,
     avatarUrl: avatarSignature === failedAvatarSignature ? "" : user.avatar_url,
     avatarInitial: user.display_name.trim().slice(0, 1) || "E",
-    userId: user.id,
+    uid: user.uid,
     isAdmin: user.is_admin
   }
 }
@@ -64,7 +64,7 @@ Component({
         nextAccountState.displayName !== this.data.displayName ||
         nextAccountState.avatarUrl !== this.data.avatarUrl ||
         nextAccountState.avatarInitial !== this.data.avatarInitial ||
-        nextAccountState.userId !== this.data.userId ||
+        nextAccountState.uid !== this.data.uid ||
         nextAccountState.isAdmin !== this.data.isAdmin
       if (accountChanged) this.setData(nextAccountState)
       if (nextAccountState.loggedIn) void this.refreshStorageUsage()
@@ -75,7 +75,7 @@ Component({
       const user = getCurrentUser()
       if (!user || !this.data.avatarUrl) return
       const page = this as SettingsPageInstance
-      page.failedAvatarSignature = `${user.id}|${this.data.avatarUrl}`
+      page.failedAvatarSignature = `${user.uid}|${this.data.avatarUrl}`
       this.setData({ avatarUrl: "" })
     },
     handleEditProfileTap() {
@@ -137,12 +137,12 @@ Component({
         }
       })
     },
-    handleCopyUserIdTap() {
-      const userId = String(this.data.userId || "")
-      if (!userId) return
+    handleCopyUidTap() {
+      const uid = String(this.data.uid || "")
+      if (!uid) return
       wx.setClipboardData({
-        data: userId,
-        success: () => wx.showToast({ title: "用户 ID 已复制", icon: "success" }),
+        data: uid,
+        success: () => wx.showToast({ title: "UID 已复制", icon: "success" }),
         fail: () => wx.showToast({ title: "复制失败，请重试", icon: "none" })
       })
     },

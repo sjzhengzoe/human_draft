@@ -59,11 +59,11 @@ export function integerValue(value, fieldName, minimum, maximum) {
   return value;
 }
 
-export async function nextSortOrder(supabase, userId, table, filters = {}) {
+export async function nextSortOrder(supabase, uid, table, filters = {}) {
   let query = supabase
     .from(table)
     .select("sort_order")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: false })
     .limit(1);
   Object.entries(filters).forEach(([key, value]) => {
@@ -74,12 +74,12 @@ export async function nextSortOrder(supabase, userId, table, filters = {}) {
   return Number(data?.sort_order || 0) + 1000;
 }
 
-export async function requireRecord(supabase, userId, table, id, fields = "*") {
+export async function requireRecord(supabase, uid, table, id, fields = "*") {
   const { data, error } = await supabase
     .from(table)
     .select(fields)
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取记录失败。");
   assertCondition(data, 404, "RECORD_NOT_FOUND", "记录不存在。");

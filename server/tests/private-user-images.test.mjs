@@ -131,7 +131,7 @@ test("storage usage is aggregated from the authenticated user's asset ledger", a
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].name, "get_user_image_storage_usage");
-  assert.equal(calls[0].params.p_user_id, "user-1");
+  assert.equal(calls[0].params.p_uid, "user-1");
   assert.equal(usage.plan, "public_beta");
   assert.equal(usage.used_bytes, 3072);
   assert.equal(usage.image_count, 2);

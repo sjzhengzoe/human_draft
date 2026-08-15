@@ -116,7 +116,7 @@ function pickRandomImage(images: readonly string[]) {
 }
 
 function imageSelectionStorageKey(date: string) {
-  return `${EXERCISE_IMAGE_SELECTION_STORAGE_PREFIX}:${getCurrentUser()?.id || "local"}:${date}`
+  return `${EXERCISE_IMAGE_SELECTION_STORAGE_PREFIX}:${getCurrentUser()?.uid || "local"}:${date}`
 }
 
 function getImagesForState(state: ExerciseBowlLevel, date: string) {

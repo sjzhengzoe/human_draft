@@ -22,36 +22,36 @@ export function createDishImageUrlMap(paths) {
   });
 }
 
-export async function uploadDishImage(supabase, userId, dishId, image) {
+export async function uploadDishImage(supabase, uid, dishId, image) {
   return uploadStandardImage(supabase, {
     bucketName: config.dishBucket,
-    basePath: `users/${userId}/dishes/${dishId}/${randomUUID()}`,
-    userId,
+    basePath: `users/${uid}/dishes/${dishId}/${randomUUID()}`,
+    uid,
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传菜品图片失败。",
   });
 }
 
-export async function copyDishImageToScheduleArchive(supabase, userId, sourceId, path) {
+export async function copyDishImageToScheduleArchive(supabase, uid, sourceId, path) {
   if (!path) return "";
   const extension = path.match(/(\.[a-z0-9]+)$/i)?.[1] || ".webp";
-  const archivePath = `users/${userId}/menu-schedule-archives/${sourceId}/${randomUUID()}${extension}`;
+  const archivePath = `users/${uid}/menu-schedule-archives/${sourceId}/${randomUUID()}${extension}`;
   await copyStorageImage(supabase, {
     bucketName: config.dishBucket,
     sourcePath: path,
     destinationPath: archivePath,
-    userId,
+    uid,
     errorMessage: "保存菜单历史图片失败。",
   });
   return archivePath;
 }
 
-export async function removeDishImages(supabase, userId, paths) {
+export async function removeDishImages(supabase, uid, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.dishBucket,
     paths,
-    userId,
+    uid,
     errorMessage: "删除 Storage 图片失败:",
   });
 }

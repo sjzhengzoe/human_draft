@@ -43,25 +43,25 @@ export function toMenuPlaceResponse(place, dishes = [], imageUrls = new Map()) {
   };
 }
 
-async function assertOutsideCategoryExists(supabase, userId, categoryId) {
+async function assertOutsideCategoryExists(supabase, uid, categoryId) {
   assertCondition(UUID_PATTERN.test(categoryId), 400, "INVALID_OUTSIDE_CATEGORY", "外食分类无效。" );
   const { data, error } = await supabase
     .from("dining_scenes")
     .select("id, name")
     .eq("id", categoryId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取外食分类失败。" );
   assertCondition(data, 400, "OUTSIDE_CATEGORY_NOT_FOUND", "所选外食分类不存在。" );
   return data;
 }
 
-export async function listMenuPlaces(supabase, userId, query = {}) {
+export async function listMenuPlaces(supabase, uid, query = {}) {
   const includeDishes = query.include_dishes !== "false" && query.include_dishes !== false;
   let request = supabase
     .from("menu_places")
     .select("*, outside_category:dining_scenes!menu_places_outside_category_user_fkey(id, name)")
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (query.place_type) {
     assertCondition(
       query.place_type === "home" || query.place_type === "outside",
@@ -91,7 +91,7 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   const { data: dishes, error: dishError } = await supabase
     .from("dishes")
     .select("id, name, introduction, main_ingredients, cooking_methods, taste, place_id, image_path, place_sort_order, created_at")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .in("place_id", placeIds)
     .order("place_sort_order", { ascending: true })
     .order("created_at", { ascending: false });
@@ -114,25 +114,25 @@ export async function listMenuPlaces(supabase, userId, query = {}) {
   );
 }
 
-async function requireMenuPlace(supabase, userId, placeId) {
+async function requireMenuPlace(supabase, uid, placeId) {
   assertCondition(UUID_PATTERN.test(placeId), 400, "INVALID_PLACE_ID", "用餐地点无效。" );
   const { data, error } = await supabase
     .from("menu_places")
     .select("*, outside_category:dining_scenes!menu_places_outside_category_user_fkey(id, name)")
     .eq("id", placeId)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .maybeSingle();
   throwSupabaseError(error, "读取用餐地点失败。" );
   assertCondition(data, 404, "PLACE_NOT_FOUND", "用餐地点不存在。" );
   return data;
 }
 
-export async function getMenuPlace(supabase, userId, placeId) {
-  const data = await requireMenuPlace(supabase, userId, placeId);
+export async function getMenuPlace(supabase, uid, placeId) {
+  const data = await requireMenuPlace(supabase, uid, placeId);
   const { data: dishes, error: dishError } = await supabase
     .from("dishes")
     .select("id, name, introduction, main_ingredients, cooking_methods, taste, place_id, image_path, place_sort_order, created_at")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("place_id", placeId)
     .order("place_sort_order", { ascending: true })
     .order("created_at", { ascending: false });
@@ -146,7 +146,7 @@ export async function getMenuPlace(supabase, userId, placeId) {
   return toMenuPlaceResponse(data, dishes || [], imageUrls);
 }
 
-export async function reorderMenuPlaces(supabase, userId, body) {
+export async function reorderMenuPlaces(supabase, uid, body) {
   const ids = Array.isArray(body.ids) ? body.ids : [];
   assertCondition(
     ids.length > 0
@@ -164,7 +164,7 @@ export async function reorderMenuPlaces(supabase, userId, body) {
   );
 
   const { error } = await supabase.rpc("reorder_menu_places", {
-    p_user_id: userId,
+    p_uid: uid,
     p_place_ids: ids,
   });
   throwSupabaseError(error, "保存店铺排序失败。", {
@@ -177,74 +177,74 @@ export async function reorderMenuPlaces(supabase, userId, body) {
   return { updated: ids.length };
 }
 
-export async function createMenuPlace(supabase, userId, fields, image) {
+export async function createMenuPlace(supabase, uid, fields, image) {
   const name = fields.name?.trim() || "";
   const outsideCategoryId = fields.outside_category_id?.trim() || "";
   assertCondition(name, 400, "PLACE_NAME_REQUIRED", "请填写店铺名。" );
   assertCondition(name.length <= 120, 400, "PLACE_NAME_TOO_LONG", "店铺名不能超过 120 个字符。" );
-  await assertOutsideCategoryExists(supabase, userId, outsideCategoryId);
+  await assertOutsideCategoryExists(supabase, uid, outsideCategoryId);
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择店铺图片。" );
   const placeId = randomUUID();
-  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image);
+  const { imagePath } = await uploadDishImage(supabase, uid, placeId, image);
   const { error } = await supabase.rpc("create_menu_place_at_end", {
-    p_user_id: userId,
+    p_uid: uid,
     p_id: placeId,
     p_name: name,
     p_outside_category_id: outsideCategoryId,
     p_image_path: imagePath,
   });
   if (error) {
-    await removeDishImages(supabase, userId, [imagePath]);
+    await removeDishImages(supabase, uid, [imagePath]);
     throwSupabaseError(error, "新增店铺失败。" );
   }
-  return getMenuPlace(supabase, userId, placeId);
+  return getMenuPlace(supabase, uid, placeId);
 }
 
-export async function updateMenuPlace(supabase, userId, placeId, body) {
-  const place = await requireMenuPlace(supabase, userId, placeId);
+export async function updateMenuPlace(supabase, uid, placeId, body) {
+  const place = await requireMenuPlace(supabase, uid, placeId);
   assertCondition(place.place_type === "outside", 400, "HOME_PLACE_READ_ONLY", "默认家庭地点不能编辑。" );
   const name = typeof body.name === "string" ? body.name.trim() : place.name;
   const outsideCategoryId = body.outside_category_id === undefined
     ? place.outside_category_id
     : body.outside_category_id;
   assertCondition(name && name.length <= 120, 400, "PLACE_NAME_REQUIRED", "请填写店铺名。" );
-  await assertOutsideCategoryExists(supabase, userId, outsideCategoryId);
+  await assertOutsideCategoryExists(supabase, uid, outsideCategoryId);
 
   const { error } = await supabase.rpc("update_menu_place", {
-    p_user_id: userId,
+    p_uid: uid,
     p_place_id: placeId,
     p_name: name,
     p_outside_category_id: outsideCategoryId,
   });
   throwSupabaseError(error, "更新店铺失败。" );
-  return getMenuPlace(supabase, userId, placeId);
+  return getMenuPlace(supabase, uid, placeId);
 }
 
-export async function replaceMenuPlaceImage(supabase, userId, placeId, image) {
-  const place = await requireMenuPlace(supabase, userId, placeId);
+export async function replaceMenuPlaceImage(supabase, uid, placeId, image) {
+  const place = await requireMenuPlace(supabase, uid, placeId);
   assertCondition(place.place_type === "outside", 400, "PLACE_IMAGE_UNAVAILABLE", "当前地点不能更换图片。" );
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择店铺图片。" );
-  const { imagePath } = await uploadDishImage(supabase, userId, placeId, image);
+  const { imagePath } = await uploadDishImage(supabase, uid, placeId, image);
   const { error } = await supabase
     .from("menu_places")
     .update({ image_path: imagePath })
     .eq("id", placeId)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (error) {
-    await removeDishImages(supabase, userId, [imagePath]);
+    await removeDishImages(supabase, uid, [imagePath]);
     throwSupabaseError(error, "更新店铺图片失败。" );
   }
-  await removeDishImages(supabase, userId, [place.image_path]);
-  return getMenuPlace(supabase, userId, placeId);
+  await removeDishImages(supabase, uid, [place.image_path]);
+  return getMenuPlace(supabase, uid, placeId);
 }
 
-export async function deleteMenuPlace(supabase, userId, placeId) {
-  const place = await requireMenuPlace(supabase, userId, placeId);
+export async function deleteMenuPlace(supabase, uid, placeId) {
+  const place = await requireMenuPlace(supabase, uid, placeId);
   assertCondition(place.place_type === "outside", 400, "HOME_PLACE_READ_ONLY", "默认家庭地点不能删除。" );
   const { data: dishes, error } = await supabase
     .from("dishes")
     .select("id, image_path")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("place_id", placeId);
   throwSupabaseError(error, "读取店铺菜品失败。" );
 
@@ -253,7 +253,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
     ? await supabase
       .from("menu_schedule_items")
       .select("dish_id")
-      .eq("user_id", userId)
+      .eq("uid", uid)
       .eq("source_kind", "dish")
       .in("dish_id", sourceDishIds)
     : { data: [], error: null };
@@ -261,7 +261,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
   const { data: placeReferences, error: placeReferenceError } = await supabase
     .from("menu_schedule_items")
     .select("id")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("source_kind", "place")
     .eq("place_id", placeId)
     .limit(1);
@@ -276,7 +276,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
     const archivePlaceImagePath = hasScheduleReferences
       ? await copyDishImageToScheduleArchive(
         supabase,
-        userId,
+        uid,
         place.id,
         place.image_path,
       )
@@ -288,7 +288,7 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
       if (!referencedDishIds.has(dish.id)) continue;
       const archiveImagePath = await copyDishImageToScheduleArchive(
         supabase,
-        userId,
+        uid,
         dish.id,
         dish.image_path,
       );
@@ -297,18 +297,18 @@ export async function deleteMenuPlace(supabase, userId, placeId) {
     }
 
     const { error: deleteError } = await supabase.rpc("archive_and_delete_menu_place", {
-      p_user_id: userId,
+      p_uid: uid,
       p_place_id: placeId,
       p_dish_archives: dishArchives,
       p_place_archive_image_path: archivePlaceImagePath,
     });
     throwSupabaseError(deleteError, "删除店铺失败。" );
   } catch (deleteError) {
-    await removeDishImages(supabase, userId, archivedPaths);
+    await removeDishImages(supabase, uid, archivedPaths);
     throw deleteError;
   }
 
-  await removeDishImages(supabase, userId, [
+  await removeDishImages(supabase, uid, [
     place.image_path,
     ...(dishes || []).map((dish) => dish.image_path),
   ]);

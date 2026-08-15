@@ -6,25 +6,25 @@ import {
   UUID_PATTERN,
 } from "../shared/records.mjs";
 
-export async function listDiningScenes(supabase, userId) {
+export async function listDiningScenes(supabase, uid) {
   const { data, error } = await supabase
     .from("dining_scenes")
     .select("*")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .order("sort_order", { ascending: true });
   throwSupabaseError(error, "读取用餐场景失败。");
   return data;
 }
 
-export async function getDiningScene(supabase, userId, id) {
+export async function getDiningScene(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "用餐场景编号无效。");
-  return requireRecord(supabase, userId, "dining_scenes", id);
+  return requireRecord(supabase, uid, "dining_scenes", id);
 }
 
-export async function createDiningScene(supabase, userId, body) {
+export async function createDiningScene(supabase, uid, body) {
   const { data, error } = await supabase
     .rpc("create_dining_scene_at_end", {
-      p_user_id: userId,
+      p_uid: uid,
       p_name: requiredText(body.name, "场景名称", 40),
     })
     .single();
@@ -38,13 +38,13 @@ export async function createDiningScene(supabase, userId, body) {
   return data;
 }
 
-export async function updateDiningScene(supabase, userId, id, body) {
-  await getDiningScene(supabase, userId, id);
+export async function updateDiningScene(supabase, uid, id, body) {
+  await getDiningScene(supabase, uid, id);
   const { data, error } = await supabase
     .from("dining_scenes")
     .update({ name: requiredText(body.name, "场景名称", 40) })
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新用餐场景失败。", {
@@ -57,12 +57,12 @@ export async function updateDiningScene(supabase, userId, id, body) {
   return data;
 }
 
-export async function deleteDiningScene(supabase, userId, id) {
-  await getDiningScene(supabase, userId, id);
+export async function deleteDiningScene(supabase, uid, id) {
+  await getDiningScene(supabase, uid, id);
   const { data: place, error: placeError } = await supabase
     .from("menu_places")
     .select("id")
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .eq("outside_category_id", id)
     .limit(1)
     .maybeSingle();
@@ -77,11 +77,11 @@ export async function deleteDiningScene(supabase, userId, id) {
     .from("dining_scenes")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除用餐场景失败。");
 }
 
-export async function swapDiningSceneSortOrders(supabase, userId, body) {
+export async function swapDiningSceneSortOrders(supabase, uid, body) {
   const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
   const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
   assertCondition(
@@ -91,7 +91,7 @@ export async function swapDiningSceneSortOrders(supabase, userId, body) {
     "请选择两个不同的用餐场景。",
   );
   const { error } = await supabase.rpc("swap_dining_scene_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });

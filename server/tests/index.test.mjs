@@ -5,29 +5,29 @@ import test from "node:test";
 import sharp from "sharp";
 
 process.env.NODE_ENV = "test";
-process.env.ADMIN_USER_IDS = "10000000-0000-4000-8000-000000000002";
+process.env.ADMIN_UIDS = "10000";
 process.env.ACCESS_TOKEN_SECRET = "test-access-token-secret-that-is-at-least-32-bytes";
 const { buildServer } = await import("../index.mjs");
 const { issueAccessToken } = await import("../domains/auth/access-token.mjs");
 const { setCosStorageTestAdapter } = await import("../lib/cos-storage.mjs");
 
 const SESSION_ID = "10000000-0000-4000-8000-000000000001";
-const USER_ID = "10000000-0000-4000-8000-000000000002";
+const UID = "10000";
 const MEDIA_ID = "10000000-0000-4000-8000-000000000003";
 const DINING_ID = "10000000-0000-4000-8000-000000000004";
 const SOURCE_ID = "10000000-0000-4000-8000-000000000005";
 const TARGET_ID = "10000000-0000-4000-8000-000000000006";
 const SEASON_ID = "10000000-0000-4000-8000-000000000007";
 const EPISODE_ID = "10000000-0000-4000-8000-000000000008";
-const OTHER_USER_ID = "10000000-0000-4000-8000-000000000009";
+const OTHER_UID = "20000";
 const TEST_REFRESH_TOKEN = "r1.test-refresh-token-that-is-long-enough-for-tests";
 const TEST_TOKEN = (await issueAccessToken({
   sessionId: SESSION_ID,
-  user: { id: USER_ID, wechat_openid: "test-openid" },
+  user: { uid: UID, wechat_openid: "test-openid" },
 })).token;
 const NON_ADMIN_TOKEN = (await issueAccessToken({
   sessionId: SESSION_ID,
-  user: { id: OTHER_USER_ID, wechat_openid: "test-openid" },
+  user: { uid: OTHER_UID, wechat_openid: "test-openid" },
 })).token;
 
 function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
@@ -80,8 +80,8 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     eq(field, value) {
       this.rows = this.rows.filter((row) =>
-        field === "user_id"
-          ? (row[field] ?? USER_ID) === value
+        field === "uid"
+          ? (row[field] ?? UID) === value
           : row[field] === value
       );
       return this;
@@ -158,7 +158,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       if (this.table === "app_sessions" && this.selection.includes("app_users")) {
         return this.rows.map((row) => ({
           ...row,
-          user: (tables.app_users || []).find((user) => user.id === row.user_id) || null,
+          user: (tables.app_users || []).find((user) => user.uid === row.uid) || null,
         }));
       }
       return this.rows;
@@ -256,14 +256,15 @@ function authenticatedTables(extra = {}) {
     app_sessions: [
       {
         id: SESSION_ID,
-        user_id: USER_ID,
+        uid: UID,
         token_hash: createHash("sha256").update(TEST_REFRESH_TOKEN).digest("hex"),
         expires_at: "2999-01-01T00:00:00.000Z",
       },
     ],
     app_users: [
       {
-        id: USER_ID,
+        id: "10000000-0000-4000-8000-000000000002",
+        uid: UID,
         wechat_openid: "test-openid",
         display_name: "测试用户",
         avatar_url: "",
@@ -391,13 +392,13 @@ test("authenticated users can update their nickname without changing account ide
   });
 
   assert.equal(response.statusCode, 200);
-  assert.equal(response.json().data.user.id, USER_ID);
+  assert.equal(response.json().data.user.uid, UID);
   assert.equal(response.json().data.user.display_name, "新昵称");
   assert.equal(tables.app_users[0].display_name, "新昵称");
   assert.deepEqual(checked, [{ openId: "test-openid", content: "新昵称" }]);
 });
 
-test("admin authorization uses the internal user UUID instead of the OpenID", async (t) => {
+test("admin authorization uses the public UID instead of the OpenID", async (t) => {
   const app = buildServer({
     logger: false,
     supabase: createFakeSupabase({ tables: authenticatedTables() }),
@@ -466,13 +467,13 @@ test("chat topics list official examples and only the authenticated user's topic
   }));
   const mine = {
     id: "30000000-0000-4000-8000-000000000001",
-    user_id: USER_ID,
+    uid: UID,
     official_topic_id: officialTopic.id,
     content: officialTopic.content,
   };
   const anotherUsersTopic = {
     id: "30000000-0000-4000-8000-000000000002",
-    user_id: OTHER_USER_ID,
+    uid: OTHER_UID,
     official_topic_id: null,
     content: "不应返回的话题",
   };
@@ -484,8 +485,8 @@ test("chat topics list official examples and only the authenticated user's topic
         official_chat_topics: [officialTopic, hiddenOfficialTopic, ...extraOfficialTopics],
         user_chat_topics: [mine, anotherUsersTopic],
         user_hidden_official_chat_topics: [
-          { user_id: USER_ID, official_topic_id: hiddenOfficialTopic.id },
-          { user_id: OTHER_USER_ID, official_topic_id: officialTopic.id },
+          { uid: UID, official_topic_id: hiddenOfficialTopic.id },
+          { uid: OTHER_UID, official_topic_id: officialTopic.id },
         ],
       }),
     }),
@@ -647,14 +648,14 @@ test("footprint routes require login and scope reads and writes to the authentic
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       user_footprint_cities: [
-        { user_id: USER_ID, city_code: "110100" },
-        { user_id: OTHER_USER_ID, city_code: "310100" },
+        { uid: UID, city_code: "110100" },
+        { uid: OTHER_UID, city_code: "310100" },
       ],
     }),
     rpc: {
-      set_user_footprint_city: ({ p_user_id }) => ({
+      set_user_footprint_city: ({ p_uid }) => ({
         data: null,
-        error: p_user_id === USER_ID ? null : new Error("wrong user"),
+        error: p_uid === UID ? null : new Error("wrong user"),
       }),
     },
   });
@@ -695,7 +696,7 @@ test("footprint routes require login and scope reads and writes to the authentic
       {
         name: "set_user_footprint_city",
         params: {
-          p_user_id: USER_ID,
+          p_uid: UID,
           p_city_code: "440100",
           p_visited: true,
         },
@@ -724,26 +725,26 @@ test("footprint routes require login and scope reads and writes to the authentic
 test("menu overview combines metadata, permissions, and initial content", async (t) => {
   const category = {
     id: SOURCE_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "家常菜",
     sort_order: 1000,
     created_at: "2026-08-01T00:00:00.000Z",
   };
   const outsideCategory = {
     id: TARGET_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "面馆",
     sort_order: 1000,
   };
   const secondOutsideCategory = {
     id: SEASON_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "咖啡店",
     sort_order: 2000,
   };
   const homePlace = {
     id: DINING_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "家",
     place_type: "home",
     outside_category_id: null,
@@ -756,7 +757,7 @@ test("menu overview combines metadata, permissions, and initial content", async 
   };
   const dish = {
     id: MEDIA_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "番茄炒鸡蛋",
     record_type: "home",
     place_id: DINING_ID,
@@ -781,7 +782,7 @@ test("menu overview combines metadata, permissions, and initial content", async 
   const outsidePlaces = [
     {
       id: EPISODE_ID,
-      user_id: USER_ID,
+      uid: UID,
       name: "街角面馆",
       place_type: "outside",
       outside_category_id: TARGET_ID,
@@ -794,7 +795,7 @@ test("menu overview combines metadata, permissions, and initial content", async 
     },
     {
       id: "10000000-0000-4000-8000-000000000010",
-      user_id: USER_ID,
+      uid: UID,
       name: "巷口咖啡",
       place_type: "outside",
       outside_category_id: SEASON_ID,
@@ -873,22 +874,22 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         menu_schedule_meals: [
-          { id: firstMealId, user_id: USER_ID, meal_date: "2026-08-03", meal_period: "lunch", slot_count: 3 },
-          { id: secondMealId, user_id: USER_ID, meal_date: "2026-08-04", meal_period: "dinner", slot_count: 3 },
+          { id: firstMealId, uid: UID, meal_date: "2026-08-03", meal_period: "lunch", slot_count: 3 },
+          { id: secondMealId, uid: UID, meal_date: "2026-08-04", meal_period: "dinner", slot_count: 3 },
         ],
         menu_schedule_items: [
-          { id: "41000000-0000-4000-8000-000000000001", user_id: USER_ID, meal_id: firstMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
-          { id: "41000000-0000-4000-8000-000000000002", user_id: USER_ID, meal_id: firstMealId, source_kind: "dish", record_type: "outside", dish_id: outsideDishId, place_id: storeId, snapshot_name: "牛肉面", snapshot_place_name: "街角面馆", snapshot_image_path: "noodle.webp", position: 1 },
-          { id: "41000000-0000-4000-8000-000000000003", user_id: USER_ID, meal_id: firstMealId, source_kind: "place", record_type: "outside", dish_id: null, place_id: storeId, snapshot_name: "街角面馆", snapshot_place_name: "街角面馆", snapshot_image_path: "store.webp", position: 2 },
-          { id: "41000000-0000-4000-8000-000000000004", user_id: USER_ID, meal_id: secondMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
+          { id: "41000000-0000-4000-8000-000000000001", uid: UID, meal_id: firstMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
+          { id: "41000000-0000-4000-8000-000000000002", uid: UID, meal_id: firstMealId, source_kind: "dish", record_type: "outside", dish_id: outsideDishId, place_id: storeId, snapshot_name: "牛肉面", snapshot_place_name: "街角面馆", snapshot_image_path: "noodle.webp", position: 1 },
+          { id: "41000000-0000-4000-8000-000000000003", uid: UID, meal_id: firstMealId, source_kind: "place", record_type: "outside", dish_id: null, place_id: storeId, snapshot_name: "街角面馆", snapshot_place_name: "街角面馆", snapshot_image_path: "store.webp", position: 2 },
+          { id: "41000000-0000-4000-8000-000000000004", uid: UID, meal_id: secondMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
         ],
         dishes: [
-          { id: homeDishId, user_id: USER_ID, name: "番茄炒蛋（新版）", record_type: "home", place_id: DINING_ID, image_path: "home-current.webp", thumbnail_path: null },
-          { id: outsideDishId, user_id: USER_ID, name: "红烧牛肉面", record_type: "outside", place_id: storeId, image_path: "noodle-current.webp", thumbnail_path: null },
+          { id: homeDishId, uid: UID, name: "番茄炒蛋（新版）", record_type: "home", place_id: DINING_ID, image_path: "home-current.webp", thumbnail_path: null },
+          { id: outsideDishId, uid: UID, name: "红烧牛肉面", record_type: "outside", place_id: storeId, image_path: "noodle-current.webp", thumbnail_path: null },
         ],
         menu_places: [
-          { id: DINING_ID, user_id: USER_ID, name: "家里", place_type: "home", image_path: "", thumbnail_path: null },
-          { id: storeId, user_id: USER_ID, name: "街角新面馆", place_type: "outside", image_path: "store-current.webp", thumbnail_path: null },
+          { id: DINING_ID, uid: UID, name: "家里", place_type: "home", image_path: "", thumbnail_path: null },
+          { id: storeId, uid: UID, name: "街角新面馆", place_type: "outside", image_path: "store-current.webp", thumbnail_path: null },
         ],
       }),
     }),
@@ -934,10 +935,10 @@ test("menu schedule falls back to an archived snapshot after its source is delet
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         menu_schedule_meals: [
-          { id: mealId, user_id: USER_ID, meal_date: "2026-08-05", meal_period: "lunch", slot_count: 1 },
+          { id: mealId, uid: UID, meal_date: "2026-08-05", meal_period: "lunch", slot_count: 1 },
         ],
         menu_schedule_items: [
-          { id: "42000000-0000-4000-8000-000000000003", user_id: USER_ID, meal_id: mealId, source_kind: "dish", record_type: "home", dish_id: deletedDishId, place_id: null, snapshot_name: "已经删除的菜", snapshot_place_name: "", snapshot_image_path: "users/archive/history.webp", snapshot_place_image_path: "", position: 0 },
+          { id: "42000000-0000-4000-8000-000000000003", uid: UID, meal_id: mealId, source_kind: "dish", record_type: "home", dish_id: deletedDishId, place_id: null, snapshot_name: "已经删除的菜", snapshot_place_name: "", snapshot_image_path: "users/archive/history.webp", snapshot_place_image_path: "", position: 0 },
         ],
       }),
     }),
@@ -966,13 +967,13 @@ test("deleting a referenced dish copies history images before the atomic databas
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       dishes: [
-        { id: dishId, user_id: USER_ID, name: "旧菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
+        { id: dishId, uid: UID, name: "旧菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
       ],
       menu_places: [
-        { id: placeId, user_id: USER_ID, name: "旧店", place_type: "outside", image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
+        { id: placeId, uid: UID, name: "旧店", place_type: "outside", image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
       ],
       menu_schedule_items: [
-        { id: "43000000-0000-4000-8000-000000000003", user_id: USER_ID, source_kind: "dish", dish_id: dishId },
+        { id: "43000000-0000-4000-8000-000000000003", uid: UID, source_kind: "dish", dish_id: dishId },
       ],
     }),
   });
@@ -1003,15 +1004,15 @@ test("deleting a referenced store archives both store and child-dish images", as
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       menu_places: [
-        { id: placeId, user_id: USER_ID, name: "旧店", place_type: "outside", outside_category_id: SOURCE_ID, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp", source_dish_id: sourceDishId },
+        { id: placeId, uid: UID, name: "旧店", place_type: "outside", outside_category_id: SOURCE_ID, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp", source_dish_id: sourceDishId },
       ],
       dishes: [
-        { id: sourceDishId, user_id: USER_ID, name: "旧店", record_type: "outside", place_id: null, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
-        { id: childDishId, user_id: USER_ID, name: "店内菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
+        { id: sourceDishId, uid: UID, name: "旧店", record_type: "outside", place_id: null, image_path: "places/original.webp", thumbnail_path: "places/thumb.webp" },
+        { id: childDishId, uid: UID, name: "店内菜", record_type: "outside", place_id: placeId, image_path: "dishes/original.webp", thumbnail_path: "dishes/thumb.webp" },
       ],
       menu_schedule_items: [
-        { id: "44000000-0000-4000-8000-000000000004", user_id: USER_ID, source_kind: "dish", dish_id: childDishId, place_id: placeId },
-        { id: "44000000-0000-4000-8000-000000000005", user_id: USER_ID, source_kind: "place", dish_id: null, place_id: placeId },
+        { id: "44000000-0000-4000-8000-000000000004", uid: UID, source_kind: "dish", dish_id: childDishId, place_id: placeId },
+        { id: "44000000-0000-4000-8000-000000000005", uid: UID, source_kind: "place", dish_id: null, place_id: placeId },
       ],
     }),
   });
@@ -1067,7 +1068,7 @@ test("live-reference migration archives menu sources transactionally on deletion
 test("menu places expose stores first and their linked dishes separately", async (t) => {
   const place = {
     id: DINING_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "街角面馆",
     place_type: "outside",
     outside_category_id: SOURCE_ID,
@@ -1081,7 +1082,7 @@ test("menu places expose stores first and their linked dishes separately", async
   };
   const dish = {
     id: TARGET_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "牛肉面",
     record_type: "outside",
     category_id: null,
@@ -1165,7 +1166,7 @@ test("outside menu places can be reordered within their category", async (t) => 
   assert.deepEqual(supabase.rpcCalls.at(-1), {
     name: "reorder_menu_places",
     params: {
-      p_user_id: USER_ID,
+      p_uid: UID,
       p_place_ids: [SOURCE_ID, TARGET_ID],
     },
   });
@@ -1218,7 +1219,7 @@ test("media list supports server-side pagination and fuzzy title search", async 
 });
 
 test("media list uses one independently signed private cover", async (t) => {
-  const coverPath = `users/${USER_ID}/entries/${MEDIA_ID}/cover-cost-v4.webp`;
+  const coverPath = `users/${UID}/entries/${MEDIA_ID}/cover-cost-v4.webp`;
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -1353,7 +1354,7 @@ test("media list can include every category when media type is omitted", async (
   const entries = [
     {
       id: MEDIA_ID,
-      user_id: USER_ID,
+      uid: UID,
       title: "我的电影",
       media_type: "电影",
       watch_status: "completed",
@@ -1362,7 +1363,7 @@ test("media list can include every category when media type is omitted", async (
     },
     {
       id: TARGET_ID,
-      user_id: USER_ID,
+      uid: UID,
       title: "我的电视剧",
       media_type: "电视剧",
       watch_status: "in_progress",
@@ -1395,7 +1396,7 @@ test("media list can include every category when media type is omitted", async (
 test("personal modules never return another user's records", async (t) => {
   const ownMedia = {
     id: MEDIA_ID,
-    user_id: USER_ID,
+    uid: UID,
     title: "我的电影",
     media_type: "电影",
     watch_status: "completed",
@@ -1405,7 +1406,7 @@ test("personal modules never return another user's records", async (t) => {
   const otherMedia = {
     ...ownMedia,
     id: TARGET_ID,
-    user_id: OTHER_USER_ID,
+    uid: OTHER_UID,
     title: "别人的电影",
     sort_order: 2000,
   };
@@ -1437,7 +1438,7 @@ test("personal modules never return another user's records", async (t) => {
 test("key moments list is user-scoped and filtered by Shanghai day", async (t) => {
   const ownMoment = {
     id: "30000000-0000-4000-8000-000000000001",
-    user_id: USER_ID,
+    uid: UID,
     content: "当天的节点",
     occurred_at: "2026-08-02T04:00:00.000Z",
     image_path: null,
@@ -1456,7 +1457,7 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
           {
             ...ownMoment,
             id: "30000000-0000-4000-8000-000000000003",
-            user_id: OTHER_USER_ID,
+            uid: OTHER_UID,
           },
         ],
       }),
@@ -1501,7 +1502,7 @@ test("key moments can be created without an image and run text safety checks", a
   const body = response.json();
   assert.equal(response.statusCode, 201);
   assert.equal(body.data.item.content, "完成关键节点模块");
-  assert.equal(body.data.item.user_id, USER_ID);
+  assert.equal(body.data.item.uid, UID);
   assert.equal(body.data.item.occurred_at, "2026-08-02T04:30:00.000Z");
   assert.match(body.data.item.id, /^[0-9a-f-]{36}$/i);
   assert.deepEqual(checked, [
@@ -1518,7 +1519,7 @@ test("key moment edits only check text when the content actually changes", async
       tables: authenticatedTables({
         key_moments: [{
           id: momentId,
-          user_id: USER_ID,
+          uid: UID,
           content: "小猫",
           occurred_at: "2026-08-02T04:30:00.000Z",
           image_path: null,
@@ -1650,7 +1651,7 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
   assert.deepEqual(supabase.rpcCalls.at(-1), {
     name: "create_media_season_with_episodes",
     params: {
-      p_user_id: USER_ID,
+      p_uid: UID,
       p_media_entry_id: MEDIA_ID,
       p_name: "第二季",
       p_episode_count: 12,
@@ -1813,7 +1814,7 @@ test("media cover upload stores one WebP image and updates the existing entry", 
   const upload = supabase.cosUploads[0];
   assert.ok(upload);
   assert.equal(upload.bucket, "media-covers");
-  assert.match(upload.path, new RegExp(`^users/${USER_ID}/entries/${MEDIA_ID}/.+\\.webp$`));
+  assert.match(upload.path, new RegExp(`^users/${UID}/entries/${MEDIA_ID}/.+\\.webp$`));
   assert.equal(upload.options.contentType, "image/webp");
   assert.deepEqual(
     await sharp(upload.buffer).metadata().then(({ format, width, height }) => ({
@@ -1834,7 +1835,7 @@ test("media cover upload stores one WebP image and updates the existing entry", 
 test("activity cards expose introductions and replace optimized 4:3 covers", async (t) => {
   const activity = {
     id: SOURCE_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "环湖骑行",
     introduction: "沿着湖岸慢慢骑。",
     activity_type: "户外",
@@ -1952,7 +1953,7 @@ test("activity cards expose introductions and replace optimized 4:3 covers", asy
   const upload = supabase.cosUploads[0];
   assert.ok(upload);
   assert.equal(upload.bucket, "activity-images");
-  assert.match(upload.path, new RegExp(`^users/${USER_ID}/activities/${SOURCE_ID}/.+\\.webp$`));
+  assert.match(upload.path, new RegExp(`^users/${UID}/activities/${SOURCE_ID}/.+\\.webp$`));
   assert.deepEqual(supabase.cosRemovals[0], {
     bucket: "activity-images",
     paths: ["users/old/activity.webp"],
@@ -2029,8 +2030,8 @@ test("delete routes return a JSON success envelope", async (t) => {
 });
 
 test("deleting a media entry removes each managed image once", async (t) => {
-  const sharedCover = `users/${USER_ID}/entries/${MEDIA_ID}/shared-normalized-v3.webp`;
-  const seasonCover = `users/${USER_ID}/entries/${MEDIA_ID}/season-normalized-v3.webp`;
+  const sharedCover = `users/${UID}/entries/${MEDIA_ID}/shared-normalized-v3.webp`;
+  const seasonCover = `users/${UID}/entries/${MEDIA_ID}/season-normalized-v3.webp`;
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -2068,8 +2069,8 @@ test("deleting a media entry removes each managed image once", async (t) => {
 });
 
 test("deleting a media season removes its managed cover only when no reference remains", async (t) => {
-  const retainedCover = `users/${USER_ID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
-  const removedCover = `users/${USER_ID}/entries/${MEDIA_ID}/removed-normalized-v3.webp`;
+  const retainedCover = `users/${UID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
+  const removedCover = `users/${UID}/entries/${MEDIA_ID}/removed-normalized-v3.webp`;
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -2101,8 +2102,8 @@ test("deleting a media season removes its managed cover only when no reference r
 });
 
 test("switching a media entry cover keeps the old file while a season still uses it", async (t) => {
-  const retainedCover = `users/${USER_ID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
-  const selectedCover = `users/${USER_ID}/entries/${MEDIA_ID}/selected-normalized-v3.webp`;
+  const retainedCover = `users/${UID}/entries/${MEDIA_ID}/retained-normalized-v3.webp`;
+  const selectedCover = `users/${UID}/entries/${MEDIA_ID}/selected-normalized-v3.webp`;
   const supabase = createFakeSupabase({
     tables: authenticatedTables({
       media_entries: [{
@@ -2174,7 +2175,7 @@ test("luggage reorder accepts one final snapshot and applies only the required m
     {
       name: "move_luggage_group",
       params: {
-        p_user_id: USER_ID,
+        p_uid: UID,
         p_source_id: secondGroupId,
         p_target_id: firstGroupId,
         p_insert_after: false,
@@ -2183,7 +2184,7 @@ test("luggage reorder accepts one final snapshot and applies only the required m
     {
       name: "move_luggage_item",
       params: {
-        p_user_id: USER_ID,
+        p_uid: UID,
         p_source_id: secondItemId,
         p_target_group_id: firstGroupId,
         p_target_item_id: firstItemId,
@@ -2354,7 +2355,7 @@ test("media writes accept an omitted platform and validate selected platforms be
   assert.deepEqual(supabase.rpcCalls[2], {
     name: "create_media_entry_at_end",
     params: {
-      p_user_id: USER_ID,
+      p_uid: UID,
       p_title: "合法平台条目",
       p_media_type: "电影",
       p_watch_status: "completed",
@@ -2407,7 +2408,7 @@ test("cross-type media updates use the destination-locked move RPC", async (t) =
     {
       name: "move_media_entry_to_type_at_end",
       params: {
-        p_user_id: USER_ID,
+        p_uid: UID,
         p_entry_id: MEDIA_ID,
         p_title: "新标题",
         p_media_type: "动漫",
@@ -2650,7 +2651,7 @@ test("swap routes map only their expected SQLSTATE errors", async (t) => {
   assert.deepEqual(successfulSupabase.rpcCalls[0], {
     name: "swap_dish_sort_orders",
     params: {
-      p_user_id: USER_ID,
+      p_uid: UID,
       p_source_id: SOURCE_ID,
       p_target_id: TARGET_ID,
     },
@@ -2769,7 +2770,7 @@ test("reorder routes map invalid database order lists to HTTP 400", async (t) =>
 test("dish meal periods accept free combinations and reject invalid values", async (t) => {
   const dish = {
     id: SOURCE_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "番茄炒鸡蛋",
     record_type: "home",
     place_id: DINING_ID,
@@ -2787,7 +2788,7 @@ test("dish meal periods accept free combinations and reject invalid values", asy
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         dishes: [dish],
-        menu_places: [{ id: DINING_ID, user_id: USER_ID, place_type: "home", outside_category_id: null }],
+        menu_places: [{ id: DINING_ID, uid: UID, place_type: "home", outside_category_id: null }],
       }),
     }),
   });
@@ -2833,7 +2834,7 @@ test("dish meal-period migration defaults existing dishes to lunch and dinner", 
 test("home dish details accept ingredients, introduction, methods, taste, and flavor options", async (t) => {
   const dish = {
     id: SOURCE_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "炒虾",
     record_type: "home",
     category_id: TARGET_ID,
@@ -2857,7 +2858,7 @@ test("home dish details accept ingredients, introduction, methods, taste, and fl
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         dishes: [dish],
-        menu_places: [{ id: DINING_ID, user_id: USER_ID, place_type: "home", outside_category_id: null }],
+        menu_places: [{ id: DINING_ID, uid: UID, place_type: "home", outside_category_id: null }],
       }),
     }),
   });
@@ -3037,7 +3038,7 @@ test("dish ordering migration backfills newest-first and inserts new dishes firs
 test("dishes can move from the home place to an outside place", async (t) => {
   const dish = {
     id: SOURCE_ID,
-    user_id: USER_ID,
+    uid: UID,
     name: "番茄炒鸡蛋",
     record_type: "home",
     category_id: TARGET_ID,
@@ -3060,11 +3061,11 @@ test("dishes can move from the home place to an outside place", async (t) => {
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         dishes: [dish],
-        categories: [{ id: TARGET_ID, user_id: USER_ID, name: "半荤" }],
-        dining_scenes: [{ id: DINING_ID, user_id: USER_ID, name: "日常" }],
+        categories: [{ id: TARGET_ID, uid: UID, name: "半荤" }],
+        dining_scenes: [{ id: DINING_ID, uid: UID, name: "日常" }],
         menu_places: [
-          { id: SEASON_ID, user_id: USER_ID, place_type: "home", outside_category_id: null },
-          { id: DINING_ID, user_id: USER_ID, place_type: "outside", outside_category_id: DINING_ID },
+          { id: SEASON_ID, uid: UID, place_type: "home", outside_category_id: null },
+          { id: DINING_ID, uid: UID, place_type: "outside", outside_category_id: DINING_ID },
         ],
       }),
     }),

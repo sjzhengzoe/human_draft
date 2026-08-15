@@ -47,16 +47,16 @@
       <view class="settings-list">
         <view class="account-id-item">
           <view class="account-id-item__content">
-            <view class="account-id-item__label">用户 ID</view>
-            <text class="account-id-item__value" selectable="{{true}}">{{userId}}</text>
+            <view class="account-id-item__label">UID</view>
+            <text class="account-id-item__value" selectable="{{true}}">{{uid}}</text>
           </view>
           <view
             class="account-id-item__copy"
             role="button"
-            aria-label="复制用户 ID"
+            aria-label="复制 UID"
             hover-class="account-id-item__copy--hover"
             hover-stay-time="80"
-            bindtap="handleCopyUserIdTap"
+            bindtap="handleCopyUidTap"
           ><app-icon name="copy" size="27" /></view>
         </view>
       </view>

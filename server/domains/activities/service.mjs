@@ -73,30 +73,30 @@ function assertActivityImage(image) {
   );
 }
 
-async function uploadActivityImage(supabase, userId, itemId, image) {
+async function uploadActivityImage(supabase, uid, itemId, image) {
   assertActivityImage(image);
   return uploadStandardImage(supabase, {
     bucketName: config.activityBucket,
-    basePath: `users/${userId}/activities/${itemId}/${randomUUID()}`,
-    userId,
+    basePath: `users/${uid}/activities/${itemId}/${randomUUID()}`,
+    uid,
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传活动封面失败。",
   });
 }
 
-async function removeActivityImages(supabase, userId, paths) {
+async function removeActivityImages(supabase, uid, paths) {
   return removeStorageImages(supabase, {
     bucketName: config.activityBucket,
     paths,
-    userId,
+    uid,
     errorMessage: "删除活动封面失败:",
   });
 }
 
 export const readActivityMultipart = readMultipartImage;
 
-export async function listActivityItems(supabase, userId, query) {
+export async function listActivityItems(supabase, uid, query) {
   const includeAllTypes = query.all_types === "true";
   const activityType = includeAllTypes
     ? ""
@@ -106,7 +106,7 @@ export async function listActivityItems(supabase, userId, query) {
   let request = supabase
     .from("activity_items")
     .select("*")
-    .eq("user_id", userId);
+    .eq("uid", uid);
   if (activityType) request = request.eq("activity_type", activityType);
   if (typeof query.keyword === "string" && query.keyword.trim()) {
     request = request.ilike("name", `%${query.keyword.trim().slice(0, 80)}%`);
@@ -124,22 +124,22 @@ export async function listActivityItems(supabase, userId, query) {
   return (data || []).map((item) => toActivityResponse(item, imageUrls));
 }
 
-export async function createActivityItem(supabase, userId, body, image) {
+export async function createActivityItem(supabase, uid, body, image) {
   const activityType = enumValue(body.activity_type, ACTIVITY_TYPES, "活动分类");
   const name = requiredText(body.name, "活动名称");
   const introduction = introductionValue(body.introduction ?? "");
-  const sortOrder = await nextSortOrder(supabase, userId, "activity_items", {
+  const sortOrder = await nextSortOrder(supabase, uid, "activity_items", {
     activity_type: activityType,
   });
   const id = randomUUID();
   const paths = image
-    ? await uploadActivityImage(supabase, userId, id, image)
+    ? await uploadActivityImage(supabase, uid, id, image)
     : { imagePath: null };
   const { data, error } = await supabase
     .from("activity_items")
     .insert({
       id,
-      user_id: userId,
+      uid: uid,
       name,
       introduction,
       activity_type: activityType,
@@ -149,16 +149,16 @@ export async function createActivityItem(supabase, userId, body, image) {
     .select("*")
     .single();
   if (error) {
-    await removeActivityImages(supabase, userId, [paths.imagePath]);
+    await removeActivityImages(supabase, uid, [paths.imagePath]);
     throwSupabaseError(error, "新增活动失败。");
   }
   return toSignedActivityResponse(supabase, data);
 }
 
-export async function updateActivityItem(supabase, userId, id, body) {
+export async function updateActivityItem(supabase, uid, id, body) {
   const existing = await requireRecord(
     supabase,
-    userId,
+    uid,
     "activity_items",
     id,
     "id, activity_type",
@@ -171,7 +171,7 @@ export async function updateActivityItem(supabase, userId, id, body) {
   if (body.activity_type !== undefined) {
     changes.activity_type = enumValue(body.activity_type, ACTIVITY_TYPES, "活动分类");
     if (changes.activity_type !== existing.activity_type) {
-      changes.sort_order = await nextSortOrder(supabase, userId, "activity_items", {
+      changes.sort_order = await nextSortOrder(supabase, uid, "activity_items", {
         activity_type: changes.activity_type,
       });
     }
@@ -186,42 +186,42 @@ export async function updateActivityItem(supabase, userId, id, body) {
     .from("activity_items")
     .update(changes)
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   throwSupabaseError(error, "更新活动失败。");
   return toSignedActivityResponse(supabase, data);
 }
 
-export async function replaceActivityItemImage(supabase, userId, id, image) {
+export async function replaceActivityItemImage(supabase, uid, id, image) {
   const current = await requireRecord(
     supabase,
-    userId,
+    uid,
     "activity_items",
     id,
     "id, image_path",
   );
   const previousPaths = [current.image_path];
-  const paths = await uploadActivityImage(supabase, userId, current.id, image);
+  const paths = await uploadActivityImage(supabase, uid, current.id, image);
   const { data, error } = await supabase
     .from("activity_items")
     .update({ image_path: paths.imagePath })
     .eq("id", current.id)
-    .eq("user_id", userId)
+    .eq("uid", uid)
     .select("*")
     .single();
   if (error) {
-    await removeActivityImages(supabase, userId, [paths.imagePath]);
+    await removeActivityImages(supabase, uid, [paths.imagePath]);
     throwSupabaseError(error, "更新活动封面失败。");
   }
-  await removeActivityImages(supabase, userId, previousPaths);
+  await removeActivityImages(supabase, uid, previousPaths);
   return toSignedActivityResponse(supabase, data);
 }
 
-export async function deleteActivityItem(supabase, userId, id) {
+export async function deleteActivityItem(supabase, uid, id) {
   const current = await requireRecord(
     supabase,
-    userId,
+    uid,
     "activity_items",
     id,
     "id, image_path",
@@ -230,12 +230,12 @@ export async function deleteActivityItem(supabase, userId, id) {
     .from("activity_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("uid", uid);
   throwSupabaseError(error, "删除活动失败。");
-  await removeActivityImages(supabase, userId, [current.image_path]);
+  await removeActivityImages(supabase, uid, [current.image_path]);
 }
 
-export async function swapActivityItemSortOrders(supabase, userId, body) {
+export async function swapActivityItemSortOrders(supabase, uid, body) {
   const sourceId = typeof body.source_id === "string" ? body.source_id.trim() : "";
   const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "";
   assertCondition(
@@ -245,7 +245,7 @@ export async function swapActivityItemSortOrders(supabase, userId, body) {
     "请选择两个不同的活动项目。",
   );
   const { error } = await supabase.rpc("swap_activity_item_sort_orders", {
-    p_user_id: userId,
+    p_uid: uid,
     p_source_id: sourceId,
     p_target_id: targetId,
   });
