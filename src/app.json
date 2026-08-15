@@ -38,8 +38,7 @@
       "pages": [
         "index",
         "detail/index",
-        "edit/index",
-        "settings/index"
+        "edit/index"
       ]
     },
     {

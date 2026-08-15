@@ -13,8 +13,6 @@ export type KeyMoment = {
 
 export type KeyMomentDetailItem = KeyMoment & {
   date_label: string
-  day_label: string
-  month_year_label: string
   time_label: string
   position_label: string
 }

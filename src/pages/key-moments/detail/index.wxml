@@ -23,28 +23,20 @@
     <swiper-item wx:for="{{items}}" wx:key="id">
       <view class="detail-slide">
         <view class="detail-sheet">
-          <view class="detail-date">
-            <view class="detail-date__day">{{item.day_label}}</view>
-            <view class="detail-date__aside">
-              <view class="detail-date__month-year">{{item.month_year_label}}</view>
-              <view class="detail-date__time">{{item.time_label}}</view>
-            </view>
-          </view>
-
           <view wx:if="{{item.content}}" class="detail-content">{{item.content}}</view>
 
           <view
             wx:if="{{item.image_count}}"
-            class="detail-gallery detail-gallery--count-{{item.image_count}}"
+            class="detail-gallery detail-gallery--count-{{item.image_count}} {{item.content ? 'detail-gallery--after-content' : ''}}"
           >
             <image
               wx:for="{{item.image_urls}}"
               wx:for-item="imageUrl"
               wx:for-index="imageIndex"
               wx:key="*this"
-              class="detail-image {{item.image_count === 1 ? 'detail-image--single' : ''}}"
+              class="detail-image"
               src="{{imageUrl}}"
-              mode="{{item.image_count === 1 ? 'aspectFit' : 'aspectFill'}}"
+              mode="aspectFill"
               data-id="{{item.id}}"
               data-url="{{imageUrl}}"
               aria-label="预览第 {{imageIndex + 1}} 张图片"
@@ -53,7 +45,7 @@
           </view>
 
           <view class="detail-footer">
-            <view class="detail-footer__date">{{item.date_label}}</view>
+            <view class="detail-footer__date">{{item.date_label}} {{item.time_label}}</view>
             <view
               wx:if="{{canWrite}}"
               class="detail-edit"

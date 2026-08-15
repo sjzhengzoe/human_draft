@@ -26,12 +26,6 @@
         <app-icon name="chevron-down" size="27" />
       </view>
     </picker>
-    <view
-      class="settings-button"
-      role="button"
-      aria-label="人生节点设置"
-      bindtap="handleSettings"
-    ><app-icon name="settings-2" size="27" /></view>
     <button
       wx:if="{{canWrite || guestMode}}"
       class="add-button"
@@ -68,7 +62,7 @@
           class="timeline-entry {{index === items.length - 1 ? 'timeline-entry--last' : ''}}"
           data-id="{{item.id}}"
           role="button"
-          aria-label="{{activeGranularity === 'day' ? '查看关键节点详情' : (canWrite ? '编辑关键节点' : '关键节点')}}"
+          aria-label="查看关键节点详情"
           bindtap="handleMomentTap"
         >
           <view class="timeline-rail">
@@ -88,7 +82,8 @@
                 <app-icon name="trash-2-danger" size="24" />
               </view>
             </view>
-            <view class="moment-card moment-card--{{displayLayout}}">
+            <view class="moment-card">
+              <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
               <view
                 wx:if="{{item.image_count}}"
                 class="moment-gallery moment-gallery--count-{{item.image_count}}"
@@ -98,9 +93,9 @@
                   wx:for-item="imageUrl"
                   wx:for-index="imageIndex"
                   wx:key="*this"
-                  class="moment-image {{item.image_count === 1 ? 'moment-image--single' : ''}}"
+                  class="moment-image"
                   src="{{imageUrl}}"
-                  mode="{{item.image_count === 1 ? 'widthFix' : 'aspectFill'}}"
+                  mode="aspectFill"
                   lazy-load
                   data-id="{{item.id}}"
                   data-url="{{imageUrl}}"
@@ -108,7 +103,6 @@
                   catchtap="handlePreview"
                 />
               </view>
-              <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
             </view>
           </view>
         </view>

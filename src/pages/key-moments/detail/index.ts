@@ -24,8 +24,6 @@ function detailDateParts(value: string) {
   return {
     editorDate: `${year}-${pad(month)}-${pad(day)}`,
     dateLabel: `${year}年${month}月${day}日`,
-    dayLabel: String(day),
-    monthYearLabel: `${month}月 · ${year}`,
     timeLabel: `${pad(hour)}:${pad(minute)}`
   }
 }
@@ -36,8 +34,6 @@ function toDetailItems(items: KeyMoment[]): KeyMomentDetailItem[] {
     return {
       ...item,
       date_label: labels.dateLabel,
-      day_label: labels.dayLabel,
-      month_year_label: labels.monthYearLabel,
       time_label: labels.timeLabel,
       position_label: `${index + 1} / ${items.length}`
     }

@@ -43,7 +43,7 @@ test("key moment creation uses the previewed date only for day view", async () =
   assert.match(editor, /editorTime: INITIAL_DATE_TIME\.time/);
 });
 
-test("day-view key moment items open detail while other views keep the edit flow", async () => {
+test("key moment items open the same detail flow in year, month, and day views", async () => {
   const [page, styles, logic] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
@@ -71,8 +71,9 @@ test("day-view key moment items open detail while other views keep the edit flow
   );
   assert.match(
     logic,
-    /handleMomentTap\([\s\S]*?activeGranularity === "day"[\s\S]*?pages\/key-moments\/detail\/index\?id=/,
+    /handleMomentTap\([\s\S]*?pages\/key-moments\/detail\/index\?id=/,
   );
+  assert.doesNotMatch(logic, /handleMomentTap\([\s\S]*?activeGranularity === "day"/);
 });
 
 test("tapping the key moment page title scrolls the timeline back to the top", async () => {
@@ -102,9 +103,12 @@ test("key moment editor selects up to nine original images and displays a WeChat
   ]);
 
   assert.match(page, /class="moment-gallery moment-gallery--count-\{\{item\.image_count\}\}"/);
-  assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="\{\{item\.image_count === 1 \? 'widthFix' : 'aspectFill'\}\}"/);
+  assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="aspectFill"/);
   assert.match(editorPage, /wx:for="\{\{editorImages\}\}"[\s\S]*?class="image-grid__preview"[\s\S]*?mode="aspectFill"/);
   assert.match(editorPage, /\{\{editorImages\.length\}\} \/ 9/);
+  assert.ok(editorPage.indexOf('class="content-editor') < editorPage.indexOf('class="image-grid'));
+  assert.ok(editorPage.indexOf('class="image-grid') < editorPage.indexOf('class="time-fields'));
   assert.doesNotMatch(editorPage, /<image-cropper/);
   assert.match(styles, /\.moment-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(editorStyles, /\.image-grid[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
@@ -138,36 +142,24 @@ test("key moment text editing uses the shared bottom dialog", async () => {
   assert.match(editorLogic, /handleContentEditorConfirm\(\)[\s\S]*?editorContent: this\.data\.contentDraft/);
 });
 
-test("key moments offer user-scoped horizontal and vertical display settings", async () => {
-  const [page, styles, logic, settingsPage, settingsLogic, storage, appConfig] = await Promise.all([
+test("key moments use one WeChat-style layout and remove obsolete layout settings", async () => {
+  const [page, styles, logic, appConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/pages/key-moments/settings/index.wxml", import.meta.url), "utf8"),
-    readFile(new URL("../../src/pages/key-moments/settings/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/utils/key-moment-settings.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(
-    page,
-    /class="settings-button"[\s\S]*?aria-label="人生节点设置"[\s\S]*?<app-icon name="settings-2"/,
-  );
-  assert.doesNotMatch(page, /<text>设置<\/text>/);
+  assert.doesNotMatch(page, /settings-button|handleSettings|displayLayout/);
   assert.match(
     page,
     /class="add-button"[\s\S]*?aria-label="新增人生节点"[\s\S]*?<app-icon name="plus-white"/,
   );
-  assert.match(page, /moment-card--\{\{displayLayout\}\}/);
-  assert.match(styles, /\.moment-card--vertical\s*\{[\s\S]*?display: block;/);
-  assert.match(styles, /\.moment-card--vertical \.moment-gallery\s*\{[\s\S]*?width: 100%;/);
-  assert.match(logic, /getKeyMomentDisplayLayout\(session\.user\.uid\)/);
-  assert.match(logic, /wx\.navigateTo\(\{ url: "\/pages\/key-moments\/settings\/index" \}\)/);
-  assert.match(settingsPage, /默认图文布局/);
-  assert.match(settingsPage, /layout-preview--\{\{item\.value\}\}/);
-  assert.match(settingsLogic, /setKeyMomentDisplayLayout\(this\.data\.uid, layout\)/);
-  assert.match(storage, /KEY_MOMENT_DISPLAY_LAYOUT_V1/);
-  assert.match(storage, /storageKey\(uid\)/);
+  assert.match(page, /class="moment-card"/);
+  assert.match(styles, /\.moment-card\s*\{[\s\S]*?display: block;/);
+  assert.match(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 1;/);
+  assert.doesNotMatch(styles, /moment-card--vertical|moment-card--horizontal/);
+  assert.doesNotMatch(logic, /getKeyMomentDisplayLayout|handleSettings|displayLayout/);
   const parsedAppConfig = JSON.parse(appConfig);
   const registeredPages = [
     ...parsedAppConfig.pages,
@@ -175,7 +167,7 @@ test("key moments offer user-scoped horizontal and vertical display settings", a
       subPackage.pages.map((registeredPage) => `${subPackage.root}/${registeredPage}`),
     ),
   ];
-  assert.ok(registeredPages.includes("pages/key-moments/settings/index"));
+  assert.ok(!registeredPages.includes("pages/key-moments/settings/index"));
   assert.ok(registeredPages.includes("pages/key-moments/edit/index"));
 });
 
@@ -226,7 +218,10 @@ test("key moment detail uses a vertical full-page swiper and multi-image preview
     readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
   ]);
   assert.match(page, /<swiper[\s\S]*?vertical="\{\{true\}\}"[\s\S]*?bindchange="handleSwiperChange"/);
+  assert.match(page, /class="detail-content"[\s\S]*?class="detail-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"/);
+  assert.match(page, /class="detail-image"[\s\S]*?mode="aspectFill"/);
+  assert.match(page, /\{\{item\.date_label\}\} \{\{item\.time_label\}\}/);
   assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
   assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);
   const keyMomentPackage = JSON.parse(appConfig).subPackages.find((entry) => entry.root === "pages/key-moments");

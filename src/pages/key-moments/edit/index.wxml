@@ -12,15 +12,19 @@
 <view wx:else class="page page--with-navigation">
   <scroll-view class="editor-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="editor-card">
-      <view class="field-label">发生时间</view>
-      <view class="time-fields">
-        <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
-          <view class="time-field__value">{{editorDate}}</view>
-        </picker>
-        <picker class="time-field" mode="time" value="{{editorTime}}" bindchange="handleEditorTimeChange">
-          <view class="time-field__value">{{editorTime}}</view>
-        </picker>
+      <view class="field-label">节点文字</view>
+      <view
+        class="content-editor {{editorContent ? '' : 'content-editor--placeholder'}}"
+        role="button"
+        aria-label="编辑节点文字"
+        bindtap="handleOpenContentEditor"
+      >
+        <text class="content-editor__text">{{editorContent || '写下这个关键节点…'}}</text>
+        <view class="content-editor__icon">
+          <app-icon name="pencil" size="24" />
+        </view>
       </view>
+      <view class="content-count">{{editorContent.length}} / 50</view>
 
       <view class="field-heading field-label--spaced">
         <view class="field-label">节点图片</view>
@@ -59,19 +63,15 @@
         </view>
       </view>
 
-      <view class="field-label field-label--spaced">节点文字</view>
-      <view
-        class="content-editor {{editorContent ? '' : 'content-editor--placeholder'}}"
-        role="button"
-        aria-label="编辑节点文字"
-        bindtap="handleOpenContentEditor"
-      >
-        <text class="content-editor__text">{{editorContent || '写下这个关键节点…'}}</text>
-        <view class="content-editor__icon">
-          <app-icon name="pencil" size="24" />
-        </view>
+      <view class="field-label field-label--spaced">发生时间</view>
+      <view class="time-fields">
+        <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
+          <view class="time-field__value">{{editorDate}}</view>
+        </picker>
+        <picker class="time-field" mode="time" value="{{editorTime}}" bindchange="handleEditorTimeChange">
+          <view class="time-field__value">{{editorTime}}</view>
+        </picker>
       </view>
-      <view class="content-count">{{editorContent.length}} / 50</view>
     </view>
     <view class="editor-safe-area" />
   </scroll-view>

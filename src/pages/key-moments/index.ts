@@ -15,12 +15,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import {
-  DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT,
-  getKeyMomentDisplayLayout
-} from "../../utils/key-moment-settings"
 import { requireLoginForAction } from "../../utils/login-required"
-import type { KeyMomentDisplayLayout } from "../../utils/key-moment-settings"
 import {
   getCachedKeyMoments,
   getKeyMomentDataRevision
@@ -120,7 +115,6 @@ Page({
     activeGranularity: "day" as KeyMomentGranularity,
     anchorDate: INITIAL_DATE_TIME.date,
     periodLabel: periodLabel("day", INITIAL_DATE_TIME.date),
-    displayLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT as KeyMomentDisplayLayout,
     items: [] as KeyMomentTimelineItem[],
     canWrite: false,
     guestMode: false,
@@ -145,10 +139,6 @@ Page({
       return
     }
     if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
-    if (user) {
-      const displayLayout = getKeyMomentDisplayLayout(user.uid)
-      if (displayLayout !== this.data.displayLayout) this.setData({ displayLayout })
-    }
     if (!this.data.hasLoaded) {
       void this.loadItems()
       return
@@ -218,7 +208,6 @@ Page({
         : await listKeyMoments(input, { forceRefresh: options.forceRefresh })
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
-        displayLayout: getKeyMomentDisplayLayout(session.user.uid),
         items: toTimelineItems(items),
         canWrite: session.user.can_write,
         keyMomentRevision: getKeyMomentDataRevision()
@@ -266,28 +255,15 @@ Page({
     this.openEditor(`/pages/key-moments/edit/index?date=${editorDate}&time=${now.time}`)
   },
 
-  handleSettings() {
-    if (this.data.loading) return
-    wx.navigateTo({ url: "/pages/key-moments/settings/index" })
-  },
-
   handleMomentTap(event: WechatMiniprogram.TouchEvent) {
     if (this.data.loading || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
-    if (this.data.activeGranularity === "day") {
-      const dateTime = editorDateTime(item.occurred_at)
-      wx.navigateTo({
-        url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
-      })
-      return
-    }
-    if (!this.data.canWrite) return
     const dateTime = editorDateTime(item.occurred_at)
-    this.openEditor(
-      `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
-    )
+    wx.navigateTo({
+      url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
+    })
   },
 
   openEditor(url: string) {

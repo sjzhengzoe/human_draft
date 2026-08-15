@@ -63,28 +63,12 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  margin: 0 !important;
+  margin: 0 0 0 auto !important;
   padding: 0 !important;
   border-radius: 50% !important;
   background: var(--ui-color-action-primary);
   color: var(--ui-color-text-inverse);
   line-height: normal;
-}
-
-.settings-button {
-  display: flex;
-  width: 60rpx;
-  height: 60rpx;
-  flex: 0 0 60rpx;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  border-radius: 50%;
-  color: var(--ui-color-text-primary);
-}
-
-.settings-button:active {
-  background: var(--ui-color-background-hover);
 }
 
 .add-button::after,
@@ -206,24 +190,28 @@
 }
 
 .moment-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 24rpx;
+  display: block;
   margin-top: 4rpx;
   padding: 14rpx 24rpx 30rpx 18rpx;
 }
 
 .moment-gallery {
   display: grid;
-  width: 236rpx;
+  width: 510rpx;
+  max-width: 100%;
   box-sizing: border-box;
-  flex: 0 0 236rpx;
   grid-template-columns: repeat(3, 1fr);
   gap: 6rpx;
 }
 
+.moment-gallery--count-1 {
+  width: 320rpx;
+  grid-template-columns: 1fr;
+}
+
 .moment-gallery--count-2,
 .moment-gallery--count-4 {
+  width: 420rpx;
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -235,23 +223,7 @@
   background: var(--ui-color-background-subtle);
 }
 
-.moment-image--single {
-  width: 236rpx;
-  height: auto;
-  max-height: 360rpx;
-  aspect-ratio: auto;
-}
-
-.moment-card--vertical {
-  display: block;
-}
-
-.moment-card--vertical .moment-gallery {
-  width: 100%;
-  max-width: 510rpx;
-}
-
-.moment-card--vertical .moment-gallery + .moment-content {
+.moment-content + .moment-gallery {
   margin-top: 18rpx;
 }
 
