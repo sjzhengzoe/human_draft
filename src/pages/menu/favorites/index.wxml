@@ -22,3 +22,4 @@
   </view>
 </view>
 <operation-loading visible="{{saving}}" text="正在保存常吃清单…" />
+<login-required-dialog id="login-required-dialog" />

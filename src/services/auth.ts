@@ -3,6 +3,7 @@ import type { ApiEnvelope, AppUser, AuthSession } from "../types/api"
 import { clearKeyMomentDataCache } from "../utils/key-moment-data-cache"
 import { clearLuggageDataCache } from "../utils/luggage-data-cache"
 import { clearMediaDataCache } from "../utils/media-data-cache"
+import { applyHiddenHomeModuleKeys } from "../utils/home-modules"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
 
 let pendingLogin: Promise<AuthSession> | null = null
@@ -117,6 +118,7 @@ export function redirectToLogin(expectedToken?: string): void {
   clearLuggageDataCache()
   clearMediaDataCache()
   clearKeyMomentDataCache()
+  applyHiddenHomeModuleKeys([])
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {
@@ -174,6 +176,7 @@ export async function logout(): Promise<void> {
   clearLuggageDataCache()
   clearMediaDataCache()
   clearKeyMomentDataCache()
+  applyHiddenHomeModuleKeys([])
   try {
     getApp<IAppOption>().globalData.currentUser = null
   } catch (_error) {

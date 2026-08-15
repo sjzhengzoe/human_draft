@@ -1,4 +1,5 @@
 import { listMediaCategories, swapMediaCategorySortOrders } from "../../../services/media"
+import { getCurrentUser } from "../../../services/auth"
 import type { MediaCategory } from "../../../types/media"
 import {
   activateAsyncPage,
@@ -8,6 +9,7 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { hasSameOrder } from "../../../utils/drag-sort"
+import { requireLoginForAction } from "../../../utils/login-required"
 import {
   getMediaDataRevision,
   markMediaDataChanged
@@ -23,6 +25,7 @@ Page({
     hasLoaded: false,
     moving: false,
     sortEditing: false,
+    guestMode: false,
     mediaRevision: -1,
     errorMessage: ""
   },
@@ -31,6 +34,18 @@ Page({
     activateAsyncPage(this)
     mediaCategorySortOriginalIds = []
     if (this.data.sortEditing) this.setData({ sortEditing: false })
+    if (!getCurrentUser()) {
+      this.setData({
+        categories: [],
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        guestMode: true,
+        errorMessage: ""
+      })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     if (!this.data.hasLoaded || this.data.mediaRevision !== getMediaDataRevision()) {
       void this.loadCategories()
     }
@@ -42,6 +57,7 @@ Page({
   },
 
   async loadCategories() {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const showInitialLoading = !this.data.hasLoaded
     this.setData({
@@ -68,6 +84,7 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
@@ -78,6 +95,7 @@ Page({
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.moving || this.data.contentLoading) return
     if (this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
@@ -85,6 +103,7 @@ Page({
   },
 
   async handleSortEditingToggle() {
+    if (!requireLoginForAction(this)) return
     if (this.data.moving || this.data.contentLoading) return
     if (!this.data.sortEditing) {
       mediaCategorySortOriginalIds = this.data.categories.map((category) => category.id)

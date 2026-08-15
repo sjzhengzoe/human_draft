@@ -3,14 +3,20 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("home module settings uses an independent page route", async () => {
-  const [appConfigSource, settingsPageSource, moduleSettingsConfigSource] =
+  const [appConfigSource, settingsPageSource, settingsMarkup, moduleSettingsConfigSource,
+    moduleSettingsSource, moduleSettingsMarkup, moduleSource, settingsService] =
     await Promise.all([
       readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
       readFile(new URL("../../src/pages/settings/index.ts", import.meta.url), "utf8"),
+      readFile(new URL("../../src/pages/settings/index.wxml", import.meta.url), "utf8"),
       readFile(
         new URL("../../src/pages/settings/home-modules/index.json", import.meta.url),
         "utf8",
       ),
+      readFile(new URL("../../src/pages/settings/home-modules/index.ts", import.meta.url), "utf8"),
+      readFile(new URL("../../src/pages/settings/home-modules/index.wxml", import.meta.url), "utf8"),
+      readFile(new URL("../../src/utils/home-modules.js", import.meta.url), "utf8"),
+      readFile(new URL("../../src/services/home-module-settings.ts", import.meta.url), "utf8"),
     ]);
 
   const appConfig = JSON.parse(appConfigSource);
@@ -18,8 +24,21 @@ test("home module settings uses an independent page route", async () => {
 
   assert.ok(appConfig.pages.includes("pages/settings/home-modules/index"));
   assert.match(settingsPageSource, /wx\.navigateTo\(\{[\s\S]*?pages\/settings\/home-modules\/index/);
+  assert.doesNotMatch(
+    settingsPageSource.match(/handleModuleSettingsTap\(\) \{([\s\S]*?)\n    \}/)?.[1] || "",
+    /requireLoginForAction/,
+  );
+  assert.doesNotMatch(settingsMarkup, /login-required-dialog/);
   assert.doesNotMatch(settingsPageSource, /showModuleSettings|setTabBarHidden/);
   assert.notEqual(moduleSettingsConfig.disableScroll, true);
+  assert.match(moduleSettingsSource, /handleModuleVisibleChange[\s\S]*?requireLoginForAction\(this\)/);
+  assert.match(moduleSettingsSource, /loadHomeModuleSettings\(\)/);
+  assert.match(moduleSettingsSource, /saveHomeModuleSettings\(\)/);
+  assert.match(moduleSettingsMarkup, /title="首页设置"/);
+  assert.match(moduleSettingsMarkup, /<login-required-dialog id="login-required-dialog"/);
+  assert.doesNotMatch(moduleSource, /getStorageSync|setStorageSync|removeStorageSync/);
+  assert.match(settingsService, /path: "\/api\/auth\/home-modules"/);
+  assert.match(settingsService, /wx\.removeStorageSync\(LEGACY_STORAGE_KEY\)/);
 });
 
 test("account section displays and copies the public UID", async () => {

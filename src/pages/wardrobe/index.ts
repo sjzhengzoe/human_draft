@@ -169,7 +169,6 @@ Page({
   },
 
   handleManageCategories() {
-    if (!requireLoginForAction(this)) return
     if (!this.data.contentLoading) {
       wx.navigateTo({ url: "/pages/wardrobe/categories/index" })
     }

@@ -1,5 +1,3 @@
-const HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY = "HIDDEN_HOME_MODULE_KEYS_V1"
-
 const HOME_FEATURE_GROUPS = [
   {
     key: "inspiration",
@@ -108,6 +106,7 @@ const HOME_FEATURE_GROUPS = [
 
 let visibleHomeFeatureGroupsCache = null
 let visibleHomeFeatureGroupsSignature = ""
+let hiddenHomeModuleKeys = new Set()
 
 function getAllModuleKeys() {
   return HOME_FEATURE_GROUPS.flatMap((group) => group.items.map((item) => item.key))
@@ -126,24 +125,23 @@ function getHomeModulePath(key) {
 }
 
 function getHiddenModuleKeys() {
-  const stored = wx.getStorageSync(HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY)
-  if (!Array.isArray(stored)) return new Set()
-  const hiddenKeys = new Set(stored.filter((key) => typeof key === "string"))
-  const allKeys = getAllModuleKeys()
-  if (allKeys.length > 0 && allKeys.every((key) => hiddenKeys.has(key))) {
-    hiddenKeys.delete(allKeys[0])
-  }
-  return hiddenKeys
+  return new Set(hiddenHomeModuleKeys)
 }
 
-function saveHiddenModuleKeys(hiddenKeys) {
+function applyHiddenHomeModuleKeys(keys) {
   const knownKeys = getAllModuleKeys()
-  const storedKeys = knownKeys.filter((key) => hiddenKeys.has(key))
-  if (storedKeys.length === 0) {
-    wx.removeStorageSync(HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY)
-    return
+  const requestedKeys = new Set(Array.isArray(keys) ? keys : [])
+  const nextKeys = knownKeys.filter((key) => requestedKeys.has(key))
+  if (knownKeys.length > 0 && nextKeys.length === knownKeys.length) {
+    nextKeys.shift()
   }
-  wx.setStorageSync(HIDDEN_HOME_MODULE_KEYS_STORAGE_KEY, storedKeys)
+  hiddenHomeModuleKeys = new Set(nextKeys)
+  return [...nextKeys]
+}
+
+function getHiddenHomeModuleKeys() {
+  const hiddenKeys = getHiddenModuleKeys()
+  return getAllModuleKeys().filter((key) => hiddenKeys.has(key))
 }
 
 function getVisibleHomeFeatureGroups() {
@@ -197,12 +195,14 @@ function setHomeModuleVisible(key, visible) {
     hiddenKeys.add(key)
   }
 
-  saveHiddenModuleKeys(hiddenKeys)
+  hiddenHomeModuleKeys = hiddenKeys
   return true
 }
 
 module.exports = {
   HOME_FEATURE_GROUPS,
+  applyHiddenHomeModuleKeys,
+  getHiddenHomeModuleKeys,
   getHomeModuleSettingGroups,
   getHomeModulePath,
   getVisibleHomeFeatureGroups,

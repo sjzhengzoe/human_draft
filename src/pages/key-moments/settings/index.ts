@@ -1,4 +1,4 @@
-import { ensureLogin, getCurrentUser } from "../../../services/auth"
+import { getCurrentUser } from "../../../services/auth"
 import {
   DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT,
   getKeyMomentDisplayLayout,
@@ -6,6 +6,7 @@ import {
   setKeyMomentDisplayLayout
 } from "../../../utils/key-moment-settings"
 import type { KeyMomentDisplayLayout } from "../../../utils/key-moment-settings"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 function loadUserLayout(page: WechatMiniprogram.Page.Instance<WechatMiniprogram.IAnyObject, WechatMiniprogram.IAnyObject>, uid: string) {
   page.setData({
@@ -40,20 +41,27 @@ Page({
       loadUserLayout(this, user.uid)
       return
     }
+    this.setData({
+      uid: "",
+      activeLayout: DEFAULT_KEY_MOMENT_DISPLAY_LAYOUT,
+      ready: true
+    })
+  },
 
-    ensureLogin()
-      .then((session) => loadUserLayout(this, session.user.uid))
-      .catch(() => undefined)
+  onShow() {
+    const user = getCurrentUser()
+    if (user && user.uid !== this.data.uid) loadUserLayout(this, user.uid)
   },
 
   handleLayoutTap(event: WechatMiniprogram.TouchEvent) {
     const layout = event.currentTarget.dataset.value
     if (
       !this.data.ready
-      || !this.data.uid
       || !isKeyMomentDisplayLayout(layout)
       || layout === this.data.activeLayout
     ) return
+    if (!requireLoginForAction(this)) return
+    if (!this.data.uid) return
 
     if (!setKeyMomentDisplayLayout(this.data.uid, layout)) {
       wx.showToast({ title: "保存失败，请重试", icon: "none" })

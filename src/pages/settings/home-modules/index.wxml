@@ -1,6 +1,6 @@
 <view class="module-settings-page">
   <custom-navigation
-    title="首页模块显示设置"
+    title="首页设置"
     background="{{themeColors.pageBackground}}"
   />
 
@@ -17,6 +17,7 @@
             class="module-settings-switch"
             checked="{{item.visible}}"
             color="{{themeColors.actionPrimary}}"
+            disabled="{{settingsLoading || settingsSaving}}"
             data-key="{{item.key}}"
             bindchange="handleModuleVisibleChange"
           />
@@ -25,3 +26,5 @@
     </view>
   </view>
 </view>
+
+<login-required-dialog id="login-required-dialog" />

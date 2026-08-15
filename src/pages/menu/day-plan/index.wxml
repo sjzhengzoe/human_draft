@@ -127,3 +127,4 @@
 
 <app-dialog visible="{{showRemoveDialog}}" title="删除一个档位" content="最后一个档位中的菜品也会一起移除。" confirmText="删除" bind:cancel="handleRemoveCancel" bind:confirm="handleRemoveConfirm" />
 <operation-loading visible="{{saving}}" text="正在保存菜单…" />
+<login-required-dialog id="login-required-dialog" />

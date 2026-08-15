@@ -1,4 +1,5 @@
 import { getMenuRanking } from "../../../services/menu"
+import { getCurrentUser } from "../../../services/auth"
 import type { MenuRankingItem } from "../../../types/api"
 import {
   activateAsyncPage,
@@ -54,6 +55,7 @@ Page({
     effectiveLabel: "",
     items: [] as MenuRankingItem[],
     loading: true,
+    guestMode: false,
     errorMessage: ""
   },
 
@@ -65,12 +67,38 @@ Page({
     const anchorDate = /^\d{4}-\d{2}-\d{2}$/.test(query.date || "")
       ? query.date as string
       : formatDate(new Date())
-    this.setData({ dimension, anchorDate }, () => this.loadData())
+    this.setData({ dimension, anchorDate }, () => {
+      if (!getCurrentUser()) {
+        const range = rangeFor(dimension, anchorDate)
+        this.setData({
+          periodLabel: range.label,
+          effectiveLabel: "",
+          items: [],
+          loading: false,
+          guestMode: true,
+          errorMessage: ""
+        })
+        return
+      }
+      this.loadData()
+    })
+  },
+
+  onShow() {
+    activateAsyncPage(this)
+    if (getCurrentUser() && this.data.guestMode) {
+      this.setData({ guestMode: false }, () => this.loadData())
+    }
   },
 
   onUnload() { deactivateAsyncPage(this) },
 
   async loadData() {
+    if (!getCurrentUser()) {
+      const range = rangeFor(this.data.dimension, this.data.anchorDate)
+      this.setData({ periodLabel: range.label, effectiveLabel: "", items: [], loading: false })
+      return
+    }
     const generation = beginAsyncPageRequest(this)
     const range = rangeFor(this.data.dimension, this.data.anchorDate)
     this.setData({ loading: true, errorMessage: "", periodLabel: range.label })

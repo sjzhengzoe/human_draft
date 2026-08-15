@@ -43,3 +43,5 @@
     </view>
   </view>
 </view>
+
+<login-required-dialog id="login-required-dialog" />

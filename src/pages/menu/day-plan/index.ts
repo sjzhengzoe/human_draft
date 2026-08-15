@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../../services/auth"
+import { getCurrentUser } from "../../../services/auth"
 import {
   getMenuScheduleRange,
   listDishes,
@@ -18,6 +18,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 type TimeMode = "day" | "week" | "month" | "year"
 
@@ -312,6 +313,7 @@ Page({
     loading: true,
     saving: false,
     hasLoaded: false,
+    guestMode: false,
     errorMessage: "",
     showRemoveDialog: false,
     removeMealIndex: -1
@@ -319,11 +321,24 @@ Page({
 
   onLoad() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.showGuestPlan()
+      return
+    }
     this.loadInitialData()
   },
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      if (!this.data.guestMode) this.showGuestPlan()
+      return
+    }
+    if (this.data.guestMode) {
+      this.setData({ guestMode: false, hasLoaded: false })
+      this.loadInitialData()
+      return
+    }
     if (this.data.hasLoaded) this.loadSchedule()
   },
 
@@ -331,11 +346,23 @@ Page({
     deactivateAsyncPage(this)
   },
 
+  showGuestPlan() {
+    this.applySchedule([])
+    this.setData({
+      dishes: [],
+      loading: false,
+      hasLoaded: true,
+      guestMode: true,
+      errorMessage: ""
+    })
+  },
+
   async loadInitialData() {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     this.setData({ loading: true, errorMessage: "" })
     try {
-      await Promise.all([initializeUIFont().catch(() => undefined), ensureLogin()])
+      await initializeUIFont().catch(() => undefined)
       const dishes = await listAllDishes()
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({ dishes })
@@ -351,6 +378,10 @@ Page({
   },
 
   async loadSchedule(existingGeneration?: number) {
+    if (!getCurrentUser()) {
+      this.applySchedule([])
+      return
+    }
     const generation = existingGeneration || beginAsyncPageRequest(this)
     const range = rangeFor(this.data.activeMode, this.data.selectedDate)
     if (!existingGeneration) this.setData({ loading: true, errorMessage: "" })
@@ -421,6 +452,7 @@ Page({
   },
 
   handleMealEdit(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const date = String(event.currentTarget.dataset.date || this.data.selectedDate)
     const period = String(event.currentTarget.dataset.period || "") as MealPeriod
     if (!MEAL_DEFINITIONS.some((meal) => meal.key === period)) return
@@ -461,6 +493,7 @@ Page({
   },
 
   async handleRandomize() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.dishes.length || this.data.saving) {
       if (!this.data.dishes.length) wx.showToast({ title: "暂无可随机的选项", icon: "none" })
       return
@@ -513,6 +546,7 @@ Page({
   },
 
   async handleAddSlot(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const mealIndex = Number(event.currentTarget.dataset.mealIndex)
     const meal = this.data.dayMeals[mealIndex]
     if (!meal || meal.slotCount >= 12 || this.data.saving) return
@@ -520,6 +554,7 @@ Page({
   },
 
   handleRemoveSlotRequest(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const mealIndex = Number(event.currentTarget.dataset.mealIndex)
     const meal = this.data.dayMeals[mealIndex]
     if (!meal || meal.slotCount <= 1 || this.data.saving) return
@@ -531,12 +566,14 @@ Page({
   },
 
   async handleRemoveConfirm() {
+    if (!requireLoginForAction(this)) return
     const meal = this.data.dayMeals[this.data.removeMealIndex]
     this.setData({ showRemoveDialog: false, removeMealIndex: -1 })
     if (meal) await this.saveSlotChange(meal, meal.slotCount - 1)
   },
 
   async saveSlotChange(meal: MealSection, slotCount: number) {
+    if (!requireLoginForAction(this)) return
     this.setData({ saving: true })
     try {
       await replaceMenuScheduleMeal({

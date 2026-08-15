@@ -100,8 +100,7 @@ Page({
   },
 
   handleManagerOpen() {
-    if (!requireLoginForAction(this)) return
-    if (!this.data.canWrite || this.data.loading) return
+    if ((!this.data.canWrite && !this.data.guestMode) || this.data.loading) return
     wx.navigateTo({
       url: `/pages/activities/manage/index?type=${encodeURIComponent(this.data.activeType)}`
     })

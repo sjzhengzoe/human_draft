@@ -1,4 +1,4 @@
-import { ensureLogin } from "../../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../../services/auth"
 import {
   deleteActivityItem,
   listActivityItems,
@@ -12,6 +12,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
 
@@ -29,7 +30,8 @@ Page({
     deleting: false,
     showDeleteDialog: false,
     pendingDeleteId: "",
-    pendingDeleteName: ""
+    pendingDeleteName: "",
+    guestMode: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -39,6 +41,11 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ items: [], loading: false, hasLoaded: true, guestMode: true })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     void this.loadItems(this.data.hasLoaded)
   },
 
@@ -47,6 +54,7 @@ Page({
   },
 
   async loadItems(silent = false) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     if (!silent) this.setData({ loading: true })
     try {
@@ -74,6 +82,7 @@ Page({
   },
 
   handleManagerEdit(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.ordering || this.data.deleting) return
     const id = String(event.currentTarget.dataset.id || "")
     if (!id) return
@@ -83,6 +92,7 @@ Page({
   },
 
   async handleManagerMove(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.ordering) return
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
@@ -111,6 +121,7 @@ Page({
   },
 
   handleDeleteRequest(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.deleting || this.data.ordering) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)

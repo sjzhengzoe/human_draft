@@ -46,3 +46,5 @@
   </view>
   <operation-loading visible="{{moving}}" text="正在保存排序…" />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

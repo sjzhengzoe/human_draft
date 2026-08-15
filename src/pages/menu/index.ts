@@ -763,7 +763,6 @@ Page({
   },
 
   handleFavoritesManage() {
-    if (!requireLoginForAction(this)) return
     wx.navigateTo({ url: "/pages/menu/favorites/index" })
   },
 
@@ -995,7 +994,6 @@ Page({
   },
 
   handlePrintTap() {
-    if (!requireLoginForAction(this)) return
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
@@ -1005,7 +1003,6 @@ Page({
   },
 
   handleDayPlanTap() {
-    if (!requireLoginForAction(this)) return
     if (this.data.sorting || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })

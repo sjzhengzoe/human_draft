@@ -1,6 +1,8 @@
 import { listMenuFavorites, replaceMenuFavorites } from "../../../services/menu"
+import { getCurrentUser } from "../../../services/auth"
 import type { MenuFavorite } from "../../../types/api"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 function toInput(item: MenuFavorite) {
   return item.source_kind === "dish"
@@ -13,16 +15,23 @@ Page({
     items: [] as MenuFavorite[],
     loading: true,
     saving: false,
+    guestMode: false,
     errorMessage: ""
   },
 
   onShow() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ items: [], loading: false, guestMode: true, errorMessage: "" })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false })
     this.loadData()
   },
   onUnload() { deactivateAsyncPage(this) },
 
   async loadData() {
+    if (!getCurrentUser()) return
     this.setData({ loading: true, errorMessage: "" })
     try {
       const items = await listMenuFavorites()
@@ -35,10 +44,12 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     wx.navigateTo({ url: "/pages/menu/index?mode=favorites" })
   },
 
   async saveItems(items: MenuFavorite[]) {
+    if (!requireLoginForAction(this)) return
     if (this.data.saving) return
     const previous = this.data.items
     this.setData({ items, saving: true })
@@ -56,11 +67,13 @@ Page({
   },
 
   handleRemove(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const id = String(event.currentTarget.dataset.id || "")
     this.saveItems(this.data.items.filter((item) => item.id !== id))
   },
 
   handleMove(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     const index = Number(event.currentTarget.dataset.index)
     const direction = Number(event.currentTarget.dataset.direction)
     const target = index + direction

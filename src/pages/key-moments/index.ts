@@ -267,7 +267,6 @@ Page({
   },
 
   handleSettings() {
-    if (!requireLoginForAction(this)) return
     if (this.data.loading) return
     wx.navigateTo({ url: "/pages/key-moments/settings/index" })
   },

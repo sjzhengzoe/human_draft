@@ -1,5 +1,5 @@
 import { APP_FONTS } from "../../../config/fonts"
-import { ensureLogin } from "../../../services/auth"
+import { getCurrentUser } from "../../../services/auth"
 import { loadAppFont } from "../../../services/font-loader"
 import { listCategories, listDishes, updatePrintStatus } from "../../../services/menu"
 import type { Category, Dish } from "../../../types/api"
@@ -11,6 +11,7 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 type PrintDish = Dish & { selectionOrder: number }
 
@@ -243,6 +244,7 @@ Page({
     loading: true,
     contentLoading: false,
     hasLoaded: false,
+    guestMode: false,
     generating: false,
     updatingPrinted: false,
     outputPath: "",
@@ -251,14 +253,47 @@ Page({
 
   onLoad() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.showGuestPrintPage()
+      return
+    }
     this.loadData()
+  },
+
+  onShow() {
+    activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      if (!this.data.guestMode) this.showGuestPrintPage()
+      return
+    }
+    if (this.data.guestMode) {
+      this.setData({ guestMode: false, hasLoaded: false })
+      this.loadData()
+    }
   },
 
   onUnload() {
     deactivateAsyncPage(this)
   },
 
+  showGuestPrintPage() {
+    this.setData({
+      categories: [],
+      dishes: [],
+      selectedIds: [],
+      selectedDishes: [],
+      canWrite: false,
+      loading: false,
+      contentLoading: false,
+      hasLoaded: true,
+      guestMode: true,
+      outputPath: "",
+      errorMessage: ""
+    })
+  },
+
   async loadData() {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const activeCategoryId = this.data.activeCategoryId
     const activePrintStatus = this.data.activePrintStatus
@@ -269,7 +304,8 @@ Page({
       errorMessage: ""
     })
     try {
-      const session = await ensureLogin()
+      const user = getCurrentUser()
+      if (!user) return
       const [categories, dishes] = await Promise.all([
         listCategories(),
         listDishes({
@@ -291,7 +327,7 @@ Page({
           ...dish,
           selectionOrder: selectedIds.indexOf(dish.id) + 1
         })),
-        canWrite: session.user.can_write
+        canWrite: user.can_write
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -518,6 +554,7 @@ Page({
   },
 
   async handleConfirmPrinted() {
+    if (!requireLoginForAction(this)) return
     if (
       !this.data.canWrite ||
       !this.data.outputPath ||

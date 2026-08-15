@@ -97,3 +97,5 @@
 
   <canvas type="2d" id="menuPrintCanvas" class="print-canvas"></canvas>
 </view>
+
+<login-required-dialog id="login-required-dialog" />

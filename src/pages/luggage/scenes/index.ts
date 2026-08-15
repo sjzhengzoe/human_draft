@@ -5,6 +5,7 @@ import {
   reorderLuggageScenes,
   updateLuggageScene
 } from "../../../services/luggage"
+import { getCurrentUser } from "../../../services/auth"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
@@ -14,6 +15,7 @@ import {
 } from "../../../utils/async-page"
 import { hasSameOrder } from "../../../utils/drag-sort"
 import { getLuggageDataRevision } from "../../../utils/luggage-data-cache"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 let luggageSceneSortOriginalIds: string[] = []
 
@@ -30,6 +32,7 @@ Page({
     deleteConfirmVisible: false,
     savingOrder: false,
     sortEditing: false,
+    guestMode: false,
     luggageRevision: -1,
     errorMessage: ""
   },
@@ -37,6 +40,17 @@ Page({
   onShow() {
     activateAsyncPage(this)
     if (this.data.sortEditing) return
+    if (!getCurrentUser()) {
+      this.setData({
+        scenes: [],
+        loading: false,
+        hasLoaded: true,
+        guestMode: true,
+        errorMessage: ""
+      })
+      return
+    }
+    if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
     if (!this.data.hasLoaded || this.data.luggageRevision !== getLuggageDataRevision()) {
       void this.loadScenes()
     }
@@ -48,6 +62,7 @@ Page({
   },
 
   async loadScenes(forceRefresh = false) {
+    if (!getCurrentUser()) return
     const generation = beginAsyncPageRequest(this)
     const initial = !this.data.hasLoaded
     this.setData({ loading: initial, errorMessage: "" })
@@ -71,6 +86,7 @@ Page({
   },
 
   handleAdd() {
+    if (!requireLoginForAction(this)) return
     if (this.data.savingOrder || this.data.sceneSaving || this.data.deleting) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
@@ -88,6 +104,7 @@ Page({
   },
 
   async saveScene(event: WechatMiniprogram.CustomEvent<{ name?: string }>) {
+    if (!requireLoginForAction(this)) return
     const name = String(event.detail.name || "").trim()
     if (!name || this.data.sceneSaving) return
     const editingId = this.data.sceneEditingId
@@ -130,6 +147,7 @@ Page({
   },
 
   handleEdit(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.savingOrder || this.data.sceneSaving || this.data.deleting || this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
     const name = String(event.currentTarget.dataset.name || "")
@@ -143,6 +161,7 @@ Page({
   },
 
   openSceneDeleteConfirm() {
+    if (!requireLoginForAction(this)) return
     if (!this.data.sceneEditingId || this.data.sceneSaving || this.data.deleting) return
     this.setData({ sceneDialogVisible: false, deleteConfirmVisible: true })
   },
@@ -152,6 +171,7 @@ Page({
   },
 
   async confirmSceneDelete() {
+    if (!requireLoginForAction(this)) return
     const id = this.data.sceneEditingId
     if (!id || this.data.sceneSaving || this.data.deleting) return
     this.setData({ deleting: true })
@@ -177,6 +197,7 @@ Page({
   },
 
   handleSceneMove(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (!this.data.sortEditing || this.data.savingOrder || this.data.deleting) return
     const index = Number(event.currentTarget.dataset.index)
     const targetIndex = index + Number(event.currentTarget.dataset.direction)
@@ -190,6 +211,7 @@ Page({
   },
 
   async handleSortEditingToggle() {
+    if (!requireLoginForAction(this)) return
     if (
       this.data.savingOrder || this.data.sceneSaving || this.data.deleting ||
       this.data.loading || this.data.scenes.length < 2

@@ -414,7 +414,6 @@ Page({
   },
 
   handleSettings() {
-    if (!requireLoginForAction(this)) return
     if (this.data.busy) return
     wx.navigateTo({ url: "/exercise/pages/settings/index" })
   },

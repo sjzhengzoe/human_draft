@@ -400,8 +400,7 @@ Page({
   },
 
   handleManageScenes() {
-    if (!requireLoginForAction(this)) return
-    if (!this.data.canWrite || this.data.contentLoading) return
+    if ((!this.data.canWrite && !this.data.guestMode) || this.data.contentLoading) return
     if (this.data.sortEditing) {
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return

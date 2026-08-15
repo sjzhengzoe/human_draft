@@ -41,6 +41,11 @@ export type ImageStorageUsage = {
   modules: ImageStorageUsageModule[]
 }
 
+export type HomeModuleSettings = {
+  configured: boolean
+  hidden_module_keys: string[]
+}
+
 export type Category = {
   id: string
   name: string

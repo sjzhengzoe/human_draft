@@ -717,8 +717,7 @@ Page({
   },
 
   handleManageCategories() {
-    if (!requireLoginForAction(this)) return
-    if (!this.data.canWrite || this.data.contentLoading) return
+    if ((!this.data.canWrite && !this.data.guestMode) || this.data.contentLoading) return
     wx.navigateTo({ url: "/pages/media/categories/index" })
   },
 

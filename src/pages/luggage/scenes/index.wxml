@@ -110,3 +110,5 @@
     text="{{deleting ? '正在删除场景…' : '正在保存排序…'}}"
   />
 </view>
+
+<login-required-dialog id="login-required-dialog" />

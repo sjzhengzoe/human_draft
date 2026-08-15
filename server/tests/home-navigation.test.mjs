@@ -4,6 +4,13 @@ import test from "node:test"
 
 const projectRoot = new URL("../../", import.meta.url)
 
+function methodBody(source, name) {
+  const start = source.indexOf(`${name}(`)
+  if (start < 0) return ""
+  const end = source.indexOf("\n  },", start)
+  return source.slice(start, end < 0 ? source.length : end)
+}
+
 test("home modules open before login and action login returns to the current page", async () => {
   const [homePage, loginPage, homeModules] = await Promise.all([
     readFile(new URL("src/pages/create/index.ts", projectRoot), "utf8"),
@@ -112,4 +119,54 @@ test("personal feature pages render a guest state before requesting private data
   )
   assert.match(footprint, /if \(getCurrentUser\(\)\) void this\.loadCloudFootprint\(\)/)
   assert.match(footprint, /handleCityTap[\s\S]*?requireLoginForAction\(this\)/)
+})
+
+test("login prompts wait for a write action instead of blocking management pages", async () => {
+  const parentChecks = [
+    ["src/pages/media/index.ts", "handleManageCategories"],
+    ["src/pages/wardrobe/index.ts", "handleManageCategories"],
+    ["src/pages/activities/index.ts", "handleManagerOpen"],
+    ["src/pages/luggage/index.ts", "handleManageScenes"],
+    ["src/pages/key-moments/index.ts", "handleSettings"],
+    ["src/exercise/pages/index.ts", "handleSettings"],
+    ["src/pages/menu/index.ts", "handleFavoritesManage"],
+    ["src/pages/menu/index.ts", "handlePrintTap"],
+    ["src/pages/menu/index.ts", "handleDayPlanTap"],
+  ]
+
+  for (const [path, handler] of parentChecks) {
+    const source = await readFile(new URL(path, projectRoot), "utf8")
+    const body = methodBody(source, handler)
+    assert.ok(body, `${path} must keep ${handler}`)
+    assert.doesNotMatch(body, /requireLoginForAction/, `${handler} must remain browseable as a guest`)
+    assert.match(body, /wx\.navigateTo\(/, `${handler} must still open its destination`)
+  }
+
+  const writeChecks = [
+    ["src/pages/media/categories/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
+    ["src/pages/wardrobe/categories/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
+    ["src/pages/activities/manage/index.ts", ["handleManagerEdit", "handleManagerMove", "handleDeleteRequest"]],
+    ["src/pages/luggage/scenes/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
+    ["src/pages/key-moments/settings/index.ts", ["handleLayoutTap"]],
+    ["src/exercise/pages/settings/index.ts", ["handleSave", "handleReset"]],
+    ["src/pages/menu/favorites/index.ts", ["handleAdd", "handleRemove", "handleMove"]],
+    ["src/pages/menu/day-plan/index.ts", ["handleMealEdit", "handleRandomize", "handleAddSlot", "handleRemoveSlotRequest"]],
+    ["src/pages/menu/print/index.ts", ["handleConfirmPrinted"]],
+  ]
+
+  for (const [path, handlers] of writeChecks) {
+    const [source, markup] = await Promise.all([
+      readFile(new URL(path, projectRoot), "utf8"),
+      readFile(new URL(path.replace(/\.ts$/, ".wxml"), projectRoot), "utf8"),
+    ])
+    assert.match(source, /getCurrentUser\(\)/, `${path} must identify guest mode before private reads`)
+    assert.match(markup, /<login-required-dialog id="login-required-dialog"/)
+    for (const handler of handlers) {
+      assert.match(
+        methodBody(source, handler),
+        /requireLoginForAction\(this\)/,
+        `${path} must defer login until ${handler}`,
+      )
+    }
+  }
 })

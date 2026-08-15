@@ -5,6 +5,10 @@ import {
   refreshSession
 } from "../domains/auth/service.mjs"
 import {
+  getUserHomeModuleSettings,
+  saveUserHomeModuleSettings
+} from "../domains/auth/home-module-settings.mjs"
+import {
   readAvatarImage,
   updateUserAvatar,
   updateUserDisplayName
@@ -89,6 +93,31 @@ export function registerAuthRoutes(app, context) {
       data: await getUserImageStorageUsage(
         getSupabaseAdmin(),
         request.auth.user.uid
+      )
+    })
+  )
+
+  app.get(
+    "/api/auth/home-modules",
+    { preHandler: authenticated },
+    async (request) => ({
+      ok: true,
+      data: await getUserHomeModuleSettings(
+        getSupabaseAdmin(),
+        request.auth.user.uid
+      )
+    })
+  )
+
+  app.put(
+    "/api/auth/home-modules",
+    { preHandler: authenticated },
+    async (request) => ({
+      ok: true,
+      data: await saveUserHomeModuleSettings(
+        getSupabaseAdmin(),
+        request.auth.user.uid,
+        request.body?.hidden_module_keys
       )
     })
   )

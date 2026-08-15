@@ -3,7 +3,9 @@ import {
   resetExerciseState,
   saveExerciseSettings
 } from "../../services/exercise"
+import { getCurrentUser } from "../../../services/auth"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
+import { requireLoginForAction } from "../../../utils/login-required"
 
 function digitsOnly(value: string, maxLength: number) {
   return value.replace(/\D/g, "").slice(0, maxLength)
@@ -21,6 +23,10 @@ Page({
 
   onLoad() {
     activateAsyncPage(this)
+    if (!getCurrentUser()) {
+      this.setData({ loading: false })
+      return
+    }
     this.loadSettings()
   },
 
@@ -29,6 +35,7 @@ Page({
   },
 
   async loadSettings() {
+    if (!getCurrentUser()) return
     try {
       const dashboard = await getExerciseDashboard()
       if (!isAsyncPageActive(this)) return
@@ -61,6 +68,7 @@ Page({
   },
 
   async handleSave() {
+    if (!requireLoginForAction(this)) return
     if (this.data.saving || this.data.resetting) return
     const dailyMinutes = Number(this.data.dailyMinutes)
     const monthlyRestDays = Number(this.data.monthlyRestDays)
@@ -96,6 +104,7 @@ Page({
   },
 
   handleReset() {
+    if (!requireLoginForAction(this)) return
     if (this.data.saving || this.data.resetting) return
     this.setData({ resetConfirmVisible: true })
   },
@@ -112,6 +121,7 @@ Page({
   },
 
   async performReset() {
+    if (!requireLoginForAction(this)) return
     this.setData({ resetting: true })
     try {
       await resetExerciseState()

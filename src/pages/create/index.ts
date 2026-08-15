@@ -1,4 +1,5 @@
 import { hideGlobalLoading } from "../../services/loading"
+import { loadHomeModuleSettings } from "../../services/home-module-settings"
 import {
   getVisibleHomeFeatureGroups
 } from "../../utils/home-modules"
@@ -48,6 +49,7 @@ Component({
     show() {
       const page = this as CreatePageInstance
       page.navigationLocked = false
+      const settingsPromise = loadHomeModuleSettings()
       const tabBar = page.getTabBar && page.getTabBar()
 
       updateAppTabBarState(tabBar, {
@@ -70,6 +72,20 @@ Component({
         updates.greetingText = nextGreetingText
       }
       if (Object.keys(updates).length > 0) this.setData(updates)
+
+      void settingsPromise
+        .then(() => {
+          const loadedFeatureGroups = getVisibleHomeFeatureGroups()
+          if (
+            getGroupKeySignature(loadedFeatureGroups) !==
+            getGroupKeySignature(this.data.featureGroups)
+          ) {
+            this.setData({ featureGroups: loadedFeatureGroups })
+          }
+        })
+        .catch(() => {
+          // 首页保持默认模块即可，进入设置页时再展示明确的读取错误。
+        })
 
       if (page.hasRendered) {
         wx.nextTick(() => hideGlobalLoading())
