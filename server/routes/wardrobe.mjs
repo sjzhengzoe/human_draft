@@ -1,4 +1,5 @@
 import { readMultipartImage } from "../http/multipart-image.mjs";
+import { checkUserText } from "../domains/shared/content-security.mjs";
 import {
   createWardrobeCategory,
   createWardrobeItem,
@@ -51,6 +52,12 @@ export function registerWardrobeRoutes(app, context) {
     "/api/wardrobe/categories",
     { preHandler: authenticated },
     async (request, reply) => {
+      await checkUserText(
+        contentSecurity,
+        request.auth.user.openid,
+        request.body?.name,
+        request.body?.fields,
+      );
       const item = await createWardrobeCategory(
         getSupabaseAdmin(),
         request.auth.user.uid,
@@ -76,17 +83,25 @@ export function registerWardrobeRoutes(app, context) {
   app.put(
     "/api/wardrobe/categories/:id",
     { preHandler: authenticated },
-    async (request) => ({
-      ok: true,
-      data: {
-        item: await updateWardrobeCategory(
-          getSupabaseAdmin(),
-          request.auth.user.uid,
-          request.params.id,
-          request.body || {},
-        ),
-      },
-    }),
+    async (request) => {
+      await checkUserText(
+        contentSecurity,
+        request.auth.user.openid,
+        request.body?.name,
+        request.body?.fields,
+      );
+      return {
+        ok: true,
+        data: {
+          item: await updateWardrobeCategory(
+            getSupabaseAdmin(),
+            request.auth.user.uid,
+            request.params.id,
+            request.body || {},
+          ),
+        },
+      };
+    },
   );
 
   app.delete(
@@ -126,7 +141,10 @@ export function registerWardrobeRoutes(app, context) {
 
   app.post("/api/wardrobe/items", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request);
-    await contentSecurity.checkImage(image);
+    await Promise.all([
+      checkUserText(contentSecurity, request.auth.user.openid, fields.name, fields.values),
+      contentSecurity.checkImage(image),
+    ]);
     const item = await createWardrobeItem(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -158,17 +176,25 @@ export function registerWardrobeRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateWardrobeItem(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/wardrobe/items/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.name,
+      request.body?.values,
+    );
+    return {
+      ok: true,
+      data: {
+        item: await updateWardrobeItem(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.post("/api/wardrobe/items/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request);

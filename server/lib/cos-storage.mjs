@@ -77,6 +77,44 @@ export async function deleteCosObject(key) {
   return callCos("deleteObject", baseParameters(key));
 }
 
+export async function deleteCosObjects(keys = []) {
+  const uniqueKeys = [...new Set(keys.filter(Boolean))];
+  if (!uniqueKeys.length) return { deletedKeys: [], failedKeys: [] };
+  if (testAdapter?.deleteObjects) return testAdapter.deleteObjects(uniqueKeys);
+  if (testAdapter) {
+    const deletedKeys = [];
+    const failedKeys = [];
+    for (const key of uniqueKeys) {
+      try {
+        await testAdapter.deleteObject(key);
+        deletedKeys.push(key);
+      } catch (_error) {
+        failedKeys.push(key);
+      }
+    }
+    return { deletedKeys, failedKeys };
+  }
+
+  const deletedKeys = [];
+  const failedKeys = [];
+  for (let index = 0; index < uniqueKeys.length; index += 1000) {
+    const batch = uniqueKeys.slice(index, index + 1000);
+    try {
+      const result = await callCos("deleteMultipleObject", {
+        Bucket: config.cosBucket,
+        Region: config.cosRegion,
+        Quiet: false,
+        Objects: batch.map((Key) => ({ Key })),
+      });
+      const failed = new Set((result.Error || []).map((item) => item.Key));
+      batch.forEach((key) => (failed.has(key) ? failedKeys : deletedKeys).push(key));
+    } catch (_error) {
+      failedKeys.push(...batch);
+    }
+  }
+  return { deletedKeys, failedKeys };
+}
+
 export function getCosSignedObjectUrl(key, expiresIn, query = {}) {
   if (testAdapter) return testAdapter.getSignedObjectUrl(key, expiresIn, query);
   return new Promise((resolve, reject) => {

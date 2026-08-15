@@ -15,7 +15,7 @@ function callbackError(result: WechatMiniprogram.GeneralCallbackResult, fallback
   return new Error(result.errMsg || fallback)
 }
 
-function wxLogin(): Promise<string> {
+export function getWechatLoginCode(): Promise<string> {
   return new Promise((resolve, reject) => {
     wx.login({
       success(result) {
@@ -73,7 +73,7 @@ async function runLogin(): Promise<AuthSession> {
   if (pendingLogin) return pendingLogin
 
   pendingLogin = (async () => {
-    const code = await wxLogin()
+    const code = await getWechatLoginCode()
     const session = await requestWechatSession(code)
     setStoredSession(session)
     redirectingToLogin = false
@@ -116,15 +116,7 @@ export async function refreshLoginSession(expectedRefreshToken?: string): Promis
 
 export function redirectToLogin(expectedToken?: string): void {
   if (!clearStoredSession(expectedToken)) return
-  clearLuggageDataCache()
-  clearMediaDataCache()
-  clearKeyMomentDataCache()
-  applyHiddenHomeModuleKeys([])
-  try {
-    getApp<IAppOption>().globalData.currentUser = null
-  } catch (_error) {
-    // App 初始化早期可能还取不到实例。
-  }
+  clearLocalAccountState()
 
   const pages = getCurrentPages()
   const currentRoute = pages[pages.length - 1]?.route
@@ -136,6 +128,19 @@ export function redirectToLogin(expectedToken?: string): void {
       redirectingToLogin = false
     }
   })
+}
+
+export function clearLocalAccountState(): void {
+  clearStoredSession()
+  clearLuggageDataCache()
+  clearMediaDataCache()
+  clearKeyMomentDataCache()
+  applyHiddenHomeModuleKeys([])
+  try {
+    getApp<IAppOption>().globalData.currentUser = null
+  } catch (_error) {
+    // App 初始化早期可能还取不到实例。
+  }
 }
 
 export async function ensureLogin(): Promise<AuthSession> {
@@ -173,14 +178,5 @@ export async function logout(): Promise<void> {
       })
     })
   }
-  clearStoredSession()
-  clearLuggageDataCache()
-  clearMediaDataCache()
-  clearKeyMomentDataCache()
-  applyHiddenHomeModuleKeys([])
-  try {
-    getApp<IAppOption>().globalData.currentUser = null
-  } catch (_error) {
-    // 忽略 App 销毁阶段的取值失败。
-  }
+  clearLocalAccountState()
 }

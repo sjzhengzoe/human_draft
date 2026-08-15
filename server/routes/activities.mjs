@@ -7,6 +7,7 @@ import {
   swapActivityItemSortOrders,
   updateActivityItem,
 } from "../domains/activities/service.mjs";
+import { checkUserText } from "../domains/shared/content-security.mjs";
 
 export function registerActivityRoutes(app, context) {
   const { authenticated, contentSecurity, getSupabaseAdmin } = context;
@@ -28,7 +29,10 @@ export function registerActivityRoutes(app, context) {
     if (request.isMultipart()) {
       ({ fields, image } = await readActivityMultipart(request));
     }
-    if (image) await contentSecurity.checkImage(image);
+    await Promise.all([
+      checkUserText(contentSecurity, request.auth.user.openid, fields.name, fields.introduction),
+      image ? contentSecurity.checkImage(image) : undefined,
+    ]);
     const item = await createActivityItem(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -47,17 +51,25 @@ export function registerActivityRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/activities/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateActivityItem(
+  app.put("/api/activities/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.name,
+      request.body?.introduction,
+    );
+    return {
+      ok: true,
+      data: {
+        item: await updateActivityItem(
         getSupabaseAdmin(),
         request.auth.user.uid,
         request.params.id,
         request.body || {},
       ),
-    },
-  }));
+      },
+    };
+  });
 
   app.post("/api/activities/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readActivityMultipart(request);

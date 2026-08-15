@@ -14,9 +14,11 @@ import {
   updateUserDisplayName
 } from "../domains/auth/profile.mjs"
 import { getUserImageStorageUsage } from "../domains/shared/image-storage.mjs"
+import { assertCondition } from "../lib/errors.mjs"
 
 export function registerAuthRoutes(app, context) {
   const {
+    accountDeletion,
     authenticated,
     contentSecurity,
     getSupabaseAdmin,
@@ -33,10 +35,7 @@ export function registerAuthRoutes(app, context) {
       const authResult = await loginWithWechatCode(
         getSupabaseAdmin(),
         request.body?.code,
-        {
-          displayName: request.body?.display_name,
-          avatarUrl: request.body?.avatar_url
-        },
+        {},
         {
           registrationEnabled: registration.enabled,
           registrationMessage: registration.message
@@ -158,6 +157,30 @@ export function registerAuthRoutes(app, context) {
     async (request) => {
       await logoutSession(getSupabaseAdmin(), request.refreshAuth)
       return { ok: true }
+    }
+  )
+
+  app.delete(
+    "/api/auth/account",
+    {
+      config: { allowDuringReadOnly: true },
+      preHandler: authenticated
+    },
+    async (request) => {
+      assertCondition(
+        request.body?.confirmation === "DELETE_MY_ACCOUNT",
+        400,
+        "ACCOUNT_DELETION_NOT_CONFIRMED",
+        "请重新确认注销账号。"
+      )
+      return {
+        ok: true,
+        data: await accountDeletion.deleteAccount({
+          uid: request.auth.user.uid,
+          openId: request.auth.user.openid,
+          code: request.body?.code
+        })
+      }
     }
   )
 }

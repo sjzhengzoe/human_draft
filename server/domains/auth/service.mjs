@@ -105,6 +105,22 @@ async function exchangeWechatCode(code) {
   return result.openid;
 }
 
+export async function verifyWechatIdentity(code, expectedOpenId) {
+  assertCondition(
+    typeof code === "string" && code.trim().length > 0,
+    400,
+    "INVALID_WECHAT_CODE",
+    "无法确认当前微信账号，请重试。",
+  );
+  const openId = await exchangeWechatCode(code.trim());
+  assertCondition(
+    openId === expectedOpenId,
+    403,
+    "ACCOUNT_IDENTITY_MISMATCH",
+    "当前微信账号与登录账号不一致，无法注销。",
+  );
+}
+
 function createRefreshToken() {
   return `r1.${randomBytes(32).toString("base64url")}`;
 }

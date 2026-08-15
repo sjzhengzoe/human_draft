@@ -1,4 +1,5 @@
 import { getCurrentUser, logout } from "../../services/auth"
+import { deleteCurrentAccount } from "../../services/account-deletion"
 import {
   getCachedImageStorageUsage,
   getImageStorageUsage
@@ -10,6 +11,7 @@ type SettingsPageInstance = WechatMiniprogram.Component.TrivialInstance & {
   getTabBar?: () => WechatMiniprogram.Component.TrivialInstance
   navigationLocked?: boolean
   logoutPending?: boolean
+  deleteAccountPending?: boolean
   failedAvatarSignature?: string
   storageUsageRequestId?: number
 }
@@ -68,6 +70,7 @@ Component({
     storageImageCountText: "",
     storageUsageNearLimit: false,
     storageUsageLoading: false,
+    deleteAccountDialogVisible: false,
     themeColors: UI_COLORS
   },
   pageLifetimes: {
@@ -204,6 +207,50 @@ Component({
           wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
         }
       })
+    },
+    handleAboutTap() {
+      const page = this as SettingsPageInstance
+      if (page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: "/pages/settings/about/index",
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
+      })
+    },
+    handleDeleteAccountTap() {
+      const page = this as SettingsPageInstance
+      if (!this.data.loggedIn || page.deleteAccountPending) return
+      this.setData({ deleteAccountDialogVisible: true })
+    },
+    handleDeleteAccountCancel() {
+      const page = this as SettingsPageInstance
+      if (page.deleteAccountPending) return
+      this.setData({ deleteAccountDialogVisible: false })
+    },
+    async handleDeleteAccountConfirm() {
+      const page = this as SettingsPageInstance
+      if (page.deleteAccountPending) return
+      page.deleteAccountPending = true
+      wx.showLoading({ title: "正在注销", mask: true })
+      try {
+        await deleteCurrentAccount()
+        this.setData({ deleteAccountDialogVisible: false })
+        wx.reLaunch({
+          url: "/pages/create/index",
+          fail: () => wx.showToast({ title: "账号已注销，请重新打开小程序", icon: "none" })
+        })
+      } catch (error) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "注销失败，请稍后重试",
+          icon: "none"
+        })
+      } finally {
+        wx.hideLoading()
+        page.deleteAccountPending = false
+      }
     },
     handleRuntimeControlsTap() {
       const page = this as SettingsPageInstance

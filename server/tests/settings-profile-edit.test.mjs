@@ -16,7 +16,7 @@ test("settings profile editing uses a dedicated page with the shared cropper", a
   ]);
 
   assert.match(settingsMarkup, /aria-label="修改头像和昵称"[\s\S]*?bindtap="handleEditProfileTap"/);
-  assert.doesNotMatch(settingsMarkup, /<app-dialog|<image-cropper/);
+  assert.doesNotMatch(settingsMarkup, /<image-cropper/);
   assert.match(settingsLogic, /pages\/settings\/profile-edit\/index/);
   assert.match(config, /"app-input": "\/components\/app-input\/index"/);
   assert.match(config, /"image-cropper": "\/components\/image-cropper\/index"/);

@@ -1,0 +1,58 @@
+.about-page {
+  height: calc(100vh - var(--app-navigation-height));
+  box-sizing: border-box;
+  background: var(--ui-color-background-page);
+}
+
+.about-content {
+  padding: 28rpx var(--ui-page-gutter) calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.about-hero,
+.about-section {
+  padding: 28rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-color-background-surface);
+}
+
+.about-section {
+  margin-top: 20rpx;
+}
+
+.about-hero__eyebrow {
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.about-hero__title,
+.about-section__title {
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-large);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.about-hero__title {
+  margin-top: 6rpx;
+}
+
+.about-hero__text,
+.about-section__text,
+.about-footnote {
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.7;
+}
+
+.about-hero__text,
+.about-section__text {
+  margin-top: 14rpx;
+}
+
+.about-footnote {
+  padding: 28rpx 12rpx 0;
+  font-size: var(--ui-font-size-small);
+}

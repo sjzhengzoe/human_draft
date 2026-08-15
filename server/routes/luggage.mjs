@@ -15,9 +15,10 @@ import {
   updateLuggageItem,
   updateLuggageScene,
 } from "../domains/luggage/service.mjs";
+import { checkUserText } from "../domains/shared/content-security.mjs";
 
 export function registerLuggageRoutes(app, context) {
-  const { authenticated, getSupabaseAdmin } = context;
+  const { authenticated, contentSecurity, getSupabaseAdmin } = context;
 
   app.get("/api/luggage", { preHandler: authenticated }, async (request) => ({
     ok: true,
@@ -25,6 +26,7 @@ export function registerLuggageRoutes(app, context) {
   }));
 
   app.post("/api/luggage/scenes", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
     const item = await createLuggageScene(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -42,17 +44,20 @@ export function registerLuggageRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateLuggageScene(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateLuggageScene(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/luggage/scenes/:id", { preHandler: authenticated }, async (request) => {
     await deleteLuggageScene(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
@@ -60,6 +65,7 @@ export function registerLuggageRoutes(app, context) {
   });
 
   app.post("/api/luggage/groups", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
     const item = await createLuggageGroup(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -68,17 +74,20 @@ export function registerLuggageRoutes(app, context) {
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/luggage/groups/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateLuggageGroup(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/luggage/groups/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateLuggageGroup(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/luggage/groups/:id", { preHandler: authenticated }, async (request) => {
     await deleteLuggageGroup(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
@@ -100,6 +109,7 @@ export function registerLuggageRoutes(app, context) {
   });
 
   app.post("/api/luggage/items", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
     const item = await createLuggageItem(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -108,17 +118,20 @@ export function registerLuggageRoutes(app, context) {
     return reply.code(201).send({ ok: true, data: { item } });
   });
 
-  app.put("/api/luggage/items/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateLuggageItem(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/luggage/items/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateLuggageItem(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.put("/api/luggage/items/:id/move", { preHandler: authenticated }, async (request) => {
     await moveLuggageItem(

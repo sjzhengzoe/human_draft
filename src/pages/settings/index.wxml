@@ -48,6 +48,11 @@
       >登录</view>
     </view>
 
+    <view class="public-beta-card">
+      <view class="public-beta-card__title">公开测试期 · 当前免费</view>
+      <view class="public-beta-card__text">功能仍在持续完善。未来推出付费会员时，会提前说明范围与规则；基础功能仍会保留免费使用。</view>
+    </view>
+
     <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
@@ -86,12 +91,24 @@
       <view class="settings-section__title">通用</view>
       <view class="settings-list">
         <view
+          wx:if="{{isAdmin}}"
           class="settings-item"
           hover-class="settings-item--hover"
           hover-stay-time="80"
           bindtap="handleAnalyticsTap"
         >
           <view class="settings-item__label-group"><app-icon name="layout-grid" size="27" /><text class="settings-item__label">运营数据</text></view>
+          <view class="settings-item__right">
+            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+          </view>
+        </view>
+        <view
+          class="settings-item"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
+          bindtap="handleAboutTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="book-open" size="27" /><text class="settings-item__label">关于、隐私与服务说明</text></view>
           <view class="settings-item__right">
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>
@@ -136,5 +153,25 @@
       hover-stay-time="80"
       bindtap="handleLogoutTap"
     >退出登录</view>
+
+    <view
+      wx:if="{{loggedIn}}"
+      class="settings-delete-account-button"
+      role="button"
+      aria-label="注销账号"
+      hover-class="settings-delete-account-button--hover"
+      hover-stay-time="80"
+      bindtap="handleDeleteAccountTap"
+    >注销账号</view>
   </view>
 </scroll-view>
+
+<app-dialog
+  visible="{{deleteAccountDialogVisible}}"
+  title="确认注销账号？"
+  content="注销后，账号、登录会话、个人记录和私有图片将永久删除，无法恢复。请确认当前数据已不再需要。"
+  cancel-text="暂不注销"
+  confirm-text="永久注销"
+  bind:cancel="handleDeleteAccountCancel"
+  bind:confirm="handleDeleteAccountConfirm"
+/>

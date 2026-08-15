@@ -24,6 +24,7 @@ import {
   updateMediaSeason,
 } from "../domains/media/service.mjs";
 import { readMultipartImage } from "../http/multipart-image.mjs";
+import { checkUserText } from "../domains/shared/content-security.mjs";
 
 export function registerMediaRoutes(app, context) {
   const { authenticated, contentSecurity, getSupabaseAdmin } = context;
@@ -51,17 +52,26 @@ export function registerMediaRoutes(app, context) {
     },
   }));
 
-  app.put("/api/media-episodes/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateMediaEpisode(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/media-episodes/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.title,
+      request.body?.plot_summary,
+      request.body?.timeline_notes,
+    );
+    return {
+      ok: true,
+      data: {
+        item: await updateMediaEpisode(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.get("/api/media-categories", { preHandler: authenticated }, async (request) => ({
     ok: true,
@@ -76,6 +86,7 @@ export function registerMediaRoutes(app, context) {
   }));
 
   app.post("/api/media-categories", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
     const item = await createMediaCategory(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -93,17 +104,20 @@ export function registerMediaRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/media-categories/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateMediaCategory(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/media-categories/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateMediaCategory(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/media-categories/:id", { preHandler: authenticated }, async (request) => {
     await deleteMediaCategory(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
@@ -129,6 +143,7 @@ export function registerMediaRoutes(app, context) {
   }));
 
   app.post("/api/media/:id/seasons", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
     const item = await createMediaSeason(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -166,17 +181,20 @@ export function registerMediaRoutes(app, context) {
     };
   });
 
-  app.put("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateMediaSeason(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateMediaSeason(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/media-seasons/:id", { preHandler: authenticated }, async (request) => {
     await deleteMediaSeason(getSupabaseAdmin(), request.auth.user.uid, request.params.id);
@@ -197,6 +215,12 @@ export function registerMediaRoutes(app, context) {
   );
 
   app.post("/api/media", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.title,
+      request.body?.media_type,
+    );
     const item = await createMediaEntry(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -223,17 +247,25 @@ export function registerMediaRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/media/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateMediaEntry(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/media/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.title,
+      request.body?.media_type,
+    );
+    return {
+      ok: true,
+      data: {
+        item: await updateMediaEntry(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/media/:id", { preHandler: authenticated }, async (request) => {
     await deleteMediaEntry(getSupabaseAdmin(), request.auth.user.uid, request.params.id);

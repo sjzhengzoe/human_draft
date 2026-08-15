@@ -2,6 +2,7 @@ import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 import { config } from "./config.mjs";
 import { createAuthGuards } from "./http/auth-guards.mjs";
+import { registerAccountDeletion } from "./http/account-deletion.mjs";
 import { registerErrorHandlers } from "./http/error-handlers.mjs";
 import { registerRuntimeSafety } from "./http/runtime-safety.mjs";
 import { registerProductAnalytics } from "./http/product-analytics.mjs";
@@ -74,8 +75,10 @@ export function buildServer(options = {}) {
     registerRuntimeSafety(app, options, getSupabaseAdmin);
   const productAnalytics = registerProductAnalytics(app, options, getSupabaseAdmin);
   const authGuards = createAuthGuards(getSupabaseAdmin, rateLimiter);
+  const accountDeletion = registerAccountDeletion(app, options, getSupabaseAdmin);
   const routeContext = {
     ...authGuards,
+    accountDeletion,
     contentSecurity,
     getSupabaseAdmin,
     productAnalytics,

@@ -56,7 +56,8 @@ test("account section displays and copies the public UID", async () => {
   assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{uid\}\}/);
   assert.match(markup, /aria-label="复制 UID"[\s\S]*?bindtap="handleCopyUidTap"/);
   assert.match(markup, /aria-label="修改头像和昵称"[\s\S]*?bindtap="handleEditProfileTap"/);
-  assert.doesNotMatch(markup, /<app-dialog|<image-cropper/);
+  assert.doesNotMatch(markup, /<image-cropper/);
+  assert.match(markup, /<app-dialog[\s\S]*?title="确认注销账号？"/);
   assert.match(logic, /pages\/settings\/profile-edit\/index/);
   assert.match(profileMarkup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
   assert.match(markup, /wx:if="\{\{isAdmin\}\}" class="profile-role">管理员</);
@@ -123,7 +124,7 @@ test("settings navigation ignores repeated taps and unlocks after failures", asy
   assert.match(logic, /handleModuleSettingsTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleEditProfileTap\(\)[\s\S]*?if \(!user \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleAnalyticsTap\(\)[\s\S]*?if \(!this\.data\.isAdmin \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
-  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 5);
+  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 6);
 });
 
 test("settings logout ignores duplicate taps and releases its lock on every exit path", async () => {

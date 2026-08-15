@@ -6,9 +6,10 @@ import {
   swapDiningSceneSortOrders,
   updateDiningScene,
 } from "../domains/dining/service.mjs";
+import { checkUserText } from "../domains/shared/content-security.mjs";
 
 export function registerDiningRoutes(app, context) {
-  const { authenticated, getSupabaseAdmin } = context;
+  const { authenticated, contentSecurity, getSupabaseAdmin } = context;
 
   app.get("/api/dining-scenes", { preHandler: authenticated }, async (request) => ({
     ok: true,
@@ -22,8 +23,9 @@ export function registerDiningRoutes(app, context) {
     },
   }));
 
-  app.post("/api/dining-scenes", { preHandler: authenticated }, async (request, reply) =>
-    reply.code(201).send({
+  app.post("/api/dining-scenes", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return reply.code(201).send({
       ok: true,
       data: {
         item: await createDiningScene(
@@ -32,8 +34,8 @@ export function registerDiningRoutes(app, context) {
           request.body || {},
         ),
       },
-    }),
-  );
+    });
+  });
 
   app.put("/api/dining-scenes/order/swap", { preHandler: authenticated }, async (request) => ({
     ok: true,
@@ -44,17 +46,20 @@ export function registerDiningRoutes(app, context) {
     ),
   }));
 
-  app.put("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      item: await updateDiningScene(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {},
-      ),
-    },
-  }));
+  app.put("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name);
+    return {
+      ok: true,
+      data: {
+        item: await updateDiningScene(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
+  });
 
   app.delete("/api/dining-scenes/:id", { preHandler: authenticated }, async (request) => {
     await deleteDiningScene(getSupabaseAdmin(), request.auth.user.uid, request.params.id);

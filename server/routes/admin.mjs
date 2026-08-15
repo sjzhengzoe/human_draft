@@ -1,5 +1,7 @@
+import { checkUserText } from "../domains/shared/content-security.mjs";
+
 export function registerAdminRoutes(app, context) {
-  const { adminAuthenticated, productAnalytics, runtimeControls } = context;
+  const { adminAuthenticated, contentSecurity, productAnalytics, runtimeControls } = context;
 
   app.get(
     "/api/admin/analytics",
@@ -25,16 +27,19 @@ export function registerAdminRoutes(app, context) {
       config: { allowDuringReadOnly: true },
       preHandler: adminAuthenticated,
     },
-    async (request) => ({
-      ok: true,
-      data: {
-        controls: await runtimeControls.updateControl({
-          key: request.params.key,
-          enabled: request.body?.enabled,
-          reason: request.body?.reason,
-          uid: request.auth.user.uid,
-        }),
-      },
-    }),
+    async (request) => {
+      await checkUserText(contentSecurity, request.auth.user.openid, request.body?.reason);
+      return {
+        ok: true,
+        data: {
+          controls: await runtimeControls.updateControl({
+            key: request.params.key,
+            enabled: request.body?.enabled,
+            reason: request.body?.reason,
+            uid: request.auth.user.uid,
+          }),
+        },
+      };
+    },
   );
 }

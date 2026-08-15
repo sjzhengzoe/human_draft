@@ -1,0 +1,42 @@
+<custom-navigation title="关于与隐私" background="{{themeColors.pageBackground}}" />
+
+<scroll-view
+  class="about-page"
+  scroll-y
+  enhanced
+  bounces="{{false}}"
+  show-scrollbar="{{false}}"
+>
+  <view class="about-content">
+    <view class="about-hero">
+      <view class="about-hero__eyebrow">公开测试期</view>
+      <view class="about-hero__title">当前免费使用</view>
+      <view class="about-hero__text">产品仍在持续完善，部分功能和规则可能根据实际使用情况调整。</view>
+    </view>
+
+    <view class="about-section">
+      <view class="about-section__title">未来的会员安排</view>
+      <view class="about-section__text">未来将提供自愿开通的年度付费会员，用于支持持续维护和新增能力。具体价格、时间与会员范围尚未确定，确定后会提前说明，不会突然扣费。</view>
+      <view class="about-section__text">基础功能会继续保留免费使用；未开通会员不会导致已有账号或数据被删除。若某项新能力仅向会员提供，也会在使用前明确标注。</view>
+    </view>
+
+    <view class="about-section">
+      <view class="about-section__title">我们处理哪些数据</view>
+      <view class="about-section__text">为提供登录和个人记录功能，服务端会保存微信账号对应的登录标识、你设置的昵称与头像，以及你主动创建的菜单、影视、行李、衣橱等个人记录和图片。</view>
+      <view class="about-section__text">图片存放在私有对象存储中，客户端按需获取临时访问地址。用户提交的文字和图片在写入前会调用微信内容安全能力进行检测。</view>
+    </view>
+
+    <view class="about-section">
+      <view class="about-section__title">运营数据与异常记录</view>
+      <view class="about-section__text">为判断功能是否正常、定位接口异常和改进产品，会记录必要的功能使用统计与错误信息。运营统计不保存你的私人正文、图片内容、完整请求参数或 IP 地址。</view>
+    </view>
+
+    <view class="about-section">
+      <view class="about-section__title">你的数据权利</view>
+      <view class="about-section__text">你可以在各功能中修改或删除自己创建的记录，也可以在“我的”页面注销账号。</view>
+      <view class="about-section__text">注销会永久删除账号、登录会话、个人业务记录及私有图片，无法恢复。数据库删除立即生效；如对象存储临时不可用，系统会在账号已不可访问的前提下继续后台清理图片。为安全审计保留的非内容型运行记录可能继续存在，但会移除账号关联。</view>
+    </view>
+
+    <view class="about-footnote">本说明适用于当前公开测试版本；如数据处理方式或服务规则发生重要变化，会更新说明并在合适的位置提示。</view>
+  </view>
+</scroll-view>

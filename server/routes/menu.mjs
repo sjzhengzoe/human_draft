@@ -11,6 +11,7 @@ import {
   updatePrintStatus
 } from "../domains/menu/dishes.mjs"
 import { readMultipartImage } from "../http/multipart-image.mjs"
+import { checkUserText } from "../domains/shared/content-security.mjs"
 import {
   createMenuPlace,
   deleteMenuPlace,
@@ -127,7 +128,10 @@ export function registerMenuRoutes(app, context) {
 
   app.post("/api/menu-places", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request)
-    await contentSecurity.checkImage(image)
+    await Promise.all([
+      checkUserText(contentSecurity, request.auth.user.openid, fields.name),
+      contentSecurity.checkImage(image)
+    ])
     const place = await createMenuPlace(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -137,17 +141,20 @@ export function registerMenuRoutes(app, context) {
     return reply.code(201).send({ ok: true, data: { place } })
   })
 
-  app.put("/api/menu-places/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      place: await updateMenuPlace(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {}
-      )
+  app.put("/api/menu-places/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(contentSecurity, request.auth.user.openid, request.body?.name)
+    return {
+      ok: true,
+      data: {
+        place: await updateMenuPlace(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {}
+        )
+      }
     }
-  }))
+  })
 
   app.post("/api/menu-places/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request)
@@ -191,7 +198,17 @@ export function registerMenuRoutes(app, context) {
 
   app.post("/api/dishes", { preHandler: authenticated }, async (request, reply) => {
     const { fields, image } = await readMultipartImage(request)
-    await contentSecurity.checkImage(image)
+    await Promise.all([
+      checkUserText(
+        contentSecurity,
+        request.auth.user.openid,
+        fields.name,
+        fields.main_ingredients,
+        fields.introduction,
+        fields.flavor_options
+      ),
+      contentSecurity.checkImage(image)
+    ])
     const dish = await createDish(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -202,6 +219,14 @@ export function registerMenuRoutes(app, context) {
   })
 
   app.post("/api/menu-dishes", { preHandler: authenticated }, async (request, reply) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.name,
+      request.body?.main_ingredients,
+      request.body?.introduction,
+      request.body?.flavor_options
+    )
     const dish = await createDish(
       getSupabaseAdmin(),
       request.auth.user.uid,
@@ -238,17 +263,27 @@ export function registerMenuRoutes(app, context) {
     )
   }))
 
-  app.put("/api/dishes/:id", { preHandler: authenticated }, async (request) => ({
-    ok: true,
-    data: {
-      dish: await updateDish(
-        getSupabaseAdmin(),
-        request.auth.user.uid,
-        request.params.id,
-        request.body || {}
-      )
+  app.put("/api/dishes/:id", { preHandler: authenticated }, async (request) => {
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      request.body?.name,
+      request.body?.main_ingredients,
+      request.body?.introduction,
+      request.body?.flavor_options
+    )
+    return {
+      ok: true,
+      data: {
+        dish: await updateDish(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {}
+        )
+      }
     }
-  }))
+  })
 
   app.post("/api/dishes/:id/image", { preHandler: authenticated }, async (request) => {
     const { image } = await readMultipartImage(request)

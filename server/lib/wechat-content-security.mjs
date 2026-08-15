@@ -105,7 +105,6 @@ export function createWechatContentSecurity(options = {}) {
       });
       result = await response.json();
     } catch (error) {
-      if (allowRetry) return requestCheck(endpoint, createRequest, false);
       throw unavailableError(error);
     }
 

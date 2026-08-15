@@ -28,6 +28,11 @@ export type AuthSession = {
   user: AppUser
 }
 
+export type AccountDeletionResult = {
+  deleted: boolean
+  cleanup_pending: boolean
+}
+
 export type ImageStorageUsageModule = {
   key: string
   image_count: number
