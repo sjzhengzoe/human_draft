@@ -1,12 +1,10 @@
 <view
   wx:if="{{visible}}"
   class="app-dialog {{fullscreen ? 'app-dialog--fullscreen' : ''}} {{placement === 'bottom' ? 'app-dialog--bottom' : ''}}"
+  style="{{placement === 'bottom' && keyboardHeight ? 'padding-bottom: ' + keyboardHeight + 'px;' : ''}}"
   catchtouchmove="noop"
 >
-  <view
-    class="app-dialog__panel"
-    style="{{placement === 'bottom' && keyboardHeight ? 'transform: translate3d(0, -' + keyboardHeight + 'px, 0);' : ''}}"
-  >
+  <view class="app-dialog__panel">
     <view wx:if="{{placement === 'bottom'}}" class="app-dialog__handle" />
     <view wx:if="{{title}}" class="app-dialog__header">
       <view wx:if="{{title}}" class="app-dialog__title">{{title}}</view>

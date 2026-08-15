@@ -28,12 +28,14 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   assert.match(componentSource, /wx\.onKeyboardHeightChange/);
   assert.match(componentSource, /wx\.offKeyboardHeightChange/);
   assert.match(template, /app-dialog--bottom/);
-  assert.match(template, /translate3d\(0, -/);
+  assert.match(template, /padding-bottom: ' \+ keyboardHeight \+ 'px/);
+  assert.doesNotMatch(template, /translate3d/);
   assert.match(styles, /\.app-dialog__panel\s*{[^}]*max-height:\s*68vh/);
   assert.match(styles, /\.app-dialog--bottom\s*{[^}]*align-items:\s*flex-end/);
   assert.match(styles, /\.app-dialog--bottom \.app-dialog__panel\s*{[^}]*max-height:\s*78vh/);
   assert.match(inputTemplate, /adjust-position="\{\{dialogMode \? false : adjustPosition\}\}"/);
   assert.match(inputTemplate, /cursor-spacing="\{\{dialogMode \? 0 : cursorSpacing\}\}"/);
+  assert.match(inputTemplate, /always-embed="\{\{dialogMode \? false : true\}\}"/);
   assert.match(inputSource, /maxlength:[\s\S]*?value: 120/);
   assert.match(inputSource, /ready\(\)[\s\S]*?wx\.nextTick/);
   assert.match(inputSource, /nativeFocus: this\.properties\.focus && !this\.properties\.disabled && !this\.properties\.dialogMode/);

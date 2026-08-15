@@ -2,7 +2,7 @@
   wx:if="{{dialogMode || persistent || editing}}"
   class="app-input__control custom-class"
   style="font-family: HumanDraftUI, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: {{fontSize}};"
-  always-embed="{{true}}"
+  always-embed="{{dialogMode ? false : true}}"
   type="{{type}}"
   name="{{name}}"
   value="{{localValue}}"
