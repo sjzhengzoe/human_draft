@@ -28,6 +28,15 @@ export function getStoredSession(): AuthSession | null {
   if (typeof stored.user.is_admin !== "boolean") {
     stored.user.is_admin = stored.user.can_write === true
   }
+  if (!stored.user.access) {
+    stored.user.access = {
+      registration_cohort: "public_beta",
+      service_stage: "public_beta",
+      display_label: "公测体验中",
+      billing_visible: false,
+      paid_features_visible: false
+    }
+  }
   stored.user.can_write = true
   if (Date.parse(stored.refresh_expires_at) <= Date.now() + 60_000) {
     clearStoredSession()

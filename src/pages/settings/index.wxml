@@ -26,7 +26,10 @@
       <view wx:else class="profile-avatar-fallback">{{avatarInitial}}</view>
       <view class="profile-main">
         <view class="profile-name">{{displayName}}</view>
-        <view wx:if="{{isAdmin}}" class="profile-role">管理员</view>
+        <view wx:if="{{loggedIn}}" class="profile-statuses">
+          <view class="profile-role">{{accessDisplayLabel}}</view>
+          <view wx:if="{{isAdmin}}" class="profile-role">管理员</view>
+        </view>
       </view>
       <view
         wx:if="{{loggedIn}}"
@@ -50,7 +53,7 @@
 
     <view class="public-beta-card">
       <view class="public-beta-card__title">公开测试期 · 当前免费</view>
-      <view class="public-beta-card__text">功能仍在持续完善。未来推出付费会员时，会提前说明范围与规则；基础功能仍会保留免费使用。</view>
+      <view class="public-beta-card__text">功能仍在持续完善。当前不提供会员、充值或付费入口；如未来决定推出，会在启用前说明范围与规则。</view>
     </view>
 
     <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">

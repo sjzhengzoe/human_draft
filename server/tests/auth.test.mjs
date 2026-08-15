@@ -221,6 +221,34 @@ test("local-avatar signup stays incomplete and can log in again without profile"
   assert.equal(supabase.state.sessions.length, 2);
 });
 
+test("new registrations keep beta cohort separate from access and capture sanitized attribution", async (context) => {
+  mockWechatLogin(context, "openid-beta-attribution");
+  const supabase = createFakeSupabase();
+
+  const session = await loginWithWechatCode(supabase, "registration-code", {}, {
+    registrationAttribution: {
+      source_scene: 1001,
+      source_campaign: "natural_search",
+      source_referrer_app_id: "wx_referrer_01",
+      release_channel: "trial",
+    },
+  });
+
+  assert.equal(supabase.state.users[0].registration_cohort, "public_beta");
+  assert.equal(supabase.state.users[0].access_tier, "beta_full");
+  assert.equal(supabase.state.users[0].registration_source_scene, 1001);
+  assert.equal(supabase.state.users[0].registration_source_campaign, "natural_search");
+  assert.equal(supabase.state.users[0].registration_referrer_app_id, "wx_referrer_01");
+  assert.equal(supabase.state.users[0].registration_release_channel, "trial");
+  assert.deepEqual(session.user.access, {
+    registration_cohort: "public_beta",
+    service_stage: "public_beta",
+    display_label: "公测体验中",
+    billing_visible: false,
+    paid_features_visible: false,
+  });
+});
+
 test("a migrated completed user can still log in without an avatar", async (context) => {
   mockWechatLogin(context, "openid-existing");
   const supabase = createFakeSupabase([

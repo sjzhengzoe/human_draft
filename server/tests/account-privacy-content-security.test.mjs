@@ -164,6 +164,21 @@ test("account deletion migration is service-only and removes account data atomic
   assert.match(migration, /grant execute on function public\.delete_app_account[\s\S]*service_role/i);
 });
 
+test("public beta access migration separates cohort, access tier and registration source", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/20260815071848_public_beta_access_profile.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /registration_cohort text not null default 'public_beta'/i);
+  assert.match(migration, /access_tier text not null default 'beta_full'/i);
+  assert.match(migration, /access_tier in \('beta_full', 'free', 'member'\)/i);
+  assert.match(migration, /registration_source_scene integer/i);
+  assert.match(migration, /registration_source_campaign text/i);
+  assert.match(migration, /registration_referrer_app_id text/i);
+  assert.match(migration, /registration_release_channel text/i);
+  assert.doesNotMatch(migration, /create table|membership_orders|add column[^;]*(?:payment|balance)/i);
+});
+
 test("settings exposes public-beta terms, privacy details, and shared-dialog account deletion", async () => {
   const [appSource, settingsMarkup, settingsLogic, settingsConfig, aboutMarkup, aboutStyles] =
     await Promise.all([
@@ -177,12 +192,14 @@ test("settings exposes public-beta terms, privacy details, and shared-dialog acc
   assert.ok(JSON.parse(appSource).pages.includes("pages/settings/about/index"));
   assert.equal(JSON.parse(settingsConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
   assert.match(settingsMarkup, /公开测试期 · 当前免费/);
+  assert.match(settingsMarkup, /当前不提供会员、充值或付费入口/);
   assert.match(settingsMarkup, /关于、隐私与服务说明/);
   assert.match(settingsMarkup, /<app-dialog[\s\S]*?永久注销/);
   assert.doesNotMatch(settingsLogic.match(/handleDeleteAccountTap[\s\S]*?handleDeleteAccountConfirm/)?.[0] || "", /wx\.showModal/);
   assert.match(settingsLogic, /deleteCurrentAccount\(\)/);
-  assert.match(aboutMarkup, /未来的会员安排/);
-  assert.match(aboutMarkup, /不会突然扣费/);
+  assert.match(aboutMarkup, /当前服务安排/);
+  assert.match(aboutMarkup, /当前不提供会员、充值、余额、订单或付费权益入口/);
+  assert.match(aboutMarkup, /不会发生自动扣费/);
   assert.match(aboutMarkup, /不保存你的私人正文、图片内容、完整请求参数或 IP 地址/);
   assert.match(aboutMarkup, /数据库删除立即生效/);
   assert.doesNotMatch(aboutStyles, /#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i);

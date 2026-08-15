@@ -15,9 +15,9 @@
     </view>
 
     <view class="about-section">
-      <view class="about-section__title">未来的会员安排</view>
-      <view class="about-section__text">未来将提供自愿开通的年度付费会员，用于支持持续维护和新增能力。具体价格、时间与会员范围尚未确定，确定后会提前说明，不会突然扣费。</view>
-      <view class="about-section__text">基础功能会继续保留免费使用；未开通会员不会导致已有账号或数据被删除。若某项新能力仅向会员提供，也会在使用前明确标注。</view>
+      <view class="about-section__title">当前服务安排</view>
+      <view class="about-section__text">公开测试期间统一免费使用，当前不提供会员、充值、余额、订单或付费权益入口，也不会发生自动扣费。</view>
+      <view class="about-section__text">是否推出付费会员、采用什么形式以及开放哪些权益仍在评估。如未来决定推出，会在启用前明确说明；已有账号和数据不会仅因方案变化被删除。</view>
     </view>
 
     <view class="about-section">

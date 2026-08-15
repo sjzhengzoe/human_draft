@@ -18,6 +18,13 @@ export type AppUser = {
   can_write: boolean
   is_admin: boolean
   created_at: string
+  access: {
+    registration_cohort: "public_beta"
+    service_stage: "public_beta" | "official"
+    display_label: string
+    billing_visible: boolean
+    paid_features_visible: boolean
+  }
 }
 
 export type AuthSession = {

@@ -60,12 +60,14 @@ test("account section displays and copies the public UID", async () => {
   assert.match(markup, /<app-dialog[\s\S]*?title="确认注销账号？"/);
   assert.match(logic, /pages\/settings\/profile-edit\/index/);
   assert.match(profileMarkup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
-  assert.match(markup, /wx:if="\{\{isAdmin\}\}" class="profile-role">管理员</);
-  assert.doesNotMatch(markup, /普通用户/);
+  assert.match(markup, /class="profile-role">\{\{accessDisplayLabel\}\}/);
+  assert.match(markup, /wx:if="\{\{isAdmin\}\}" class="profile-role">管理员/);
+  assert.doesNotMatch(markup, /普通用户|免费用户/);
   assert.match(styles, /\.profile-card\s*\{[\s\S]*?min-height: 152rpx/);
   assert.match(styles, /\.account-id-item__copy\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
   assert.match(styles, /\.profile-edit-button\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
   assert.match(logic, /uid: user\.uid/);
+  assert.match(logic, /accessDisplayLabel: user\.access\.display_label/);
   assert.match(logic, /handleCopyUidTap\(\)[\s\S]*?wx\.setClipboardData\(\{/);
   assert.doesNotMatch(logic, /handleCopyOpenIdTap|accountIdText/);
   assert.match(profileLogic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);

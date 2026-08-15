@@ -38,7 +38,8 @@ export function registerAuthRoutes(app, context) {
         {},
         {
           registrationEnabled: registration.enabled,
-          registrationMessage: registration.message
+          registrationMessage: registration.message,
+          registrationAttribution: request.body || {}
         }
       )
       const { is_new_user: isNewUser, ...session } = authResult

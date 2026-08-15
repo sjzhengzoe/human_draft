@@ -48,7 +48,8 @@ function getSettingsAccountState(failedAvatarSignature = "") {
       avatarUrl: "",
       avatarInitial: "E",
       uid: "",
-      isAdmin: false
+      isAdmin: false,
+      accessDisplayLabel: ""
     }
   }
 
@@ -59,7 +60,8 @@ function getSettingsAccountState(failedAvatarSignature = "") {
     avatarUrl: avatarSignature === failedAvatarSignature ? "" : user.avatar_url,
     avatarInitial: user.display_name.trim().slice(0, 1) || "E",
     uid: user.uid,
-    isAdmin: user.is_admin
+    isAdmin: user.is_admin,
+    accessDisplayLabel: user.access.display_label
   }
 }
 
@@ -87,7 +89,8 @@ Component({
         nextAccountState.avatarUrl !== this.data.avatarUrl ||
         nextAccountState.avatarInitial !== this.data.avatarInitial ||
         nextAccountState.uid !== this.data.uid ||
-        nextAccountState.isAdmin !== this.data.isAdmin
+        nextAccountState.isAdmin !== this.data.isAdmin ||
+        nextAccountState.accessDisplayLabel !== this.data.accessDisplayLabel
       if (accountChanged) this.setData(nextAccountState)
       if (nextAccountState.loggedIn) {
         const cachedUsage = getCachedImageStorageUsage()
