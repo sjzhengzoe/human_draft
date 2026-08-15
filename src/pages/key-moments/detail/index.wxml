@@ -22,7 +22,7 @@
   >
     <swiper-item wx:for="{{items}}" wx:key="id">
       <view class="detail-slide">
-        <view class="detail-sheet">
+        <view class="detail-sheet detail-sheet--count-{{item.image_count}}">
           <view wx:if="{{item.content}}" class="detail-content">{{item.content}}</view>
 
           <view
@@ -34,12 +34,15 @@
               wx:for-item="imageUrl"
               wx:for-index="imageIndex"
               wx:key="*this"
-              class="detail-image"
+              class="detail-image {{item.image_count === 1 ? 'detail-image--single' : 'detail-image--grid'}}"
               src="{{imageUrl}}"
               mode="aspectFill"
+              style="{{item.image_count === 1 ? item.single_image_style : ''}}"
+              data-item-index="{{index}}"
               data-id="{{item.id}}"
               data-url="{{imageUrl}}"
               aria-label="预览第 {{imageIndex + 1}} 张图片"
+              bindload="handleSingleImageLoad"
               bindtap="handlePreview"
             />
           </view>

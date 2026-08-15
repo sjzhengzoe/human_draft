@@ -103,12 +103,12 @@ export async function createKeyMoment(input: {
 
 export async function updateKeyMoment(
   id: string,
-  input: { content: string; occurredAt: string }
+  input: { content: string }
 ): Promise<KeyMoment> {
   const data = await request<{ item: KeyMoment }>({
     path: `/api/key-moments/${id}`,
     method: "PUT",
-    data: { content: input.content, occurred_at: input.occurredAt }
+    data: { content: input.content }
   })
   updateCachedKeyMoment(data.item)
   return data.item

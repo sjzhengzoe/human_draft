@@ -1,7 +1,4 @@
 {
   "navigationBarTitleText": "编辑人生节点",
-  "disableScroll": true,
-  "usingComponents": {
-    "app-dialog": "/components/app-dialog/index"
-  }
+  "disableScroll": true
 }

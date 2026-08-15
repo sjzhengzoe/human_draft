@@ -54,6 +54,11 @@ function editorDateTime(value: string): { date: string; time: string } {
   }
 }
 
+function editorDateTimeLabel(date: string, time: string): string {
+  const [year, month, day] = date.split("-").map(Number)
+  return `${year}年${month}月${day}日 ${time}`
+}
+
 const INITIAL_DATE_TIME = currentShanghaiDateTime()
 
 Page({
@@ -61,10 +66,9 @@ Page({
     loading: true,
     editingId: "",
     editorContent: "",
-    contentDraft: "",
-    contentEditorVisible: false,
     editorDate: INITIAL_DATE_TIME.date,
     editorTime: INITIAL_DATE_TIME.time,
+    editorDateTimeLabel: editorDateTimeLabel(INITIAL_DATE_TIME.date, INITIAL_DATE_TIME.time),
     editorImages: [] as EditorImage[],
     removedPersistedIndexes: [] as number[],
     canAddImage: true,
@@ -77,7 +81,12 @@ Page({
     const editingId = String(query.id || "")
     const editorDate = String(query.date || INITIAL_DATE_TIME.date)
     const editorTime = String(query.time || INITIAL_DATE_TIME.time)
-    this.setData({ editingId, editorDate, editorTime })
+    this.setData({
+      editingId,
+      editorDate,
+      editorTime,
+      editorDateTimeLabel: editorDateTimeLabel(editorDate, editorTime)
+    })
     void this.loadEditor(editingId, editorDate)
   },
 
@@ -109,6 +118,7 @@ Page({
         editorContent: item.content,
         editorDate: dateTime.date,
         editorTime: dateTime.time,
+        editorDateTimeLabel: editorDateTimeLabel(dateTime.date, dateTime.time),
         editorImages: item.image_urls.map((previewUrl, persistedIndex) => ({
           key: `persisted_${persistedIndex}`,
           previewUrl,
@@ -130,43 +140,11 @@ Page({
 
   handleBack() {
     if (this.data.saving || this.data.selectingImage) return
-    if (this.data.contentEditorVisible) {
-      this.handleContentEditorCancel()
-      return
-    }
     wx.navigateBack()
   },
 
-  handleOpenContentEditor() {
-    if (this.data.saving || this.data.selectingImage) return
-    this.setData({
-      contentDraft: this.data.editorContent,
-      contentEditorVisible: true
-    })
-  },
-
-  handleContentDraftInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ contentDraft: event.detail.value })
-  },
-
-  handleContentEditorCancel() {
-    this.setData({ contentEditorVisible: false, contentDraft: "" })
-  },
-
-  handleContentEditorConfirm() {
-    this.setData({
-      editorContent: this.data.contentDraft,
-      contentEditorVisible: false,
-      contentDraft: ""
-    })
-  },
-
-  handleEditorDateChange(event: WechatMiniprogram.PickerChange) {
-    this.setData({ editorDate: String(event.detail.value) })
-  },
-
-  handleEditorTimeChange(event: WechatMiniprogram.PickerChange) {
-    this.setData({ editorTime: String(event.detail.value) })
+  handleEditorContentInput(event: WechatMiniprogram.TextareaInput) {
+    this.setData({ editorContent: event.detail.value })
   },
 
   handleChooseImage() {
@@ -231,7 +209,7 @@ Page({
     this.setData({ saving: true })
     try {
       if (this.data.editingId) {
-        await updateKeyMoment(this.data.editingId, { content, occurredAt })
+        await updateKeyMoment(this.data.editingId, { content })
         const removedIndexes = [...this.data.removedPersistedIndexes].sort((left, right) => right - left)
         const pendingImages = this.data.editorImages.filter((item) => item.selectedImageUploadPath)
         const retainedImageCount = this.data.editorImages.length - pendingImages.length

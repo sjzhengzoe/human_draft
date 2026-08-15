@@ -35,7 +35,8 @@ function toDetailItems(items: KeyMoment[]): KeyMomentDetailItem[] {
       ...item,
       date_label: labels.dateLabel,
       time_label: labels.timeLabel,
-      position_label: `${index + 1} / ${items.length}`
+      position_label: `${index + 1} / ${items.length}`,
+      single_image_style: ""
     }
   })
 }
@@ -110,6 +111,26 @@ Page({
     if (current && item?.image_urls.length) {
       wx.previewImage({ current, urls: item.image_urls })
     }
+  },
+
+  handleSingleImageLoad(
+    event: WechatMiniprogram.CustomEvent<{ width?: number; height?: number }>
+  ) {
+    const itemIndex = Number(event.currentTarget.dataset.itemIndex)
+    const item = this.data.items[itemIndex]
+    if (!item || item.image_count !== 1) return
+    const sourceWidth = Number(event.detail.width) || 0
+    const sourceHeight = Number(event.detail.height) || 0
+    if (sourceWidth <= 0 || sourceHeight <= 0) return
+
+    const maxEdge = 480
+    const sourceRatio = sourceHeight / sourceWidth
+    const displayRatio = Math.min(1.5, Math.max(2 / 3, sourceRatio))
+    const width = displayRatio >= 1 ? Math.round(maxEdge / displayRatio) : maxEdge
+    const height = displayRatio >= 1 ? maxEdge : Math.round(maxEdge * displayRatio)
+    const singleImageStyle = `width: ${width}rpx; height: ${height}rpx;`
+    if (item.single_image_style === singleImageStyle) return
+    this.setData({ [`items[${itemIndex}].single_image_style`]: singleImageStyle })
   },
 
   handleEdit() {

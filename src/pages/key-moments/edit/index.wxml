@@ -12,24 +12,17 @@
 <view wx:else class="page page--with-navigation">
   <scroll-view class="editor-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="editor-card">
-      <view class="field-label">节点文字</view>
-      <view
-        class="content-editor {{editorContent ? '' : 'content-editor--placeholder'}}"
-        role="button"
-        aria-label="编辑节点文字"
-        bindtap="handleOpenContentEditor"
-      >
-        <text class="content-editor__text">{{editorContent || '写下这个关键节点…'}}</text>
-        <view class="content-editor__icon">
-          <app-icon name="pencil" size="24" />
-        </view>
-      </view>
+      <textarea
+        class="content-editor"
+        value="{{editorContent}}"
+        maxlength="50"
+        placeholder="写下这个关键节点…"
+        auto-height
+        show-confirm-bar="{{false}}"
+        bindinput="handleEditorContentInput"
+      />
       <view class="content-count">{{editorContent.length}} / 50</view>
 
-      <view class="field-heading field-label--spaced">
-        <view class="field-label">节点图片</view>
-        <view class="field-heading__count">{{editorImages.length}} / 9</view>
-      </view>
       <view class="image-grid {{selectingImage ? 'image-grid--loading' : ''}}">
         <view
           wx:for="{{editorImages}}"
@@ -59,19 +52,10 @@
           bindtap="handleChooseImage"
         >
           <app-icon name="image-plus" size="30" />
-          <text>{{selectingImage ? '选择中…' : '添加'}}</text>
         </view>
       </view>
 
-      <view class="field-label field-label--spaced">发生时间</view>
-      <view class="time-fields">
-        <picker class="time-field" mode="date" value="{{editorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleEditorDateChange">
-          <view class="time-field__value">{{editorDate}}</view>
-        </picker>
-        <picker class="time-field" mode="time" value="{{editorTime}}" bindchange="handleEditorTimeChange">
-          <view class="time-field__value">{{editorTime}}</view>
-        </picker>
-      </view>
+      <view class="readonly-time">{{editorDateTimeLabel}}</view>
     </view>
     <view class="editor-safe-area" />
   </scroll-view>
@@ -81,30 +65,3 @@
     <button class="save-button" loading="{{saving}}" disabled="{{saving || selectingImage}}" bindtap="saveEditor">保存</button>
   </view>
 </view>
-
-<app-dialog
-  wx:if="{{contentEditorVisible}}"
-  visible="{{true}}"
-  placement="bottom"
-  title="编辑节点文字"
-  custom-body="{{true}}"
-  cancel-text="取消"
-  confirm-text="完成"
-  bind:cancel="handleContentEditorCancel"
-  bind:confirm="handleContentEditorConfirm"
->
-  <view slot="body" class="content-dialog-body">
-    <textarea
-      class="content-dialog-input"
-      value="{{contentDraft}}"
-      maxlength="50"
-      placeholder="写下这个关键节点…"
-      focus="{{true}}"
-      adjust-position="{{false}}"
-      cursor-spacing="0"
-      show-confirm-bar="{{false}}"
-      bindinput="handleContentDraftInput"
-    />
-    <view class="content-dialog-count">{{contentDraft.length}} / 50</view>
-  </view>
-</app-dialog>

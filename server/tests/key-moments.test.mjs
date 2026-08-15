@@ -106,9 +106,8 @@ test("key moment editor selects up to nine original images and displays a WeChat
   assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="aspectFill"/);
   assert.match(editorPage, /wx:for="\{\{editorImages\}\}"[\s\S]*?class="image-grid__preview"[\s\S]*?mode="aspectFill"/);
-  assert.match(editorPage, /\{\{editorImages\.length\}\} \/ 9/);
   assert.ok(editorPage.indexOf('class="content-editor') < editorPage.indexOf('class="image-grid'));
-  assert.ok(editorPage.indexOf('class="image-grid') < editorPage.indexOf('class="time-fields'));
+  assert.ok(editorPage.indexOf('class="image-grid') < editorPage.indexOf('class="readonly-time'));
   assert.doesNotMatch(editorPage, /<image-cropper/);
   assert.match(styles, /\.moment-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(editorStyles, /\.image-grid[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
@@ -120,26 +119,25 @@ test("key moment editor selects up to nine original images and displays a WeChat
   assert.match(editorLogic, /sizeType: \["original"\]/);
 });
 
-test("key moment text editing uses the shared bottom dialog", async () => {
-  const [editorPage, editorConfig, editorLogic] = await Promise.all([
+test("key moment editor uses direct borderless text input and a read-only time", async () => {
+  const [editorPage, editorConfig, editorLogic, service] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.equal(JSON.parse(editorConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
+  assert.equal(JSON.parse(editorConfig).usingComponents, undefined);
   assert.match(
     editorPage,
-    /class="content-editor[^"]*"[\s\S]*?aria-label="编辑节点文字"[\s\S]*?bindtap="handleOpenContentEditor"/,
+    /<textarea[\s\S]*?class="content-editor"[\s\S]*?bindinput="handleEditorContentInput"/,
   );
-  assert.match(
-    editorPage,
-    /<app-dialog[\s\S]*?placement="bottom"[\s\S]*?title="编辑节点文字"[\s\S]*?bind:confirm="handleContentEditorConfirm"/,
-  );
-  assert.match(editorPage, /<textarea[\s\S]*?adjust-position="\{\{false\}\}"[\s\S]*?bindinput="handleContentDraftInput"/);
-  assert.doesNotMatch(editorPage, /class="content-input"/);
-  assert.match(editorLogic, /handleOpenContentEditor\(\)[\s\S]*?contentEditorVisible: true/);
-  assert.match(editorLogic, /handleContentEditorConfirm\(\)[\s\S]*?editorContent: this\.data\.contentDraft/);
+  assert.match(editorPage, /class="readonly-time">\{\{editorDateTimeLabel\}\}<\/view>/);
+  assert.doesNotMatch(editorPage, /节点文字|节点图片|<picker|<app-dialog/);
+  assert.match(editorLogic, /handleEditorContentInput\([\s\S]*?editorContent: event\.detail\.value/);
+  assert.doesNotMatch(editorLogic, /handleEditorDateChange|handleEditorTimeChange|contentEditorVisible/);
+  assert.match(editorLogic, /updateKeyMoment\(this\.data\.editingId, \{ content \}\)/);
+  assert.match(service, /export async function updateKeyMoment\([\s\S]*?input: \{ content: string \}[\s\S]*?data: \{ content: input\.content \}/);
 });
 
 test("key moments use one WeChat-style layout and remove obsolete layout settings", async () => {
@@ -211,18 +209,24 @@ test("key moment image loading uses ordered image arrays and shared storage proc
   assert.doesNotMatch(imageProcessing, /thumbnail:/);
 });
 
-test("key moment detail uses a vertical full-page swiper and multi-image preview", async () => {
-  const [page, logic, appConfig] = await Promise.all([
+test("key moment detail uses top-aligned adaptive single images and square multi-image grids", async () => {
+  const [page, styles, logic, appConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/detail/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
   ]);
   assert.match(page, /<swiper[\s\S]*?vertical="\{\{true\}\}"[\s\S]*?bindchange="handleSwiperChange"/);
   assert.match(page, /class="detail-content"[\s\S]*?class="detail-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"/);
-  assert.match(page, /class="detail-image"[\s\S]*?mode="aspectFill"/);
+  assert.match(page, /detail-image--single[\s\S]*?detail-image--grid/);
+  assert.match(page, /bindload="handleSingleImageLoad"/);
   assert.match(page, /\{\{item\.date_label\}\} \{\{item\.time_label\}\}/);
+  assert.match(styles, /\.detail-slide[\s\S]*?justify-content: flex-start/);
+  assert.match(styles, /\.detail-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(styles, /\.detail-image--grid[\s\S]*?aspect-ratio: 1/);
   assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
+  assert.match(logic, /handleSingleImageLoad\([\s\S]*?sourceRatio[\s\S]*?single_image_style/);
   assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);
   const keyMomentPackage = JSON.parse(appConfig).subPackages.find((entry) => entry.root === "pages/key-moments");
   assert.ok(keyMomentPackage.pages.includes("detail/index"));
