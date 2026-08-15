@@ -216,7 +216,7 @@ Page({
     })
   },
 
-  handleIntroductionInput(event: WechatMiniprogram.Input) {
+  handleIntroductionInput(event: WechatMiniprogram.TextareaInput) {
     this.setData({ introduction: event.detail.value })
   },
 

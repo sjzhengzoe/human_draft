@@ -32,7 +32,7 @@
   </view>
   <view wx:elif="{{categories.length === 0}}" class="state">还没有分类</view>
   <view wx:else class="category-list">
-    <view wx:for="{{categories}}" wx:key="id" class="category-card" data-id="{{item.id}}" bindtap="handleEdit">
+    <view wx:for="{{categories}}" wx:key="id" class="category-card" data-id="{{item.id}}" bindtap="handleEdit" role="button" aria-label="编辑{{item.name}}分类">
       <view class="category-card__main">
         <view class="category-card__name">{{item.name}}</view>
         <view class="category-card__fields">点击修改分类名称</view>
@@ -41,10 +41,53 @@
         <view class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
         <view class="sort-control {{index === categories.length - 1 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
       </view>
-      <view class="category-card__arrow"><app-icon name="chevron-right" size="27" /></view>
+      <view class="category-card__arrow"><app-icon name="pencil" size="24" /></view>
     </view>
   </view>
   <operation-loading visible="{{moving}}" text="正在保存排序…" />
+
+  <app-dialog
+    wx:if="{{editorVisible}}"
+    visible="{{true}}"
+    placement="bottom"
+    title="{{editorId ? '编辑影视分类' : '新增影视分类'}}"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="category-editor">
+      <app-input
+        custom-class="category-editor__input"
+        value="{{editorName}}"
+        maxlength="40"
+        placeholder="例如：纪录片、播客"
+        focus
+        dialog-mode
+        bindinput="handleEditorInput"
+        bindconfirm="saveEditor"
+      />
+    </view>
+    <view slot="actions" class="category-editor__actions">
+      <view wx:if="{{editorId}}" class="category-editor__delete" role="button" bindtap="handleDeleteRequest">
+        <app-icon name="trash-2-danger" size="24" />
+        <text>删除分类</text>
+      </view>
+      <view class="category-editor__main-actions">
+        <button class="category-editor__button" disabled="{{saving}}" bindtap="closeEditor">取消</button>
+        <button class="category-editor__button category-editor__button--primary" loading="{{saving}}" disabled="{{saving || !editorCanSave}}" bindtap="saveEditor">保存</button>
+      </view>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    wx:if="{{deleteConfirmVisible}}"
+    visible="{{true}}"
+    title="删除影视分类"
+    content="只有分类下没有影视条目时才能删除“{{editorName}}”。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="handleDeleteCancel"
+    bindconfirm="handleDeleteConfirm"
+  />
 </view>
 
 <login-required-dialog id="login-required-dialog" />

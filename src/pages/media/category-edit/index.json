@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "编辑影视分类",
-  "usingComponents": {
-    "app-input": "/components/app-input/index"
-  }
-}

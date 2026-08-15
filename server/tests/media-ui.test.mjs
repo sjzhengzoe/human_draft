@@ -15,11 +15,32 @@ const detailConfigUrl = new URL("../../src/pages/media/detail/index.json", impor
 const mediaPageBases = [
   "../../src/pages/media/index",
   "../../src/pages/media/categories/index",
-  "../../src/pages/media/category-edit/index",
   "../../src/pages/media/edit/index",
   "../../src/pages/media/detail/index",
   "../../src/pages/media/episode-edit/index",
 ];
+
+test("media category names use the shared bottom editor", async () => {
+  const [page, logic, config, appConfig] = await Promise.all([
+    readFile(new URL("../../src/pages/media/categories/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/categories/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/categories/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
+  ]);
+
+  const components = JSON.parse(config).usingComponents;
+  assert.equal(components["app-dialog"], "/components/app-dialog/index");
+  assert.equal(components["app-input"], "/components/app-input/index");
+  assert.match(page, /<app-dialog[\s\S]*?placement="bottom"[\s\S]*?title="\{\{editorId \? '编辑影视分类' : '新增影视分类'\}\}"/);
+  assert.match(page, /<app-input[\s\S]*?maxlength="40"[\s\S]*?dialog-mode/);
+  assert.match(logic, /createMediaCategory/);
+  assert.match(logic, /updateMediaCategory/);
+  assert.match(logic, /deleteMediaCategory/);
+  assert.doesNotMatch(logic, /pages\/media\/category-edit/);
+  const mediaPackage = JSON.parse(appConfig).subPackages.find((item) => item.root === "pages/media");
+  assert.ok(mediaPackage);
+  assert.ok(!mediaPackage.pages.includes("category-edit/index"));
+});
 
 test("media overview stays minimal while records show five-star personal ratings", async () => {
   const [page, styles, logic] = await Promise.all([

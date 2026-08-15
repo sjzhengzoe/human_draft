@@ -45,16 +45,17 @@
       </view>
 
       <view class="field-label field-label--spaced">节点文字</view>
-      <textarea
-        class="content-input"
-        value="{{editorContent}}"
-        maxlength="50"
-        placeholder="写下这个关键节点…"
-        adjust-position="{{true}}"
-        cursor-spacing="32"
-        show-confirm-bar="{{false}}"
-        bindinput="handleContentInput"
-      />
+      <view
+        class="content-editor {{editorContent ? '' : 'content-editor--placeholder'}}"
+        role="button"
+        aria-label="编辑节点文字"
+        bindtap="handleOpenContentEditor"
+      >
+        <text class="content-editor__text">{{editorContent || '写下这个关键节点…'}}</text>
+        <view class="content-editor__icon">
+          <app-icon name="pencil" size="24" />
+        </view>
+      </view>
       <view class="content-count">{{editorContent.length}} / 50</view>
     </view>
     <view class="editor-safe-area" />
@@ -75,3 +76,30 @@
   bind:confirm="handleImageCropConfirm"
   bind:error="handleImageCropError"
 />
+
+<app-dialog
+  wx:if="{{contentEditorVisible}}"
+  visible="{{true}}"
+  placement="bottom"
+  title="编辑节点文字"
+  custom-body="{{true}}"
+  cancel-text="取消"
+  confirm-text="完成"
+  bind:cancel="handleContentEditorCancel"
+  bind:confirm="handleContentEditorConfirm"
+>
+  <view slot="body" class="content-dialog-body">
+    <textarea
+      class="content-dialog-input"
+      value="{{contentDraft}}"
+      maxlength="50"
+      placeholder="写下这个关键节点…"
+      focus="{{true}}"
+      adjust-position="{{false}}"
+      cursor-spacing="0"
+      show-confirm-bar="{{false}}"
+      bindinput="handleContentDraftInput"
+    />
+    <view class="content-dialog-count">{{contentDraft.length}} / 50</view>
+  </view>
+</app-dialog>

@@ -12,10 +12,7 @@
       <view class="field__main">
         <view class="field__label">每日运动分钟数</view>
       </view>
-      <view class="number-input">
-        <app-input custom-class="number-input__control" type="number" value="{{dailyMinutes}}" maxlength="3" bindinput="handleDailyInput" />
-        <text>分钟</text>
-      </view>
+      <view class="field__value">{{dailyMinutes}} 分钟</view>
     </view>
 
     <view class="field">
@@ -23,19 +20,15 @@
         <view class="field__label">每月发放休息额度</view>
         <view class="field__hint">每月自动累计，不会过期；调整后下月生效</view>
       </view>
-      <view class="number-input">
-        <app-input custom-class="number-input__control" type="number" value="{{monthlyRestDays}}" maxlength="2" bindinput="handleRestInput" />
-        <text>天</text>
-      </view>
+      <view class="field__value">{{monthlyRestDays}} 天</view>
     </view>
   </view>
 
   <button
     class="save-button"
-    loading="{{saving}}"
     disabled="{{saving || resetting}}"
-    bindtap="handleSave"
-  >保存设置</button>
+    bindtap="handleOpenSettingsEditor"
+  >修改设置</button>
 
   <view class="section-title section-title--data">数据管理</view>
   <view class="reset-card">
@@ -50,6 +43,52 @@
       bindtap="handleReset"
     >清空</button>
   </view>
+
+  <app-dialog
+    wx:if="{{settingsEditorVisible}}"
+    visible="{{true}}"
+    placement="bottom"
+    title="修改目标设置"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+  >
+    <view slot="body" class="settings-editor">
+      <view class="settings-editor__field">
+        <view class="settings-editor__label">每日运动分钟数</view>
+        <view class="settings-editor__input-wrap">
+          <app-input
+            custom-class="settings-editor__input"
+            type="number"
+            value="{{dailyMinutesDraft}}"
+            maxlength="3"
+            focus
+            dialog-mode
+            bindinput="handleDailyInput"
+          />
+          <text>分钟</text>
+        </view>
+      </view>
+      <view class="settings-editor__field">
+        <view class="settings-editor__label">每月发放休息额度</view>
+        <view class="settings-editor__input-wrap">
+          <app-input
+            custom-class="settings-editor__input"
+            type="number"
+            value="{{monthlyRestDaysDraft}}"
+            maxlength="2"
+            dialog-mode
+            bindinput="handleRestInput"
+          />
+          <text>天</text>
+        </view>
+      </view>
+      <view class="settings-editor__hint">休息额度调整后从下月生效。</view>
+    </view>
+    <view slot="actions" class="settings-editor__actions">
+      <button class="settings-editor__button" disabled="{{saving}}" bindtap="handleSettingsEditorCancel">取消</button>
+      <button class="settings-editor__button settings-editor__button--primary" loading="{{saving}}" disabled="{{saving || !dailyMinutesDraft || !monthlyRestDaysDraft}}" bindtap="handleSave">保存</button>
+    </view>
+  </app-dialog>
 
   <app-dialog
     wx:if="{{resetConfirmVisible}}"

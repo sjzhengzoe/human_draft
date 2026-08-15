@@ -113,6 +113,28 @@ test("key moment images keep their source ratio and make the shared crop step op
   assert.doesNotMatch(editorLogic, /handleOpenImageCropper|handleImageOriginal/);
 });
 
+test("key moment text editing uses the shared bottom dialog", async () => {
+  const [editorPage, editorConfig, editorLogic] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(editorConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
+  assert.match(
+    editorPage,
+    /class="content-editor[^"]*"[\s\S]*?aria-label="编辑节点文字"[\s\S]*?bindtap="handleOpenContentEditor"/,
+  );
+  assert.match(
+    editorPage,
+    /<app-dialog[\s\S]*?placement="bottom"[\s\S]*?title="编辑节点文字"[\s\S]*?bind:confirm="handleContentEditorConfirm"/,
+  );
+  assert.match(editorPage, /<textarea[\s\S]*?adjust-position="\{\{false\}\}"[\s\S]*?bindinput="handleContentDraftInput"/);
+  assert.doesNotMatch(editorPage, /class="content-input"/);
+  assert.match(editorLogic, /handleOpenContentEditor\(\)[\s\S]*?contentEditorVisible: true/);
+  assert.match(editorLogic, /handleContentEditorConfirm\(\)[\s\S]*?editorContent: this\.data\.contentDraft/);
+});
+
 test("key moments offer user-scoped horizontal and vertical display settings", async () => {
   const [page, styles, logic, settingsPage, settingsLogic, storage, appConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),

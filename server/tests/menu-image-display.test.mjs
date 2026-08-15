@@ -37,8 +37,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(page, /field field--inline field--name/);
   assert.match(page, /field field--inline field--introduction/);
   assert.match(page, /<app-input[\s\S]*?custom-class="field__input"[\s\S]*?value="\{\{name\}\}"[\s\S]*?placeholder="例如：番茄炒鸡蛋"/);
-  assert.match(page, /field--introduction[\s\S]*?<app-input[\s\S]*?value="\{\{introduction\}\}"[\s\S]*?placeholder="简单介绍这道菜"/);
-  assert.equal(page.match(/<app-input\b/g)?.length, 4);
+  assert.match(page, /field--introduction[\s\S]*?<textarea[\s\S]*?value="\{\{introduction\}\}"[\s\S]*?maxlength="1000"[\s\S]*?placeholder="简单介绍这道菜"/);
+  assert.equal(page.match(/<app-input\b/g)?.length, 3);
   assert.doesNotMatch(page, /font-size="23rpx"/);
   assert.doesNotMatch(page, /<input\b|always-embed/);
   assert.match(page, /用餐场景<text class="field__required">\*<\/text>/);
@@ -60,8 +60,7 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(page, /wx:if="\{\{mainIngredients\.length\}\}"[\s\S]*?class="item-entry"[\s\S]*?mainIngredientInput/);
   assert.match(page, /catchtap="handleRemoveMainIngredient"/);
   assert.doesNotMatch(page, /主要食材（可不填，每行一个）/);
-  assert.match(page, /field--introduction[\s\S]*?<app-input[\s\S]*?value="\{\{introduction\}\}"/);
-  assert.doesNotMatch(page, /<textarea[\s\S]*?value="\{\{introduction\}\}"/);
+  assert.match(page, /field--introduction[\s\S]*?<textarea[\s\S]*?value="\{\{introduction\}\}"/);
   assert.match(page, /value="\{\{flavorOptionInput\}\}"/);
   assert.match(page, /placeholder="输入衍生菜，例如：紫苏炒虾"/);
   assert.match(page, /bindconfirm="handleAddFlavorOption"/);
@@ -79,8 +78,10 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(styles, /\.field--inline[^}]*grid-template-columns:\s*132rpx minmax\(0, 1fr\)/);
   assert.match(styles, /\.field--inline[^}]*padding:\s*22rpx 28rpx/);
   assert.match(styles, /\.field--inline\.field--section-start[^}]*padding-top:\s*24rpx[^}]*border-top:\s*1rpx solid var\(--ui-color-border\)/);
-  assert.match(styles, /\.field--inline\.field--name,[\s\S]*?\.field--inline\.field--introduction[^}]*align-items:\s*center/);
-  assert.match(styles, /\.field--name \.field__label,[\s\S]*?\.field--introduction \.field__label[^}]*padding-top:\s*0/);
+  assert.match(styles, /\.field--inline\.field--name[^}]*align-items:\s*center/);
+  assert.match(styles, /\.field--inline\.field--introduction[^}]*align-items:\s*start/);
+  assert.match(styles, /\.field__textarea[^}]*min-height:\s*180rpx/);
+  assert.match(styles, /\.field--name \.field__label[^}]*padding-top:\s*0/);
   assert.match(styles, /\.field__label[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles, /\.meal-period-option[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles, /\.field__input[^}]*border-bottom:\s*1rpx solid var\(--ui-color-border-subtle\)[^}]*background:\s*transparent/);

@@ -30,8 +30,7 @@
         "edit/index",
         "detail/index",
         "episode-edit/index",
-        "categories/index",
-        "category-edit/index"
+        "categories/index"
       ]
     },
     {

@@ -67,7 +67,7 @@
         custom-class="runtime-control-dialog__input"
         value="{{reason}}"
         placeholder="例如：处理图片存储异常"
-        maxlength="200"
+        maxlength="120"
         dialog-mode="{{true}}"
         bindinput="handleReasonInput"
       />

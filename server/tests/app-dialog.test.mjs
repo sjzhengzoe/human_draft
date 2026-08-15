@@ -16,11 +16,12 @@ async function sourceFiles(directory, extension) {
 }
 
 test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom placement", async () => {
-  const [componentSource, template, styles, inputTemplate] = await Promise.all([
+  const [componentSource, template, styles, inputTemplate, inputSource] = await Promise.all([
     readFile(new URL("src/components/app-dialog/index.ts", projectRoot), "utf8"),
     readFile(new URL("src/components/app-dialog/index.wxml", projectRoot), "utf8"),
     readFile(new URL("src/components/app-dialog/index.less", projectRoot), "utf8"),
     readFile(new URL("src/components/app-input/index.wxml", projectRoot), "utf8"),
+    readFile(new URL("src/components/app-input/index.ts", projectRoot), "utf8"),
   ]);
 
   assert.match(componentSource, /placement:[\s\S]*?value: "center"/);
@@ -33,6 +34,7 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   assert.match(styles, /\.app-dialog--bottom \.app-dialog__panel\s*{[^}]*max-height:\s*78vh/);
   assert.match(inputTemplate, /adjust-position="\{\{dialogMode \? false : adjustPosition\}\}"/);
   assert.match(inputTemplate, /cursor-spacing="\{\{dialogMode \? 0 : cursorSpacing\}\}"/);
+  assert.match(inputSource, /maxlength:[\s\S]*?value: 120/);
 });
 
 test("every dialog containing an input uses the shared bottom placement", async () => {
@@ -53,5 +55,40 @@ test("every dialog containing an input uses the shared bottom placement", async 
   for (const path of scripts) {
     const source = await readFile(path, "utf8");
     assert.doesNotMatch(source, /editable:\s*true/, `native editable modal remains: ${path.pathname}`);
+  }
+});
+
+test("text edit guidance separates short bottom sheets from long page editors", async () => {
+  const [agentGuidance, typographyGuidance] = await Promise.all([
+    readFile(new URL("AGENTS.md", projectRoot), "utf8"),
+    readFile(new URL("docs/ui-typography.md", projectRoot), "utf8"),
+  ]);
+
+  for (const guidance of [agentGuidance, typographyGuidance]) {
+    assert.match(guidance, /120/);
+    assert.match(guidance, /200[–-]500/);
+    assert.match(guidance, /textarea/);
+  }
+
+  const templates = await sourceFiles(new URL("src/", projectRoot), ".wxml");
+  for (const path of templates) {
+    if (path.pathname.endsWith("/components/app-input/index.wxml")) continue;
+    const source = await readFile(path, "utf8");
+    for (const input of source.match(/<app-input\b[\s\S]*?\/>/g) || []) {
+      const maxlength = Number(input.match(/maxlength="(\d+)"/)?.[1] || 0);
+      assert.ok(
+        maxlength <= 120,
+        `long text must use a textarea instead of app-input: ${path.pathname}`,
+      );
+    }
+    for (const dialog of source.match(/<app-dialog\b[\s\S]*?<\/app-dialog>/g) || []) {
+      for (const control of dialog.match(/<(?:input|textarea|app-input)\b[\s\S]*?\/>/g) || []) {
+        const maxlength = Number(control.match(/maxlength="(\d+)"/)?.[1] || 0);
+        assert.ok(
+          maxlength <= 120,
+          `long text must not use a dialog: ${path.pathname}`,
+        );
+      }
+    }
   }
 });

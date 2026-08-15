@@ -42,12 +42,15 @@
 
       <view class="field field--inline field--introduction">
         <view class="field__label">菜品介绍</view>
-        <app-input
-          custom-class="field__input"
+        <textarea
+          class="field__textarea"
           value="{{introduction}}"
           maxlength="1000"
-          confirm-type="done"
           placeholder="简单介绍这道菜"
+          placeholder-class="ui-input-placeholder"
+          adjust-position="{{true}}"
+          cursor-spacing="32"
+          show-confirm-bar="{{false}}"
           bindinput="handleIntroductionInput"
         />
       </view>

@@ -42,6 +42,8 @@ Page({
     loading: true,
     editingId: "",
     editorContent: "",
+    contentDraft: "",
+    contentEditorVisible: false,
     editorDate: INITIAL_DATE_TIME.date,
     editorTime: INITIAL_DATE_TIME.time,
     currentImageUrl: "",
@@ -109,11 +111,35 @@ Page({
 
   handleBack() {
     if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    if (this.data.contentEditorVisible) {
+      this.handleContentEditorCancel()
+      return
+    }
     wx.navigateBack()
   },
 
-  handleContentInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ editorContent: event.detail.value })
+  handleOpenContentEditor() {
+    if (this.data.saving || this.data.selectingImage || this.data.showImageCropper) return
+    this.setData({
+      contentDraft: this.data.editorContent,
+      contentEditorVisible: true
+    })
+  },
+
+  handleContentDraftInput(event: WechatMiniprogram.TextareaInput) {
+    this.setData({ contentDraft: event.detail.value })
+  },
+
+  handleContentEditorCancel() {
+    this.setData({ contentEditorVisible: false, contentDraft: "" })
+  },
+
+  handleContentEditorConfirm() {
+    this.setData({
+      editorContent: this.data.contentDraft,
+      contentEditorVisible: false,
+      contentDraft: ""
+    })
   },
 
   handleEditorDateChange(event: WechatMiniprogram.PickerChange) {

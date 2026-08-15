@@ -66,7 +66,6 @@ test("media reads reuse session cache and successful writes update it", async ()
 test("every media mutation page marks cached lists as changed", async () => {
   const mutationPages = [
     "src/pages/media/edit/index.ts",
-    "src/pages/media/category-edit/index.ts",
     "src/pages/media/categories/index.ts",
     "src/pages/media/detail/index.ts",
     "src/pages/media/episode-edit/index.ts",

@@ -17,7 +17,7 @@ Component({
     },
     maxlength: {
       type: Number,
-      value: 140
+      value: 120
     },
     name: {
       type: String,

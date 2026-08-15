@@ -1,4 +1,10 @@
-import { listMediaCategories, swapMediaCategorySortOrders } from "../../../services/media"
+import {
+  createMediaCategory,
+  deleteMediaCategory,
+  listMediaCategories,
+  swapMediaCategorySortOrders,
+  updateMediaCategory
+} from "../../../services/media"
 import { getCurrentUser } from "../../../services/auth"
 import type { MediaCategory } from "../../../types/media"
 import {
@@ -25,6 +31,13 @@ Page({
     hasLoaded: false,
     moving: false,
     sortEditing: false,
+    editorVisible: false,
+    editorId: "",
+    editorName: "",
+    editorCanSave: false,
+    saving: false,
+    deleteConfirmVisible: false,
+    deleting: false,
     guestMode: false,
     mediaRevision: -1,
     errorMessage: ""
@@ -90,7 +103,12 @@ Page({
       return
     }
     if (!this.data.moving && !this.data.contentLoading) {
-      wx.navigateTo({ url: "/pages/media/category-edit/index" })
+      this.setData({
+        editorVisible: true,
+        editorId: "",
+        editorName: "",
+        editorCanSave: false
+      })
     }
   },
 
@@ -99,7 +117,106 @@ Page({
     if (this.data.moving || this.data.contentLoading) return
     if (this.data.sortEditing) return
     const id = String(event.currentTarget.dataset.id || "")
-    if (id) wx.navigateTo({ url: `/pages/media/category-edit/index?id=${id}` })
+    const category = this.data.categories.find((item) => item.id === id)
+    if (!category) return
+    this.setData({
+      editorVisible: true,
+      editorId: category.id,
+      editorName: category.name,
+      editorCanSave: true
+    })
+  },
+
+  handleEditorInput(event: WechatMiniprogram.Input) {
+    const editorName = event.detail.value
+    this.setData({ editorName, editorCanSave: Boolean(editorName.trim()) })
+  },
+
+  closeEditor() {
+    if (this.data.saving || this.data.deleting) return
+    this.setData({
+      editorVisible: false,
+      editorId: "",
+      editorName: "",
+      editorCanSave: false
+    })
+  },
+
+  async saveEditor() {
+    if (!requireLoginForAction(this)) return
+    if (this.data.saving || this.data.deleting) return
+    const name = this.data.editorName.trim()
+    if (!name) {
+      wx.showToast({ title: "请填写分类名称", icon: "none" })
+      return
+    }
+    this.setData({ saving: true })
+    try {
+      if (this.data.editorId) await updateMediaCategory(this.data.editorId, name)
+      else await createMediaCategory(name)
+      const mediaRevision = markMediaDataChanged()
+      const categories = await listMediaCategories()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        categories,
+        mediaRevision,
+        editorVisible: false,
+        editorId: "",
+        editorName: "",
+        editorCanSave: false
+      })
+      wx.showToast({ title: "已保存", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "保存失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ saving: false })
+    }
+  },
+
+  handleDeleteRequest() {
+    if (!requireLoginForAction(this)) return
+    if (!this.data.editorId || this.data.saving || this.data.deleting) return
+    this.setData({ editorVisible: false, deleteConfirmVisible: true })
+  },
+
+  handleDeleteCancel() {
+    if (this.data.deleting) return
+    this.setData({ deleteConfirmVisible: false, editorVisible: true })
+  },
+
+  async handleDeleteConfirm() {
+    if (!this.data.editorId || this.data.deleting) return
+    this.setData({ deleting: true })
+    try {
+      await deleteMediaCategory(this.data.editorId)
+      const mediaRevision = markMediaDataChanged()
+      const categories = await listMediaCategories()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        categories,
+        mediaRevision,
+        deleteConfirmVisible: false,
+        editorId: "",
+        editorName: "",
+        editorCanSave: false
+      })
+      wx.showToast({ title: "已删除", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ deleteConfirmVisible: false, editorVisible: true })
+        wx.showToast({
+          title: error instanceof Error ? error.message : "删除失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
   },
 
   async handleSortEditingToggle() {

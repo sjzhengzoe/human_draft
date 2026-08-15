@@ -18,6 +18,9 @@ Page({
     resetting: false,
     dailyMinutes: "30",
     monthlyRestDays: "4",
+    dailyMinutesDraft: "",
+    monthlyRestDaysDraft: "",
+    settingsEditorVisible: false,
     resetConfirmVisible: false
   },
 
@@ -56,22 +59,41 @@ Page({
   },
 
   handleDailyInput(event: WechatMiniprogram.Input) {
-    const dailyMinutes = digitsOnly(event.detail.value, 3)
-    this.setData({ dailyMinutes })
-    return dailyMinutes
+    const dailyMinutesDraft = digitsOnly(event.detail.value, 3)
+    this.setData({ dailyMinutesDraft })
+    return dailyMinutesDraft
   },
 
   handleRestInput(event: WechatMiniprogram.Input) {
-    const monthlyRestDays = digitsOnly(event.detail.value, 2)
-    this.setData({ monthlyRestDays })
-    return monthlyRestDays
+    const monthlyRestDaysDraft = digitsOnly(event.detail.value, 2)
+    this.setData({ monthlyRestDaysDraft })
+    return monthlyRestDaysDraft
+  },
+
+  handleOpenSettingsEditor() {
+    if (!requireLoginForAction(this)) return
+    if (this.data.saving || this.data.resetting) return
+    this.setData({
+      dailyMinutesDraft: this.data.dailyMinutes,
+      monthlyRestDaysDraft: this.data.monthlyRestDays,
+      settingsEditorVisible: true
+    })
+  },
+
+  handleSettingsEditorCancel() {
+    if (this.data.saving) return
+    this.setData({
+      dailyMinutesDraft: "",
+      monthlyRestDaysDraft: "",
+      settingsEditorVisible: false
+    })
   },
 
   async handleSave() {
     if (!requireLoginForAction(this)) return
     if (this.data.saving || this.data.resetting) return
-    const dailyMinutes = Number(this.data.dailyMinutes)
-    const monthlyRestDays = Number(this.data.monthlyRestDays)
+    const dailyMinutes = Number(this.data.dailyMinutesDraft)
+    const monthlyRestDays = Number(this.data.monthlyRestDaysDraft)
     if (!Number.isInteger(dailyMinutes) || dailyMinutes < 1 || dailyMinutes > 300) {
       wx.showToast({ title: "每日分钟数需为 1–300", icon: "none" })
       return
@@ -87,6 +109,13 @@ Page({
         monthly_rest_days: monthlyRestDays
       })
       if (!isAsyncPageActive(this)) return
+      this.setData({
+        dailyMinutes: String(dailyMinutes),
+        monthlyRestDays: String(monthlyRestDays),
+        dailyMinutesDraft: "",
+        monthlyRestDaysDraft: "",
+        settingsEditorVisible: false
+      })
       wx.showToast({ title: "已保存：目标明天生效，额度下月生效", icon: "none" })
       setTimeout(() => {
         if (isAsyncPageActive(this)) wx.navigateBack()

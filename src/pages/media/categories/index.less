@@ -1,1 +1,66 @@
 @import "../../wardrobe/categories/index.less";
+
+.category-editor {
+  padding-top: 2rpx;
+}
+
+.category-editor__input {
+  height: 76rpx;
+  box-sizing: border-box;
+  padding: 0 20rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-color-background-page);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.category-editor__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 22rpx;
+}
+
+.category-editor__delete {
+  display: inline-flex;
+  min-height: 48rpx;
+  align-items: center;
+  align-self: center;
+  gap: 7rpx;
+  padding: 0 14rpx;
+  color: var(--ui-color-danger);
+  font-size: var(--ui-font-size-base);
+}
+
+.category-editor__main-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.category-editor__button {
+  display: flex;
+  width: 100% !important;
+  height: 76rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 16rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.category-editor__button::after {
+  border: 0;
+}
+
+.category-editor__button--primary {
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+}
