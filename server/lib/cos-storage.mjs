@@ -62,23 +62,19 @@ export async function getCosObject(key) {
   return Buffer.isBuffer(data.Body) ? data.Body : Buffer.from(data.Body || "");
 }
 
+export async function copyCosObject(sourceKey, destinationKey) {
+  if (testAdapter) return testAdapter.copyObject(sourceKey, destinationKey);
+  const encodedSourceKey = encodeURIComponent(sourceKey).replace(/%2F/gi, "/");
+  return callCos("putObjectCopy", {
+    ...baseParameters(destinationKey),
+    CopySource: `${config.cosBucket}.cos.${config.cosRegion}.myqcloud.com/${encodedSourceKey}`,
+    MetadataDirective: "Copy",
+  });
+}
+
 export async function deleteCosObject(key) {
   if (testAdapter) return testAdapter.deleteObject(key);
   return callCos("deleteObject", baseParameters(key));
-}
-
-export async function copyCosObject(sourceKey, destinationKey, metadata = {}) {
-  if (testAdapter?.copyObject) {
-    return testAdapter.copyObject(sourceKey, destinationKey, metadata);
-  }
-  const buffer = await getCosObject(sourceKey);
-  await putCosObject({
-    key: destinationKey,
-    buffer,
-    contentType: metadata.contentType || "image/webp",
-    cacheControl: metadata.cacheControl || "3600",
-  });
-  return buffer;
 }
 
 export function getCosSignedObjectUrl(key, expiresIn, query = {}) {

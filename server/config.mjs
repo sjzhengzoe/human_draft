@@ -3,6 +3,14 @@ const toPositiveInteger = (value, fallback) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const toOptionalBoolean = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return undefined;
+};
+
 const splitCsv = (value = "") =>
   value
     .split(",")
@@ -56,6 +64,8 @@ export const config = {
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || "",
   accessTokenTtlMinutes: toPositiveInteger(process.env.ACCESS_TOKEN_TTL_MINUTES, 60),
   maxUploadSizeMb: Math.min(toPositiveInteger(process.env.MAX_UPLOAD_SIZE_MB, 10), 10),
+  registrationEnabledOverride: toOptionalBoolean(process.env.REGISTRATION_ENABLED),
+  emergencyReadOnly: toOptionalBoolean(process.env.EMERGENCY_READ_ONLY) === true,
 };
 
 export function getMissingRuntimeConfig() {

@@ -52,6 +52,7 @@ export async function updateUserAvatar(supabase, uid, image) {
     crop: image.crop,
     cacheControl: "0",
     uploadErrorMessage: "保存头像失败。",
+    replacedPaths: [previousPath],
   });
 
   const urls = await createSignedUrlMap({

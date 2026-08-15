@@ -224,7 +224,13 @@ export async function replaceMenuPlaceImage(supabase, uid, placeId, image) {
   const place = await requireMenuPlace(supabase, uid, placeId);
   assertCondition(place.place_type === "outside", 400, "PLACE_IMAGE_UNAVAILABLE", "当前地点不能更换图片。" );
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择店铺图片。" );
-  const { imagePath } = await uploadDishImage(supabase, uid, placeId, image);
+  const { imagePath } = await uploadDishImage(
+    supabase,
+    uid,
+    placeId,
+    image,
+    [place.image_path],
+  );
   const { error } = await supabase
     .from("menu_places")
     .update({ image_path: imagePath })
@@ -271,6 +277,10 @@ export async function deleteMenuPlace(supabase, uid, placeId) {
     (dishReferenceResult.data || []).map((item) => item.dish_id),
   );
   const hasScheduleReferences = referencedDishIds.size > 0 || placeReferences?.length;
+  const deletedImagePaths = [
+    place.image_path,
+    ...(dishes || []).map((dish) => dish.image_path),
+  ].filter(Boolean);
   const archivedPaths = [];
   try {
     const archivePlaceImagePath = hasScheduleReferences
@@ -279,6 +289,7 @@ export async function deleteMenuPlace(supabase, uid, placeId) {
         uid,
         place.id,
         place.image_path,
+        { replacedPaths: deletedImagePaths },
       )
       : "";
     if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);
@@ -291,6 +302,7 @@ export async function deleteMenuPlace(supabase, uid, placeId) {
         uid,
         dish.id,
         dish.image_path,
+        { replacedPaths: deletedImagePaths },
       );
       if (archiveImagePath) archivedPaths.push(archiveImagePath);
       dishArchives.push({ dish_id: dish.id, archive_image_path: archiveImagePath });

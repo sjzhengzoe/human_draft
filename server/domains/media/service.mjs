@@ -133,6 +133,23 @@ async function removeMediaCoverIfUnreferenced(
   if (!stillReferenced) await removeManagedMediaCover(supabase, uid, path);
 }
 
+async function replaceableMediaCoverPath(supabase, uid, mediaEntryId, coverUrl) {
+  const path = managedMediaCoverPath(coverUrl, uid, mediaEntryId);
+  if (!path) return "";
+  const { data, error } = await supabase
+    .from("media_seasons")
+    .select("id")
+    .eq("media_entry_id", mediaEntryId)
+    .eq("uid", uid)
+    .eq("cover_url", coverUrl)
+    .limit(1);
+  if (error) {
+    console.error("检查影视封面替换额度失败，按新增图片计算:", error);
+    return "";
+  }
+  return data?.length ? "" : path;
+}
+
 function mediaPlatforms(value) {
   const platforms = textArray(value, "平台", MEDIA_PLATFORMS.length);
   assertCondition(
@@ -536,6 +553,12 @@ export async function replaceMediaEntryCover(supabase, uid, id, image) {
     "仅支持 PNG、JPEG 或 WebP 图片。",
   );
   const current = await requireRecord(supabase, uid, "media_entries", id, "id,cover_url");
+  const replacedPath = await replaceableMediaCoverPath(
+    supabase,
+    uid,
+    id,
+    current.cover_url,
+  );
   const { imagePath } = await uploadStandardImage(supabase, {
     bucketName: config.mediaCoverBucket,
     basePath: `users/${uid}/entries/${id}/${randomUUID()}`,
@@ -543,6 +566,7 @@ export async function replaceMediaEntryCover(supabase, uid, id, image) {
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传影视封面失败。",
+    replacedPaths: [replacedPath],
   });
   const { data, error } = await supabase
     .from("media_entries")

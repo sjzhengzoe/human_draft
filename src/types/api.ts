@@ -1,6 +1,7 @@
 export type ApiError = {
   code: string
   message: string
+  request_id?: string
   details?: unknown
 }
 
@@ -37,8 +38,38 @@ export type ImageStorageUsage = {
   plan: "public_beta"
   used_bytes: number
   image_count: number
-  quota_bytes: null
+  quota_bytes: number
+  warning_bytes: number
+  remaining_bytes: number
+  is_near_limit: boolean
+  is_over_limit: boolean
   modules: ImageStorageUsageModule[]
+}
+
+export type RuntimeControlKey = "registration_enabled" | "write_enabled"
+
+export type RuntimeControl = {
+  key: RuntimeControlKey
+  enabled: boolean
+  message: string
+  updated_by_uid: string | null
+  updated_at: string
+  forced_by_environment: boolean
+}
+
+export type RuntimeControlAudit = {
+  id: number
+  control_key: RuntimeControlKey
+  previous_enabled: boolean
+  next_enabled: boolean
+  reason: string
+  operator_uid: string | null
+  created_at: string
+}
+
+export type RuntimeControlAdminState = {
+  controls: Record<RuntimeControlKey, RuntimeControl>
+  audits: RuntimeControlAudit[]
 }
 
 export type HomeModuleSettings = {

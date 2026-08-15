@@ -74,10 +74,10 @@
         <view class="storage-usage-item">
           <view class="storage-usage-item__header">
             <view class="storage-usage-item__label">图片空间</view>
-            <view class="storage-usage-item__value">{{storageUsageText}}</view>
+            <view class="storage-usage-item__value {{storageUsageNearLimit ? 'storage-usage-item__value--warning' : ''}}">{{storageUsageText}}</view>
           </view>
           <view wx:if="{{storageImageCountText}}" class="storage-usage-item__count">{{storageImageCountText}}</view>
-          <view class="storage-usage-item__note">公开测试期间仅展示实际用量，正式额度将根据真实使用情况确定。</view>
+          <view class="storage-usage-item__note">达到 80 MB 后会提示空间不足；达到 100 MB 后暂停新增图片，删除图片即可释放空间。</view>
         </view>
       </view>
     </view>
@@ -92,6 +92,23 @@
           bindtap="handleModuleSettingsTap"
         >
           <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页设置</text></view>
+          <view class="settings-item__right">
+            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{isAdmin}}" class="settings-section">
+      <view class="settings-section__title">管理</view>
+      <view class="settings-list">
+        <view
+          class="settings-item"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
+          bindtap="handleRuntimeControlsTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">运营控制</text></view>
           <view class="settings-item__right">
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>

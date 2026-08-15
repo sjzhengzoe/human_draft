@@ -3,7 +3,10 @@ export function registerContentSecurityRoutes(app, context) {
 
   app.post(
     "/api/content-security/text",
-    { preHandler: authenticated },
+    {
+      config: { allowDuringReadOnly: true },
+      preHandler: authenticated
+    },
     async (request) => {
       await contentSecurity.checkText(
         request.auth.user.openid,

@@ -3,9 +3,11 @@ import Fastify from "fastify";
 import { config } from "./config.mjs";
 import { createAuthGuards } from "./http/auth-guards.mjs";
 import { registerErrorHandlers } from "./http/error-handlers.mjs";
+import { registerRuntimeSafety } from "./http/runtime-safety.mjs";
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { wechatContentSecurity } from "./lib/wechat-content-security.mjs";
 import { registerActivityRoutes } from "./routes/activities.mjs";
+import { registerAdminRoutes } from "./routes/admin.mjs";
 import { registerAuthRoutes } from "./routes/auth.mjs";
 import { registerChatTopicRoutes } from "./routes/chat-topics.mjs";
 import { registerContentSecurityRoutes } from "./routes/content-security.mjs";
@@ -22,6 +24,7 @@ import { registerWardrobeRoutes } from "./routes/wardrobe.mjs";
 const routeRegistrars = [
   registerSystemRoutes,
   registerAuthRoutes,
+  registerAdminRoutes,
   registerContentSecurityRoutes,
   registerExerciseRoutes,
   registerFootprintRoutes,
@@ -45,6 +48,7 @@ export function buildServer(options = {}) {
   const app = Fastify({
     logger: options.logger ?? config.nodeEnv !== "test",
     bodyLimit: config.maxUploadSizeMb * 1024 * 1024 + 1024 * 1024,
+    trustProxy: "127.0.0.1",
   });
 
   app.register(multipart, {
@@ -58,21 +62,25 @@ export function buildServer(options = {}) {
   app.addHook("onSend", async (request, reply, payload) => {
     if (request.url.startsWith("/api/")) {
       reply.header("Cache-Control", "no-store");
+      reply.header("X-Request-ID", request.id);
     }
     return payload;
   });
 
-  const authGuards = createAuthGuards(getSupabaseAdmin);
+  const { operationalEvents, rateLimiter, runtimeControls } =
+    registerRuntimeSafety(app, options, getSupabaseAdmin);
+  const authGuards = createAuthGuards(getSupabaseAdmin, rateLimiter);
   const routeContext = {
     ...authGuards,
     contentSecurity,
     getSupabaseAdmin,
+    runtimeControls,
   };
 
   for (const registerRoutes of routeRegistrars) {
     registerRoutes(app, routeContext);
   }
-  registerErrorHandlers(app);
+  registerErrorHandlers(app, operationalEvents);
 
   return app;
 }

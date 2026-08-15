@@ -149,7 +149,7 @@ async function toItemResponse(supabase, item, category, signedUrls) {
   };
 }
 
-async function uploadImage(supabase, uid, itemId, image) {
+async function uploadImage(supabase, uid, itemId, image, replacedPaths = []) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择衣物图片。");
   assertCondition(STANDARD_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
   const revision = randomUUID();
@@ -161,6 +161,7 @@ async function uploadImage(supabase, uid, itemId, image) {
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传衣物图片失败。",
+    replacedPaths,
   });
 }
 
@@ -384,7 +385,7 @@ export async function updateWardrobeItem(supabase, uid, itemId, body) {
 export async function replaceWardrobeItemImage(supabase, uid, itemId, image) {
   const current = await requireItem(supabase, uid, itemId);
   const category = await requireCategory(supabase, uid, current.category_id);
-  const paths = await uploadImage(supabase, uid, itemId, image);
+  const paths = await uploadImage(supabase, uid, itemId, image, [current.image_path]);
   const { data, error } = await supabase
     .from("wardrobe_items")
     .update({ image_path: paths.imagePath })

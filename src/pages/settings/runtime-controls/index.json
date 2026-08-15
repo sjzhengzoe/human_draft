@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#f6f7f1",
+  "usingComponents": {
+    "app-dialog": "/components/app-dialog/index",
+    "app-input": "/components/app-input/index"
+  }
+}

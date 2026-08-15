@@ -135,7 +135,10 @@ test("storage usage is aggregated from the authenticated user's asset ledger", a
   assert.equal(usage.plan, "public_beta");
   assert.equal(usage.used_bytes, 3072);
   assert.equal(usage.image_count, 2);
-  assert.equal(usage.quota_bytes, null);
+  assert.equal(usage.quota_bytes, 100 * 1024 * 1024);
+  assert.equal(usage.warning_bytes, 80 * 1024 * 1024);
+  assert.equal(usage.remaining_bytes, 100 * 1024 * 1024 - 3072);
+  assert.equal(usage.is_near_limit, false);
   assert.equal(usage.modules.find((item) => item.key === "menu").used_bytes, 1024);
   assert.equal(usage.modules.find((item) => item.key === "media").image_count, 1);
 });

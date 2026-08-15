@@ -73,7 +73,7 @@ function assertActivityImage(image) {
   );
 }
 
-async function uploadActivityImage(supabase, uid, itemId, image) {
+async function uploadActivityImage(supabase, uid, itemId, image, replacedPaths = []) {
   assertActivityImage(image);
   return uploadStandardImage(supabase, {
     bucketName: config.activityBucket,
@@ -82,6 +82,7 @@ async function uploadActivityImage(supabase, uid, itemId, image) {
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传活动封面失败。",
+    replacedPaths,
   });
 }
 
@@ -202,7 +203,13 @@ export async function replaceActivityItemImage(supabase, uid, id, image) {
     "id, image_path",
   );
   const previousPaths = [current.image_path];
-  const paths = await uploadActivityImage(supabase, uid, current.id, image);
+  const paths = await uploadActivityImage(
+    supabase,
+    uid,
+    current.id,
+    image,
+    [current.image_path],
+  );
   const { data, error } = await supabase
     .from("activity_items")
     .update({ image_path: paths.imagePath })

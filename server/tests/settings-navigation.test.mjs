@@ -71,13 +71,14 @@ test("account section displays and copies the public UID", async () => {
   assert.match(profileLogic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
   assert.match(markup, /class="settings-section__title">存储空间</);
   assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
-  assert.match(markup, /公开测试期间仅展示实际用量/);
+  assert.match(markup, /达到 80 MB[\s\S]*?达到 100 MB/);
   assert.match(logic, /getImageStorageUsage\(\)/);
   assert.match(logic, /getCachedImageStorageUsage\(\)/);
   assert.match(logic, /if \(cachedUsage\) this\.setData\(getStorageUsageState\(cachedUsage\)\)/);
   assert.match(logic, /if \(this\.data\.storageUsageLoading\) return/);
   assert.match(logic, /formatStorageBytes\(usage\.used_bytes\)/);
-  assert.match(logic, /总额度待定/);
+  assert.match(logic, /formatStorageBytes\(usage\.quota_bytes\)/);
+  assert.doesNotMatch(logic, /总额度待定/);
 });
 
 test("settings renders local account state without a fullscreen loading frame", async () => {
@@ -121,7 +122,7 @@ test("settings navigation ignores repeated taps and unlocks after failures", asy
   assert.match(logic, /handleLoginTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleModuleSettingsTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleEditProfileTap\(\)[\s\S]*?if \(!user \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
-  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 3);
+  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 4);
 });
 
 test("settings logout ignores duplicate taps and releases its lock on every exit path", async () => {

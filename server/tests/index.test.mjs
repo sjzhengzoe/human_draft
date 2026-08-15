@@ -2742,10 +2742,11 @@ test("swap routes map only their expected SQLSTATE errors", async (t) => {
     payload: { source_id: SOURCE_ID, target_id: TARGET_ID },
   });
   assert.equal(unknownResponse.statusCode, 500);
-  assert.deepEqual(unknownResponse.json().error, {
-    code: "DATABASE_ERROR",
-    message: "交换菜品排序失败。",
-  });
+  const unknownError = unknownResponse.json().error;
+  assert.equal(unknownError.code, "DATABASE_ERROR");
+  assert.equal(unknownError.message, "交换菜品排序失败。");
+  assert.equal(typeof unknownError.request_id, "string");
+  assert.ok(unknownError.request_id.length > 0);
 });
 
 test("reorder routes map invalid database order lists to HTTP 400", async (t) => {

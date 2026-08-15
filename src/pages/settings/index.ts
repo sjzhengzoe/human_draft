@@ -22,10 +22,17 @@ function formatStorageBytes(value: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-function getStorageUsageState(usage: { used_bytes: number; image_count: number }) {
+function getStorageUsageState(usage: {
+  used_bytes: number
+  image_count: number
+  quota_bytes: number
+  remaining_bytes: number
+  is_near_limit: boolean
+}) {
   return {
-    storageUsageText: `已使用 ${formatStorageBytes(usage.used_bytes)}`,
-    storageImageCountText: `共 ${usage.image_count} 张图片 · 总额度待定`,
+    storageUsageText: `${formatStorageBytes(usage.used_bytes)} / ${formatStorageBytes(usage.quota_bytes)}`,
+    storageImageCountText: `共 ${usage.image_count} 张图片 · 剩余 ${formatStorageBytes(usage.remaining_bytes)}`,
+    storageUsageNearLimit: usage.is_near_limit,
     storageUsageLoading: false
   }
 }
@@ -59,6 +66,7 @@ Component({
     ...getSettingsAccountState(),
     storageUsageText: "正在统计…",
     storageImageCountText: "",
+    storageUsageNearLimit: false,
     storageUsageLoading: false,
     themeColors: UI_COLORS
   },
@@ -180,6 +188,7 @@ Component({
         this.setData({
           storageUsageText: "暂时无法读取",
           storageImageCountText: "稍后重新进入页面即可重试",
+          storageUsageNearLimit: false,
           storageUsageLoading: false
         })
       }
@@ -190,6 +199,18 @@ Component({
       page.navigationLocked = true
       wx.navigateTo({
         url: "/pages/settings/home-modules/index",
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
+      })
+    },
+    handleRuntimeControlsTap() {
+      const page = this as SettingsPageInstance
+      if (!this.data.isAdmin || page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: "/pages/settings/runtime-controls/index",
         fail: () => {
           page.navigationLocked = false
           wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })

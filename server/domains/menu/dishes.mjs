@@ -324,7 +324,7 @@ export async function updateDish(supabase, uid, dishId, body) {
 export async function replaceDishImage(supabase, uid, dishId, image) {
   assertCondition(image?.buffer?.length, 400, "IMAGE_REQUIRED", "请选择菜品图片。" );
   const dish = await getDish(supabase, uid, dishId);
-  const paths = await uploadDishImage(supabase, uid, dishId, image);
+  const paths = await uploadDishImage(supabase, uid, dishId, image, [dish.image_path]);
   const { data, error } = await supabase
     .from("dishes")
     .update({ image_path: paths.imagePath })
@@ -373,6 +373,7 @@ export async function deleteDish(supabase, uid, dishId) {
         uid,
         dish.id,
         dish.image_path,
+        { replacedPaths: [dish.image_path] },
       )
       : "";
     if (archiveImagePath) archivedPaths.push(archiveImagePath);
@@ -382,6 +383,7 @@ export async function deleteDish(supabase, uid, dishId) {
         uid,
         place.id,
         place.image_path,
+        { replacedPaths: [dish.image_path] },
       )
       : "";
     if (archivePlaceImagePath) archivedPaths.push(archivePlaceImagePath);

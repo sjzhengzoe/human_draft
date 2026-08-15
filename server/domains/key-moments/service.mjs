@@ -114,7 +114,7 @@ function assertImage(image) {
   assertCondition(STANDARD_IMAGE_TYPES.has(image.mimetype), 415, "UNSUPPORTED_IMAGE_TYPE", "仅支持 PNG、JPEG 或 WebP 图片。");
 }
 
-async function uploadImage(supabase, uid, momentId, image) {
+async function uploadImage(supabase, uid, momentId, image, replacedPaths = []) {
   assertImage(image);
   const revision = randomUUID();
   const basePath = `users/${uid}/moments/${momentId}/${revision}`;
@@ -125,6 +125,7 @@ async function uploadImage(supabase, uid, momentId, image) {
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传关键节点图片失败。",
+    replacedPaths,
   });
 }
 
@@ -203,7 +204,7 @@ export async function updateKeyMoment(supabase, uid, momentId, body, options = {
 
 export async function replaceKeyMomentImage(supabase, uid, momentId, image) {
   const current = await requireMoment(supabase, uid, momentId);
-  const paths = await uploadImage(supabase, uid, current.id, image);
+  const paths = await uploadImage(supabase, uid, current.id, image, [current.image_path]);
   const { data, error } = await supabase
     .from("key_moments")
     .update({ image_path: paths.imagePath })

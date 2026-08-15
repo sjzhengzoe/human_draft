@@ -6,7 +6,8 @@
     "pages/editor/index",
     "pages/settings/index",
     "pages/settings/profile-edit/index",
-    "pages/settings/home-modules/index"
+    "pages/settings/home-modules/index",
+    "pages/settings/runtime-controls/index"
   ],
   "subPackages": [
     {

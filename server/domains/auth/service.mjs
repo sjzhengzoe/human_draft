@@ -146,7 +146,7 @@ async function createSession(supabase, user) {
   };
 }
 
-export async function loginWithWechatCode(supabase, code, profile = {}) {
+export async function loginWithWechatCode(supabase, code, profile = {}, options = {}) {
   assertCondition(
     typeof code === "string" && code.trim().length > 0,
     400,
@@ -183,6 +183,12 @@ export async function loginWithWechatCode(supabase, code, profile = {}) {
     throwSupabaseError(error, "更新小程序账号失败。");
     user = data;
   } else {
+    assertCondition(
+      options.registrationEnabled !== false,
+      503,
+      "REGISTRATION_CLOSED",
+      options.registrationMessage || "当前暂时停止新用户注册，请稍后再试。",
+    );
     const displayName = typeof profile.displayName === "string" && profile.displayName.trim()
       ? requiredDisplayName(profile.displayName)
       : "微信用户";

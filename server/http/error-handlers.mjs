@@ -1,6 +1,7 @@
 import { HttpError } from "../lib/errors.mjs"
+import { shouldRecordOperationalError } from "./operational-events.mjs"
 
-export function registerErrorHandlers(app) {
+export function registerErrorHandlers(app, operationalEvents) {
   app.setNotFoundHandler((_request, reply) => {
     reply.code(404).send({
       ok: false,
@@ -8,7 +9,7 @@ export function registerErrorHandlers(app) {
     })
   })
 
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler(async (error, request, reply) => {
     if (!(error instanceof HttpError)) {
       request.log.error(error)
     } else if (error.cause) {
@@ -24,11 +25,21 @@ export function registerErrorHandlers(app) {
           ? "上传文件过大。"
           : "服务器暂时无法处理请求。"
 
+    const recorded = shouldRecordOperationalError(statusCode, code)
+    if (recorded) {
+      try {
+        await operationalEvents.record({ request, error, statusCode, code, message })
+      } catch (recordError) {
+        request.log.error(recordError, "failed to persist operational event")
+      }
+    }
+
     reply.code(statusCode).send({
       ok: false,
       error: {
         code,
         message,
+        ...(recorded ? { request_id: request.id } : {}),
         ...(error instanceof HttpError && error.details ? { details: error.details } : {})
       }
     })

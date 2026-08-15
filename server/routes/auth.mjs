@@ -24,17 +24,36 @@ export function registerAuthRoutes(app, context) {
     refreshAuthenticated
   } = context
 
-  app.post("/api/auth/wechat", async (request) => ({
-    ok: true,
-    data: await loginWithWechatCode(getSupabaseAdmin(), request.body?.code, {
-      displayName: request.body?.display_name,
-      avatarUrl: request.body?.avatar_url
-    })
-  }))
+  app.post(
+    "/api/auth/wechat",
+    { config: { allowDuringReadOnly: true } },
+    async (request) => {
+      const controls = await context.runtimeControls.getSnapshot()
+      const registration = controls.registration_enabled
+      return {
+        ok: true,
+        data: await loginWithWechatCode(
+          getSupabaseAdmin(),
+          request.body?.code,
+          {
+            displayName: request.body?.display_name,
+            avatarUrl: request.body?.avatar_url
+          },
+          {
+            registrationEnabled: registration.enabled,
+            registrationMessage: registration.message
+          }
+        )
+      }
+    }
+  )
 
   app.post(
     "/api/auth/refresh",
-    { preHandler: refreshAuthenticated },
+    {
+      config: { allowDuringReadOnly: true },
+      preHandler: refreshAuthenticated
+    },
     async (request) => ({
       ok: true,
       data: await refreshSession(getSupabaseAdmin(), request.refreshAuth)
@@ -124,7 +143,10 @@ export function registerAuthRoutes(app, context) {
 
   app.post(
     "/api/auth/logout",
-    { preHandler: refreshAuthenticated },
+    {
+      config: { allowDuringReadOnly: true },
+      preHandler: refreshAuthenticated
+    },
     async (request) => {
       await logoutSession(getSupabaseAdmin(), request.refreshAuth)
       return { ok: true }

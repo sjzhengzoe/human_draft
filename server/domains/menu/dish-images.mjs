@@ -22,7 +22,7 @@ export function createDishImageUrlMap(paths) {
   });
 }
 
-export async function uploadDishImage(supabase, uid, dishId, image) {
+export async function uploadDishImage(supabase, uid, dishId, image, replacedPaths = []) {
   return uploadStandardImage(supabase, {
     bucketName: config.dishBucket,
     basePath: `users/${uid}/dishes/${dishId}/${randomUUID()}`,
@@ -30,10 +30,17 @@ export async function uploadDishImage(supabase, uid, dishId, image) {
     buffer: image.buffer,
     crop: image.crop,
     uploadErrorMessage: "上传菜品图片失败。",
+    replacedPaths,
   });
 }
 
-export async function copyDishImageToScheduleArchive(supabase, uid, sourceId, path) {
+export async function copyDishImageToScheduleArchive(
+  supabase,
+  uid,
+  sourceId,
+  path,
+  { replacedPaths = [] } = {},
+) {
   if (!path) return "";
   const extension = path.match(/(\.[a-z0-9]+)$/i)?.[1] || ".webp";
   const archivePath = `users/${uid}/menu-schedule-archives/${sourceId}/${randomUUID()}${extension}`;
@@ -42,6 +49,7 @@ export async function copyDishImageToScheduleArchive(supabase, uid, sourceId, pa
     sourcePath: path,
     destinationPath: archivePath,
     uid,
+    replacedPaths,
     errorMessage: "保存菜单历史图片失败。",
   });
   return archivePath;

@@ -1,0 +1,76 @@
+<view class="runtime-controls-page">
+  <custom-navigation title="运营控制" background="{{themeColors.pageBackground}}" />
+
+  <scroll-view class="runtime-controls-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="runtime-controls-content">
+      <view class="runtime-controls-note">所有开关均由服务端执行，并记录操作者、时间和原因。环境紧急配置启用时，页面不能覆盖该状态。</view>
+
+      <view class="runtime-control-card">
+        <view class="runtime-control-card__header">
+          <view class="runtime-control-card__title">新用户注册</view>
+          <view class="runtime-control-card__state {{registrationEnabled ? 'runtime-control-card__state--enabled' : 'runtime-control-card__state--paused'}}">{{registrationEnabled ? '开放中' : '已暂停'}}</view>
+        </view>
+        <view class="runtime-control-card__description">暂停后，已有用户仍可登录和使用；从未注册的微信用户不能创建账号。</view>
+        <view wx:if="{{registrationUpdatedAt}}" class="runtime-control-card__meta">最近更新 {{registrationUpdatedAt}}</view>
+        <view wx:if="{{registrationForced}}" class="runtime-control-card__warning">当前由服务器紧急配置接管</view>
+        <button
+          class="runtime-control-card__action"
+          disabled="{{registrationForced || loading || saving}}"
+          bindtap="handleRegistrationAction"
+        >{{registrationEnabled ? '暂停新用户注册' : '恢复新用户注册'}}</button>
+      </view>
+
+      <view class="runtime-control-card">
+        <view class="runtime-control-card__header">
+          <view class="runtime-control-card__title">业务写入</view>
+          <view class="runtime-control-card__state {{writeEnabled ? 'runtime-control-card__state--enabled' : 'runtime-control-card__state--paused'}}">{{writeEnabled ? '正常写入' : '紧急只读'}}</view>
+        </view>
+        <view class="runtime-control-card__description">只读期间仍可登录和查看数据；新增、修改、删除和上传由服务端统一阻止。</view>
+        <view wx:if="{{writeUpdatedAt}}" class="runtime-control-card__meta">最近更新 {{writeUpdatedAt}}</view>
+        <view wx:if="{{writeForced}}" class="runtime-control-card__warning">当前由服务器紧急配置接管</view>
+        <button
+          class="runtime-control-card__action"
+          disabled="{{writeForced || loading || saving}}"
+          bindtap="handleWriteAction"
+        >{{writeEnabled ? '进入紧急只读' : '恢复业务写入'}}</button>
+      </view>
+
+      <view class="runtime-audit-section">
+        <view class="runtime-audit-section__title">最近操作</view>
+        <view wx:if="{{audits.length}}" class="runtime-audit-list">
+          <view wx:for="{{audits}}" wx:key="id" class="runtime-audit-item">
+            <view class="runtime-audit-item__header">
+              <view class="runtime-audit-item__title">{{item.label}} · {{item.stateText}}</view>
+              <view class="runtime-audit-item__time">{{item.timeText}}</view>
+            </view>
+            <view class="runtime-audit-item__reason">{{item.reason}}</view>
+            <view wx:if="{{item.operator_uid}}" class="runtime-audit-item__operator">操作人 UID {{item.operator_uid}}</view>
+          </view>
+        </view>
+        <view wx:else class="runtime-audit-empty">暂无开关操作记录</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <app-dialog
+    visible="{{dialogVisible}}"
+    title="{{dialogTitle}}"
+    placement="bottom"
+    custom-body="{{true}}"
+    confirm-text="{{dialogConfirmText}}"
+    bindcancel="handleDialogCancel"
+    bindconfirm="handleDialogConfirm"
+  >
+    <view slot="body" class="runtime-control-dialog">
+      <view class="runtime-control-dialog__hint">请填写本次操作原因，保存后会进入审计记录。</view>
+      <app-input
+        custom-class="runtime-control-dialog__input"
+        value="{{reason}}"
+        placeholder="例如：处理图片存储异常"
+        maxlength="200"
+        dialog-mode="{{true}}"
+        bindinput="handleReasonInput"
+      />
+    </view>
+  </app-dialog>
+</view>

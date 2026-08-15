@@ -51,6 +51,11 @@ class FakeQuery {
     return this;
   }
 
+  in(column, values) {
+    this.filters.push([column, values, "in"]);
+    return this;
+  }
+
   gt(column, value) {
     this.filters.push([column, value, "gt"]);
     return this;
@@ -58,7 +63,11 @@ class FakeQuery {
 
   matches(row) {
     return this.filters.every(([column, value, operator]) =>
-      operator === "gt" ? row[column] > value : row[column] === value,
+      operator === "gt"
+        ? row[column] > value
+        : operator === "in"
+          ? value.includes(row[column])
+          : row[column] === value,
     );
   }
 
@@ -163,6 +172,23 @@ function createFakeSupabase(users = []) {
       return new FakeQuery(state, table);
     },
     async rpc(name) {
+      if (name === "get_user_image_storage_usage") {
+        return {
+          data: [
+            {
+              module: "avatars",
+              image_count: state.assetWrites.length,
+              used_bytes: state.assetWrites.reduce(
+                (total, asset) => total + Number(asset.size_bytes || 0),
+                0,
+              ),
+              quota_bytes: 104857600,
+              warning_bytes: 83886080,
+            },
+          ],
+          error: null,
+        };
+      }
       assert.equal(name, "ensure_user_defaults");
       return { data: null, error: null };
     },
@@ -352,4 +378,38 @@ test("new users can sign up without avatar or nickname", async (context) => {
   assert.equal(session.user.avatar_url, "");
   assert.equal(supabase.state.users[0].profile_completed, false);
   assert.equal(supabase.state.sessions.length, 1);
+});
+
+test("closed registration blocks only new accounts", async (context) => {
+  mockWechatLogin(context, "openid-new-closed");
+  const newUserSupabase = createFakeSupabase();
+  await assert.rejects(
+    loginWithWechatCode(
+      newUserSupabase,
+      "new-user-code",
+      {},
+      { registrationEnabled: false, registrationMessage: "注册维护中。" },
+    ),
+    (error) => error?.code === "REGISTRATION_CLOSED" && error?.message === "注册维护中。",
+  );
+  assert.equal(newUserSupabase.state.users.length, 0);
+
+  context.mock.restoreAll();
+  mockWechatLogin(context, "openid-existing-closed");
+  const existingSupabase = createFakeSupabase([{
+    id: "internal-existing-closed",
+    uid: "1000000009",
+    wechat_openid: "openid-existing-closed",
+    display_name: "已有用户",
+    avatar_url: "",
+    profile_completed: true,
+    created_at: "2026-08-01T00:00:00.000Z",
+  }]);
+  const session = await loginWithWechatCode(
+    existingSupabase,
+    "existing-user-code",
+    {},
+    { registrationEnabled: false },
+  );
+  assert.equal(session.user.uid, "1000000009");
 });
