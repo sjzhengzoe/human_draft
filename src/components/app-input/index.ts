@@ -1,5 +1,9 @@
 import { UI_FONT_SIZES } from "../../styles/typography"
 
+type AppInputInstance = WechatMiniprogram.Component.TrivialInstance & {
+  readyForFocus?: boolean
+}
+
 Component({
   externalClasses: ["custom-class"],
   properties: {
@@ -68,17 +72,41 @@ Component({
     },
     focus(focus: boolean) {
       if (focus && !this.properties.disabled) {
-        this.setData({ editing: true, nativeFocus: true })
+        this.setData({
+          editing: true,
+          nativeFocus: this.properties.dialogMode ? this.data.nativeFocus : true
+        })
       }
     }
   },
   lifetimes: {
     attached() {
+      const component = this as AppInputInstance
+      component.readyForFocus = false
       this.setData({
         localValue: this.properties.value,
         editing: this.properties.focus && !this.properties.disabled,
-        nativeFocus: this.properties.focus && !this.properties.disabled
+        nativeFocus: this.properties.focus && !this.properties.disabled && !this.properties.dialogMode
       })
+    },
+    ready() {
+      const component = this as AppInputInstance
+      component.readyForFocus = true
+      if (!this.properties.dialogMode || !this.properties.focus || this.properties.disabled) return
+      wx.nextTick(() => {
+        if (
+          component.readyForFocus &&
+          this.properties.dialogMode &&
+          this.properties.focus &&
+          !this.properties.disabled
+        ) {
+          this.setData({ nativeFocus: true })
+        }
+      })
+    },
+    detached() {
+      const component = this as AppInputInstance
+      component.readyForFocus = false
     }
   },
   methods: {

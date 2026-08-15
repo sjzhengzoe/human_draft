@@ -35,6 +35,8 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   assert.match(inputTemplate, /adjust-position="\{\{dialogMode \? false : adjustPosition\}\}"/);
   assert.match(inputTemplate, /cursor-spacing="\{\{dialogMode \? 0 : cursorSpacing\}\}"/);
   assert.match(inputSource, /maxlength:[\s\S]*?value: 120/);
+  assert.match(inputSource, /ready\(\)[\s\S]*?wx\.nextTick/);
+  assert.match(inputSource, /nativeFocus: this\.properties\.focus && !this\.properties\.disabled && !this\.properties\.dialogMode/);
 });
 
 test("every dialog containing an input uses the shared bottom placement", async () => {
