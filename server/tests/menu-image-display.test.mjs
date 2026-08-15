@@ -124,7 +124,8 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
     /wx:if="\{\{!contentLoading && !errorMessage && \(dishes\.length > 0 \|\| outsidePlaces\.length > 0\)\}\}" class="quick-footer">没有更多了/,
   );
   assert.doesNotMatch(menuPage, /当前 \{\{dishes\.length\}\} 个选择/);
-  assert.match(menuPage, /wx:if="\{\{selectionMode\}\}"[^>]*data-type="all"[^>]*>全部<\/view>/);
+  assert.match(menuPage, /class="record-filter__item[^>]*data-type="all"[^>]*>全部<\/view>/);
+  assert.doesNotMatch(menuPage, /wx:if="\{\{selectionMode\}\}"[^>]*data-type="all"/);
   assert.equal(menuPage.match(/>全部<\/view>/g)?.length, 4);
   assert.match(menuPage, /data-filter="outside"[^>]*bindtap="handleFilterTap">全部<\/view>/);
   assert.doesNotMatch(menuPage, /quick-card__type/);
@@ -143,10 +144,10 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
     menuPage,
     /browse-card__name[\s\S]*browse-card__title-introduction[\s\S]*browse-card__record-row[\s\S]*用餐场景[\s\S]*菜品分类[\s\S]*browse-card__meal-row[\s\S]*主要食材[\s\S]*烹饪类型[\s\S]*口味特点[\s\S]*衍生菜系/,
   );
-  assert.match(menuPage, /wx:for="\{\{item\.tasteTags\}\}"/);
+  assert.match(menuPage, /wx:for="\{\{dishes\[browseItem\.itemIndex\]\.tasteTags\}\}"/);
   assert.match(menuPage, /menu-filter-label">用餐场景：/);
   assert.match(menuPage, /activeRecordType === 'outside' \? '外食分类：' : '菜品分类：'/);
-  assert.match(menuPage, /wx:if="\{\{item\.introduction\}\}"/);
+  assert.match(menuPage, /wx:if="\{\{dishes\[browseItem\.itemIndex\]\.introduction\}\}"/);
   assert.match(menuPage, /wx:for="\{\{outsidePlaces\}\}"/);
   assert.match(menuPage, /bindtap="handlePlaceTap"/);
   assert.match(menuPage, /wx:for="\{\{place\.dishes\}\}"/);
@@ -230,7 +231,7 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuRevision, /menuDataRevision \+= 1/);
   assert.match(menuLogic, /applyBrowseWindow/);
   assert.match(menuLogic, /BROWSE_WINDOW_RADIUS\s*=\s*1/);
-  assert.match(menuPage, /wx:if="\{\{item\.browseVisible\}\}" class="browse-slide-scroll"/);
+  assert.match(menuPage, /wx:if="\{\{browseItem\.browseVisible\}\}" class="browse-slide-scroll"/);
   assert.match(menuLogic, /handleBrowseChange\(event:\s*WechatMiniprogram\.SwiperChange\)/);
   assert.doesNotMatch(menuLogic, /getBrowseMetrics|BROWSE_CARD_STRIDE_RPX|scrollLeft/);
   assert.match(cropper, /imageWidth/);

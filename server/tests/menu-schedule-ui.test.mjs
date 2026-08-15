@@ -28,15 +28,30 @@ test("weekly-menu selection defaults both dining scene and category to all", asy
     read("src/pages/menu/index.wxml"),
     read("src/pages/menu/index.ts"),
   ]);
-  assert.match(page, /wx:if="\{\{selectionMode\}\}" class="record-filter__item \{\{activeRecordType === 'all'/);
-  assert.match(page, /activeRecordType === 'home' && selectionMode[\s\S]*data-filter="home"[\s\S]*>全部</);
+  assert.match(page, /class="record-filter__item \{\{activeRecordType === 'all'/);
+  assert.match(page, /activeRecordType === 'home'[\s\S]*data-filter="home"[\s\S]*>全部</);
   assert.match(page, /activeRecordType === 'all'[\s\S]*data-filter="all"[\s\S]*>全部</);
   assert.match(page, /activeRecordType !== 'outside' && dishes\.length/);
   assert.match(page, /activeRecordType !== 'home' && outsidePlaces\.length/);
   assert.match(page, /搜索全部菜品或店铺/);
   assert.match(logic, /activeFilter: "all",\s*activeRecordType: "all"/);
   assert.match(logic, /recordType === "outside"[\s\S]*recordType === "home"[\s\S]*listMenuPlaces/);
-  assert.match(logic, /const filter = this\.data\.selectionMode\s*\? recordType/);
+  assert.match(page, /<button wx:if="\{\{canWrite \|\| guestMode\}\}" class="add-button" bindtap="handleAddTap">/);
+  assert.match(logic, /handleAddTap\(\)[\s\S]*?activeRecordType === "outside"[\s\S]*?pages\/menu\/place-edit\/index[\s\S]*?pages\/menu\/edit\/index/);
+});
+
+test("regular menu modes expose all filters and browse home dishes with outside places", async () => {
+  const [page, logic] = await Promise.all([
+    read("src/pages/menu/index.wxml"),
+    read("src/pages/menu/index.ts"),
+  ]);
+  assert.match(page, /class="record-filter__item \{\{activeRecordType === 'all'/);
+  assert.match(page, /wx:if="\{\{activeRecordType === 'home'\}\}" class="category-chip \{\{activeFilter === 'home'/);
+  assert.doesNotMatch(page, /wx:if="\{\{selectionMode\}\}" class="record-filter__item/);
+  assert.match(logic, /const filter = recordType/);
+  assert.match(logic, /canReorder: canWrite && activeRecordType !== "all"/);
+  assert.match(logic, /function buildBrowseItems\([\s\S]*?recordType !== "outside"[\s\S]*?recordType !== "home"/);
+  assert.match(page, /wx:for="\{\{browseItems\}\}"[\s\S]*?browseItem\.kind === 'place'[\s\S]*?dishes\[browseItem\.itemIndex\]\.name/);
 });
 
 test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {

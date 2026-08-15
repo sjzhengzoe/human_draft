@@ -87,6 +87,13 @@ type QuickMenuPlace = Omit<MenuPlace, "dishes" | "preview_dishes"> & {
   selected: boolean
 }
 
+type BrowseItem = {
+  key: string
+  kind: "dish" | "place"
+  itemIndex: number
+  browseVisible: boolean
+}
+
 type SelectionItem = {
   key: string
   source_kind: MenuScheduleSourceKind
@@ -190,6 +197,32 @@ function toQuickMenuPlace(place: MenuPlace): QuickMenuPlace {
   }
 }
 
+function buildBrowseItems(
+  dishes: MenuDish[],
+  outsidePlaces: QuickMenuPlace[],
+  recordType: RecordTypeFilter,
+  currentIndex: number
+): BrowseItem[] {
+  const items: BrowseItem[] = []
+  if (recordType !== "outside") {
+    dishes.forEach((dish, itemIndex) => items.push({
+      key: `dish:${dish.id}`,
+      kind: "dish",
+      itemIndex,
+      browseVisible: false
+    }))
+  }
+  if (recordType !== "home") {
+    outsidePlaces.forEach((place, itemIndex) => items.push({
+      key: `place:${place.id}`,
+      kind: "place",
+      itemIndex,
+      browseVisible: false
+    }))
+  }
+  return applyBrowseWindow(items, currentIndex)
+}
+
 function recordTypeFromFilter(filter: string): RecordTypeFilter {
   if (filter === "home" || filter.startsWith("home:")) return "home"
   if (filter === "outside" || filter.startsWith("outside:")) return "outside"
@@ -210,8 +243,8 @@ function resolveCategoryFilter(
   categories: Category[],
   outsideCategories: DiningScene[]
 ) {
+  if (filter === "all" || filter === "home" || filter === "outside") return filter
   const recordType = recordTypeFromFilter(filter)
-  if (recordType === "outside" && filter === "outside") return filter
   if (
     recordType === "home"
     && filter.startsWith("home:")
@@ -354,6 +387,7 @@ Page({
     outsideCategories: [] as DiningScene[],
     dishes: [] as MenuDish[],
     outsidePlaces: [] as QuickMenuPlace[],
+    browseItems: [] as BrowseItem[],
     homePlaceId: "",
     displayMode: "quick" as DisplayMode,
     browseCurrentIndex: 0,
@@ -426,7 +460,8 @@ Page({
         hasLoaded: true,
         metadataLoaded: true,
         dishes: [],
-        outsidePlaces: []
+        outsidePlaces: [],
+        browseItems: []
       })
       return
     }
@@ -537,16 +572,27 @@ Page({
         const activeRecordType = recordTypeFromFilter(activeFilter)
         const itemCount = activeRecordType === "outside"
           ? cached.outsidePlaces.length
-          : cached.dishes.length
+          : activeRecordType === "all"
+            ? cached.dishes.length + cached.outsidePlaces.length
+            : cached.dishes.length
         const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
+        const dishes = applyBrowseWindow(cached.dishes, browsePosition.browseCurrentIndex)
+        const outsidePlaces = applyBrowseWindow(
+          cached.outsidePlaces,
+          browsePosition.browseCurrentIndex
+        )
         this.setData({
-          dishes: applyBrowseWindow(cached.dishes, browsePosition.browseCurrentIndex),
-          outsidePlaces: applyBrowseWindow(
-            cached.outsidePlaces,
+          dishes,
+          outsidePlaces,
+          browseItems: buildBrowseItems(
+            dishes,
+            outsidePlaces,
+            activeRecordType,
             browsePosition.browseCurrentIndex
           ),
           activeFilter,
           activeRecordType,
+          canReorder: this.data.canWrite && activeRecordType !== "all",
           ...browsePosition,
           loading: false,
           contentLoading: false,
@@ -591,19 +637,17 @@ Page({
         outsideCategories = overview.outsideCategories
         homePlaceId = overview.homePlaceId
         canWrite = overview.canWrite
-        if (this.data.selectionMode) {
-          activeFilter = resolveCategoryFilter(
-            this.data.activeFilter,
-            categories,
-            outsideCategories
-          )
-          activeRecordType = recordTypeFromFilter(activeFilter)
+        activeFilter = resolveCategoryFilter(
+          this.data.activeFilter,
+          categories,
+          outsideCategories
+        )
+        activeRecordType = recordTypeFromFilter(activeFilter)
+        if (activeFilter !== overview.activeFilter) {
           const content = await loadFilteredMenuItems(activeFilter, homePlaceId)
           dishes = content.dishes
           outsidePlaces = content.outsidePlaces
         } else {
-          activeFilter = overview.activeFilter
-          activeRecordType = overview.activeRecordType
           dishes = overview.dishes
           outsidePlaces = overview.outsidePlaces
         }
@@ -640,12 +684,18 @@ Page({
       const dataPatch: WechatMiniprogram.IAnyObject = {
         dishes: nextDishes,
         outsidePlaces: nextOutsidePlaces,
+        browseItems: buildBrowseItems(
+          nextDishes,
+          nextOutsidePlaces,
+          activeRecordType,
+          browsePosition.browseCurrentIndex
+        ),
         homePlaceId,
         activeFilter,
         activeRecordType,
         ...browsePosition,
         canWrite,
-        canReorder: canWrite,
+        canReorder: canWrite && activeRecordType !== "all",
         loadedRevision,
         lastLoadedAt: loadedAt,
         draggingIndex: -1,
@@ -849,9 +899,7 @@ Page({
     const recordType = String(event.currentTarget.dataset.type || "all") as RecordTypeFilter
     if (!["all", "home", "outside"].includes(recordType)) return
     if (recordType === this.data.activeRecordType) return
-    const filter = this.data.selectionMode
-      ? recordType
-      : defaultCategoryFilter(recordType, this.data.categories)
+    const filter = recordType
     if (filter === this.data.activeFilter) return
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = null
@@ -1043,25 +1091,17 @@ Page({
 
   handleBrowseChange(event: WechatMiniprogram.SwiperChange) {
     const index = Number(event.detail.current)
-    const itemCount = this.data.activeRecordType === "outside"
-      ? this.data.outsidePlaces.length
-      : this.data.dishes.length
+    const itemCount = this.data.browseItems.length
     const browsePosition = getBrowsePosition(itemCount, index)
     if (browsePosition.browseCurrentIndex !== this.data.browseCurrentIndex) {
       const previousIndex = this.data.browseCurrentIndex
       const currentIndex = browsePosition.browseCurrentIndex
-      const collectionKey = this.data.activeRecordType === "outside"
-        ? "outsidePlaces"
-        : "dishes"
-      const items = this.data.activeRecordType === "outside"
-        ? this.data.outsidePlaces
-        : this.data.dishes
       const dataPatch: WechatMiniprogram.IAnyObject = { browseCurrentIndex: currentIndex }
-      items.forEach((item, itemIndex) => {
+      this.data.browseItems.forEach((item, itemIndex) => {
         const wasVisible = isBrowseItemVisible(itemIndex, previousIndex)
         const shouldBeVisible = isBrowseItemVisible(itemIndex, currentIndex)
         if (wasVisible !== shouldBeVisible || item.browseVisible !== shouldBeVisible) {
-          dataPatch[`${collectionKey}[${itemIndex}].browseVisible`] = shouldBeVisible
+          dataPatch[`browseItems[${itemIndex}].browseVisible`] = shouldBeVisible
         }
       })
       this.setData(dataPatch)

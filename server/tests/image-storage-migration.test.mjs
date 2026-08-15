@@ -6,6 +6,10 @@ const cleanupMigration = await readFile(
   new URL("../../supabase/migrations/20260814105241_cleanup_prelaunch_redundancy.sql", import.meta.url),
   "utf8",
 );
+const menuScheduleRepairMigration = await readFile(
+  new URL("../../supabase/migrations/20260815073016_fix_menu_schedule_removed_thumbnail_columns.sql", import.meta.url),
+  "utf8",
+);
 const mediaCoverRecovery = await readFile(
   new URL("../scripts/restore-missing-media-covers.mjs", import.meta.url),
   "utf8",
@@ -24,6 +28,13 @@ test("pre-launch cleanup removes legacy thumbnail columns after the single-image
       new RegExp(`alter table public\\.${table} drop column if exists thumbnail_path`, "i"),
     );
   }
+});
+
+test("menu schedule snapshots use the canonical image after thumbnail columns are removed", () => {
+  assert.match(menuScheduleRepairMigration, /create or replace function public\.replace_menu_schedule_meal/i);
+  assert.doesNotMatch(menuScheduleRepairMigration, /source_(?:dish|place)\.thumbnail_path/i);
+  assert.match(menuScheduleRepairMigration, /coalesce\(source_dish\.image_path, ''\)/i);
+  assert.match(menuScheduleRepairMigration, /coalesce\(source_place\.image_path, ''\)/i);
 });
 
 test("media cover recovery is dry-run by default and only fills missing COS objects", () => {
