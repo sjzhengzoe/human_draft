@@ -3,6 +3,7 @@ import { getCurrentUser } from "./services/auth"
 import { loadAppFont } from "./services/font-loader"
 import { initializeToastDefaults } from "./services/toast"
 import { initializeUIFont } from "./services/ui-font"
+import { captureProductAttribution } from "./services/analytics-context"
 
 const RED3_PRELOAD_RETRY_DELAY = 3000
 const RED3_PRELOAD_MAX_RETRIES = 3
@@ -21,13 +22,15 @@ App<IAppOption>({
   globalData: {
     currentUser: null
   },
-  onLaunch() {
+  onLaunch(options) {
+    captureProductAttribution(options)
     initializeToastDefaults()
     this.globalData.currentUser = getCurrentUser()
     void initializeUIFont().catch(() => undefined)
     preloadRed3Font()
   },
-  onShow() {
+  onShow(options) {
+    captureProductAttribution(options)
     const user = getCurrentUser()
     this.globalData.currentUser = user
   }

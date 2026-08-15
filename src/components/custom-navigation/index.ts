@@ -1,4 +1,5 @@
 import { UI_COLORS } from "../../styles/colors"
+import { trackCurrentModuleOpen } from "../../services/analytics"
 
 const FALLBACK_STATUS_BAR_HEIGHT = 24
 const FALLBACK_NAVIGATION_BAR_HEIGHT = 44
@@ -54,6 +55,11 @@ Component({
     titleTappable: {
       type: Boolean,
       value: false
+    }
+  },
+  pageLifetimes: {
+    show() {
+      trackCurrentModuleOpen()
     }
   },
   methods: {

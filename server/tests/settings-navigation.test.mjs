@@ -122,7 +122,8 @@ test("settings navigation ignores repeated taps and unlocks after failures", asy
   assert.match(logic, /handleLoginTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleModuleSettingsTap\(\)[\s\S]*?if \(page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
   assert.match(logic, /handleEditProfileTap\(\)[\s\S]*?if \(!user \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
-  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 4);
+  assert.match(logic, /handleAnalyticsTap\(\)[\s\S]*?if \(!this\.data\.isAdmin \|\| page\.navigationLocked\) return[\s\S]*?page\.navigationLocked = true/);
+  assert.equal((logic.match(/fail: \(\) => \{[\s\S]*?page\.navigationLocked = false/g) || []).length, 5);
 });
 
 test("settings logout ignores duplicate taps and releases its lock on every exit path", async () => {

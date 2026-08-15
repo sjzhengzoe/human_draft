@@ -96,5 +96,17 @@ export function createRequestRateLimiter(options = {}) {
     }
   }
 
-  return { enforceAuthenticated, enforceIp, limiter };
+  function enforceAnalytics(request, reply) {
+    if (!enabled || !request.auth?.user?.uid) return;
+    rejectRateLimit(
+      reply,
+      limiter.consume(`uid:analytics:${request.auth.user.uid}`, {
+        limit: 60,
+        windowMs: 10 * 60_000,
+      }),
+      "运营事件上报过于频繁，请稍后再试。",
+    );
+  }
+
+  return { enforceAnalytics, enforceAuthenticated, enforceIp, limiter };
 }

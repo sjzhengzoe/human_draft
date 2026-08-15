@@ -1,5 +1,14 @@
 export function registerAdminRoutes(app, context) {
-  const { adminAuthenticated, runtimeControls } = context;
+  const { adminAuthenticated, productAnalytics, runtimeControls } = context;
+
+  app.get(
+    "/api/admin/analytics",
+    { preHandler: adminAuthenticated },
+    async (request) => ({
+      ok: true,
+      data: await productAnalytics.getAdminDashboard(request.query || {}),
+    }),
+  );
 
   app.get(
     "/api/admin/runtime-controls",

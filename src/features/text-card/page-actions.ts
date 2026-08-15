@@ -1,5 +1,6 @@
 import { checkTextContent } from "../../services/content-security";
 import { saveImageToPhotosAlbum } from "../../utils/text-card-render";
+import { trackTextCardCreated } from "../../services/analytics";
 
 export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
 
@@ -56,6 +57,7 @@ export async function saveTextCardImages(
       await saveImageToPhotosAlbum(url);
     }
     wx.showToast({ title: "已保存", icon: "success" });
+    trackTextCardCreated();
   } catch (error) {
     console.error("保存图片失败", error);
     wx.showToast({ title: "保存失败", icon: "none" });

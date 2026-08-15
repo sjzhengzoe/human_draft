@@ -72,6 +72,52 @@ export type RuntimeControlAdminState = {
   audits: RuntimeControlAudit[]
 }
 
+export type ProductAnalyticsDaily = {
+  metric_date: string
+  registrations: number
+  logins: number
+  active_users: number
+  module_opens: number
+  content_creations: number
+  image_uploads: number
+  uploaded_bytes: number
+  error_occurrences: number
+  warning_occurrences: number
+}
+
+export type ProductAnalyticsModule = {
+  module: string
+  unique_users: number
+  module_opens: number
+  content_creations: number
+  image_uploads: number
+  uploaded_bytes: number
+}
+
+export type ProductAnalyticsSource = {
+  source_scene: number | null
+  source_campaign: string
+  source_referrer_app_id: string
+  release_channel: string
+  registrations: number
+}
+
+export type ProductAnalyticsDashboard = {
+  range: { from: string; to: string; days: number }
+  generated_at: string
+  current: {
+    total_users: number
+    users_logged_in_30d: number
+    image_count: number
+    current_image_bytes: number
+    open_error_groups: number
+  }
+  totals: Omit<ProductAnalyticsDaily, "metric_date">
+  daily: ProductAnalyticsDaily[]
+  modules: ProductAnalyticsModule[]
+  sources: ProductAnalyticsSource[]
+}
+
 export type HomeModuleSettings = {
   configured: boolean
   hidden_module_keys: string[]

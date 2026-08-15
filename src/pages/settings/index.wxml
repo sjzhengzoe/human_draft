@@ -89,6 +89,17 @@
           class="settings-item"
           hover-class="settings-item--hover"
           hover-stay-time="80"
+          bindtap="handleAnalyticsTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="layout-grid" size="27" /><text class="settings-item__label">运营数据</text></view>
+          <view class="settings-item__right">
+            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+          </view>
+        </view>
+        <view
+          class="settings-item"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
           bindtap="handleModuleSettingsTap"
         >
           <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页设置</text></view>

@@ -1,0 +1,82 @@
+<view class="analytics-page">
+  <custom-navigation title="运营数据" background="{{themeColors.pageBackground}}" />
+
+  <scroll-view class="analytics-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="analytics-content">
+      <view class="analytics-note">仅统计固定运营指标，不采集用户填写的文字、图片内容、请求正文或 IP 地址。</view>
+
+      <view class="analytics-periods" role="tablist" aria-label="统计周期">
+        <view
+          wx:for="{{periods}}"
+          wx:key="days"
+          class="analytics-period {{selectedDays === item.days ? 'analytics-period--selected' : ''}}"
+          role="tab"
+          aria-selected="{{selectedDays === item.days}}"
+          data-days="{{item.days}}"
+          bindtap="handlePeriodTap"
+        >{{item.label}}</view>
+      </view>
+
+      <view wx:if="{{loading}}" class="analytics-state">正在汇总运营数据…</view>
+      <view wx:elif="{{errorMessage}}" class="analytics-state analytics-state--error">
+        <view>{{errorMessage}}</view>
+        <view class="analytics-retry" role="button" aria-label="重新加载运营数据" bindtap="handleRetryTap">重新加载</view>
+      </view>
+
+      <block wx:else>
+        <view class="analytics-range">{{rangeText}}</view>
+
+        <view class="analytics-summary-grid">
+          <view wx:for="{{summaryCards}}" wx:key="key" class="analytics-summary-card">
+            <view class="analytics-summary-card__value">{{item.value}}</view>
+            <view class="analytics-summary-card__label">{{item.label}}</view>
+          </view>
+        </view>
+
+        <view class="analytics-section">
+          <view class="analytics-section__title">当前规模与成本</view>
+          <view class="analytics-card analytics-current">
+            <view class="analytics-current__item"><text>账号总数</text><text>{{dashboard.current.total_users}}</text></view>
+            <view class="analytics-current__item"><text>近 30 天登录用户</text><text>{{dashboard.current.users_logged_in_30d}}</text></view>
+            <view class="analytics-current__item"><text>当前图片</text><text>{{dashboard.current.image_count}} 张</text></view>
+            <view class="analytics-current__item"><text>当前图片空间</text><text>{{currentImageBytesText}}</text></view>
+            <view class="analytics-current__item"><text>本周期新增上传</text><text>{{uploadedBytesText}}</text></view>
+            <view class="analytics-current__item"><text>未解决错误组</text><text>{{dashboard.current.open_error_groups}}</text></view>
+          </view>
+        </view>
+
+        <view class="analytics-section">
+          <view class="analytics-section__title">模块使用</view>
+          <view wx:if="{{moduleRows.length}}" class="analytics-card analytics-list">
+            <view wx:for="{{moduleRows}}" wx:key="module" class="analytics-list__item">
+              <view class="analytics-list__title">{{item.label}}</view>
+              <view class="analytics-list__meta">打开 {{item.module_opens}} · 创建 {{item.content_creations}} · 上传 {{item.uploadedBytesText}}</view>
+            </view>
+          </view>
+          <view wx:else class="analytics-empty">本周期还没有模块使用记录</view>
+        </view>
+
+        <view class="analytics-section">
+          <view class="analytics-section__title">注册来源</view>
+          <view wx:if="{{sourceRows.length}}" class="analytics-card analytics-list">
+            <view wx:for="{{sourceRows}}" wx:key="label" class="analytics-list__item analytics-list__item--row">
+              <view class="analytics-list__title">{{item.label}}</view>
+              <view class="analytics-list__value">{{item.registrations}}</view>
+            </view>
+          </view>
+          <view wx:else class="analytics-empty">本周期还没有新增注册</view>
+        </view>
+
+        <view class="analytics-section">
+          <view class="analytics-section__title">每日明细</view>
+          <view class="analytics-card analytics-list">
+            <view wx:for="{{dailyRows}}" wx:key="metric_date" class="analytics-list__item">
+              <view class="analytics-list__title">{{item.metric_date}}</view>
+              <view class="analytics-list__meta">活跃 {{item.active_users}} · 创建 {{item.content_creations}} · 上传 {{item.uploadedBytesText}} · 错误 {{item.error_occurrences}}</view>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view>

@@ -4,6 +4,7 @@ import { config } from "./config.mjs";
 import { createAuthGuards } from "./http/auth-guards.mjs";
 import { registerErrorHandlers } from "./http/error-handlers.mjs";
 import { registerRuntimeSafety } from "./http/runtime-safety.mjs";
+import { registerProductAnalytics } from "./http/product-analytics.mjs";
 import { getSupabaseAdmin as getDefaultSupabaseAdmin } from "./lib/supabase.mjs";
 import { wechatContentSecurity } from "./lib/wechat-content-security.mjs";
 import { registerActivityRoutes } from "./routes/activities.mjs";
@@ -20,10 +21,12 @@ import { registerMediaRoutes } from "./routes/media.mjs";
 import { registerMenuRoutes } from "./routes/menu.mjs";
 import { registerSystemRoutes } from "./routes/system.mjs";
 import { registerWardrobeRoutes } from "./routes/wardrobe.mjs";
+import { registerAnalyticsRoutes } from "./routes/analytics.mjs";
 
 const routeRegistrars = [
   registerSystemRoutes,
   registerAuthRoutes,
+  registerAnalyticsRoutes,
   registerAdminRoutes,
   registerContentSecurityRoutes,
   registerExerciseRoutes,
@@ -69,11 +72,14 @@ export function buildServer(options = {}) {
 
   const { operationalEvents, rateLimiter, runtimeControls } =
     registerRuntimeSafety(app, options, getSupabaseAdmin);
+  const productAnalytics = registerProductAnalytics(app, options, getSupabaseAdmin);
   const authGuards = createAuthGuards(getSupabaseAdmin, rateLimiter);
   const routeContext = {
     ...authGuards,
     contentSecurity,
     getSupabaseAdmin,
+    productAnalytics,
+    rateLimiter,
     runtimeControls,
   };
 

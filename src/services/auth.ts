@@ -5,6 +5,7 @@ import { clearLuggageDataCache } from "../utils/luggage-data-cache"
 import { clearMediaDataCache } from "../utils/media-data-cache"
 import { applyHiddenHomeModuleKeys } from "../utils/home-modules"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
+import { getProductAttribution } from "./analytics-context"
 
 let pendingLogin: Promise<AuthSession> | null = null
 let pendingRefresh: Promise<AuthSession> | null = null
@@ -33,7 +34,7 @@ function requestWechatSession(code: string): Promise<AuthSession> {
     wx.request<ApiEnvelope<AuthSession>>({
       url: `${API_BASE_URL}/api/auth/wechat`,
       method: "POST",
-      data: { code },
+      data: { code, ...getProductAttribution() },
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300 && response.data.data) {
           resolve(response.data.data)

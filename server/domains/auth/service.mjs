@@ -218,6 +218,7 @@ export async function loginWithWechatCode(supabase, code, profile = {}, options 
   const avatarUrl = await resolveUserAvatarUrl(user.avatar_url);
 
   return {
+    is_new_user: !existingUser,
     token: session.token,
     expires_at: session.expiresAt,
     refresh_token: session.refreshToken,

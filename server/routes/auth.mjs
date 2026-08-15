@@ -30,20 +30,28 @@ export function registerAuthRoutes(app, context) {
     async (request) => {
       const controls = await context.runtimeControls.getSnapshot()
       const registration = controls.registration_enabled
+      const authResult = await loginWithWechatCode(
+        getSupabaseAdmin(),
+        request.body?.code,
+        {
+          displayName: request.body?.display_name,
+          avatarUrl: request.body?.avatar_url
+        },
+        {
+          registrationEnabled: registration.enabled,
+          registrationMessage: registration.message
+        }
+      )
+      const { is_new_user: isNewUser, ...session } = authResult
+      await context.productAnalytics.recordAuthentication({
+        request,
+        uid: session.user.uid,
+        isNewUser,
+        attribution: request.body || {}
+      })
       return {
         ok: true,
-        data: await loginWithWechatCode(
-          getSupabaseAdmin(),
-          request.body?.code,
-          {
-            displayName: request.body?.display_name,
-            avatarUrl: request.body?.avatar_url
-          },
-          {
-            registrationEnabled: registration.enabled,
-            registrationMessage: registration.message
-          }
-        )
+        data: session
       }
     }
   )

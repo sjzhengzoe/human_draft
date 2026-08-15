@@ -12,6 +12,7 @@ import {
   optimizeImage,
   standardImagePath,
 } from "../../lib/image-processing.mjs";
+import { recordImageUploaded } from "../system/product-analytics.mjs";
 
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
 export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "3600";
@@ -136,7 +137,15 @@ export async function uploadStorageImage(
       size_bytes: buffer.length,
       mime_type: contentType,
     }, { onConflict: "object_key" });
-    if (!error) return;
+    if (!error) {
+      await recordImageUploaded(supabase, {
+        objectKey,
+        uid,
+        module,
+        sizeBytes: buffer.length,
+      });
+      return;
+    }
     try {
       await deleteCosObject(objectKey);
     } catch (cleanupError) {
@@ -262,6 +271,12 @@ export async function copyStorageImage(
         mime_type: sourceAsset?.mime_type || "image/webp",
       }, { onConflict: "object_key" });
       if (ledgerError) throw ledgerError;
+      await recordImageUploaded(supabase, {
+        objectKey: destinationKey,
+        uid,
+        module: IMAGE_MODULE_BY_BUCKET.get(bucketName),
+        sizeBytes: sourceBytes,
+      });
     });
   } catch (error) {
     if (error instanceof HttpError) throw error;

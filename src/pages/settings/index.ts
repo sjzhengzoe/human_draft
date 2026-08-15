@@ -216,6 +216,18 @@ Component({
           wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
         }
       })
+    },
+    handleAnalyticsTap() {
+      const page = this as SettingsPageInstance
+      if (!this.data.isAdmin || page.navigationLocked) return
+      page.navigationLocked = true
+      wx.navigateTo({
+        url: "/pages/settings/analytics/index",
+        fail: () => {
+          page.navigationLocked = false
+          wx.showToast({ title: "暂时无法打开，请重试", icon: "none" })
+        }
+      })
     }
   }
 })
