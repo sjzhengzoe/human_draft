@@ -190,7 +190,8 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(page, /activeGranularity === 'year'[\s\S]*?class="today-publisher"/);
   assert.match(page, /class="today-publisher__label">今天<\/view>/);
   assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
-  assert.match(page, /class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day[\s\S]*?timeline-date__time/);
+  assert.match(page, /wx:if="\{\{item\.show_date_heading\}\}" class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
+  assert.match(page, /class="moment-time">\{\{item\.heading_time\}\}<\/view>/);
   assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
   assert.match(page, /item\.show_item_divider[\s\S]*?class="item-divider"/);
   assert.doesNotMatch(page, /interval_after|timeline-gap/);
@@ -209,7 +210,9 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(logic, /periodLabel: periodLabel\("year", INITIAL_DATE_TIME\.date\)/);
   assert.match(logic, /show_item_divider: index < items\.length - 1/);
   assert.match(logic, /heading_time: `\$\{pad\(parts\.hour\)\}:\$\{pad\(parts\.minute\)\}`/);
-  assert.doesNotMatch(logic, /show_date_heading|show_date_divider|isSameShanghaiDate/);
+  assert.match(logic, /show_date_heading: showDateHeading/);
+  assert.match(logic, /previousParts\.year !== parts\.year[\s\S]*?previousParts\.month !== parts\.month[\s\S]*?previousParts\.day !== parts\.day/);
+  assert.doesNotMatch(logic, /show_date_divider|isSameShanghaiDate/);
   assert.doesNotMatch(logic, /intervalLabel|interval_after/);
   const parsedAppConfig = JSON.parse(appConfig);
   const registeredPages = [

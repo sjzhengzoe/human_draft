@@ -75,8 +75,13 @@ function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
   return items.map((item, index) => {
     const parts = shanghaiParts(item.occurred_at)
     const previousParts = index > 0 ? shanghaiParts(items[index - 1].occurred_at) : null
+    const showDateHeading = !previousParts
+      || previousParts.year !== parts.year
+      || previousParts.month !== parts.month
+      || previousParts.day !== parts.day
     return {
       ...item,
+      show_date_heading: showDateHeading,
       show_year_heading: !previousParts || previousParts.year !== parts.year,
       show_item_divider: index < items.length - 1,
       heading_day: pad(parts.day),
