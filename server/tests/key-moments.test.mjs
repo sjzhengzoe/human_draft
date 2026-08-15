@@ -43,32 +43,31 @@ test("key moment creation uses the previewed date only for day view", async () =
   assert.match(editor, /editorTime: INITIAL_DATE_TIME\.time/);
 });
 
-test("key moment items open the same detail flow in year, month, and day views", async () => {
-  const [page, styles, logic] = await Promise.all([
+test("key moment items open the same detail flow and deletion lives only in detail", async () => {
+  const [page, styles, logic, detailPage, detailStyles, detailLogic, detailConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.json", import.meta.url), "utf8"),
   ]);
   assert.match(
     page,
     /class="timeline-entry[^\n]*"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?bindtap="handleMomentTap"/,
   );
   assert.match(page, /class="moment-image[^\n]*"[\s\S]*?catchtap="handlePreview"/);
-  assert.match(
-    page,
-    /class="timeline-delete-button"[\s\S]*?data-id="\{\{item\.id\}\}"[\s\S]*?catchtap="handleDelete"/,
-  );
-  assert.doesNotMatch(page, /class="delete-button"|edit-button|edit-button__dots|•••/);
-  assert.match(styles, /\.timeline-delete-button/);
-  assert.doesNotMatch(styles, /\.delete-button|\.edit-button/);
-  assert.match(
-    logic,
-    /handleDelete\(event:[\s\S]*?editingId: id,[\s\S]*?showDeleteConfirm: true/,
-  );
-  assert.match(
-    logic,
-    /handleDeleteConfirmCancel\(\)[\s\S]*?showDeleteConfirm: false, editingId: ""/,
-  );
+  assert.doesNotMatch(page, /timeline-delete-button|删除关键节点|handleDelete/);
+  assert.doesNotMatch(styles, /timeline-delete-button/);
+  assert.doesNotMatch(logic, /deleteKeyMoment|handleDelete|showDeleteConfirm|deleting/);
+  assert.match(detailPage, /class="detail-actions"[\s\S]*?class="detail-edit"[\s\S]*?class="detail-delete"/);
+  assert.match(detailPage, /aria-label="删除当前人生节点"[\s\S]*?bindtap="handleDelete"/);
+  assert.match(detailPage, /<app-dialog[\s\S]*?title="删除关键节点"[\s\S]*?bindconfirm="handleDeleteConfirm"/);
+  assert.match(detailStyles, /\.detail-actions[\s\S]*?display: flex/);
+  assert.match(detailLogic, /handleDelete\(\)[\s\S]*?showDeleteConfirm: true/);
+  assert.match(detailLogic, /handleDeleteConfirm\(\)[\s\S]*?deleteKeyMoment\(item\.id\)[\s\S]*?wx\.navigateBack\(\)/);
+  assert.equal(JSON.parse(detailConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
   assert.match(
     logic,
     /handleMomentTap\([\s\S]*?pages\/key-moments\/detail\/index\?id=/,
@@ -183,8 +182,9 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
 });
 
 test("key moments reuse cached periods and update cached lists after writes", async () => {
-  const [page, service, cache, auth] = await Promise.all([
+  const [page, detail, service, cache, auth] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/utils/key-moment-data-cache.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/services/auth.ts", import.meta.url), "utf8"),
@@ -196,7 +196,7 @@ test("key moments reuse cached periods and update cached lists after writes", as
   assert.match(page, /syncItemsFromCache/);
   assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已保存"[\s\S]{0,80}?await this\.loadItems\(\)/);
   assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已删除"[\s\S]{0,80}?await this\.loadItems\(\)/);
-  assert.match(page, /finally \{[\s\S]*?wx\.hideLoading\(\)[\s\S]*?if \(toastTitle[\s\S]*?wx\.showToast/);
+  assert.match(detail, /finally \{[\s\S]*?wx\.hideLoading\(\)[\s\S]*?if \(deleted[\s\S]*?wx\.showToast/);
   assert.match(service, /if \(cached\?\.fresh\) return cached\.items/);
   assert.match(service, /pendingKeyMomentRequests/);
   assert.match(service, /updateCachedKeyMoment\(data\.item\)/);

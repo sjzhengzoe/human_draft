@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "节点详情",
-  "disableScroll": true
+  "disableScroll": true,
+  "usingComponents": {
+    "app-dialog": "/components/app-dialog/index"
+  }
 }

@@ -1,7 +1,4 @@
-import {
-  deleteKeyMoment,
-  listKeyMoments
-} from "../../services/key-moments"
+import { listKeyMoments } from "../../services/key-moments"
 import { ensureLogin, getCurrentUser } from "../../services/auth"
 import type {
   KeyMoment,
@@ -132,10 +129,7 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     keyMomentRevision: -1,
-    timelineScrollAnchor: "",
-    showDeleteConfirm: false,
-    editingId: "",
-    deleting: false
+    timelineScrollAnchor: ""
   },
 
   onLoad() {
@@ -298,50 +292,6 @@ Page({
     const item = this.data.items.find((entry) => entry.id === id)
     if (url && item?.image_urls.length) {
       wx.previewImage({ current: url, urls: item.image_urls })
-    }
-  },
-
-  handleDelete(event: WechatMiniprogram.TouchEvent) {
-    if (
-      !this.data.canWrite
-      || this.data.loading
-      || this.data.contentLoading
-      || this.data.deleting
-    ) return
-    const id = String(event.currentTarget.dataset.id || "")
-    if (!id) return
-    this.setData({ editingId: id, showDeleteConfirm: true })
-  },
-
-  handleDeleteConfirmCancel() {
-    if (this.data.deleting) return
-    this.setData({ showDeleteConfirm: false, editingId: "" })
-  },
-
-  async handleDeleteConfirm() {
-    if (!this.data.editingId || this.data.deleting) return
-    let toastTitle = ""
-    let toastIcon: "success" | "none" = "success"
-    this.setData({ deleting: true })
-    wx.showLoading({ title: "删除中", mask: true })
-    try {
-      await deleteKeyMoment(this.data.editingId)
-      if (!isAsyncPageActive(this)) return
-      this.setData({ showDeleteConfirm: false, editingId: "" })
-      if (!this.syncItemsFromCache()) await this.loadItems({ background: true })
-      toastTitle = "已删除"
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        this.setData({ showDeleteConfirm: false, editingId: "" })
-      }
-      toastTitle = error instanceof Error ? error.message : "删除失败"
-      toastIcon = "none"
-    } finally {
-      wx.hideLoading()
-      if (isAsyncPageActive(this)) this.setData({ deleting: false })
-    }
-    if (toastTitle && isAsyncPageActive(this)) {
-      wx.showToast({ title: toastTitle, icon: toastIcon })
     }
   }
 })

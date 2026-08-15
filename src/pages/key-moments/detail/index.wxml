@@ -49,13 +49,20 @@
 
           <view class="detail-footer">
             <view class="detail-footer__date">{{item.date_label}} {{item.time_label}}</view>
-            <view
-              wx:if="{{canWrite}}"
-              class="detail-edit"
-              role="button"
-              aria-label="编辑当前人生节点"
-              bindtap="handleEdit"
-            ><app-icon name="pencil" size="24" /></view>
+            <view wx:if="{{canWrite}}" class="detail-actions">
+              <view
+                class="detail-edit"
+                role="button"
+                aria-label="编辑当前人生节点"
+                bindtap="handleEdit"
+              ><app-icon name="pencil" size="24" /></view>
+              <view
+                class="detail-delete"
+                role="button"
+                aria-label="删除当前人生节点"
+                bindtap="handleDelete"
+              ><app-icon name="trash-2-danger" size="24" /></view>
+            </view>
           </view>
         </view>
 
@@ -66,4 +73,15 @@
       </view>
     </swiper-item>
   </swiper>
+
+  <app-dialog
+    wx:if="{{showDeleteConfirm}}"
+    visible="{{true}}"
+    title="删除关键节点"
+    content="删除后，图片和文案都无法恢复。"
+    cancel-text="取消"
+    confirm-text="删除"
+    bindcancel="handleDeleteConfirmCancel"
+    bindconfirm="handleDeleteConfirm"
+  />
 </view>

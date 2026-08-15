@@ -1,4 +1,4 @@
-import { listKeyMomentFeed } from "../../../services/key-moments"
+import { deleteKeyMoment, listKeyMomentFeed } from "../../../services/key-moments"
 import { ensureLogin } from "../../../services/auth"
 import type { KeyMoment, KeyMomentDetailItem } from "../../../types/key-moments"
 import {
@@ -49,7 +49,9 @@ Page({
     requestedId: "",
     anchorDate: "",
     canWrite: false,
-    dataRevision: -1
+    dataRevision: -1,
+    showDeleteConfirm: false,
+    deleting: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -134,12 +136,54 @@ Page({
   },
 
   handleEdit() {
-    if (!this.data.canWrite) return
+    if (!this.data.canWrite || this.data.deleting) return
     const item = this.data.items[this.data.swiperCurrent]
     if (!item) return
     const date = detailDateParts(item.occurred_at).editorDate
     wx.navigateTo({
       url: `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}&date=${date}`
     })
+  },
+
+  handleDelete() {
+    if (!this.data.canWrite || this.data.deleting) return
+    const item = this.data.items[this.data.swiperCurrent]
+    if (!item) return
+    this.setData({ showDeleteConfirm: true })
+  },
+
+  handleDeleteConfirmCancel() {
+    if (this.data.deleting) return
+    this.setData({ showDeleteConfirm: false })
+  },
+
+  async handleDeleteConfirm() {
+    if (this.data.deleting) return
+    const item = this.data.items[this.data.swiperCurrent]
+    if (!item) return
+    let deleted = false
+    this.setData({ deleting: true })
+    wx.showLoading({ title: "删除中", mask: true })
+    try {
+      await deleteKeyMoment(item.id)
+      if (!isAsyncPageActive(this)) return
+      this.setData({ showDeleteConfirm: false })
+      deleted = true
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ showDeleteConfirm: false })
+        wx.showToast({
+          title: error instanceof Error ? error.message : "删除失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ deleting: false })
+    }
+    if (deleted && isAsyncPageActive(this)) {
+      wx.showToast({ title: "已删除", icon: "success" })
+      wx.navigateBack()
+    }
   }
 })
