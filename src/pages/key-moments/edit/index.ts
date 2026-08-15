@@ -1,11 +1,13 @@
 import {
-  appendKeyMomentImage,
   createKeyMoment,
+  createKeyMomentDraft,
+  discardNewKeyMomentImages,
   discardStagedKeyMomentImages,
-  listKeyMoments,
+  readKeyMoment,
+  stageNewKeyMomentImage,
   stageKeyMomentImage,
   updateKeyMoment
-} from "../../../services/key-moments"
+} from "../services/key-moments"
 import { ensureLogin } from "../../../services/auth"
 import {
   activateAsyncPage,
@@ -22,6 +24,7 @@ type EditorImage = {
   previewUrl: string
   selectedImageUploadPath: string
   persistedPath: string
+  stagedPath: string
 }
 
 type DragRect = {
@@ -50,7 +53,8 @@ function localEditorImage(path: string): EditorImage {
     key: `local_${Date.now()}_${editorImageSequence}`,
     previewUrl: path,
     selectedImageUploadPath: path,
-    persistedPath: ""
+    persistedPath: "",
+    stagedPath: ""
   }
 }
 
@@ -97,7 +101,13 @@ Page({
     draggingImageKey: "",
     dragGhostUrl: "",
     dragGhostStyle: "",
-    saving: false
+    saving: false,
+    initialContent: "",
+    initialImagePaths: [] as string[],
+    newDraftId: "",
+    saved: false,
+    showDiscardConfirm: false,
+    discarding: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -113,16 +123,22 @@ Page({
       editorTime,
       editorDateTimeLabel: editorDateTimeLabel(editorDate, editorTime)
     })
-    void this.loadEditor(editingId, editorDate)
+    void this.loadEditor(editingId)
   },
 
   onUnload() {
+    if (!this.data.saved && this.data.newDraftId) {
+      const stagedPaths = this.data.editorImages.map((image) => image.stagedPath).filter(Boolean)
+      if (stagedPaths.length) {
+        void discardNewKeyMomentImages(this.data.newDraftId, stagedPaths).catch(() => undefined)
+      }
+    }
     activeImageDrag = null
     imageDragSequence += 1
     deactivateAsyncPage(this)
   },
 
-  async loadEditor(editingId: string, editorDate: string) {
+  async loadEditor(editingId: string) {
     try {
       const session = await ensureLogin()
       if (!session.user.can_write) throw new Error("当前账号没有编辑权限")
@@ -130,12 +146,7 @@ Page({
         if (isAsyncPageActive(this)) this.setData({ loading: false })
         return
       }
-      const items = await listKeyMoments(
-        { granularity: "day", date: editorDate },
-        { forceRefresh: true }
-      )
-      const item = items.find((entry) => entry.id === editingId)
-      if (!item) throw new Error("关键节点不存在或已删除")
+      const item = await readKeyMoment(editingId)
       if (!isAsyncPageActive(this)) return
       const dateTime = editorDateTime(item.occurred_at)
       this.setData({
@@ -147,9 +158,12 @@ Page({
           key: `persisted_${persistedIndex}`,
           previewUrl,
           selectedImageUploadPath: "",
-          persistedPath: item.image_paths[persistedIndex] || ""
+          persistedPath: item.image_paths[persistedIndex] || "",
+          stagedPath: ""
         })),
         originalImagePaths: [...item.image_paths],
+        initialContent: item.content,
+        initialImagePaths: [...item.image_paths],
         canAddImage: item.image_urls.length < MAX_IMAGE_COUNT,
         loading: false
       })
@@ -164,7 +178,40 @@ Page({
   },
 
   handleBack() {
-    if (this.data.saving || this.data.selectingImage) return
+    if (this.data.saving || this.data.selectingImage || this.data.discarding) return
+    if (!this.hasUnsavedChanges()) {
+      wx.navigateBack()
+      return
+    }
+    this.setData({ showDiscardConfirm: true })
+  },
+
+  hasUnsavedChanges(): boolean {
+    if (this.data.editorContent !== this.data.initialContent) return true
+    const currentImages = this.data.editorImages.map(
+      (image) => image.persistedPath || image.selectedImageUploadPath
+    )
+    return JSON.stringify(currentImages) !== JSON.stringify(this.data.initialImagePaths)
+  },
+
+  handleDiscardCancel() {
+    if (!this.data.discarding) this.setData({ showDiscardConfirm: false })
+  },
+
+  async handleDiscardConfirm() {
+    if (this.data.discarding) return
+    this.setData({ discarding: true })
+    const draftId = this.data.newDraftId
+    const stagedPaths = this.data.editorImages.map((image) => image.stagedPath).filter(Boolean)
+    if (draftId && stagedPaths.length) {
+      try {
+        await discardNewKeyMomentImages(draftId, stagedPaths)
+      } catch (_error) {
+        // 服务端会在暂存图片过期后再次核对并清理未引用对象。
+      }
+    }
+    if (!isAsyncPageActive(this)) return
+    this.setData({ newDraftId: "", saved: true, showDiscardConfirm: false })
     wx.navigateBack()
   },
 
@@ -211,6 +258,9 @@ Page({
     if (!image) return
     const editorImages = this.data.editorImages.filter((_item, currentIndex) => currentIndex !== index)
     this.setData({ editorImages, canAddImage: true })
+    if (this.data.newDraftId && image.stagedPath) {
+      void discardNewKeyMomentImages(this.data.newDraftId, [image.stagedPath]).catch(() => undefined)
+    }
   },
 
   handlePreviewEditorImage(event: WechatMiniprogram.TouchEvent) {
@@ -291,6 +341,39 @@ Page({
     })
   },
 
+  async saveNewKeyMoment(content: string, occurredAt: string) {
+    let draftId = this.data.newDraftId
+    if (!draftId) {
+      draftId = await createKeyMomentDraft()
+      if (!isAsyncPageActive(this)) return
+      this.setData({ newDraftId: draftId })
+    }
+
+    const pendingIndexes = this.data.editorImages
+      .map((image, index) => image.selectedImageUploadPath && !image.stagedPath ? index : -1)
+      .filter((index) => index >= 0)
+    await mapWithConcurrency(pendingIndexes, 2, async (index) => {
+      const image = this.data.editorImages[index]
+      if (!image) return
+      const stagedPath = await stageNewKeyMomentImage(draftId, image.selectedImageUploadPath)
+      image.stagedPath = stagedPath
+      if (isAsyncPageActive(this)) {
+        this.setData({ [`editorImages[${index}].stagedPath`]: stagedPath })
+      }
+    })
+    const imagePaths = this.data.editorImages.map((image) => image.stagedPath).filter(Boolean)
+    try {
+      await createKeyMoment({ id: draftId, content, occurredAt, imagePaths })
+    } catch (createError) {
+      try {
+        await readKeyMoment(draftId)
+        await updateKeyMoment(draftId, { content, imagePaths })
+      } catch (_lookupError) {
+        throw createError
+      }
+    }
+  },
+
   async saveEditor() {
     if (saveEditorInFlight || this.data.saving || this.data.selectingImage) return
     const content = this.data.editorContent.trim()
@@ -313,33 +396,28 @@ Page({
           (path) => !retainedImagePaths.has(path)
         )
         const stagedPathByImageKey = new Map<string, string>()
-        for (const image of pendingImages) {
+        const stagedPairs = await mapWithConcurrency(pendingImages, 2, async (image) => {
           const stagedPath = await stageKeyMomentImage(
             this.data.editingId,
             image.selectedImageUploadPath,
             replacedImagePaths
           )
           stagedImagePaths.push(stagedPath)
-          stagedPathByImageKey.set(image.key, stagedPath)
-        }
+          return { key: image.key, stagedPath }
+        })
+        stagedPairs.forEach(({ key, stagedPath }) => {
+          stagedPathByImageKey.set(key, stagedPath)
+        })
         const imagePaths = this.data.editorImages.map(
           (image) => image.persistedPath || stagedPathByImageKey.get(image.key) || ""
         )
         await updateKeyMoment(this.data.editingId, { content, imagePaths })
         stagedImagePaths.length = 0
       } else {
-        const pendingImages = this.data.editorImages.filter((image) => image.selectedImageUploadPath)
-        const firstImage = pendingImages.shift()
-        const created = await createKeyMoment({
-          content,
-          occurredAt,
-          imagePath: firstImage?.selectedImageUploadPath
-        })
-        for (const image of pendingImages) {
-          await appendKeyMomentImage(created.id, image.selectedImageUploadPath)
-        }
+        await this.saveNewKeyMoment(content, occurredAt)
       }
       if (!isAsyncPageActive(this)) return
+      this.setData({ saved: true })
       this.getOpenerEventChannel().emit("saved", { date: this.data.editorDate })
       wx.showToast({ title: "已保存", icon: "success" })
       wx.navigateBack()
@@ -381,4 +459,30 @@ function closestImageIndex(clientX: number, clientY: number, rects: DragRect[]):
     }
   })
   return closestIndex
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  action: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+  let firstError: unknown
+  const worker = async () => {
+    while (nextIndex < items.length && !firstError) {
+      const index = nextIndex
+      nextIndex += 1
+      try {
+        results[index] = await action(items[index], index)
+      } catch (error) {
+        firstError = error
+      }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  )
+  if (firstError) throw firstError
+  return results
 }

@@ -63,7 +63,7 @@ test("key moment items open the same detail flow and deletion lives only in deta
   assert.doesNotMatch(logic, /deleteKeyMoment|handleDelete|showDeleteConfirm|deleting/);
   assert.match(detailPage, /class="detail-actions"[\s\S]*?class="detail-edit"[\s\S]*?class="detail-delete"/);
   assert.match(detailPage, /aria-label="删除当前人生节点"[\s\S]*?bindtap="handleDelete"/);
-  assert.match(detailPage, /<app-dialog[\s\S]*?title="删除关键节点"[\s\S]*?bindconfirm="handleDeleteConfirm"/);
+  assert.match(detailPage, /<app-dialog[\s\S]*?title="删除人生节点"[\s\S]*?bindconfirm="handleDeleteConfirm"/);
   assert.match(detailStyles, /\.detail-actions[\s\S]*?display: flex/);
   assert.match(detailLogic, /handleDelete\(\)[\s\S]*?showDeleteConfirm: true/);
   assert.match(detailLogic, /handleDeleteConfirm\(\)[\s\S]*?deleteKeyMoment\(item\.id\)[\s\S]*?wx\.navigateBack\(\)/);
@@ -102,7 +102,7 @@ test("key moment editor selects up to nine original images and displays a WeChat
   ]);
 
   assert.match(page, /class="moment-gallery moment-gallery--count-\{\{item\.image_count\}\}"/);
-  assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /class="moment-content moment-content--clamped"[\s\S]*?class="moment-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="aspectFill"/);
   assert.match(editorPage, /wx:for="\{\{editorImages\}\}"[\s\S]*?class="image-grid__preview"[\s\S]*?mode="aspectFill"/);
   assert.ok(editorPage.indexOf('class="content-editor') < editorPage.indexOf('class="image-grid'));
@@ -125,7 +125,7 @@ test("key moment editor saves the complete ordered gallery instead of incrementa
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/services/key-moments.ts", import.meta.url), "utf8"),
     readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
     readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
   ]);
@@ -138,7 +138,7 @@ test("key moment editor saves the complete ordered gallery instead of incrementa
   assert.match(editorStyles, /\.image-drag-ghost[\s\S]*?position: fixed/);
   assert.match(editorLogic, /handleImageLongPress[\s\S]*?wx\.vibrateShort/);
   assert.match(editorLogic, /handleImageTouchMove[\s\S]*?editorImages\.splice\(targetIndex, 0, draggedImage\)/);
-  assert.match(editorLogic, /stageKeyMomentImage\([\s\S]*?stagedPathByImageKey\.set/);
+  assert.match(editorLogic, /stageKeyMomentImage\([\s\S]*?stagedPairs[\s\S]*?stagedPathByImageKey\.set/);
   assert.match(editorLogic, /const imagePaths = this\.data\.editorImages\.map\([\s\S]*?await updateKeyMoment\(this\.data\.editingId, \{ content, imagePaths \}\)/);
   assert.match(editorLogic, /discardStagedKeyMomentImages\(this\.data\.editingId, stagedImagePaths\)/);
   assert.match(clientService, /path: `\/api\/key-moments\/\$\{id\}\/images\/stage`/);
@@ -173,7 +173,7 @@ test("key moment editor prevents duplicate save queues before the loading state 
   );
   assert.match(
     editorLogic,
-    /listKeyMoments\([\s\S]*?\{ forceRefresh: true \}[\s\S]*?const item = items\.find/,
+    /const item = await readKeyMoment\(editingId\)/,
   );
 });
 
@@ -182,13 +182,13 @@ test("key moment editor uses direct borderless text input and a read-only time",
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/services/key-moments.ts", import.meta.url), "utf8"),
     readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
   ]);
 
-  assert.equal(JSON.parse(editorConfig).usingComponents, undefined);
-  assert.equal(JSON.parse(editorConfig).navigationBarTitleText, "编辑");
-  assert.match(editorPage, /title="\{\{editingId \? '编辑' : '新增关键节点'\}\}"/);
+  assert.equal(JSON.parse(editorConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
+  assert.equal(JSON.parse(editorConfig).navigationBarTitleText, "编辑人生节点");
+  assert.match(editorPage, /title="\{\{editingId \? '编辑人生节点' : '新增人生节点'\}\}"/);
   assert.match(
     editorPage,
     /<textarea[\s\S]*?class="content-editor"[\s\S]*?bindinput="handleEditorContentInput"/,
@@ -198,14 +198,17 @@ test("key moment editor uses direct borderless text input and a read-only time",
   assert.match(editorPage, /\{\{editorContent\.length\}\} \/ \{\{maxContentLength\}\}/);
   assert.match(editorPage, /placeholder="不必是大事，只要这一刻对你重要，就值得记录。"/);
   assert.doesNotMatch(editorPage, /写下这个关键节点/);
-  assert.doesNotMatch(editorPage, /节点文字|节点图片|<picker|<app-dialog/);
+  assert.doesNotMatch(editorPage, /节点文字|节点图片|<picker/);
+  assert.match(editorPage, /<app-dialog[\s\S]*?title="放弃未保存的更改？"/);
   assert.match(editorLogic, /const MAX_CONTENT_LENGTH = 2_000/);
   assert.match(editorLogic, /maxContentLength: MAX_CONTENT_LENGTH/);
   assert.match(editorLogic, /handleEditorContentInput\([\s\S]*?editorContent: event\.detail\.value/);
+  assert.match(editorLogic, /const content = this\.data\.editorContent\.trim\(\)/);
   assert.doesNotMatch(editorLogic, /handleEditorDateChange|handleEditorTimeChange|contentEditorVisible/);
   assert.match(editorLogic, /updateKeyMoment\(this\.data\.editingId, \{ content, imagePaths \}\)/);
   assert.match(clientService, /input: \{ content: string; imagePaths\?: string\[\] \}[\s\S]*?content: input\.content[\s\S]*?image_paths: input\.imagePaths/);
   assert.match(serverService, /const MAX_CONTENT_LENGTH = 2_000/);
+  assert.match(serverService, /function normalizeContent[\s\S]*?const content = value\.trim\(\)/);
   assert.match(serverService, /content\.length <= MAX_CONTENT_LENGTH/);
   assert.match(serverService, /文案不能超过 2000 个字/);
 });
@@ -224,7 +227,7 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
   assert.match(page, /wx:if="\{\{item\.show_date_heading\}\}" class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
   assert.match(page, /class="moment-time">\{\{item\.heading_time\}\}<\/view>/);
-  assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /class="moment-content moment-content--clamped"[\s\S]*?class="moment-gallery/);
   assert.match(page, /item\.show_item_divider[\s\S]*?class="item-divider"/);
   assert.doesNotMatch(page, /interval_after|timeline-gap/);
   assert.match(
@@ -261,7 +264,7 @@ test("key moments reuse cached periods and update cached lists after writes", as
   const [page, detail, service, cache, auth] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/services/key-moments.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/utils/key-moment-data-cache.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/services/auth.ts", import.meta.url), "utf8"),
   ]);
@@ -273,11 +276,11 @@ test("key moments reuse cached periods and update cached lists after writes", as
   assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已保存"[\s\S]{0,80}?await this\.loadItems\(\)/);
   assert.doesNotMatch(page, /wx\.showToast\(\{ title: "已删除"[\s\S]{0,80}?await this\.loadItems\(\)/);
   assert.match(detail, /finally \{[\s\S]*?wx\.hideLoading\(\)[\s\S]*?if \(deleted[\s\S]*?wx\.showToast/);
-  assert.match(service, /if \(cached\?\.fresh\) return cached\.items/);
+  assert.match(service, /if \(cached\?\.fresh\) \{[\s\S]*?next_cursor: cached\.nextCursor/);
   assert.match(service, /pendingKeyMomentRequests/);
   assert.match(service, /updateCachedKeyMoment\(data\.item\)/);
   assert.match(service, /removeCachedKeyMoment\(id\)/);
-  assert.match(cache, /KEY_MOMENT_CACHE_FRESH_MS = 5 \* 60 \* 60 \* 1000/);
+  assert.match(cache, /KEY_MOMENT_CACHE_FRESH_MS = 10 \* 60 \* 1000/);
   assert.match(cache, /MAX_CACHED_KEY_MOMENT_QUERIES = 24/);
   assert.match(auth, /clearKeyMomentDataCache\(\)/);
 });
@@ -291,38 +294,100 @@ test("key moment image loading uses ordered image arrays and shared storage proc
   ]);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?src="\{\{imageUrl\}\}"[\s\S]*?lazy-load/);
   assert.doesNotMatch(page, /thumbnail_/);
-  assert.match(routes, /await Promise\.all\(\[[\s\S]*?checkText[\s\S]*?checkImage/);
+  assert.match(routes, /app\.post\("\/api\/key-moments\/drafts\/:id\/images"[\s\S]*?checkImage\(image\)/);
   assert.match(storage, /uploadStandardImage/);
   assert.doesNotMatch(storage, /thumbnailResult|THUMBNAIL_UPLOAD_FAILED/);
   assert.match(imageProcessing, /STANDARD_IMAGE_PROFILE[\s\S]*?width: 2_560[\s\S]*?quality: 88/);
   assert.doesNotMatch(imageProcessing, /thumbnail:/);
 });
 
-test("key moment detail uses top-aligned adaptive single images and square multi-image grids", async () => {
+test("key moment detail scrolls long content and lazily pages nearby horizontal slides", async () => {
   const [page, styles, logic, appConfig] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/detail/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/detail/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/detail/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /<swiper[\s\S]*?vertical="\{\{true\}\}"[\s\S]*?bindchange="handleSwiperChange"/);
+  assert.match(page, /<swiper[\s\S]*?bindchange="handleSwiperChange"/);
+  assert.doesNotMatch(page, /vertical="\{\{true\}\}"/);
+  assert.match(page, /<scroll-view[\s\S]*?class="detail-slide"[\s\S]*?scroll-y/);
   assert.match(page, /<custom-navigation[\s\S]*?title="详情"/);
   assert.doesNotMatch(page, /swipe-guide|上下滑动切换节点|position_label/);
   assert.match(page, /class="detail-content"[\s\S]*?class="detail-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"/);
   assert.match(page, /detail-image--single[\s\S]*?detail-image--grid/);
   assert.match(page, /bindload="handleSingleImageLoad"/);
+  assert.match(page, /lazy-load/);
   assert.match(page, /\{\{item\.date_label\}\} \{\{item\.time_label\}\}/);
-  assert.match(styles, /\.detail-slide[\s\S]*?justify-content: flex-start/);
+  assert.doesNotMatch(styles, /\.detail-sheet\s*\{[^}]*overflow: hidden/);
   assert.match(styles, /\.detail-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(styles, /\.detail-image--grid[\s\S]*?width: 100%;[\s\S]*?height: 195rpx/);
   const detailFooterStyles = styles.match(/\.detail-footer\s*\{([^}]*)\}/)?.[1] || "";
   assert.doesNotMatch(detailFooterStyles, /border-(?:top|bottom)/);
-  assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
+  assert.match(logic, /getKeyMomentContext\(focusId\)/);
+  assert.match(logic, /loadMore\(direction: "newer" \| "older"\)/);
   assert.match(logic, /handleSingleImageLoad\([\s\S]*?sourceRatio[\s\S]*?single_image_style/);
   assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);
   const keyMomentPackage = JSON.parse(appConfig).subPackages.find((entry) => entry.root === "pages/key-moments");
   assert.ok(keyMomentPackage.pages.includes("detail/index"));
+});
+
+test("new key moments stage every image before one idempotent final create", async () => {
+  const [editor, clientService, routes, serverService] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../routes/key-moments.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(editor, /draftId = await createKeyMomentDraft\(\)/);
+  assert.match(editor, /stageNewKeyMomentImage\(draftId, image\.selectedImageUploadPath\)/);
+  assert.match(editor, /mapWithConcurrency\(pendingIndexes, 2/);
+  assert.match(editor, /createKeyMoment\(\{ id: draftId, content, occurredAt, imagePaths \}\)/);
+  assert.match(editor, /await readKeyMoment\(draftId\)[\s\S]*?await updateKeyMoment\(draftId/);
+  assert.doesNotMatch(editor, /appendKeyMomentImage/);
+  assert.match(clientService, /path: "\/api\/key-moments\/drafts"/);
+  assert.match(clientService, /path: `\/api\/key-moments\/drafts\/\$\{id\}\/images`/);
+  assert.match(routes, /app\.post\("\/api\/key-moments\/drafts"/);
+  assert.doesNotMatch(routes, /app\.post\("\/api\/key-moments\/:id\/images"/);
+  assert.match(serverService, /body\.id === undefined \? randomUUID\(\) : assertUuid\(body\.id\)/);
+  assert.match(serverService, /image_paths: imagePaths/);
+  assert.match(serverService, /error\.code === "23505"/);
+  assert.match(serverService, /cleanupStaleKeyMomentDraftImages/);
+});
+
+test("key moment pages distinguish errors from empty data and protect unsaved edits", async () => {
+  const [page, logic, editorPage, editorLogic] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /loadError && items\.length === 0[\s\S]*?重新加载/);
+  assert.match(page, /还没有人生节点/);
+  assert.match(logic, /handleRetry\(\)[\s\S]*?forceRefresh: true/);
+  assert.match(logic, /canPublishInPeriod/);
+  assert.match(editorPage, /title="放弃未保存的更改？"/);
+  assert.match(editorLogic, /hasUnsavedChanges\(\)/);
+  assert.match(editorLogic, /discardNewKeyMomentImages/);
+  assert.doesNotMatch(`${page}\n${editorPage}`, /关键节点/);
+});
+
+test("key moment list uses cursor pagination and a stable matching index", async () => {
+  const [page, service, serverService, migration] = await Promise.all([
+    readFile(new URL("../../src/pages/key-moments/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/key-moments/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../../supabase/migrations/20260815141445_optimize_key_moment_pagination.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /bindscrolltolower="handleLoadMore"/);
+  assert.match(service, /cursor: options\.cursor/);
+  assert.match(serverService, /decodeTimelineCursor/);
+  assert.match(serverService, /orderedTimelineQuery\(request, false\)\.limit\(limit \+ 1\)/);
+  assert.match(migration, /key_moments_uid_timeline_idx/i);
+  assert.match(migration, /\(uid, occurred_at desc, created_at desc, id desc\)/i);
 });
 
 test("key moment gallery migration preserves the former image and enforces nine images", async () => {

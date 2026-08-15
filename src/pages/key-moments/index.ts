@@ -1,4 +1,4 @@
-import { listKeyMoments } from "../../services/key-moments"
+import { listKeyMoments } from "./services/key-moments"
 import { ensureLogin, getCurrentUser } from "../../services/auth"
 import type {
   KeyMoment,
@@ -14,6 +14,7 @@ import {
 } from "../../utils/async-page"
 import { requireLoginForAction } from "../../utils/login-required"
 import {
+  cacheKeyMoments,
   getCachedKeyMoments,
   getKeyMomentDataRevision
 } from "../../utils/key-moment-data-cache"
@@ -63,14 +64,6 @@ function shanghaiParts(value: string): {
   }
 }
 
-function editorDateTime(value: string): { date: string; time: string } {
-  const parts = shanghaiParts(value)
-  return {
-    date: `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`,
-    time: `${pad(parts.hour)}:${pad(parts.minute)}`
-  }
-}
-
 function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
   return items.map((item, index) => {
     const parts = shanghaiParts(item.occurred_at)
@@ -99,6 +92,14 @@ function periodLabel(granularity: KeyMomentGranularity, date: string): string {
   return `${year}年${month}月${day}日`
 }
 
+function canPublishInPeriod(granularity: KeyMomentGranularity, date: string): boolean {
+  if (granularity === "day") return true
+  const today = currentShanghaiDateTime().date
+  return granularity === "year"
+    ? date.slice(0, 4) === today.slice(0, 4)
+    : date.slice(0, 7) === today.slice(0, 7)
+}
+
 const INITIAL_DATE_TIME = currentShanghaiDateTime()
 
 Page({
@@ -118,7 +119,11 @@ Page({
     contentLoading: false,
     hasLoaded: false,
     keyMomentRevision: -1,
-    timelineScrollAnchor: ""
+    timelineScrollAnchor: "",
+    nextCursor: "",
+    loadingMore: false,
+    loadError: "",
+    canPublishInPeriod: true
   },
 
   onLoad() {
@@ -128,7 +133,15 @@ Page({
   onShow() {
     const user = getCurrentUser()
     if (!user) {
-      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true, items: [] })
+      this.setData({
+        guestMode: true,
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        items: [],
+        nextCursor: "",
+        loadError: ""
+      })
       return
     }
     if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
@@ -171,6 +184,7 @@ Page({
     if (!cached) return false
     this.setData({
       items: toTimelineItems(cached.items),
+      nextCursor: cached.nextCursor,
       keyMomentRevision: getKeyMomentDataRevision()
     })
     return true
@@ -192,22 +206,28 @@ Page({
     const canRenderImmediately = Boolean(cached?.fresh)
     this.setData({
       loading: showInitialLoading && !canRenderImmediately,
-      contentLoading: !showInitialLoading && !options.background && !canRenderImmediately
+      contentLoading: !showInitialLoading && !options.background && !canRenderImmediately,
+      loadingMore: false,
+      ...(!canRenderImmediately ? { loadError: "" } : {})
     })
     try {
       const session = await ensureLogin()
-      const items = cached?.fresh
-        ? cached.items
+      const page = cached?.fresh
+        ? { items: cached.items, next_cursor: cached.nextCursor }
         : await listKeyMoments(input, { forceRefresh: options.forceRefresh })
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
-        items: toTimelineItems(items),
+        items: toTimelineItems(page.items),
+        nextCursor: page.next_cursor,
         canWrite: session.user.can_write,
-        keyMomentRevision: getKeyMomentDataRevision()
+        keyMomentRevision: getKeyMomentDataRevision(),
+        loadError: ""
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
-      if (!options.silent) {
+      if (!this.data.items.length) {
+        this.setData({ loadError: error instanceof Error ? error.message : "加载失败，请重试。" })
+      } else if (!options.silent) {
         wx.showToast({
           title: error instanceof Error ? error.message : "加载失败",
           icon: "none"
@@ -220,27 +240,89 @@ Page({
     }
   },
 
+  async handleLoadMore() {
+    if (
+      !this.data.nextCursor
+      || this.data.loadingMore
+      || this.data.loading
+      || this.data.contentLoading
+      || !getCurrentUser()
+    ) return
+    const generation = beginAsyncPageRequest(this)
+    const input = {
+      granularity: this.data.activeGranularity,
+      date: this.data.anchorDate
+    }
+    this.setData({ loadingMore: true })
+    try {
+      const page = await listKeyMoments(input, { cursor: this.data.nextCursor })
+      if (!isAsyncPageRequestCurrent(this, generation)) return
+      const knownIds = new Set(this.data.items.map((item) => item.id))
+      const items = [
+        ...this.data.items,
+        ...toTimelineItems(page.items.filter((item) => !knownIds.has(item.id)))
+      ]
+      const timelineItems = toTimelineItems(items)
+      cacheKeyMoments(input, timelineItems, page.next_cursor)
+      this.setData({
+        items: timelineItems,
+        nextCursor: page.next_cursor,
+        keyMomentRevision: getKeyMomentDataRevision()
+      })
+    } catch (error) {
+      if (isAsyncPageRequestCurrent(this, generation)) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "加载更多失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageRequestCurrent(this, generation)) this.setData({ loadingMore: false })
+    }
+  },
+
+  handleRetry() {
+    if (this.data.loading || this.data.contentLoading) return
+    void this.loadItems({ forceRefresh: true })
+  },
+
   handleGranularityTap(event: WechatMiniprogram.TouchEvent) {
     const granularity = event.currentTarget.dataset.value as KeyMomentGranularity
-    if (!granularity || granularity === this.data.activeGranularity || this.data.contentLoading) return
+    if (
+      !granularity
+      || granularity === this.data.activeGranularity
+      || this.data.contentLoading
+      || this.data.loadingMore
+    ) return
     this.setData({
       activeGranularity: granularity,
-      periodLabel: periodLabel(granularity, this.data.anchorDate)
+      periodLabel: periodLabel(granularity, this.data.anchorDate),
+      canPublishInPeriod: canPublishInPeriod(granularity, this.data.anchorDate),
+      nextCursor: "",
+      loadError: ""
     }, () => this.loadItems())
   },
 
   handleAnchorDateChange(event: WechatMiniprogram.PickerChange) {
     const date = String(event.detail.value)
-    if (!date || date === this.data.anchorDate) return
+    if (!date || date === this.data.anchorDate || this.data.loadingMore) return
     this.setData({
       anchorDate: date,
-      periodLabel: periodLabel(this.data.activeGranularity, date)
+      periodLabel: periodLabel(this.data.activeGranularity, date),
+      canPublishInPeriod: canPublishInPeriod(this.data.activeGranularity, date),
+      nextCursor: "",
+      loadError: ""
     }, () => this.loadItems())
   },
 
   handleAdd() {
     if (!requireLoginForAction(this)) return
-    if (!this.data.canWrite || this.data.loading || this.data.contentLoading) return
+    if (
+      !this.data.canWrite
+      || !this.data.canPublishInPeriod
+      || this.data.loading
+      || this.data.contentLoading
+    ) return
     const now = currentShanghaiDateTime()
     const editorDate = this.data.activeGranularity === "day"
       ? this.data.anchorDate
@@ -253,9 +335,8 @@ Page({
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.items.find((entry) => entry.id === id)
     if (!item) return
-    const dateTime = editorDateTime(item.occurred_at)
     wx.navigateTo({
-      url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}&date=${dateTime.date}`
+      url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}`
     })
   },
 
@@ -268,7 +349,8 @@ Page({
           if (!date) return
           this.setData({
             anchorDate: date,
-            periodLabel: periodLabel(this.data.activeGranularity, date)
+            periodLabel: periodLabel(this.data.activeGranularity, date),
+            canPublishInPeriod: canPublishInPeriod(this.data.activeGranularity, date)
           })
         }
       }

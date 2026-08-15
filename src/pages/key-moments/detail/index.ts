@@ -1,14 +1,21 @@
-import { deleteKeyMoment, listKeyMomentFeed } from "../../../services/key-moments"
+import {
+  deleteKeyMoment,
+  getKeyMomentContext,
+  listKeyMomentFeed
+} from "../services/key-moments"
 import { ensureLogin } from "../../../services/auth"
 import type { KeyMoment, KeyMomentDetailItem } from "../../../types/key-moments"
 import {
   activateAsyncPage,
+  beginAsyncPageRequest,
   deactivateAsyncPage,
-  isAsyncPageActive
+  isAsyncPageActive,
+  isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { getKeyMomentDataRevision } from "../../../utils/key-moment-data-cache"
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
+let feedLoadSequence = 0
 
 function pad(value: number): string {
   return String(value).padStart(2, "0")
@@ -22,7 +29,6 @@ function detailDateParts(value: string) {
   const hour = date.getUTCHours()
   const minute = date.getUTCMinutes()
   return {
-    editorDate: `${year}-${pad(month)}-${pad(day)}`,
     dateLabel: `${year}年${month}月${day}日`,
     timeLabel: `${pad(hour)}:${pad(minute)}`
   }
@@ -46,55 +52,76 @@ Page({
     items: [] as KeyMomentDetailItem[],
     swiperCurrent: 0,
     requestedId: "",
-    anchorDate: "",
     canWrite: false,
     dataRevision: -1,
     showDeleteConfirm: false,
-    deleting: false
+    deleting: false,
+    loadError: "",
+    loadingDirection: "" as "" | "newer" | "older",
+    newerCursor: "",
+    olderCursor: "",
+    hasNewer: false,
+    hasOlder: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
+    feedLoadSequence += 1
     activateAsyncPage(this)
     const requestedId = String(query.id || "")
-    const anchorDate = String(query.date || "")
-    this.setData({ requestedId, anchorDate })
-    void this.loadFeed(requestedId)
+    this.setData({ requestedId })
+    void this.loadContext(requestedId)
   },
 
   onShow() {
     if (!this.data.loading && this.data.dataRevision !== getKeyMomentDataRevision()) {
       const currentId = this.data.items[this.data.swiperCurrent]?.id || this.data.requestedId
-      void this.loadFeed(currentId, true)
+      void this.loadContext(currentId, true)
     }
   },
 
   onUnload() {
+    feedLoadSequence += 1
     deactivateAsyncPage(this)
   },
 
-  async loadFeed(focusId: string, background = false) {
-    if (!this.data.anchorDate) return
-    if (!background) this.setData({ loading: true })
+  async loadContext(focusId: string, background = false) {
+    if (!focusId) return
+    feedLoadSequence += 1
+    const generation = beginAsyncPageRequest(this)
+    this.setData({
+      loadingDirection: "",
+      ...(!background ? { loading: true, loadError: "" } : {})
+    })
     try {
       const session = await ensureLogin()
-      const items = toDetailItems(await listKeyMomentFeed(this.data.anchorDate))
-      if (!isAsyncPageActive(this)) return
-      const focusIndex = Math.max(0, items.findIndex((item) => item.id === focusId))
+      const context = await getKeyMomentContext(focusId)
+      if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
-        items,
-        swiperCurrent: focusIndex,
+        items: toDetailItems(context.items),
+        swiperCurrent: context.focus_index,
         canWrite: session.user.can_write,
         dataRevision: getKeyMomentDataRevision(),
-        loading: false
+        loading: false,
+        loadError: "",
+        hasNewer: context.has_newer,
+        hasOlder: context.has_older,
+        newerCursor: context.newer_cursor,
+        olderCursor: context.older_cursor
       })
     } catch (error) {
-      if (!isAsyncPageActive(this)) return
-      this.setData({ loading: false })
-      wx.showToast({
-        title: error instanceof Error ? error.message : "详情加载失败",
-        icon: "none"
-      })
+      if (!isAsyncPageRequestCurrent(this, generation)) return
+      const message = error instanceof Error ? error.message : "详情加载失败"
+      if (!background || !this.data.items.length) {
+        this.setData({ loading: false, loadError: message })
+      } else {
+        wx.showToast({ title: message, icon: "none" })
+      }
     }
+  },
+
+  handleRetry() {
+    if (this.data.loading) return
+    void this.loadContext(this.data.requestedId)
   },
 
   handleBack() {
@@ -102,7 +129,52 @@ Page({
   },
 
   handleSwiperChange(event: WechatMiniprogram.CustomEvent<{ current: number }>) {
-    this.setData({ swiperCurrent: Number(event.detail.current || 0) })
+    const swiperCurrent = Number(event.detail.current || 0)
+    this.setData({ swiperCurrent })
+    if (swiperCurrent <= 1 && this.data.hasNewer) {
+      void this.loadMore("newer")
+    } else if (swiperCurrent >= this.data.items.length - 2 && this.data.hasOlder) {
+      void this.loadMore("older")
+    }
+  },
+
+  async loadMore(direction: "newer" | "older") {
+    if (this.data.loadingDirection) return
+    const cursor = direction === "newer" ? this.data.newerCursor : this.data.olderCursor
+    if (!cursor) return
+    const sequence = ++feedLoadSequence
+    this.setData({ loadingDirection: direction })
+    try {
+      const page = await listKeyMomentFeed({ cursor, direction })
+      if (!isAsyncPageActive(this) || sequence !== feedLoadSequence) return
+      const knownIds = new Set(this.data.items.map((item) => item.id))
+      const added = toDetailItems(page.items.filter((item) => !knownIds.has(item.id)))
+      if (direction === "newer") {
+        this.setData({
+          items: [...added, ...this.data.items],
+          swiperCurrent: this.data.swiperCurrent + added.length,
+          newerCursor: page.next_cursor,
+          hasNewer: page.has_more
+        })
+      } else {
+        this.setData({
+          items: [...this.data.items, ...added],
+          olderCursor: page.next_cursor,
+          hasOlder: page.has_more
+        })
+      }
+    } catch (error) {
+      if (isAsyncPageActive(this) && sequence === feedLoadSequence) {
+        wx.showToast({
+          title: error instanceof Error ? error.message : "加载更多失败",
+          icon: "none"
+        })
+      }
+    } finally {
+      if (isAsyncPageActive(this) && sequence === feedLoadSequence) {
+        this.setData({ loadingDirection: "" })
+      }
+    }
   },
 
   handlePreview(event: WechatMiniprogram.TouchEvent) {
@@ -138,9 +210,8 @@ Page({
     if (!this.data.canWrite || this.data.deleting) return
     const item = this.data.items[this.data.swiperCurrent]
     if (!item) return
-    const date = detailDateParts(item.occurred_at).editorDate
     wx.navigateTo({
-      url: `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}&date=${date}`
+      url: `/pages/key-moments/edit/index?id=${encodeURIComponent(item.id)}`
     })
   },
 

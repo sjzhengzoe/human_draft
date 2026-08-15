@@ -11,6 +11,21 @@ export type KeyMoment = {
   updated_at: string
 }
 
+export type KeyMomentPage = {
+  items: KeyMoment[]
+  has_more: boolean
+  next_cursor: string
+}
+
+export type KeyMomentContext = {
+  items: KeyMoment[]
+  focus_index: number
+  has_newer: boolean
+  has_older: boolean
+  newer_cursor: string
+  older_cursor: string
+}
+
 export type KeyMomentDetailItem = KeyMoment & {
   date_label: string
   time_label: string

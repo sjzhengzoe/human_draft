@@ -6,22 +6,36 @@
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在读取节点详情…</view>
+  <view class="fullscreen-loading__text">正在读取人生节点…</view>
 </view>
 
-<view wx:elif="{{items.length === 0}}" class="empty-state">暂无可浏览的节点</view>
+<view wx:elif="{{loadError}}" class="state-panel">
+  <view class="state-panel__title">加载失败</view>
+  <view class="state-panel__message">{{loadError}}</view>
+  <button class="state-panel__button" bindtap="handleRetry">重新加载</button>
+</view>
+
+<view wx:elif="{{items.length === 0}}" class="state-panel">
+  <view class="state-panel__title">人生节点不存在</view>
+  <view class="state-panel__message">它可能已经被删除。</view>
+</view>
 
 <view wx:else class="page page--with-navigation">
   <swiper
     class="detail-swiper"
-    vertical="{{true}}"
     current="{{swiperCurrent}}"
     duration="280"
     easing-function="easeOutCubic"
     bindchange="handleSwiperChange"
   >
     <swiper-item wx:for="{{items}}" wx:key="id">
-      <view class="detail-slide">
+      <scroll-view
+        class="detail-slide"
+        scroll-y
+        enhanced
+        bounces="{{false}}"
+        show-scrollbar="{{false}}"
+      >
         <view class="detail-sheet detail-sheet--count-{{item.image_count}}">
           <view wx:if="{{item.content}}" class="detail-content">{{item.content}}</view>
 
@@ -42,6 +56,7 @@
               data-id="{{item.id}}"
               data-url="{{imageUrl}}"
               aria-label="预览第 {{imageIndex + 1}} 张图片"
+              lazy-load
               bindload="handleSingleImageLoad"
               bindtap="handlePreview"
             />
@@ -66,14 +81,16 @@
           </view>
         </view>
 
-      </view>
+      </scroll-view>
     </swiper-item>
   </swiper>
+
+  <view wx:if="{{loadingDirection}}" class="detail-load-more">正在加载更多…</view>
 
   <app-dialog
     wx:if="{{showDeleteConfirm}}"
     visible="{{true}}"
-    title="删除关键节点"
+    title="删除人生节点"
     content="删除后，图片和文案都无法恢复。"
     cancel-text="取消"
     confirm-text="删除"

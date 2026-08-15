@@ -46,6 +46,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       this.rows = [...(tables[table] || [])];
       this.changes = null;
       this.selection = "";
+      this.ordering = [];
     }
 
     select(selection = "") {
@@ -98,6 +99,29 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
       return this;
     }
 
+    overlaps(field, values) {
+      this.rows = this.rows.filter((row) =>
+        Array.isArray(row[field]) && row[field].some((value) => values.includes(value))
+      );
+      return this;
+    }
+
+    or(filter) {
+      const operator = filter.includes("occurred_at.gt.") ? "gt" : "lt";
+      const parts = filter.match(
+        /^occurred_at\.(?:gt|lt)\.([^,]+),and\(occurred_at\.eq\.([^,]+),created_at\.(?:gt|lt)\.([^\)]+)\),and\(occurred_at\.eq\.([^,]+),created_at\.eq\.([^,]+),id\.(?:gt|lt)\.([^\)]+)\)$/,
+      );
+      if (!parts) throw new Error(`Unsupported fake or filter: ${filter}`);
+      const [, occurredAt, , createdAt, , , id] = parts;
+      const compare = (left, right) => operator === "gt" ? left > right : left < right;
+      this.rows = this.rows.filter((row) =>
+        compare(row.occurred_at, occurredAt)
+          || (row.occurred_at === occurredAt && compare(row.created_at, createdAt))
+          || (row.occurred_at === occurredAt && row.created_at === createdAt && compare(row.id, id))
+      );
+      return this;
+    }
+
     is(field, value) {
       this.rows = this.rows.filter((row) => row[field] === value || (value === null && row[field] == null));
       return this;
@@ -140,6 +164,7 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     order(field, options) {
       orderCalls.push({ table: this.table, field, options });
+      this.ordering.push({ field, ascending: options?.ascending !== false });
       return this;
     }
 
@@ -156,6 +181,16 @@ function createFakeSupabase({ tables = {}, rpc = {} } = {}) {
 
     materialize() {
       if (this.changes) this.rows.forEach((row) => Object.assign(row, this.changes));
+      if (this.table === "key_moments" && this.ordering.length) {
+        this.rows.sort((left, right) => {
+          for (const ordering of this.ordering) {
+            if (left[ordering.field] === right[ordering.field]) continue;
+            const result = left[ordering.field] < right[ordering.field] ? -1 : 1;
+            return ordering.ascending ? result : -result;
+          }
+          return 0;
+        });
+      }
       if (this.table === "app_sessions" && this.selection.includes("app_users")) {
         return this.rows.map((row) => ({
           ...row,
@@ -1553,7 +1588,48 @@ test("key moments list is user-scoped and filtered by Shanghai day", async (t) =
   ]);
 });
 
-test("key moment detail feed keeps the selected day between newer and older nodes", async (t) => {
+test("key moments list paginates with a stable descending cursor", async (t) => {
+  const moments = [
+    ["30000000-0000-4000-8000-000000000031", "2026-08-02T06:00:00.000Z"],
+    ["30000000-0000-4000-8000-000000000032", "2026-08-02T05:00:00.000Z"],
+    ["30000000-0000-4000-8000-000000000033", "2026-08-02T04:00:00.000Z"],
+  ].map(([id, occurredAt]) => ({
+    id,
+    uid: UID,
+    content: id,
+    occurred_at: occurredAt,
+    created_at: occurredAt,
+    image_paths: [],
+  }));
+  const app = buildServer({
+    logger: false,
+    supabase: createFakeSupabase({
+      tables: authenticatedTables({ key_moments: [...moments].reverse() }),
+    }),
+  });
+  t.after(() => app.close());
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/api/key-moments?granularity=day&date=2026-08-02&page_size=2",
+    headers: authHeaders,
+  });
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.json().data.items.map((item) => item.id), moments.slice(0, 2).map((item) => item.id));
+  assert.equal(first.json().data.has_more, true);
+  assert.ok(first.json().data.next_cursor);
+
+  const second = await app.inject({
+    method: "GET",
+    url: `/api/key-moments?granularity=day&date=2026-08-02&page_size=2&cursor=${encodeURIComponent(first.json().data.next_cursor)}`,
+    headers: authHeaders,
+  });
+  assert.equal(second.statusCode, 200);
+  assert.deepEqual(second.json().data.items.map((item) => item.id), [moments[2].id]);
+  assert.equal(second.json().data.has_more, false);
+});
+
+test("key moment detail context keeps the selected node between nearby newer and older nodes", async (t) => {
   const moments = [
     ["30000000-0000-4000-8000-000000000021", "2026-08-03T04:00:00.000Z"],
     ["30000000-0000-4000-8000-000000000022", "2026-08-02T04:00:00.000Z"],
@@ -1576,7 +1652,7 @@ test("key moment detail feed keeps the selected day between newer and older node
 
   const response = await app.inject({
     method: "GET",
-    url: "/api/key-moments/feed?date=2026-08-02",
+    url: `/api/key-moments/${moments[1].id}/context?page_size=8`,
     headers: authHeaders,
   });
   assert.equal(response.statusCode, 200);
@@ -1584,6 +1660,9 @@ test("key moment detail feed keeps the selected day between newer and older node
     response.json().data.items.map((item) => item.id),
     moments.map((item) => item.id),
   );
+  assert.equal(response.json().data.focus_index, 1);
+  assert.equal(response.json().data.has_newer, false);
+  assert.equal(response.json().data.has_older, false);
 });
 
 test("key moments can be created without an image and run text safety checks", async (t) => {
@@ -1620,7 +1699,87 @@ test("key moments can be created without an image and run text safety checks", a
   ]);
 });
 
-test("key moment edits only check text when the content actually changes", async (t) => {
+test("key moments finalize multiple checked draft images in one database insert", async (t) => {
+  const checkedImages = [];
+  const supabase = createFakeSupabase({ tables: authenticatedTables() });
+  const app = buildServer({
+    logger: false,
+    supabase,
+    contentSecurity: {
+      async checkText() {},
+      async checkImage(image) {
+        checkedImages.push(image.buffer.length);
+      },
+    },
+  });
+  t.after(() => app.close());
+
+  const draftResponse = await app.inject({
+    method: "POST",
+    url: "/api/key-moments/drafts",
+    headers: authHeaders,
+  });
+  assert.equal(draftResponse.statusCode, 200);
+  const draftId = draftResponse.json().data.id;
+  assert.match(draftId, /^[0-9a-f-]{36}$/i);
+
+  const sourceImage = await sharp({
+    create: {
+      width: 180,
+      height: 120,
+      channels: 3,
+      background: { r: 120, g: 170, b: 90 },
+    },
+  }).png().toBuffer();
+  const stagedPaths = [];
+  for (const suffix of ["one", "two"]) {
+    const boundary = `key-moment-draft-${suffix}`;
+    const payload = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${suffix}.png"\r\nContent-Type: image/png\r\n\r\n`,
+      ),
+      sourceImage,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const response = await app.inject({
+      method: "POST",
+      url: `/api/key-moments/drafts/${draftId}/images`,
+      headers: {
+        ...authHeaders,
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload,
+    });
+    assert.equal(response.statusCode, 200);
+    stagedPaths.push(response.json().data.image_path);
+  }
+
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/api/key-moments",
+    headers: authHeaders,
+    payload: {
+      id: draftId,
+      content: "一次保存两张图片",
+      occurred_at: "2026-08-15T12:00:00+08:00",
+      image_paths: stagedPaths,
+    },
+  });
+  assert.equal(createResponse.statusCode, 201);
+  assert.equal(createResponse.json().data.item.id, draftId);
+  assert.deepEqual(createResponse.json().data.item.image_paths, stagedPaths);
+  assert.equal(checkedImages.length, 2);
+  assert.equal(supabase.cosUploads.length, 2);
+
+  const removedAppendRoute = await app.inject({
+    method: "POST",
+    url: `/api/key-moments/${draftId}/images`,
+    headers: authHeaders,
+  });
+  assert.equal(removedAppendRoute.statusCode, 404);
+});
+
+test("key moment edits trim outer whitespace while preserving inner spacing", async (t) => {
   const checked = [];
   const momentId = "30000000-0000-4000-8000-000000000010";
   const app = buildServer({
@@ -1662,12 +1821,13 @@ test("key moment edits only check text when the content actually changes", async
     url: `/api/key-moments/${momentId}`,
     headers: authHeaders,
     payload: {
-      content: "小狗",
+      content: "  小  狗 \n",
       occurred_at: "2026-08-02T05:00:00+08:00",
     },
   });
   assert.equal(changedResponse.statusCode, 200);
-  assert.deepEqual(checked, [{ openId: "test-openid", content: "小狗" }]);
+  assert.equal(changedResponse.json().data.item.content, "小  狗");
+  assert.deepEqual(checked, [{ openId: "test-openid", content: "小  狗" }]);
 });
 
 test("key moment edits atomically replace the complete ordered image list", async (t) => {

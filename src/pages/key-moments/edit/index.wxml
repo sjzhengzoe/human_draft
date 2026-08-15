@@ -1,12 +1,12 @@
 <custom-navigation
-  title="{{editingId ? '编辑' : '新增关键节点'}}"
+  title="{{editingId ? '编辑人生节点' : '新增人生节点'}}"
   custom-back="{{true}}"
   bind:back="handleBack"
 />
 
 <view wx:if="{{loading}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在读取关键节点…</view>
+  <view class="fullscreen-loading__text">正在读取人生节点…</view>
 </view>
 
 <view wx:else class="page page--with-navigation">
@@ -73,4 +73,15 @@
   <view wx:if="{{draggingImageKey}}" class="image-drag-ghost" style="{{dragGhostStyle}}">
     <image class="image-drag-ghost__preview" src="{{dragGhostUrl}}" mode="aspectFill" />
   </view>
+
+  <app-dialog
+    wx:if="{{showDiscardConfirm}}"
+    visible="{{true}}"
+    title="放弃未保存的更改？"
+    content="已填写的文案和选择的图片将不会保存。"
+    cancel-text="继续编辑"
+    confirm-text="放弃"
+    bindcancel="handleDiscardCancel"
+    bindconfirm="handleDiscardConfirm"
+  />
 </view>

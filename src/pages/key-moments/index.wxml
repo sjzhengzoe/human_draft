@@ -6,7 +6,7 @@
 
 <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
   <view class="fullscreen-loading__spinner" />
-  <view class="fullscreen-loading__text">正在加载关键节点…</view>
+  <view class="fullscreen-loading__text">正在加载人生节点…</view>
 </view>
 
 <view wx:else class="page page--fixed">
@@ -27,7 +27,7 @@
       </view>
     </picker>
     <button
-      wx:if="{{activeGranularity !== 'year' && (canWrite || guestMode)}}"
+      wx:if="{{activeGranularity !== 'year' && canPublishInPeriod && (canWrite || guestMode)}}"
       class="add-button"
       aria-label="新增人生节点"
       bindtap="handleAdd"
@@ -42,10 +42,12 @@
     show-scrollbar="{{false}}"
     scroll-with-animation="{{true}}"
     scroll-into-view="{{timelineScrollAnchor}}"
+    lower-threshold="180"
+    bindscrolltolower="handleLoadMore"
   >
     <view id="timeline-scroll-top" />
     <view
-      wx:if="{{activeGranularity === 'year' && (canWrite || guestMode)}}"
+      wx:if="{{activeGranularity === 'year' && canPublishInPeriod && (canWrite || guestMode)}}"
       class="today-publisher"
     >
       <view class="today-publisher__label">今天</view>
@@ -60,7 +62,17 @@
       <view class="content-loading__spinner" />
       <view class="content-loading__text">正在加载…</view>
     </view>
-    <view wx:elif="{{items.length === 0}}" class="empty-state">暂无</view>
+    <view wx:elif="{{loadError && items.length === 0}}" class="state-panel">
+      <view class="state-panel__title">加载失败</view>
+      <view class="state-panel__message">{{loadError}}</view>
+      <button class="state-panel__button" bindtap="handleRetry">重新加载</button>
+    </view>
+    <view wx:elif="{{items.length === 0}}" class="state-panel">
+      <view class="state-panel__title">{{guestMode ? '登录后记录重要时刻' : '还没有人生节点'}}</view>
+      <view class="state-panel__message">
+        {{guestMode ? '你的记录会安全地保存在账号中。' : '记录一个值得记住的时刻吧。'}}
+      </view>
+    </view>
     <view wx:else class="timeline">
       <block wx:for="{{items}}" wx:key="id">
         <view wx:if="{{item.show_year_heading}}" class="timeline-year-heading">{{item.heading_year}}</view>
@@ -68,7 +80,7 @@
           class="timeline-entry"
           data-id="{{item.id}}"
           role="button"
-          aria-label="查看关键节点详情"
+          aria-label="查看人生节点详情"
           bindtap="handleMomentTap"
         >
           <view wx:if="{{item.show_date_heading}}" class="timeline-date">
@@ -78,7 +90,7 @@
           <view wx:else class="timeline-date timeline-date--empty" />
           <view class="timeline-main">
             <view class="moment-card {{item.image_count === 0 ? 'moment-card--text-only' : ''}}">
-              <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
+              <view wx:if="{{item.content}}" class="moment-content moment-content--clamped">{{item.content}}</view>
               <view
                 wx:if="{{item.image_count}}"
                 class="moment-gallery moment-gallery--count-{{item.image_count}}"
@@ -105,6 +117,7 @@
         <view wx:if="{{item.show_item_divider}}" class="item-divider" />
       </block>
     </view>
+    <view wx:if="{{loadingMore}}" class="load-more">正在加载更多…</view>
     <view class="scroll-safe-area" />
   </scroll-view>
 </view>

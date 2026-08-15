@@ -1,6 +1,6 @@
 import type { KeyMoment, KeyMomentGranularity } from "../types/key-moments"
 
-export const KEY_MOMENT_CACHE_FRESH_MS = 5 * 60 * 60 * 1000
+export const KEY_MOMENT_CACHE_FRESH_MS = 10 * 60 * 1000
 const MAX_CACHED_KEY_MOMENT_QUERIES = 24
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 
@@ -12,6 +12,7 @@ export type KeyMomentQuery = {
 type CachedKeyMomentQuery = {
   input: KeyMomentQuery
   items: KeyMoment[]
+  nextCursor: string
   cachedAt: number
 }
 
@@ -58,7 +59,9 @@ function sortKeyMoments(items: KeyMoment[]): KeyMoment[] {
   return [...items].sort((left, right) => {
     const occurredDifference = new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime()
     if (occurredDifference !== 0) return occurredDifference
-    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    const createdDifference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    if (createdDifference !== 0) return createdDifference
+    return right.id.localeCompare(left.id)
   })
 }
 
@@ -77,6 +80,7 @@ export function getKeyMomentDataRevision(): number {
 export function getCachedKeyMoments(input: KeyMomentQuery): {
   items: KeyMoment[]
   fresh: boolean
+  nextCursor: string
 } | null {
   const key = keyMomentQueryKey(input)
   const cached = cachedQueries.get(key)
@@ -85,16 +89,18 @@ export function getCachedKeyMoments(input: KeyMomentQuery): {
   cachedQueries.set(key, cached)
   return {
     items: cloneKeyMoments(cached.items),
-    fresh: Date.now() - cached.cachedAt < KEY_MOMENT_CACHE_FRESH_MS
+    fresh: Date.now() - cached.cachedAt < KEY_MOMENT_CACHE_FRESH_MS,
+    nextCursor: cached.nextCursor
   }
 }
 
-export function cacheKeyMoments(input: KeyMomentQuery, items: KeyMoment[]): void {
+export function cacheKeyMoments(input: KeyMomentQuery, items: KeyMoment[], nextCursor = ""): void {
   const key = keyMomentQueryKey(input)
   cachedQueries.delete(key)
   cachedQueries.set(key, {
     input: { ...input },
     items: sortKeyMoments(cloneKeyMoments(items)),
+    nextCursor,
     cachedAt: Date.now()
   })
   trimCache()
