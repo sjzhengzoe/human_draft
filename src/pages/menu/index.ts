@@ -734,7 +734,13 @@ Page({
 
   async performSearch(keyword: string) {
     if (!getCurrentUser()) {
-      this.setData({ searching: false, contentLoading: false, dishes: [], outsidePlaces: [] })
+      this.setData({
+        searching: false,
+        contentLoading: false,
+        dishes: [],
+        outsidePlaces: [],
+        browseItems: []
+      })
       return
     }
     const requestId = ++searchRequestId
@@ -761,11 +767,14 @@ Page({
           preview_dishes: placeMatches ? place.preview_dishes : matchingDishes.slice(0, 5)
         }]
       })
+      const matchedDishes = dishes
+        .filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
+        .map(toMenuDish)
+      const matchedPlaces = matches.map(toQuickMenuPlace)
       this.setData({
-        dishes: dishes
-          .filter((dish) => dish.name.toLocaleLowerCase().includes(normalized))
-          .map(toMenuDish),
-        outsidePlaces: matches.map(toQuickMenuPlace),
+        dishes: matchedDishes,
+        outsidePlaces: matchedPlaces,
+        browseItems: buildBrowseItems(matchedDishes, matchedPlaces, recordType, 0),
         browseCurrentIndex: 0
       }, () => this.applySelectionMarks())
     } catch (error) {

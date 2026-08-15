@@ -51,6 +51,7 @@ test("regular menu modes expose all filters and browse home dishes with outside 
   assert.match(logic, /const filter = recordType/);
   assert.match(logic, /canReorder: canWrite && activeRecordType !== "all"/);
   assert.match(logic, /function buildBrowseItems\([\s\S]*?recordType !== "outside"[\s\S]*?recordType !== "home"/);
+  assert.match(logic, /browseItems: buildBrowseItems\(matchedDishes, matchedPlaces, recordType, 0\)/);
   assert.match(page, /wx:for="\{\{browseItems\}\}"[\s\S]*?browseItem\.kind === 'place'[\s\S]*?dishes\[browseItem\.itemIndex\]\.name/);
 });
 
