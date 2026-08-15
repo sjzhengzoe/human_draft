@@ -28,11 +28,13 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   assert.match(componentSource, /wx\.onKeyboardHeightChange/);
   assert.match(componentSource, /wx\.offKeyboardHeightChange/);
   assert.match(template, /app-dialog--bottom/);
+  assert.match(template, /app-dialog--keyboard-open/);
   assert.match(template, /padding-bottom: ' \+ keyboardHeight \+ 'px/);
   assert.doesNotMatch(template, /translate3d/);
   assert.match(styles, /\.app-dialog__panel\s*{[^}]*max-height:\s*68vh/);
   assert.match(styles, /\.app-dialog--bottom\s*{[^}]*align-items:\s*flex-end/);
   assert.match(styles, /\.app-dialog--bottom \.app-dialog__panel\s*{[^}]*max-height:\s*78vh/);
+  assert.match(styles, /\.app-dialog--bottom\.app-dialog--keyboard-open \.app-dialog__actions[\s\S]*?padding-bottom:\s*24rpx/);
   assert.match(inputTemplate, /adjust-position="\{\{dialogMode \? false : adjustPosition\}\}"/);
   assert.match(inputTemplate, /cursor-spacing="\{\{dialogMode \? 0 : cursorSpacing\}\}"/);
   assert.match(inputTemplate, /always-embed="\{\{dialogMode \? false : true\}\}"/);
@@ -44,6 +46,7 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
 test("every dialog containing an input uses the shared bottom placement", async () => {
   const templates = await sourceFiles(new URL("src/", projectRoot), ".wxml");
   let inputDialogCount = 0;
+  const inputDialogActionRules = [];
   for (const path of templates) {
     const source = await readFile(path, "utf8");
     for (const dialog of source.match(/<app-dialog\b[\s\S]*?<\/app-dialog>/g) || []) {
@@ -51,14 +54,44 @@ test("every dialog containing an input uses the shared bottom placement", async 
       inputDialogCount += 1;
       assert.match(dialog, /placement="bottom"/, `input dialog must be bottom placed: ${path.pathname}`);
       assert.doesNotMatch(dialog, /adjust-position="\{\{true\}\}"|cursor-spacing="160"/);
+      for (const control of dialog.match(/<(?:input|textarea|app-input)\b[\s\S]*?\/>/g) || []) {
+        if (/^<app-input\b/.test(control)) {
+          assert.match(control, /dialog-mode/, `dialog app-input must use dialog mode: ${path.pathname}`);
+        } else {
+          assert.match(control, /adjust-position="\{\{false\}\}"/, `native dialog input must disable page adjustment: ${path.pathname}`);
+        }
+        assert.doesNotMatch(control, /always-embed="\{\{true\}\}"/, `dialog input must not force iOS same-layer rendering: ${path.pathname}`);
+      }
+      for (const actions of dialog.match(/<[a-z-]+\b[^>]*slot="actions"[^>]*>/g) || []) {
+        const classes = actions.match(/class="([^"]+)"/)?.[1].split(/\s+/) || [];
+        for (const className of classes) {
+          inputDialogActionRules.push({
+            stylesheet: new URL(path.href.replace(/\.wxml$/, ".less")),
+            className,
+          });
+        }
+      }
     }
   }
-  assert.ok(inputDialogCount >= 5);
+  assert.ok(inputDialogCount >= 10);
 
   const scripts = await sourceFiles(new URL("src/", projectRoot), ".ts");
+  const keyboardTrackingScripts = [];
   for (const path of scripts) {
     const source = await readFile(path, "utf8");
     assert.doesNotMatch(source, /editable:\s*true/, `native editable modal remains: ${path.pathname}`);
+    if (/wx\.onKeyboardHeightChange/.test(source)) keyboardTrackingScripts.push(path.pathname);
+  }
+  assert.equal(keyboardTrackingScripts.length, 1);
+  assert.ok(keyboardTrackingScripts[0].endsWith("/src/components/app-dialog/index.ts"));
+
+  for (const { stylesheet, className } of inputDialogActionRules) {
+    const source = await readFile(stylesheet, "utf8");
+    const escapedClassName = className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const rulePattern = new RegExp(`\\.${escapedClassName}\\s*\\{[^}]*\\}`, "g");
+    for (const rule of source.match(rulePattern) || []) {
+      assert.doesNotMatch(rule, /safe-area-inset-bottom/, `dialog actions must leave keyboard and safe-area spacing to app-dialog: ${stylesheet.pathname}`);
+    }
   }
 });
 
