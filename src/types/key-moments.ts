@@ -19,10 +19,9 @@ export type KeyMomentDetailItem = KeyMoment & {
 }
 
 export type KeyMomentTimelineItem = KeyMoment & {
-  date_label: string
-  time_label: string
-  interval_after: string
+  show_year_heading: boolean
   show_date_heading: boolean
+  show_date_divider: boolean
   heading_day: string
   heading_month: string
   heading_year: string

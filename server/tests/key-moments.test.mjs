@@ -110,7 +110,9 @@ test("key moment editor selects up to nine original images and displays a WeChat
   assert.ok(editorPage.indexOf('class="image-grid') < editorPage.indexOf('class="readonly-time'));
   assert.doesNotMatch(editorPage, /<image-cropper/);
   assert.match(styles, /\.moment-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(styles, /\.moment-image[\s\S]*?width: 100%;[\s\S]*?height: 166rpx/);
   assert.match(editorStyles, /\.image-grid[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(editorStyles, /\.image-grid__item,[\s\S]*?\.image-grid__add[\s\S]*?width: 100%;[\s\S]*?height: 222rpx/);
   assert.match(
     editorLogic,
     /const remaining = MAX_IMAGE_COUNT - this\.data\.editorImages\.length[\s\S]*?count: remaining/,
@@ -149,15 +151,26 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   ]);
 
   assert.doesNotMatch(page, /settings-button|handleSettings|displayLayout/);
+  assert.match(page, /activeGranularity === 'year'[\s\S]*?class="today-publisher"/);
+  assert.match(page, /class="today-publisher__label">今天<\/view>/);
+  assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
+  assert.match(page, /class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
+  assert.match(page, /class="moment-content"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /item\.show_date_divider[\s\S]*?class="date-divider"/);
+  assert.doesNotMatch(page, /interval_after|timeline-gap/);
   assert.match(
     page,
     /class="add-button"[\s\S]*?aria-label="新增人生节点"[\s\S]*?<app-icon name="plus-white"/,
   );
   assert.match(page, /class="moment-card"/);
   assert.match(styles, /\.moment-card\s*\{[\s\S]*?display: block;/);
-  assert.match(styles, /\.moment-image\s*\{[\s\S]*?aspect-ratio: 1;/);
+  assert.match(styles, /\.timeline-entry[\s\S]*?grid-template-columns: 116rpx minmax\(0, 1fr\)/);
+  assert.match(styles, /\.moment-image\s*\{[\s\S]*?width: 100%;[\s\S]*?height: 166rpx/);
   assert.doesNotMatch(styles, /moment-card--vertical|moment-card--horizontal/);
   assert.doesNotMatch(logic, /getKeyMomentDisplayLayout|handleSettings|displayLayout/);
+  assert.match(logic, /activeGranularity: "year" as KeyMomentGranularity/);
+  assert.match(logic, /periodLabel: periodLabel\("year", INITIAL_DATE_TIME\.date\)/);
+  assert.doesNotMatch(logic, /intervalLabel|interval_after/);
   const parsedAppConfig = JSON.parse(appConfig);
   const registeredPages = [
     ...parsedAppConfig.pages,
@@ -224,7 +237,7 @@ test("key moment detail uses top-aligned adaptive single images and square multi
   assert.match(page, /\{\{item\.date_label\}\} \{\{item\.time_label\}\}/);
   assert.match(styles, /\.detail-slide[\s\S]*?justify-content: flex-start/);
   assert.match(styles, /\.detail-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
-  assert.match(styles, /\.detail-image--grid[\s\S]*?aspect-ratio: 1/);
+  assert.match(styles, /\.detail-image--grid[\s\S]*?width: 100%;[\s\S]*?height: 195rpx/);
   assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
   assert.match(logic, /handleSingleImageLoad\([\s\S]*?sourceRatio[\s\S]*?single_image_style/);
   assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);

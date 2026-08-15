@@ -27,7 +27,7 @@
       </view>
     </picker>
     <button
-      wx:if="{{canWrite || guestMode}}"
+      wx:if="{{activeGranularity !== 'year' && (canWrite || guestMode)}}"
       class="add-button"
       aria-label="新增人生节点"
       bindtap="handleAdd"
@@ -44,6 +44,18 @@
     scroll-into-view="{{timelineScrollAnchor}}"
   >
     <view id="timeline-scroll-top" />
+    <view
+      wx:if="{{activeGranularity === 'year' && (canWrite || guestMode)}}"
+      class="today-publisher"
+    >
+      <view class="today-publisher__label">今天</view>
+      <view
+        class="today-publisher__button"
+        role="button"
+        aria-label="发表今天的人生节点"
+        bindtap="handleAdd"
+      ><app-icon name="image-plus" size="30" /></view>
+    </view>
     <view wx:if="{{contentLoading}}" class="content-loading">
       <view class="content-loading__spinner" />
       <view class="content-loading__text">正在加载…</view>
@@ -51,39 +63,35 @@
     <view wx:elif="{{items.length === 0}}" class="empty-state">暂无</view>
     <view wx:else class="timeline">
       <block wx:for="{{items}}" wx:key="id">
-        <view wx:if="{{item.show_date_heading}}" class="date-group-heading">
-          <view class="date-group-heading__day">{{item.heading_day}}</view>
-          <view class="date-group-heading__aside">
-            <view class="date-group-heading__month">{{item.heading_month}}</view>
-            <view class="date-group-heading__year">{{item.heading_year}}</view>
-          </view>
-        </view>
+        <view wx:if="{{item.show_year_heading}}" class="timeline-year-heading">{{item.heading_year}}</view>
         <view
-          class="timeline-entry {{index === items.length - 1 ? 'timeline-entry--last' : ''}}"
+          class="timeline-entry"
           data-id="{{item.id}}"
           role="button"
           aria-label="查看关键节点详情"
           bindtap="handleMomentTap"
         >
-          <view class="timeline-rail">
-            <view class="timeline-dot" />
+          <view class="timeline-date">
+            <block wx:if="{{item.show_date_heading}}">
+              <view class="timeline-date__month">{{item.heading_month}}</view>
+              <view class="timeline-date__day">{{item.heading_day}}</view>
+            </block>
           </view>
           <view class="timeline-main">
-            <view class="timeline-heading">
-              <text class="timeline-time">{{item.time_label}}</text>
-              <view
-                wx:if="{{canWrite}}"
-                class="timeline-delete-button"
-                data-id="{{item.id}}"
-                role="button"
-                aria-label="删除关键节点"
-                catchtap="handleDelete"
-              >
-                <app-icon name="trash-2-danger" size="24" />
-              </view>
-            </view>
             <view class="moment-card">
-              <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
+              <view wx:if="{{item.content || canWrite}}" class="moment-heading">
+                <view wx:if="{{item.content}}" class="moment-content">{{item.content}}</view>
+                <view
+                  wx:if="{{canWrite}}"
+                  class="timeline-delete-button"
+                  data-id="{{item.id}}"
+                  role="button"
+                  aria-label="删除关键节点"
+                  catchtap="handleDelete"
+                >
+                  <app-icon name="trash-2-danger" size="24" />
+                </view>
+              </view>
               <view
                 wx:if="{{item.image_count}}"
                 class="moment-gallery moment-gallery--count-{{item.image_count}}"
@@ -106,10 +114,7 @@
             </view>
           </view>
         </view>
-        <view wx:if="{{item.interval_after}}" class="timeline-gap">
-          <view class="timeline-gap__line" />
-          <view class="timeline-gap__label">{{item.interval_after}}</view>
-        </view>
+        <view wx:if="{{item.show_date_divider}}" class="date-divider" />
       </block>
     </view>
     <view class="scroll-safe-area" />

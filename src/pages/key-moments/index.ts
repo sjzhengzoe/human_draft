@@ -22,6 +22,20 @@ import {
 } from "../../utils/key-moment-data-cache"
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
+const CHINESE_MONTHS = [
+  "一月",
+  "二月",
+  "三月",
+  "四月",
+  "五月",
+  "六月",
+  "七月",
+  "八月",
+  "九月",
+  "十月",
+  "十一月",
+  "十二月"
+]
 
 function pad(value: number): string {
   return String(value).padStart(2, "0")
@@ -60,38 +74,34 @@ function editorDateTime(value: string): { date: string; time: string } {
   }
 }
 
-function intervalLabel(newer: string, older: string): string {
-  const totalMinutes = Math.max(
-    0,
-    Math.floor((new Date(newer).getTime() - new Date(older).getTime()) / 60000)
+function isSameShanghaiDate(
+  left: ReturnType<typeof shanghaiParts> | null,
+  right: ReturnType<typeof shanghaiParts> | null
+): boolean {
+  return Boolean(
+    left
+    && right
+    && left.year === right.year
+    && left.month === right.month
+    && left.day === right.day
   )
-  const days = Math.floor(totalMinutes / 1440)
-  const hours = Math.floor((totalMinutes % 1440) / 60)
-  const minutes = totalMinutes % 60
-  return days > 0 ? `${days}d${hours}h${minutes}m` : `${hours}h${minutes}m`
 }
 
 function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
   return items.map((item, index) => {
     const parts = shanghaiParts(item.occurred_at)
     const previousParts = index > 0 ? shanghaiParts(items[index - 1].occurred_at) : null
-    const showDateHeading =
-      !previousParts ||
-      previousParts.year !== parts.year ||
-      previousParts.month !== parts.month ||
-      previousParts.day !== parts.day
+    const nextParts = index < items.length - 1
+      ? shanghaiParts(items[index + 1].occurred_at)
+      : null
     return {
       ...item,
-      date_label: `${parts.year}.${pad(parts.month)}.${pad(parts.day)}`,
-      time_label: `${pad(parts.hour)}:${pad(parts.minute)}`,
-      show_date_heading: showDateHeading,
-      heading_day: String(parts.day),
-      heading_month: `${parts.month}月`,
-      heading_year: `${parts.year}年`,
-      interval_after:
-        index < items.length - 1
-          ? intervalLabel(item.occurred_at, items[index + 1].occurred_at)
-          : ""
+      show_year_heading: !previousParts || previousParts.year !== parts.year,
+      show_date_heading: !isSameShanghaiDate(previousParts, parts),
+      show_date_divider: Boolean(nextParts && !isSameShanghaiDate(parts, nextParts)),
+      heading_day: pad(parts.day),
+      heading_month: CHINESE_MONTHS[parts.month - 1],
+      heading_year: `${parts.year}年`
     }
   })
 }
@@ -112,9 +122,9 @@ Page({
       { value: "month", label: "月" },
       { value: "day", label: "日" }
     ],
-    activeGranularity: "day" as KeyMomentGranularity,
+    activeGranularity: "year" as KeyMomentGranularity,
     anchorDate: INITIAL_DATE_TIME.date,
-    periodLabel: periodLabel("day", INITIAL_DATE_TIME.date),
+    periodLabel: periodLabel("year", INITIAL_DATE_TIME.date),
     items: [] as KeyMomentTimelineItem[],
     canWrite: false,
     guestMode: false,
