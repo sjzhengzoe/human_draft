@@ -79,15 +79,25 @@ function paginateTopics(items, query = {}) {
   };
 }
 
+async function listActiveOfficialTopics(supabase) {
+  const { data, error } = await supabase
+    .from("official_chat_topics")
+    .select(OFFICIAL_FIELDS)
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("sort_order", { ascending: false });
+  throwSupabaseError(error, "读取官方话题失败。");
+  return data || [];
+}
+
+export async function listPublicOfficialChatTopics(supabase, query = {}) {
+  return paginateTopics(await listActiveOfficialTopics(supabase), query);
+}
+
 async function listVisibleOfficialTopics(supabase, uid) {
   const [officialResult, hiddenResult, collectedResult] = await Promise.all([
-    supabase
-      .from("official_chat_topics")
-      .select(OFFICIAL_FIELDS)
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false })
-      .order("sort_order", { ascending: false }),
+    listActiveOfficialTopics(supabase),
     supabase
       .from("user_hidden_official_chat_topics")
       .select("official_topic_id")
@@ -97,7 +107,6 @@ async function listVisibleOfficialTopics(supabase, uid) {
       .select("official_topic_id")
       .eq("uid", uid),
   ]);
-  throwSupabaseError(officialResult.error, "读取官方话题失败。");
   throwSupabaseError(hiddenResult.error, "读取话题偏好失败。");
   throwSupabaseError(collectedResult.error, "读取个人话题失败。");
   const hiddenIds = new Set((hiddenResult.data || []).map((item) => item.official_topic_id));
@@ -106,7 +115,7 @@ async function listVisibleOfficialTopics(supabase, uid) {
       .map((item) => item.official_topic_id)
       .filter(Boolean),
   );
-  return (officialResult.data || []).filter(
+  return officialResult.filter(
     (item) => !hiddenIds.has(item.id) && !collectedIds.has(item.id),
   );
 }

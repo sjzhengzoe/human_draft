@@ -87,6 +87,7 @@ const PET_STATE_LABELS: Record<ExerciseBowlLevel, string> = {
 const CALENDAR_CAT_IMAGE = "/exercise/assets/calendar/happy-cat.png"
 const CALENDAR_DOG_IMAGE = "/exercise/assets/calendar/unhappy-dog.png"
 const EXERCISE_IMAGE_SELECTION_STORAGE_PREFIX = "EXERCISE_DAILY_IMAGES_V2"
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 
 type ExerciseImageSelections = {
   petImage: string
@@ -160,6 +161,62 @@ function dateDisplayLabel(date: string, today: string) {
   return `${month}月${day}日`
 }
 
+function guestCalendarContext() {
+  const now = new Date(Date.now() + SHANGHAI_OFFSET_MS)
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth() + 1
+  const day = now.getUTCDate()
+  const monthValue = `${year}-${String(month).padStart(2, "0")}`
+  const today = `${monthValue}-${String(day).padStart(2, "0")}`
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7
+  const calendarCells: ExerciseCalendarCell[] = [
+    ...Array.from({ length: firstWeekday }, (_, index) => ({
+      key: `guest-blank-${index}`,
+      date: "",
+      day: "",
+      state: "blank",
+      isToday: false,
+      isSelected: false,
+      selectable: false,
+      restUsed: false,
+      canUseRestDay: false,
+      dailyMinutes: 0,
+      pendingMinutes: 0,
+      recordedMinutes: 0,
+      overachievedMinutes: 0,
+      bowlLevel: "empty" as ExerciseBowlLevel,
+      bowlLabel: "没有",
+      ariaLabel: ""
+    })),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const calendarDay = index + 1
+      const date = `${monthValue}-${String(calendarDay).padStart(2, "0")}`
+      const isToday = calendarDay === day
+      return {
+        key: `guest-${date}`,
+        date,
+        day: calendarDay,
+        state: date > today ? "future" : "untracked",
+        isToday,
+        isSelected: isToday,
+        selectable: false,
+        restUsed: false,
+        canUseRestDay: false,
+        dailyMinutes: 0,
+        pendingMinutes: 0,
+        recordedMinutes: 0,
+        overachievedMinutes: 0,
+        bowlLevel: "empty" as ExerciseBowlLevel,
+        bowlLabel: "没有",
+        ariaLabel: `${month}月${calendarDay}日${isToday ? "，今天" : ""}`
+      }
+    })
+  ]
+
+  return { year, month, today, monthValue, calendarCells }
+}
+
 Page({
   data: {
     loading: true,
@@ -221,7 +278,7 @@ Page({
   onShow() {
     activateAsyncPage(this)
     if (!getCurrentUser()) {
-      this.setData({ guestMode: true, loading: false, hasLoaded: true, calendarLoading: false })
+      this.showGuestCalendar()
       return
     }
     if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
@@ -230,6 +287,53 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
+  },
+
+  showGuestCalendar() {
+    const context = guestCalendarContext()
+    const stateImages = getImagesForState("empty", context.today)
+    this.setData({
+      loading: false,
+      hasLoaded: true,
+      guestMode: true,
+      busy: false,
+      busyAction: "",
+      selectedDate: context.today,
+      todayDate: context.today,
+      selectedDateLabel: "今日",
+      selectedTaskTitle: "今日任务",
+      selectedPendingMinutes: 0,
+      selectedDailyTaskState: "pending",
+      selectedPendingTotal: 0,
+      selectedRecordedMinutes: 0,
+      selectedOverachievedMinutes: 0,
+      selectedRestUsed: false,
+      selectedCanUseRestDay: false,
+      selectedShowUseRestDay: false,
+      selectedCanRevokeRestDay: false,
+      selectedActionDisabled: false,
+      yearIncompleteDays: 0,
+      calendarIncompleteDays: 0,
+      restCreditBalance: 0,
+      currentMonthGrant: 0,
+      completeButtonText: "完成运动",
+      bowlLabel: "没有",
+      emotionLabel: PET_STATE_LABELS.empty,
+      petImage: stateImages.petImage,
+      bowlImage: stateImages.bowlImage,
+      calendarMonthLabel: `${context.year}年${context.month}月`,
+      calendarMonthValue: context.monthValue,
+      calendarPickerValue: `${context.monthValue}-01`,
+      calendarPickerStart: `${context.monthValue}-01`,
+      calendarPickerEnd: `${context.monthValue}-01`,
+      calendarIsCurrent: true,
+      calendarCanGoPrevious: false,
+      calendarCanGoNext: false,
+      calendarLoading: false,
+      calendarCells: context.calendarCells,
+      minutesDialogVisible: false,
+      restDialogVisible: false
+    })
   },
 
   applyDashboard(dashboard: ExerciseDashboard) {

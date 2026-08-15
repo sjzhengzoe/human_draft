@@ -88,8 +88,11 @@
         </view>
       </view>
       <view class="mini-calendar__summary">
-        <view>本年未完成 {{yearIncompleteDays}} 天 · 本月未完成 {{calendarIncompleteDays}} 天</view>
-        <view>可用休息额度 <text>{{restCreditBalance}}</text> 天 · 本月发放 {{currentMonthGrant}} 天</view>
+        <view wx:if="{{guestMode}}">登录后查看你的运动记录</view>
+        <block wx:else>
+          <view>本年未完成 {{yearIncompleteDays}} 天 · 本月未完成 {{calendarIncompleteDays}} 天</view>
+          <view>可用休息额度 <text>{{restCreditBalance}}</text> 天 · 本月发放 {{currentMonthGrant}} 天</view>
+        </block>
       </view>
     </view>
 
@@ -98,7 +101,8 @@
   <view class="balance-card">
     <view class="balance-header">
       <view class="balance-heading">{{selectedTaskTitle}}</view>
-      <view wx:if="{{selectedDailyTaskState === 'pending'}}" class="task-row__remaining">
+      <view wx:if="{{guestMode}}" class="task-row__status">登录后开始记录</view>
+      <view wx:elif="{{selectedDailyTaskState === 'pending'}}" class="task-row__remaining">
         <text class="task-row__hint">还需</text><text class="task-row__value">{{selectedPendingMinutes}}</text><text class="task-row__unit">分钟</text>
       </view>
       <view wx:elif="{{selectedDailyTaskState === 'rest'}}" class="task-row__status">已使用休息日</view>

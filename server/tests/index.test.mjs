@@ -499,6 +499,18 @@ test("chat topics list official examples and only the authenticated user's topic
   });
   t.after(() => app.close());
 
+  const publicOfficialResponse = await app.inject({
+    method: "GET",
+    url: "/api/chat-topics/official?page=1&page_size=20",
+  });
+  assert.equal(publicOfficialResponse.statusCode, 200);
+  const publicOfficialData = publicOfficialResponse.json().data;
+  assert.equal(publicOfficialData.items.length, 13);
+  assert.equal(publicOfficialData.pagination.total, 13);
+  assert.equal(publicOfficialData.items.some((item) => item.id === officialTopic.id), true);
+  assert.equal(publicOfficialData.items.some((item) => item.id === hiddenOfficialTopic.id), true);
+  assert.equal(publicOfficialData.items.some((item) => item.id === mine.id), false);
+
   const listResponse = await app.inject({
     method: "GET",
     url: "/api/chat-topics",

@@ -80,6 +80,33 @@ export function request<T>(options: RequestOptions): Promise<T> {
   return sendRequest<T>(options)
 }
 
+export async function publicRequest<T>(options: RequestOptions): Promise<T> {
+  const response = await new Promise<WechatMiniprogram.RequestSuccessCallbackResult<ApiEnvelope<T>>>(
+    (resolve, reject) => {
+      wx.request<ApiEnvelope<T>>({
+        url: `${API_BASE_URL}${options.path}`,
+        method: options.method || "GET",
+        data:
+          options.data === undefined && options.method && options.method !== "GET"
+            ? {}
+            : options.data,
+        success: resolve,
+        fail: reject
+      })
+    }
+  )
+  const body = toApiEnvelope<T>(response.data)
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (response.statusCode === 204) return undefined as T
+    return body.data as T
+  }
+  throw new ApiRequestError(
+    body.error?.message || "请求失败，请稍后重试。",
+    body.error?.code,
+    response.statusCode
+  )
+}
+
 type UploadOptions = {
   path: string
   filePath: string

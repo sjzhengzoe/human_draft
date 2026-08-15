@@ -26,6 +26,23 @@ test("official topic lists prioritize recently edited topics", async () => {
   assert.equal(updatedAtDescending.length, 2);
 });
 
+test("official chat topics expose a public read-only list", async () => {
+  const [routes, service, client, page] = await Promise.all([
+    readFile(new URL("../routes/chat-topics.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../domains/chat-topics/service.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/chat-topics.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/chat-topics/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(routes, /app\.get\("\/api\/chat-topics\/official", async/);
+  assert.match(service, /listPublicOfficialChatTopics/);
+  assert.match(client, /publicRequest<[\s\S]*?\/api\/chat-topics\/official/);
+  assert.match(page, /if \(!getCurrentUser\(\)\) \{[\s\S]*?loadGuestTopics\(\)/);
+  assert.match(page, /loadGuestTopics\(\)[\s\S]*?listOfficialChatTopics/);
+  assert.match(page, /handleAddOfficial[\s\S]*?requireLoginForAction\(this\)/);
+  assert.match(page, /handleDislikeOfficial[\s\S]*?requireLoginForAction\(this\)/);
+});
+
 test("chat topics migration separates official topics from user-owned topics", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608020003_chat_topics.sql", import.meta.url),

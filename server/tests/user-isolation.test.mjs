@@ -107,6 +107,7 @@ test("every business API route requires an authenticated session", async () => {
   const routeFiles = await readSourceFiles(join(projectRoot, "server/routes"));
   const publicRoutes = new Set([
     "GET /api/health",
+    "GET /api/chat-topics/official",
     "POST /api/auth/wechat",
   ]);
   let routeCount = 0;

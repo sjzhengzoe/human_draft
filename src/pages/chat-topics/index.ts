@@ -8,6 +8,7 @@ import {
   hideOfficialChatTopic,
   listChatTopics,
   listHiddenOfficialChatTopics,
+  listOfficialChatTopics,
   restoreOfficialChatTopic,
   updateOfficialChatTopic,
   updateUserChatTopic
@@ -137,8 +138,19 @@ Page({
   },
 
   onShow() {
+    activateAsyncPage(this)
     if (!getCurrentUser()) {
-      this.setData({ guestMode: true, loading: false, contentLoading: false, hasLoaded: true })
+      this.setData({
+        guestMode: true,
+        canWrite: false,
+        isAdmin: false,
+        myItems: [],
+        hiddenItems: [],
+        hiddenTotal: 0,
+        hiddenTotalPages: 1,
+        hiddenHasLoaded: false
+      })
+      void this.loadGuestTopics()
       return
     }
     if (this.data.guestMode) this.setData({ guestMode: false, hasLoaded: false })
@@ -147,6 +159,35 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
+  },
+
+  async loadGuestTopics() {
+    const generation = beginAsyncPageRequest(this)
+    const showInitialLoading = !this.data.hasLoaded
+    this.setData({
+      loading: showInitialLoading,
+      contentLoading: !showInitialLoading
+    })
+    try {
+      const { items, pagination } = await listOfficialChatTopics(1, OFFICIAL_PAGE_SIZE)
+      if (!isAsyncPageRequestCurrent(this, generation)) return
+      this.setData({
+        officialItems: withAddedState(items, []),
+        officialPage: pagination.page,
+        officialTotal: pagination.total,
+        officialTotalPages: pagination.total_pages
+      })
+    } catch (error) {
+      if (!isAsyncPageRequestCurrent(this, generation)) return
+      wx.showToast({
+        title: error instanceof Error ? error.message : "加载失败",
+        icon: "none"
+      })
+    } finally {
+      if (isAsyncPageRequestCurrent(this, generation)) {
+        this.setData({ loading: false, contentLoading: false, hasLoaded: true })
+      }
+    }
   },
 
   async loadTopics() {
@@ -221,22 +262,31 @@ Page({
   },
 
   async loadOfficialPage(page: number) {
-    if (!getCurrentUser()) return
     if (this.data.loadingOfficialPage) return
     this.setData({ loadingOfficialPage: true })
     try {
-      const { officialItems, officialPagination, myItems } = await listChatTopics(
-        page,
-        OFFICIAL_PAGE_SIZE
-      )
+      const user = getCurrentUser()
+      const result = user
+        ? await listChatTopics(page, OFFICIAL_PAGE_SIZE)
+        : await listOfficialChatTopics(page, OFFICIAL_PAGE_SIZE)
       if (!isAsyncPageActive(this)) return
-      this.setData({
-        officialItems: withAddedState(officialItems, myItems),
-        myItems,
-        officialPage: officialPagination.page,
-        officialTotal: officialPagination.total,
-        officialTotalPages: officialPagination.total_pages
-      })
+      if (user && "officialItems" in result) {
+        this.setData({
+          officialItems: withAddedState(result.officialItems, result.myItems),
+          myItems: result.myItems,
+          officialPage: result.officialPagination.page,
+          officialTotal: result.officialPagination.total,
+          officialTotalPages: result.officialPagination.total_pages
+        })
+      } else if ("items" in result) {
+        this.setData({
+          officialItems: withAddedState(result.items, []),
+          myItems: [],
+          officialPage: result.pagination.page,
+          officialTotal: result.pagination.total,
+          officialTotalPages: result.pagination.total_pages
+        })
+      }
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
@@ -303,6 +353,7 @@ Page({
   },
 
   async handleRestoreOfficial(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.restoringOfficialId) return
     const id = String(event.currentTarget.dataset.id || "")
     if (!id) return
@@ -443,6 +494,7 @@ Page({
   },
 
   async handleDislikeOfficial(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (this.data.hidingOfficialId) return
     const id = String(event.currentTarget.dataset.id || "")
     if (!id) return
@@ -465,6 +517,7 @@ Page({
   },
 
   handleCopyOfficial(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     const item = this.data.officialItems.find((topic) => topic.id === id)
@@ -479,6 +532,7 @@ Page({
   },
 
   async handleAddOfficial(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
     if (!this.data.canWrite || this.data.addingOfficialId || this.data.contentLoading) return
     const id = String(event.currentTarget.dataset.id || "")
     const topic = this.data.officialItems.find((item) => item.id === id)
@@ -546,6 +600,7 @@ Page({
   },
 
   async saveEditor() {
+    if (!requireLoginForAction(this)) return
     const content = this.data.editorContent.trim()
     if (!content || this.data.saving) return
     this.setData({ saving: true })

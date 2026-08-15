@@ -571,6 +571,20 @@ test("exercise home lets a tracked calendar day drive the completion date", asyn
   assert.doesNotMatch(pageSource, /pages\/rest-days\/index/);
 });
 
+test("exercise home builds a visible local calendar for signed-out visitors", async () => {
+  const [pageSource, templateSource] = await Promise.all([
+    readFile(new URL("../../src/exercise/pages/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/exercise/pages/index.wxml", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(pageSource, /if \(!getCurrentUser\(\)\) \{[\s\S]*?this\.showGuestCalendar\(\)/);
+  assert.match(pageSource, /showGuestCalendar\(\) \{[\s\S]*?guestCalendarContext\(\)/);
+  assert.match(pageSource, /Array\.from\(\{ length: daysInMonth \}/);
+  assert.match(pageSource, /calendarCells: context\.calendarCells/);
+  assert.match(templateSource, /wx:if="\{\{guestMode\}\}">登录后查看你的运动记录/);
+  assert.match(templateSource, /wx:if="\{\{guestMode\}\}" class="task-row__status">登录后开始记录/);
+});
+
 test("daily goal settings migration applies new goals from the next day", async () => {
   const migration = await readFile(
     new URL(

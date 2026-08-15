@@ -3,7 +3,20 @@ import type {
   OfficialChatTopicPagination,
   UserChatTopic
 } from "../types/chat-topics"
-import { request } from "./request"
+import { publicRequest, request } from "./request"
+
+export function listOfficialChatTopics(
+  page = 1,
+  pageSize = 5
+): Promise<{
+  items: OfficialChatTopic[]
+  pagination: OfficialChatTopicPagination
+}> {
+  return publicRequest<{
+    items: OfficialChatTopic[]
+    pagination: OfficialChatTopicPagination
+  }>({ path: `/api/chat-topics/official?page=${page}&page_size=${pageSize}` })
+}
 
 export async function listChatTopics(page = 1, pageSize = 5): Promise<{
   officialItems: OfficialChatTopic[]

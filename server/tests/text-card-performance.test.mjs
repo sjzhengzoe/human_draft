@@ -239,6 +239,15 @@ test("content security checks new input but not copy or export output", async ()
 
   const editor = await readProjectFile("src/pages/editor/index.ts")
   assert.match(editor, /await checkTextContent\(content\)/)
+
+  const contentSecurity = await readProjectFile(
+    "src/services/content-security.ts"
+  )
+  assert.match(contentSecurity, /if \(!getCurrentUser\(\)\) return/)
+  assert.match(
+    contentSecurity,
+    /if \(!getCurrentUser\(\)\) return[\s\S]*?await request/
+  )
 })
 
 test("text card UI exposes preview and high-resolution export states", async () => {

@@ -7,6 +7,7 @@ import {
   hideOfficialChatTopic,
   listChatTopics,
   listHiddenOfficialChatTopics,
+  listPublicOfficialChatTopics,
   restoreOfficialChatTopic,
   updateOfficialChatTopic,
   updateUserChatTopic,
@@ -14,6 +15,14 @@ import {
 
 export function registerChatTopicRoutes(app, context) {
   const { adminAuthenticated, authenticated, contentSecurity, getSupabaseAdmin } = context;
+
+  app.get("/api/chat-topics/official", async (request) => ({
+    ok: true,
+    data: await listPublicOfficialChatTopics(
+      getSupabaseAdmin(),
+      request.query || {},
+    ),
+  }));
 
   app.get("/api/chat-topics", { preHandler: authenticated }, async (request) => ({
     ok: true,
