@@ -135,6 +135,18 @@ export type HomeModuleSettings = {
   hidden_module_keys: string[]
 }
 
+export type FootprintPlaceStatus = "planned" | "visited"
+
+export type FootprintCityPlace = {
+  id: string
+  city_code: string
+  name: string
+  note: string
+  status: FootprintPlaceStatus
+  created_at: string
+  updated_at: string
+}
+
 export type Category = {
   id: string
   name: string

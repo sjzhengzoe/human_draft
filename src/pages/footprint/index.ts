@@ -279,6 +279,16 @@ Page({
     this.rebuildLists(() => this.drawMap())
   },
 
+  handleCityPlacesTap(event: WechatMiniprogram.TouchEvent) {
+    if (!requireLoginForAction(this)) return
+    const cityCode = String(event.currentTarget.dataset.code || "")
+    const cityName = String(event.currentTarget.dataset.name || "")
+    if (!cityCode || !cityName) return
+    wx.navigateTo({
+      url: `/pages/footprint/places/index?cityCode=${encodeURIComponent(cityCode)}&cityName=${encodeURIComponent(cityName)}`
+    })
+  },
+
   async handleCityTap(event: WechatMiniprogram.TouchEvent) {
     if (!requireLoginForAction(this)) return
     const cityCode = String(event.currentTarget.dataset.code || "")

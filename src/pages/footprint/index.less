@@ -318,29 +318,40 @@
 
 .city-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7rpx;
   padding: 14rpx 16rpx 16rpx;
   border-top: 1rpx solid var(--ui-color-shadow-strong);
 }
 
-.city-chip {
+.city-item {
   display: flex;
-  width: 100% !important;
-  min-width: 0 !important;
-  height: 54rpx;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: center;
-  gap: 6rpx;
-  padding: 0 6rpx !important;
+  min-width: 0;
+  overflow: hidden;
   border: 1rpx solid var(--footprint-color-border);
   border-radius: 14rpx;
   background: var(--ui-color-background-surface);
+  box-shadow: 0 3rpx 9rpx var(--ui-color-shadow-soft);
+}
+
+.city-chip {
+  display: flex;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 60rpx;
+  box-sizing: border-box;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6rpx;
+  padding: 0 10rpx !important;
+  border: 0;
+  border-radius: 0;
+  background: var(--ui-color-background-surface);
   color: var(--footprint-color-text-primary);
   font-size: var(--ui-font-size-base);
-  box-shadow: 0 3rpx 9rpx var(--ui-color-shadow-soft);
-  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  box-shadow: none;
+  transition: transform 120ms ease, background 160ms ease, color 160ms ease;
 }
 
 .city-chip:active {
@@ -376,11 +387,30 @@
 }
 
 .city-chip--visited {
-  border-color: var(--ui-color-success-strong);
   background: var(--ui-color-success);
   color: var(--ui-color-text-inverse);
   font-weight: 500;
   box-shadow: 0 6rpx 14rpx var(--footprint-color-success-shadow);
+}
+
+.city-places-link {
+  display: flex;
+  min-width: 70rpx;
+  min-height: 60rpx;
+  box-sizing: border-box;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10rpx;
+  border-left: 1rpx solid var(--footprint-color-border);
+  color: var(--footprint-color-text-secondary);
+  font-size: var(--ui-font-size-small);
+  line-height: 1;
+}
+
+.city-places-link:active {
+  background: var(--ui-color-background-hover);
+  color: var(--footprint-color-text-primary);
 }
 
 .city-chip--visited .city-chip__marker {
@@ -410,7 +440,5 @@
     padding-left: var(--ui-page-gutter-compact);
   }
 
-  .city-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  .city-grid { grid-template-columns: 1fr; }
 }

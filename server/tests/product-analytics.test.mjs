@@ -130,6 +130,10 @@ test("only successful core business creation routes become trusted creation even
     routeOptions: { url: "/api/footprint/cities/:cityCode" },
     body: { visited: false },
   }, 200), null);
+  assert.equal(resolveContentCreationModule({
+    ...request,
+    routeOptions: { url: "/api/footprint/cities/:cityCode/places" },
+  }, 201), "footprint");
 });
 
 class ReadQuery {

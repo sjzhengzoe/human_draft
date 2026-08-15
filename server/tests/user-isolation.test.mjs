@@ -38,6 +38,7 @@ const userOwnedTables = new Set([
   "menu_schedule_meals",
   "user_chat_topics",
   "user_footprint_cities",
+  "user_footprint_city_places",
   "user_hidden_official_chat_topics",
   "wardrobe_categories",
   "wardrobe_items",

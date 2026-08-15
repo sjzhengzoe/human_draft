@@ -34,23 +34,35 @@
     </view>
 
     <view wx:if="{{province.expanded}}" class="city-grid">
-      <button
+      <view
         wx:for="{{province.cities}}"
         wx:key="code"
         wx:for-item="city"
-        class="city-chip {{city.visited ? 'city-chip--visited' : ''}}"
-        aria-label="{{city.visited ? '取消点亮' : '点亮'}}{{city.fullName}}"
-        aria-pressed="{{city.visited}}"
-        data-code="{{city.code}}"
-        data-province-code="{{province.code}}"
-        data-province-name="{{province.name}}"
-        catchtap="handleCityTap"
+        class="city-item"
       >
-        <view class="city-chip__marker">
-          <view class="city-chip__marker-core" />
-        </view>
-        <text class="city-chip__name">{{city.name}}</text>
-      </button>
+        <button
+          class="city-chip {{city.visited ? 'city-chip--visited' : ''}}"
+          aria-label="{{city.visited ? '取消点亮' : '点亮'}}{{city.fullName}}"
+          aria-pressed="{{city.visited}}"
+          data-code="{{city.code}}"
+          data-province-code="{{province.code}}"
+          data-province-name="{{province.name}}"
+          catchtap="handleCityTap"
+        >
+          <view class="city-chip__marker">
+            <view class="city-chip__marker-core" />
+          </view>
+          <text class="city-chip__name">{{city.name}}</text>
+        </button>
+        <view
+          class="city-places-link"
+          role="button"
+          aria-label="记录{{city.fullName}}想去和去过的地点"
+          data-code="{{city.code}}"
+          data-name="{{city.fullName}}"
+          catchtap="handleCityPlacesTap"
+        >地点</view>
+      </view>
     </view>
   </view>
 </template>

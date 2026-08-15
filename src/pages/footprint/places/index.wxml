@@ -1,0 +1,131 @@
+<custom-navigation title="{{cityName ? cityName + '地点' : '城市地点'}}" />
+
+<view class="page page--fixed city-places-page">
+  <view class="city-places-hero">
+    <view class="city-places-hero__title">旅途里的小目的地</view>
+    <view class="city-places-hero__hint">先记下想去的地方，抵达后点一下就会移到“去过”。</view>
+  </view>
+
+  <view class="city-places-toolbar">
+    <view class="city-places-tabs" role="tablist" aria-label="地点状态">
+      <view
+        class="city-places-tab {{activeStatus === 'planned' ? 'city-places-tab--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeStatus === 'planned'}}"
+        data-status="planned"
+        bindtap="handleStatusTabTap"
+      >想去 {{plannedCount}}</view>
+      <view
+        class="city-places-tab {{activeStatus === 'visited' ? 'city-places-tab--active' : ''}}"
+        role="tab"
+        aria-selected="{{activeStatus === 'visited'}}"
+        data-status="visited"
+        bindtap="handleStatusTabTap"
+      >去过 {{visitedCount}}</view>
+    </view>
+    <view
+      class="city-places-add"
+      role="button"
+      aria-label="新增{{activeStatus === 'planned' ? '想去' : '去过'}}地点"
+      bindtap="handleAdd"
+    ><app-icon name="plus" size="24" /></view>
+  </view>
+
+  <scroll-view class="city-places-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view wx:if="{{errorMessage && !loading}}" class="city-places-state">
+      <view>{{errorMessage}}</view>
+      <view class="city-places-state__action" role="button" bindtap="handleRetry">重试</view>
+    </view>
+
+    <view wx:elif="{{!loading && visibleItems.length === 0}}" class="city-places-state">
+      <view class="city-places-state__title">{{activeStatus === 'planned' ? '还没有想去的地点' : '还没有标记去过的地点'}}</view>
+      <view class="city-places-state__hint">{{activeStatus === 'planned' ? '把景点、店铺或一条想走的街记在这里。' : '从“想去”清单点一下状态，就会移动到这里。'}}</view>
+      <view class="city-places-state__action" role="button" bindtap="handleAdd">{{activeStatus === 'planned' ? '添加第一个想去地点' : '直接记录去过的地点'}}</view>
+    </view>
+
+    <view wx:else class="city-place-list">
+      <view wx:for="{{visibleItems}}" wx:key="id" class="city-place-card">
+        <view
+          class="city-place-card__status {{item.status === 'visited' ? 'city-place-card__status--visited' : ''}}"
+          role="checkbox"
+          aria-label="{{item.status === 'visited' ? '将' + item.name + '移回想去' : '将' + item.name + '标记为去过'}}"
+          aria-checked="{{item.status === 'visited'}}"
+          data-id="{{item.id}}"
+          bindtap="handlePlaceStatusToggle"
+        >
+          <app-icon wx:if="{{item.status === 'visited'}}" name="check-white" size="24" />
+        </view>
+        <view class="city-place-card__body" data-id="{{item.id}}" bindtap="handleEdit">
+          <view class="city-place-card__name">{{item.name}}</view>
+          <view wx:if="{{item.note}}" class="city-place-card__note">{{item.note}}</view>
+          <view wx:else class="city-place-card__note city-place-card__note--empty">{{item.status === 'planned' ? '等你出发' : '已经抵达'}}</view>
+        </view>
+        <view
+          class="city-place-card__edit"
+          role="button"
+          aria-label="编辑{{item.name}}"
+          data-id="{{item.id}}"
+          bindtap="handleEdit"
+        ><app-icon name="pencil" size="24" /></view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <app-dialog
+    visible="{{editorVisible}}"
+    title="{{editorId ? '编辑地点' : activeStatus === 'planned' ? '新增想去地点' : '记录去过地点'}}"
+    placement="bottom"
+    custom-body="{{true}}"
+    custom-actions="{{true}}"
+    bindcancel="handleEditorCancel"
+  >
+    <view slot="body" class="city-place-editor">
+      <view class="city-place-editor__field">
+        <view class="city-place-editor__label">地点名称</view>
+        <app-input
+          custom-class="city-place-editor__input"
+          value="{{editorName}}"
+          placeholder="例如：颐和园"
+          maxlength="80"
+          dialog-mode="{{true}}"
+          bindinput="handleEditorNameInput"
+        />
+      </view>
+      <view class="city-place-editor__field">
+        <view class="city-place-editor__label">简短备注（可选）</view>
+        <app-input
+          custom-class="city-place-editor__input"
+          value="{{editorNote}}"
+          placeholder="例如：傍晚去看日落"
+          maxlength="120"
+          dialog-mode="{{true}}"
+          bindinput="handleEditorNoteInput"
+        />
+      </view>
+    </view>
+    <view slot="actions" class="city-place-editor__actions">
+      <view
+        wx:if="{{editorId}}"
+        class="city-place-editor__delete"
+        role="button"
+        aria-label="删除{{editorName}}"
+        bindtap="handleDeleteRequest"
+      ><app-icon name="trash-2-danger" size="24" /></view>
+      <view class="city-place-editor__main-actions">
+        <button class="city-place-editor__button" bindtap="handleEditorCancel">取消</button>
+        <button class="city-place-editor__button city-place-editor__button--primary" loading="{{saving}}" bindtap="handleEditorSave">保存</button>
+      </view>
+    </view>
+  </app-dialog>
+
+  <app-dialog
+    visible="{{deleteConfirmVisible}}"
+    title="删除地点"
+    content="“{{pendingDeleteName}}”会从城市地点中删除。"
+    confirm-text="删除"
+    bindcancel="handleDeleteCancel"
+    bindconfirm="handleDeleteConfirm"
+  />
+
+  <operation-loading visible="{{loading || deleting}}" text="{{deleting ? '正在删除地点…' : '正在加载地点…'}}" />
+</view>

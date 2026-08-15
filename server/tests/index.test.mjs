@@ -20,6 +20,7 @@ const TARGET_ID = "10000000-0000-4000-8000-000000000006";
 const SEASON_ID = "10000000-0000-4000-8000-000000000007";
 const EPISODE_ID = "10000000-0000-4000-8000-000000000008";
 const OTHER_UID = "20000";
+const FOOTPRINT_PLACE_ID = "10000000-0000-4000-8000-000000000009";
 const TEST_REFRESH_TOKEN = "r1.test-refresh-token-that-is-long-enough-for-tests";
 const TEST_TOKEN = (await issueAccessToken({
   sessionId: SESSION_ID,
@@ -663,6 +664,24 @@ test("footprint routes require login and scope reads and writes to the authentic
         { uid: UID, city_code: "110100" },
         { uid: OTHER_UID, city_code: "310100" },
       ],
+      user_footprint_city_places: [
+        {
+          id: FOOTPRINT_PLACE_ID,
+          uid: UID,
+          city_code: "110100",
+          name: "颐和园",
+          note: "傍晚看日落",
+          status: "planned",
+        },
+        {
+          id: TARGET_ID,
+          uid: OTHER_UID,
+          city_code: "110100",
+          name: "其他用户地点",
+          note: "",
+          status: "visited",
+        },
+      ],
     }),
     rpc: {
       set_user_footprint_city: ({ p_uid }) => ({
@@ -732,6 +751,52 @@ test("footprint routes require login and scope reads and writes to the authentic
   });
   assert.equal(invalidResponse.statusCode, 400);
   assert.equal(invalidResponse.json().error.code, "INVALID_FOOTPRINT_CITY_CODE");
+
+  const placesResponse = await app.inject({
+    method: "GET",
+    url: "/api/footprint/cities/110100/places",
+    headers: authHeaders,
+  });
+  assert.equal(placesResponse.statusCode, 200);
+  assert.deepEqual(
+    placesResponse.json().data.items.map(({ id, name, status }) => ({ id, name, status })),
+    [{ id: FOOTPRINT_PLACE_ID, name: "颐和园", status: "planned" }],
+  );
+
+  const createPlaceResponse = await app.inject({
+    method: "POST",
+    url: "/api/footprint/cities/110100/places",
+    headers: authHeaders,
+    payload: { name: "故宫", note: "工作日早去", status: "planned" },
+  });
+  assert.equal(createPlaceResponse.statusCode, 201);
+  assert.equal(createPlaceResponse.json().data.item.name, "故宫");
+  assert.equal(createPlaceResponse.json().data.item.city_code, "110100");
+
+  const updatePlaceResponse = await app.inject({
+    method: "PUT",
+    url: `/api/footprint/places/${FOOTPRINT_PLACE_ID}`,
+    headers: authHeaders,
+    payload: { status: "visited" },
+  });
+  assert.equal(updatePlaceResponse.statusCode, 200);
+  assert.equal(updatePlaceResponse.json().data.item.status, "visited");
+
+  const otherUserPlaceResponse = await app.inject({
+    method: "PUT",
+    url: `/api/footprint/places/${TARGET_ID}`,
+    headers: authHeaders,
+    payload: { status: "planned" },
+  });
+  assert.equal(otherUserPlaceResponse.statusCode, 404);
+
+  const deletePlaceResponse = await app.inject({
+    method: "DELETE",
+    url: `/api/footprint/places/${FOOTPRINT_PLACE_ID}`,
+    headers: authHeaders,
+  });
+  assert.equal(deletePlaceResponse.statusCode, 200);
+  assert.deepEqual(deletePlaceResponse.json().data, { deleted: true });
 });
 
 test("menu overview combines metadata, permissions, and initial content", async (t) => {

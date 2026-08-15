@@ -34,6 +34,7 @@ const CONTENT_CREATION_ROUTES = new Map([
   ["POST /api/key-moments", "key_moments"],
   ["POST /api/luggage/items", "luggage"],
   ["POST /api/exercise/complete", "exercise"],
+  ["POST /api/footprint/cities/:cityCode/places", "footprint"],
   ["PUT /api/footprint/cities/:cityCode", "footprint"],
 ]);
 

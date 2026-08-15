@@ -137,13 +137,16 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.match(styles, /\.province-card__progress\s*\{[\s\S]*?background: var\(--ui-color-success\);/)
   assert.match(styles, /\.province-card__name\s*\{[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.match(styles, /\.city-grid\s*\{[\s\S]*?padding: 14rpx 16rpx 16rpx;[\s\S]*?border-top:/)
-  assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 54rpx;[\s\S]*?font-size: var\(--ui-font-size-base\);/)
+  assert.match(styles, /\.city-chip\s*\{[\s\S]*?height: 60rpx;[\s\S]*?font-size: var\(--ui-font-size-base\);/)
   assert.doesNotMatch(logic, /const provinceStillVisited/)
   assert.doesNotMatch(logic, /const activeTab = provinceStillVisited/)
   assert.doesNotMatch(page, /省名直接标在区域内|绿色\s*=|app-dialog|picker/)
   assert.doesNotMatch(logic, /日期|date|showModal/)
-  assert.match(styles, /grid-template-columns: repeat\(4/)
-  assert.match(styles, /\.city-chip--visited\s*\{[\s\S]*?border-color: var\(--ui-color-success-strong\);[\s\S]*?background: var\(--ui-color-success\);[\s\S]*?color: var\(--ui-color-text-inverse\);[\s\S]*?box-shadow: 0 6rpx 14rpx var\(--footprint-color-success-shadow\);/)
+  assert.match(page, /catchtap="handleCityPlacesTap"/)
+  assert.match(page, />地点<\/view>/)
+  assert.match(logic, /pages\/footprint\/places\/index\?cityCode=/)
+  assert.match(styles, /grid-template-columns: repeat\(2/)
+  assert.match(styles, /\.city-chip--visited\s*\{[\s\S]*?background: var\(--ui-color-success\);[\s\S]*?color: var\(--ui-color-text-inverse\);[\s\S]*?box-shadow: 0 6rpx 14rpx var\(--footprint-color-success-shadow\);/)
   assert.match(styles, /\.city-chip\s*\{[\s\S]*?background: var\(--ui-color-background-surface\);[\s\S]*?color: var\(--footprint-color-text-primary\);/)
   assert.match(styles, /\.map-level-switch__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
   assert.match(styles, /\.province-tabs__button\s*\{[\s\S]*?display: flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
@@ -167,6 +170,43 @@ test("footprint interaction is direct, compact, and contains no map hints", asyn
   assert.doesNotMatch(styles, /#8fbea0|#83b293|#e2f0e6|#62aa79|#3e8a5d/)
   assert.match(logic, /initializeUIFont\(\)[\s\S]*?\.then\(\(\) => \{[\s\S]*?this\.drawMap\(\)/)
 
+  assert.doesNotMatch(styles, /font-size:\s*\d+rpx/)
+})
+
+test("city places support a cloud-backed travel wishlist and visited list", async () => {
+  const [appSource, page, logic, styles, client, route, service, migration] = await Promise.all([
+    readProjectFile("src/app.json"),
+    readProjectFile("src/pages/footprint/places/index.wxml"),
+    readProjectFile("src/pages/footprint/places/index.ts"),
+    readProjectFile("src/pages/footprint/places/index.less"),
+    readProjectFile("src/services/footprint.ts"),
+    readProjectFile("server/routes/footprint.mjs"),
+    readProjectFile("server/domains/footprint/service.mjs"),
+    readProjectFile("supabase/migrations/20260815110606_footprint_city_places.sql")
+  ])
+  const app = JSON.parse(appSource)
+  const footprintPackage = app.subPackages.find((item) => item.root === "pages/footprint")
+
+  assert.ok(footprintPackage.pages.includes("places/index"))
+  assert.match(page, /想去 \{\{plannedCount\}\}/)
+  assert.match(page, /去过 \{\{visitedCount\}\}/)
+  assert.match(page, /placement="bottom"/)
+  assert.match(page, /dialog-mode="\{\{true\}\}"/)
+  assert.match(page, /handlePlaceStatusToggle/)
+  assert.match(page, /<app-dialog[\s\S]*?title="删除地点"/)
+  assert.doesNotMatch(logic, /showModal/)
+  assert.match(logic, /current\.status === "planned" \? "visited" : "planned"/)
+  assert.match(client, /\/api\/footprint\/cities\/\$\{encodeURIComponent\(cityCode\)\}\/places/)
+  assert.match(client, /\/api\/footprint\/places\/\$\{encodeURIComponent\(placeId\)\}/)
+  assert.ok((route.match(/preHandler: authenticated/g) || []).length >= 6)
+  assert.match(service, /\.eq\("uid", uid\)/)
+  assert.match(migration, /create table if not exists public\.user_footprint_city_places/i)
+  assert.match(migration, /references public\.app_users\(uid\) on delete cascade/i)
+  assert.match(migration, /status in \('planned', 'visited'\)/i)
+  assert.match(migration, /enable row level security/i)
+  assert.match(migration, /revoke all on table public\.user_footprint_city_places[\s\S]*from public, anon, authenticated/i)
+  assert.match(styles, /\.city-places-tab--active\s*\{[\s\S]*?background: var\(--ui-color-action-primary\);[\s\S]*?color: var\(--ui-color-text-inverse\);/)
+  assert.doesNotMatch(styles, /#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i)
   assert.doesNotMatch(styles, /font-size:\s*\d+rpx/)
 })
 

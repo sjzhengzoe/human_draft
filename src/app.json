@@ -46,7 +46,8 @@
     {
       "root": "pages/footprint",
       "pages": [
-        "index"
+        "index",
+        "places/index"
       ]
     },
     {
