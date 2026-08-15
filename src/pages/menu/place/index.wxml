@@ -5,7 +5,7 @@
   <view class="fullscreen-loading__text">正在加载店铺…</view>
 </view>
 
-<scroll-view wx:else class="store-scroll page--fixed" scroll-y enhanced show-scrollbar="{{false}}">
+<scroll-view wx:else class="store-scroll page--fixed" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
   <view wx:if="{{errorMessage}}" class="state-block">
     <view>{{errorMessage}}</view>
     <button class="retry-button" bindtap="handleRetry">重试</button>

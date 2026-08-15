@@ -5,7 +5,7 @@
 />
 
 <view class="page page--with-navigation">
-  <scroll-view class="profile-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="profile-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="profile-card">
       <view class="profile-avatar-editor">
         <image

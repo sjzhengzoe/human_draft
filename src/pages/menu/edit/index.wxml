@@ -10,7 +10,7 @@
   class="edit-scroll page--fixed"
   scroll-y
   enhanced
-  bounces="{{true}}"
+  bounces="{{false}}"
   show-scrollbar="{{false}}"
 >
   <view class="page">

@@ -66,6 +66,7 @@
     class="content-scroll"
     scroll-y
     enhanced
+    bounces="{{false}}"
     show-scrollbar="{{false}}"
     scroll-top="{{contentScrollTop}}"
     lower-threshold="240"

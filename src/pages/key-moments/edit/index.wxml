@@ -10,7 +10,7 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <scroll-view class="editor-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="editor-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="editor-card">
       <view class="field-label">发生时间</view>
       <view class="time-fields">

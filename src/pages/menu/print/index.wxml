@@ -51,7 +51,7 @@
     </view>
   </scroll-view>
 
-  <scroll-view class="dish-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="dish-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="dish-scroll__content">
       <view wx:if="{{errorMessage}}" class="state-block">
         <view>{{errorMessage}}</view>

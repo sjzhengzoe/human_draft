@@ -1,6 +1,12 @@
 <custom-navigation title="我的" show-back="{{false}}" background="{{themeColors.pageBackground}}" />
 
-<view class="page">
+<scroll-view
+  class="page"
+  scroll-y
+  enhanced
+  bounces="{{false}}"
+  show-scrollbar="{{false}}"
+>
   <view class="settings-content">
     <view class="profile-card">
       <image
@@ -39,7 +45,7 @@
         hover-class="profile-login-button--hover"
         hover-stay-time="80"
         bindtap="handleLoginTap"
-      ><app-icon name="log-in" size="27" inverse="{{true}}" /><text>登录</text></view>
+      >登录</view>
     </view>
 
     <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
@@ -85,7 +91,7 @@
           hover-stay-time="80"
           bindtap="handleModuleSettingsTap"
         >
-          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页模块显示设置</text></view>
+          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页设置</text></view>
           <view class="settings-item__right">
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>
@@ -101,6 +107,6 @@
       hover-class="settings-logout-button--hover"
       hover-stay-time="80"
       bindtap="handleLogoutTap"
-    ><app-icon name="log-out" size="27" /><text>退出登录</text></view>
+    >退出登录</view>
   </view>
-</view>
+</scroll-view>

@@ -40,7 +40,7 @@
     <view wx:if="{{canWrite}}" class="empty-action" bindtap="handleAdd">新增活动</view>
   </view>
 
-  <scroll-view wx:else class="activity-list-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view wx:else class="activity-list-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="activity-grid">
       <view wx:for="{{items}}" wx:key="id" class="activity-card">
         <view class="activity-card__image-frame">

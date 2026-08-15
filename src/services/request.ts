@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../config/env"
 import type { ApiEnvelope } from "../types/api"
 import type { ImageCrop } from "../types/images"
 import { ensureLogin, redirectToLogin, refreshLoginSession } from "./auth"
+import { invalidateImageStorageUsage } from "./image-storage-revision"
 
 export class ApiRequestError extends Error {
   readonly code: string
@@ -64,6 +65,7 @@ async function sendRequest<T>(options: RequestOptions, canRefresh = true): Promi
     )
   }
   if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (options.method === "DELETE") invalidateImageStorageUsage()
     if (response.statusCode === 204) return undefined as T
     return body.data as T
   }
@@ -127,6 +129,7 @@ async function sendUpload<T>(options: UploadOptions, canRefresh = true): Promise
     )
   }
   if (response.statusCode >= 200 && response.statusCode < 300 && body.data) {
+    invalidateImageStorageUsage()
     return body.data
   }
   throw new ApiRequestError(

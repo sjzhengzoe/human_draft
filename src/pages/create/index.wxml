@@ -3,7 +3,13 @@
     <custom-navigation title="人类草稿" show-back="{{false}}" />
   </view>
 
-  <view class="page">
+  <scroll-view
+    class="page"
+    scroll-y
+    enhanced
+    bounces="{{false}}"
+    show-scrollbar="{{false}}"
+  >
     <view class="home-banner">
       <image
         class="home-banner__image"
@@ -56,7 +62,7 @@
         </view>
       </view>
     </view>
-  </view>
+  </scroll-view>
 
   <app-dialog
     visible="{{loginDialogVisible}}"

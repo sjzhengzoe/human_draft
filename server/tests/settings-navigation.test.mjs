@@ -31,7 +31,8 @@ test("account section displays and copies the public UID", async () => {
     readFile(new URL("../../src/pages/settings/profile-edit/index.ts", import.meta.url), "utf8"),
   ]);
 
-  assert.match(markup, /class="settings-logout-button"[\s\S]*?>退出登录</);
+  assert.match(markup, /class="settings-logout-button"[\s\S]*?bindtap="handleLogoutTap"[\s\S]*?>退出登录<\/view>/);
+  assert.doesNotMatch(markup, /settings-logout-button[\s\S]*?<app-icon name="log-out"/);
   assert.match(markup, /class="settings-section__title">账号</);
   assert.match(markup, /class="account-id-item__value"[\s\S]*?\{\{uid\}\}/);
   assert.match(markup, /aria-label="复制 UID"[\s\S]*?bindtap="handleCopyUidTap"/);
@@ -53,6 +54,9 @@ test("account section displays and copies the public UID", async () => {
   assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
   assert.match(markup, /公开测试期间仅展示实际用量/);
   assert.match(logic, /getImageStorageUsage\(\)/);
+  assert.match(logic, /getCachedImageStorageUsage\(\)/);
+  assert.match(logic, /if \(cachedUsage\) this\.setData\(getStorageUsageState\(cachedUsage\)\)/);
+  assert.match(logic, /if \(this\.data\.storageUsageLoading\) return/);
   assert.match(logic, /formatStorageBytes\(usage\.used_bytes\)/);
   assert.match(logic, /总额度待定/);
 });
@@ -67,8 +71,8 @@ test("settings renders local account state without a fullscreen loading frame", 
   assert.doesNotMatch(markup, /ready|fullscreen-loading|正在加载账号/);
   assert.doesNotMatch(styles, /fullscreen-loading/);
   assert.doesNotMatch(logic, /ready:/);
-  assert.match(logic, /displayName: "未登录"/);
-  assert.doesNotMatch(logic, /displayName: "游客"/);
+  assert.match(logic, /displayName: "游客"/);
+  assert.doesNotMatch(logic, /displayName: "未登录"/);
   assert.match(logic, /data:\s*\{[\s\S]*?\.\.\.getSettingsAccountState\(\)/);
   assert.match(logic, /show\(\)[\s\S]*?const nextAccountState = getSettingsAccountState\(page\.failedAvatarSignature\)/);
   assert.match(logic, /nextAccountState\.avatarUrl !== this\.data\.avatarUrl/);
@@ -117,14 +121,15 @@ test("settings logout ignores duplicate taps and releases its lock on every exit
   assert.match(logoutHandler, /fail: \(\) => \{[\s\S]*?page\.logoutPending = false/);
 });
 
-test("settings content remains vertically scrollable on short screens", async () => {
-  const styles = await readFile(
-    new URL("../../src/pages/settings/index.less", import.meta.url),
-    "utf8",
-  );
+test("settings scrolls only its bounded content and disables empty bounce", async () => {
+  const [markup, styles, configSource] = await Promise.all([
+    readFile(new URL("../../src/pages/settings/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/settings/index.less", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/settings/index.json", import.meta.url), "utf8"),
+  ]);
   const pageBlock = styles.match(/\.page\s*\{([\s\S]*?)\}/)?.[1] || "";
 
   assert.match(pageBlock, /height: calc\(100vh - var\(--app-navigation-height\)\)/);
-  assert.match(pageBlock, /overflow-y: auto/);
-  assert.doesNotMatch(pageBlock, /overflow: hidden/);
+  assert.match(markup, /<scroll-view[\s\S]*?class="page"[\s\S]*?scroll-y[\s\S]*?bounces="\{\{false\}\}"/);
+  assert.equal(JSON.parse(configSource).disableScroll, true);
 });

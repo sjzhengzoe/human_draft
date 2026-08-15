@@ -106,7 +106,7 @@
       </view>
     </view>
 
-    <scroll-view class="group-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <scroll-view class="group-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
       <view wx:if="{{contentLoading}}" class="content-loading content-loading--compact">
         <view class="content-loading__spinner" />
         <view class="content-loading__text">正在加载清单…</view>
@@ -304,7 +304,7 @@
     custom-body="{{true}}"
     custom-actions="{{true}}"
   >
-    <scroll-view slot="body" class="group-picker" scroll-y enhanced show-scrollbar="{{false}}">
+    <scroll-view slot="body" class="group-picker" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
       <view
         wx:for="{{activeScene.groups}}"
         wx:key="id"

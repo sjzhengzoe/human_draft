@@ -35,7 +35,7 @@
     </view>
   </view>
 
-  <scroll-view class="manager-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="manager-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view wx:if="{{errorMessage}}" class="state">
       <view>{{errorMessage}}</view>
       <view class="retry-button" role="button" bindtap="handleRetry">重试</view>

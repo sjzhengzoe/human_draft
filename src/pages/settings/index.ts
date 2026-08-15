@@ -1,5 +1,8 @@
 import { getCurrentUser, logout } from "../../services/auth"
-import { getImageStorageUsage } from "../../services/account"
+import {
+  getCachedImageStorageUsage,
+  getImageStorageUsage
+} from "../../services/account"
 import { UI_COLORS } from "../../styles/colors"
 import { updateAppTabBarState } from "../../utils/tab-bar"
 
@@ -19,12 +22,20 @@ function formatStorageBytes(value: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
+function getStorageUsageState(usage: { used_bytes: number; image_count: number }) {
+  return {
+    storageUsageText: `已使用 ${formatStorageBytes(usage.used_bytes)}`,
+    storageImageCountText: `共 ${usage.image_count} 张图片 · 总额度待定`,
+    storageUsageLoading: false
+  }
+}
+
 function getSettingsAccountState(failedAvatarSignature = "") {
   const user = getCurrentUser()
   if (!user) {
     return {
       loggedIn: false,
-      displayName: "未登录",
+      displayName: "游客",
       avatarUrl: "",
       avatarInitial: "E",
       uid: "",
@@ -67,7 +78,11 @@ Component({
         nextAccountState.uid !== this.data.uid ||
         nextAccountState.isAdmin !== this.data.isAdmin
       if (accountChanged) this.setData(nextAccountState)
-      if (nextAccountState.loggedIn) void this.refreshStorageUsage()
+      if (nextAccountState.loggedIn) {
+        const cachedUsage = getCachedImageStorageUsage()
+        if (cachedUsage) this.setData(getStorageUsageState(cachedUsage))
+        else void this.refreshStorageUsage()
+      }
     }
   },
   methods: {
@@ -147,6 +162,7 @@ Component({
       })
     },
     async refreshStorageUsage() {
+      if (this.data.storageUsageLoading) return
       const page = this as SettingsPageInstance
       const requestId = (page.storageUsageRequestId || 0) + 1
       page.storageUsageRequestId = requestId
@@ -158,11 +174,7 @@ Component({
       try {
         const usage = await getImageStorageUsage()
         if (page.storageUsageRequestId !== requestId) return
-        this.setData({
-          storageUsageText: `已使用 ${formatStorageBytes(usage.used_bytes)}`,
-          storageImageCountText: `共 ${usage.image_count} 张图片 · 总额度待定`,
-          storageUsageLoading: false
-        })
+        this.setData(getStorageUsageState(usage))
       } catch (_error) {
         if (page.storageUsageRequestId !== requestId) return
         this.setData({

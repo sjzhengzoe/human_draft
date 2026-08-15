@@ -44,6 +44,7 @@
     class="timeline-scroll"
     scroll-y
     enhanced
+    bounces="{{false}}"
     show-scrollbar="{{false}}"
     scroll-with-animation="{{true}}"
     scroll-into-view="{{timelineScrollAnchor}}"

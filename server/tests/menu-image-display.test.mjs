@@ -273,7 +273,7 @@ test("menu print page locks native scrolling and scrolls only the dish list", as
 
   assert.equal(JSON.parse(pageConfig).disableScroll, true);
   assert.match(page, /class="page page--fixed"/);
-  assert.match(page, /<scroll-view class="dish-scroll" scroll-y enhanced show-scrollbar="\{\{false\}\}">/);
+  assert.match(page, /<scroll-view class="dish-scroll" scroll-y enhanced bounces="\{\{false\}\}" show-scrollbar="\{\{false\}\}">/);
   assert.match(styles, /\.dish-scroll\s*\{[^}]*min-height:\s*0;[^}]*height:\s*0;[^}]*flex:\s*1;/);
 });
 

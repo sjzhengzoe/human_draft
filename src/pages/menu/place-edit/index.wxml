@@ -5,7 +5,7 @@
   <view class="fullscreen-loading__text">正在加载店铺…</view>
 </view>
 
-<scroll-view wx:else class="edit-scroll page--fixed" scroll-y enhanced show-scrollbar="{{false}}">
+<scroll-view wx:else class="edit-scroll page--fixed" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
   <view class="page">
     <view class="form-card">
       <view class="image-field" bindtap="handleChooseImage">

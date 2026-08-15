@@ -10,7 +10,7 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <scroll-view class="manager-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view class="manager-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view wx:if="{{items.length === 0}}" class="manager-empty">还没有活动</view>
     <view wx:else class="manager-list">
       <view wx:for="{{items}}" wx:key="id" class="manager-item">

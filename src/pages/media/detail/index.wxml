@@ -111,6 +111,7 @@
         class="detail-attribute-scroll"
         scroll-y
         enhanced
+        bounces="{{false}}"
         show-scrollbar="{{false}}"
         scroll-top="{{detailScrollTop}}"
         bindscroll="handleDetailScroll"
@@ -167,6 +168,7 @@
       class="records-content {{editingEpisodeId ? 'records-content--editing' : ''}}"
       scroll-y
       enhanced
+      bounces="{{false}}"
       show-scrollbar="{{false}}"
       scroll-top="{{recordsScrollTop}}"
       lower-threshold="240"

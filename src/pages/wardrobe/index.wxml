@@ -49,7 +49,7 @@
     <view class="empty-state__desc">点击右上方的“＋”开始记录</view>
   </view>
 
-  <scroll-view wx:else class="wardrobe-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view wx:else class="wardrobe-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <swiper
       class="garment-swiper"
       current="{{activeItemIndex}}"
