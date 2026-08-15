@@ -281,6 +281,8 @@ test("key moment detail uses top-aligned adaptive single images and square multi
   assert.match(styles, /\.detail-slide[\s\S]*?justify-content: flex-start/);
   assert.match(styles, /\.detail-gallery[\s\S]*?grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(styles, /\.detail-image--grid[\s\S]*?width: 100%;[\s\S]*?height: 195rpx/);
+  const detailFooterStyles = styles.match(/\.detail-footer\s*\{([^}]*)\}/)?.[1] || "";
+  assert.doesNotMatch(detailFooterStyles, /border-(?:top|bottom)/);
   assert.match(logic, /listKeyMomentFeed\(this\.data\.anchorDate\)/);
   assert.match(logic, /handleSingleImageLoad\([\s\S]*?sourceRatio[\s\S]*?single_image_style/);
   assert.match(logic, /wx\.previewImage\(\{ current, urls: item\.image_urls \}\)/);
