@@ -29,13 +29,12 @@ function detailDateParts(value: string) {
 }
 
 function toDetailItems(items: KeyMoment[]): KeyMomentDetailItem[] {
-  return items.map((item, index) => {
+  return items.map((item) => {
     const labels = detailDateParts(item.occurred_at)
     return {
       ...item,
       date_label: labels.dateLabel,
       time_label: labels.timeLabel,
-      position_label: `${index + 1} / ${items.length}`,
       single_image_style: ""
     }
   })

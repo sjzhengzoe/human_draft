@@ -121,24 +121,36 @@ test("key moment editor selects up to nine original images and displays a WeChat
 });
 
 test("key moment editor uses direct borderless text input and a read-only time", async () => {
-  const [editorPage, editorConfig, editorLogic, service] = await Promise.all([
+  const [editorPage, editorConfig, editorLogic, clientService, serverService] = await Promise.all([
     readFile(new URL("../../src/pages/key-moments/edit/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/key-moments/edit/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/services/key-moments.ts", import.meta.url), "utf8"),
+    readFile(new URL("../domains/key-moments/service.mjs", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(editorConfig).usingComponents, undefined);
+  assert.equal(JSON.parse(editorConfig).navigationBarTitleText, "编辑");
+  assert.match(editorPage, /title="\{\{editingId \? '编辑' : '新增关键节点'\}\}"/);
   assert.match(
     editorPage,
     /<textarea[\s\S]*?class="content-editor"[\s\S]*?bindinput="handleEditorContentInput"/,
   );
   assert.match(editorPage, /class="readonly-time">\{\{editorDateTimeLabel\}\}<\/view>/);
+  assert.match(editorPage, /maxlength="\{\{maxContentLength\}\}"/);
+  assert.match(editorPage, /\{\{editorContent\.length\}\} \/ \{\{maxContentLength\}\}/);
+  assert.match(editorPage, /placeholder="不必是大事，只要这一刻对你重要，就值得记录。"/);
+  assert.doesNotMatch(editorPage, /写下这个关键节点/);
   assert.doesNotMatch(editorPage, /节点文字|节点图片|<picker|<app-dialog/);
+  assert.match(editorLogic, /const MAX_CONTENT_LENGTH = 2_000/);
+  assert.match(editorLogic, /maxContentLength: MAX_CONTENT_LENGTH/);
   assert.match(editorLogic, /handleEditorContentInput\([\s\S]*?editorContent: event\.detail\.value/);
   assert.doesNotMatch(editorLogic, /handleEditorDateChange|handleEditorTimeChange|contentEditorVisible/);
   assert.match(editorLogic, /updateKeyMoment\(this\.data\.editingId, \{ content \}\)/);
-  assert.match(service, /export async function updateKeyMoment\([\s\S]*?input: \{ content: string \}[\s\S]*?data: \{ content: input\.content \}/);
+  assert.match(clientService, /export async function updateKeyMoment\([\s\S]*?input: \{ content: string \}[\s\S]*?data: \{ content: input\.content \}/);
+  assert.match(serverService, /const MAX_CONTENT_LENGTH = 2_000/);
+  assert.match(serverService, /content\.length <= MAX_CONTENT_LENGTH/);
+  assert.match(serverService, /文案不能超过 2000 个字/);
 });
 
 test("key moments use one WeChat-style layout and remove obsolete layout settings", async () => {
@@ -234,6 +246,8 @@ test("key moment detail uses top-aligned adaptive single images and square multi
     readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
   ]);
   assert.match(page, /<swiper[\s\S]*?vertical="\{\{true\}\}"[\s\S]*?bindchange="handleSwiperChange"/);
+  assert.match(page, /<custom-navigation[\s\S]*?title="详情"/);
+  assert.doesNotMatch(page, /swipe-guide|上下滑动切换节点|position_label/);
   assert.match(page, /class="detail-content"[\s\S]*?class="detail-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"/);
   assert.match(page, /detail-image--single[\s\S]*?detail-image--grid/);
@@ -271,11 +285,24 @@ test("key moments migration creates user-owned records and a private image bucke
   assert.match(migration, /key_moments_user_occurred_idx/i);
 });
 
-test("key moment content limit migration preserves old rows and enforces 50 characters", async () => {
+test("historical key moment content migration preserves old rows before validation", async () => {
   const migration = await readFile(
     new URL("../../supabase/migrations/202608020002_key_moment_content_limit.sql", import.meta.url),
     "utf8",
   );
   assert.match(migration, /char_length\(content\) <= 50/i);
   assert.match(migration, /not valid/i);
+});
+
+test("key moment content limit expands safely to 2000 characters", async () => {
+  const migration = await readFile(
+    new URL("../../supabase/migrations/20260815065801_expand_key_moment_content_limit.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /begin;/i);
+  assert.match(migration, /drop constraint if exists key_moments_content_check/i);
+  assert.match(migration, /char_length\(content\) <= 2000/i);
+  assert.match(migration, /not valid/i);
+  assert.match(migration, /validate constraint key_moments_content_check/i);
+  assert.match(migration, /commit;/i);
 });

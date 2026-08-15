@@ -1,5 +1,5 @@
 <custom-navigation
-  title="节点详情"
+  title="详情"
   custom-back="{{true}}"
   bind:back="handleBack"
 />
@@ -66,10 +66,6 @@
           </view>
         </view>
 
-        <view class="swipe-guide">
-          <app-icon name="arrow-up" size="24" />
-          <text>{{item.position_label}} · 上下滑动切换节点</text>
-        </view>
       </view>
     </swiper-item>
   </swiper>

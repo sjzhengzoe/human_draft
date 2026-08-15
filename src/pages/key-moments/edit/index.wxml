@@ -1,5 +1,5 @@
 <custom-navigation
-  title="{{editingId ? '编辑关键节点' : '新增关键节点'}}"
+  title="{{editingId ? '编辑' : '新增关键节点'}}"
   custom-back="{{true}}"
   bind:back="handleBack"
 />
@@ -15,13 +15,13 @@
       <textarea
         class="content-editor"
         value="{{editorContent}}"
-        maxlength="50"
-        placeholder="写下这个关键节点…"
+        maxlength="{{maxContentLength}}"
+        placeholder="不必是大事，只要这一刻对你重要，就值得记录。"
         auto-height
         show-confirm-bar="{{false}}"
         bindinput="handleEditorContentInput"
       />
-      <view class="content-count">{{editorContent.length}} / 50</view>
+      <view class="content-count">{{editorContent.length}} / {{maxContentLength}}</view>
 
       <view class="image-grid {{selectingImage ? 'image-grid--loading' : ''}}">
         <view

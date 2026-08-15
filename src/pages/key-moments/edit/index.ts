@@ -14,6 +14,7 @@ import {
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 const MAX_IMAGE_COUNT = 9
+const MAX_CONTENT_LENGTH = 2_000
 
 type EditorImage = {
   key: string
@@ -66,6 +67,7 @@ Page({
     loading: true,
     editingId: "",
     editorContent: "",
+    maxContentLength: MAX_CONTENT_LENGTH,
     editorDate: INITIAL_DATE_TIME.date,
     editorTime: INITIAL_DATE_TIME.time,
     editorDateTimeLabel: editorDateTimeLabel(INITIAL_DATE_TIME.date, INITIAL_DATE_TIME.time),

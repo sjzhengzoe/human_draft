@@ -20,7 +20,7 @@
 
 .detail-sheet {
   width: 100%;
-  max-height: calc(100% - 72rpx);
+  max-height: 100%;
   box-sizing: border-box;
   overflow: hidden;
   padding: 30rpx;
@@ -29,8 +29,7 @@
   box-shadow: 0 8rpx 24rpx var(--ui-color-shadow-subtle);
 }
 
-.detail-footer__date,
-.swipe-guide {
+.detail-footer__date {
   color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
 }
@@ -115,15 +114,6 @@
   height: 56rpx;
   align-items: center;
   justify-content: center;
-}
-
-.swipe-guide {
-  display: flex;
-  height: 72rpx;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  gap: 7rpx;
 }
 
 .empty-state {

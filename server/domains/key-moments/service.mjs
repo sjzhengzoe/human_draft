@@ -16,6 +16,7 @@ import {
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const GRANULARITIES = new Set(["year", "month", "day"]);
 const SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
+const MAX_CONTENT_LENGTH = 2_000;
 
 function assertUuid(value) {
   assertCondition(
@@ -30,7 +31,12 @@ function assertUuid(value) {
 function normalizeContent(value) {
   assertCondition(typeof value === "string", 400, "INVALID_CONTENT", "文案格式无效。");
   const content = value.trim();
-  assertCondition(content.length <= 50, 400, "CONTENT_TOO_LONG", "文案不能超过 50 个字。");
+  assertCondition(
+    content.length <= MAX_CONTENT_LENGTH,
+    400,
+    "CONTENT_TOO_LONG",
+    "文案不能超过 2000 个字。",
+  );
   return content;
 }
 

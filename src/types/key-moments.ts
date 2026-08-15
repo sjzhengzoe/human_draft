@@ -14,7 +14,6 @@ export type KeyMoment = {
 export type KeyMomentDetailItem = KeyMoment & {
   date_label: string
   time_label: string
-  position_label: string
   single_image_style: string
 }
 
