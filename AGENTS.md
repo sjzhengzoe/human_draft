@@ -58,6 +58,8 @@
 When the user asks to commit/push code and upload the mini program, use this established release workflow instead of rediscovering the tooling each time.
 
 - Unless the user specifies another destination, this project's confirmed push target is `git@github.com:sjzhengzoe/human_draft.git`, branch `main`. Do not create a feature branch or pull request for this routine release flow.
+- A push to `main` automatically deploys the Node server and `public/` assets through `.github/workflows/deploy-to-tencent-cos.yml.yml`. The workflow pulls `origin/main` on the Tencent Cloud host, installs locked dependencies, runs the build, restarts `human-draft-server`, checks the local health endpoint, and reloads Nginx. After a successful `main` push, do not tell the user that a separate manual server deployment is still required.
+- Treat the automatic deployment as complete only after verification. Prefer checking the GitHub Actions run when access is available; independently verify `https://www.gufeifei.cn/api/health`, and for new or changed public routes verify a representative live request. If verification fails or the workflow is still running, report that state instead of asking whether pushes deploy automatically.
 - Before committing, run `git status -sb`, inspect the diff, stage only the intended files, run the relevant focused tests plus `pnpm run typecheck`, and run `git diff --check`.
 - Use a short commit message that describes the actual change, then push with `git push origin main`. Verify that the working tree is clean and `main` matches `origin/main` afterward.
 - Prefer the official WeChat Developer Tools CLI for uploads. Do not rely on clicking the GUI upload dialog because its NW.js confirmation buttons are unreliable under automation.
