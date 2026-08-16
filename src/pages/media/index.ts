@@ -215,7 +215,8 @@ Page({
     mediaRevision: -1,
     localSyncExpiresAt: 0,
     contentScrollTop: 0,
-    errorMessage: ""
+    errorMessage: "",
+    moreMenuVisible: false
   },
 
   onLoad() {
@@ -716,9 +717,20 @@ Page({
     })
   },
 
+  handleMoreOpen() {
+    if ((!this.data.canWrite && !this.data.guestMode) || this.data.contentLoading) return
+    this.setData({ moreMenuVisible: true })
+  },
+
+  handleMoreClose() {
+    this.setData({ moreMenuVisible: false })
+  },
+
   handleManageCategories() {
     if ((!this.data.canWrite && !this.data.guestMode) || this.data.contentLoading) return
-    wx.navigateTo({ url: "/pages/media/categories/index" })
+    this.setData({ moreMenuVisible: false }, () => {
+      wx.navigateTo({ url: "/pages/media/categories/index" })
+    })
   },
 
   handleItemTap(event: WechatMiniprogram.TouchEvent) {

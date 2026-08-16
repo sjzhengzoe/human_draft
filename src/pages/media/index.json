@@ -2,6 +2,7 @@
   "navigationBarTitleText": "影视片单",
   "disableScroll": true,
   "usingComponents": {
+    "app-dialog": "/components/app-dialog/index",
     "app-input": "/components/app-input/index"
   }
 }

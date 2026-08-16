@@ -67,7 +67,16 @@
   white-space: nowrap;
 }
 
-.media-filter-actions {
+.media-command-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.media-command-actions {
   display: flex;
   flex: none;
   align-items: center;
@@ -98,7 +107,22 @@
   background: var(--ui-color-action-primary);
 }
 
+.more-button {
+  display: flex;
+  min-width: 56rpx;
+  height: 56rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12rpx;
+  border-radius: var(--ui-radius-pill);
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
 .icon-button:active,
+.more-button:active,
 .category-chip:active,
 .search-row__button:active,
 .search-row__clear:active {
@@ -154,9 +178,10 @@
 
 .search-row {
   display: flex;
+  min-width: 0;
+  flex: 1;
   align-items: center;
   gap: 10rpx;
-  margin-top: 14rpx;
 }
 
 .search-row__input {
@@ -195,6 +220,47 @@
 .search-row__clear {
   color: var(--ui-color-text-muted);
 }
+
+.more-action-list {
+  overflow: hidden;
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-color-background-subtle);
+}
+
+.more-action-item {
+  display: flex;
+  min-height: 88rpx;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 24rpx;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.more-action-item:active { background: var(--ui-color-background-hover); }
+
+.more-dialog-actions { display: flex; }
+
+.more-dialog-close {
+  display: flex;
+  width: 100%;
+  height: 76rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 16rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.more-dialog-close::after { border: 0; }
 
 .content-scroll {
   min-height: 0;

@@ -20,18 +20,10 @@
           <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
         </view>
       </scroll-view>
-      <view wx:if="{{canWrite || guestMode}}" class="media-filter-actions">
-        <view class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
-          <app-icon name="settings-2" size="24" />
-        </view>
-        <view class="icon-button icon-button--primary" role="button" aria-label="新增影视" bindtap="handleAdd">
-          <app-icon name="plus-white" size="24" />
-        </view>
-      </view>
     </view>
 
-    <block wx:if="{{displayMode === 'overview'}}">
-      <view class="media-filter-row">
+    <view class="media-filter-row media-filter-row--secondary">
+      <block wx:if="{{displayMode === 'overview'}}">
         <view class="media-filter-label">状态：</view>
         <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
           <view class="category-list status-list" role="group" aria-label="按状态筛选">
@@ -39,11 +31,8 @@
             <view class="category-chip {{overviewStatus === 'planned' ? 'category-chip--active' : ''}}" data-status="planned" bindtap="handleOverviewStatusTap">想看</view>
           </view>
         </scroll-view>
-      </view>
-    </block>
-
-    <block wx:else>
-      <view class="media-filter-row">
+      </block>
+      <block wx:else>
         <view class="media-filter-label">评分：</view>
         <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
           <view class="category-list rating-list" role="group" aria-label="按评分筛选">
@@ -51,12 +40,21 @@
             <view wx:for="{{ratingOptions}}" wx:key="value" class="category-chip {{selectedRating === item.value ? 'category-chip--active' : ''}}" data-rating="{{item.value}}" bindtap="handleRatingTap">{{item.label}}</view>
           </view>
         </scroll-view>
-      </view>
-      <view class="search-row">
+      </block>
+    </view>
+
+    <view class="media-command-row">
+      <view wx:if="{{displayMode === 'record'}}" class="search-row">
         <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
       </view>
-    </block>
+      <view wx:if="{{canWrite || guestMode}}" class="media-command-actions">
+        <view class="icon-button icon-button--primary" role="button" aria-label="新增影视" bindtap="handleAdd">
+          <app-icon name="plus-white" size="24" />
+        </view>
+        <view class="more-button" role="button" aria-label="更多影视操作" bindtap="handleMoreOpen">更多</view>
+      </view>
+    </view>
   </view>
 
   <scroll-view
@@ -141,5 +139,23 @@
     </block>
   </scroll-view>
 </view>
+
+<app-dialog
+  visible="{{moreMenuVisible}}"
+  placement="bottom"
+  title="更多操作"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body" class="more-action-list">
+    <view class="more-action-item" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
+      <app-icon name="settings-2" size="27" />
+      <text>管理影视分类</text>
+    </view>
+  </view>
+  <view slot="actions" class="more-dialog-actions">
+    <button class="more-dialog-close" bindtap="handleMoreClose">取消</button>
+  </view>
+</app-dialog>
 
 <login-required-dialog id="login-required-dialog" />

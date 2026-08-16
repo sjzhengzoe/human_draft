@@ -10,6 +10,7 @@
     <view wx:if="{{!selectionMode}}" class="view-switch" role="tablist" aria-label="菜单浏览方式">
       <view class="view-switch__item {{displayMode === 'quick' ? 'view-switch__item--active' : ''}}" data-mode="quick" bindtap="handleDisplayModeTap" role="tab">速览</view>
       <view class="view-switch__item {{displayMode === 'browse' ? 'view-switch__item--active' : ''}}" data-mode="browse" bindtap="handleDisplayModeTap" role="tab">翻阅</view>
+      <view class="view-switch__item" bindtap="handleDayPlanTap" role="tab">本周菜单</view>
     </view>
 
     <view class="menu-section-row">
@@ -21,10 +22,6 @@
           <view class="record-filter__item {{activeRecordType === 'outside' ? 'record-filter__item--active' : ''}}" data-type="outside" bindtap="handleRecordTypeTap">外食</view>
         </view>
       </view>
-      <button wx:if="{{canWrite || guestMode}}" class="add-button" bindtap="handleAddTap">
-        <app-icon name="plus-white" size="24" />
-        <text>新增</text>
-      </button>
     </view>
 
     <view class="category-filter-row">
@@ -40,9 +37,16 @@
       </scroll-view>
     </view>
 
-    <view wx:if="{{displayMode === 'quick' || selectionMode}}" class="menu-search">
-      <app-icon name="search" size="24" />
-      <app-input custom-class="menu-search__input" persistent value="{{searchKeyword}}" placeholder="{{activeRecordType === 'all' ? '搜索全部菜品或店铺' : activeRecordType === 'outside' ? '搜索店铺或店内菜品' : '搜索全部在家菜品'}}" bindinput="handleSearchInput" />
+    <view class="menu-command-row">
+      <view class="menu-search">
+        <app-icon name="search" size="24" />
+        <app-input custom-class="menu-search__input" persistent value="{{searchKeyword}}" placeholder="{{activeRecordType === 'all' ? '搜索全部菜品或店铺' : activeRecordType === 'outside' ? '搜索店铺或店内菜品' : '搜索全部在家菜品'}}" bindinput="handleSearchInput" />
+      </view>
+      <view class="menu-command-actions">
+        <view wx:if="{{sortEditing}}" class="menu-command-finish" role="button" aria-label="完成菜单排序" bindtap="handleSortEditingToggle">完成排序</view>
+        <view wx:elif="{{canWrite || guestMode}}" class="menu-command-icon menu-command-icon--primary" role="button" aria-label="新增菜单记录" bindtap="handleAddTap"><app-icon name="plus-white" size="24" /></view>
+        <view wx:if="{{!selectionMode && !sortEditing && (activeRecordType === 'home' || canReorder)}}" class="more-button" role="button" aria-label="更多菜单操作" bindtap="handleMoreOpen">更多</view>
+      </view>
     </view>
 
     <view wx:if="{{selectionMode && selectionPurpose === 'meal'}}" class="favorite-strip">
@@ -65,11 +69,6 @@
       <view wx:else class="favorite-strip__empty">还没有常吃项，点击设置添加</view>
     </view>
 
-    <view wx:if="{{displayMode === 'quick' && !selectionMode}}" class="menu-toolbar">
-      <view class="menu-toolbar__action menu-toolbar__action--featured" bindtap="handleDayPlanTap"><app-icon name="layout-grid" size="24" /><text>本周菜单</text></view>
-      <view wx:if="{{activeRecordType === 'home'}}" class="menu-toolbar__action" bindtap="handlePrintTap"><app-icon name="printer" size="24" /><text>打印</text></view>
-      <view wx:if="{{canReorder}}" class="menu-toolbar__action {{sortEditing ? 'menu-toolbar__action--active' : ''}}" bindtap="handleSortEditingToggle"><app-icon name="settings-2" size="24" /><text>{{sortEditing ? '完成排序' : '编辑排序'}}</text></view>
-    </view>
   </view>
 
   <scroll-view wx:if="{{displayMode === 'quick'}}" class="content-scroll content-scroll--quick" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
@@ -230,6 +229,28 @@
 
   <operation-loading visible="{{ordering}}" text="正在保存排序…" />
 </view>
+
+<app-dialog
+  visible="{{moreMenuVisible}}"
+  placement="bottom"
+  title="更多操作"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body" class="more-action-list">
+    <view wx:if="{{activeRecordType === 'home'}}" class="more-action-item" role="button" aria-label="打印菜单" bindtap="handlePrintTap">
+      <app-icon name="printer" size="27" />
+      <text>打印菜单</text>
+    </view>
+    <view wx:if="{{canReorder}}" class="more-action-item" role="button" aria-label="编辑菜单排序" bindtap="handleSortEditingToggle">
+      <app-icon name="settings-2" size="27" />
+      <text>编辑排序</text>
+    </view>
+  </view>
+  <view slot="actions" class="more-dialog-actions">
+    <button class="more-dialog-close" bindtap="handleMoreClose">取消</button>
+  </view>
+</app-dialog>
 
 <login-required-dialog id="login-required-dialog" />
 

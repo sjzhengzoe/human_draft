@@ -391,8 +391,8 @@ Page({
     homePlaceId: "",
     displayMode: "quick" as DisplayMode,
     browseCurrentIndex: 0,
-    activeFilter: "home",
-    activeRecordType: "home" as RecordTypeFilter,
+    activeFilter: "all",
+    activeRecordType: "all" as RecordTypeFilter,
     canWrite: false,
     guestMode: false,
     canReorder: false,
@@ -425,7 +425,8 @@ Page({
     selectedItems: [] as SelectionItem[],
     favorites: [] as SelectableFavorite[],
     showBasketDialog: false,
-    savingSelection: false
+    savingSelection: false,
+    moreMenuVisible: false
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -947,8 +948,18 @@ Page({
     this.setData({ displayMode })
   },
 
+  handleMoreOpen() {
+    if (this.data.contentLoading || this.data.sortEditing || this.data.selectionMode) return
+    this.setData({ moreMenuVisible: true })
+  },
+
+  handleMoreClose() {
+    this.setData({ moreMenuVisible: false })
+  },
+
   async handleSortEditingToggle() {
     if (!this.data.canReorder || this.data.contentLoading || this.data.ordering) return
+    if (this.data.moreMenuVisible) this.setData({ moreMenuVisible: false })
     if (!this.data.sortEditing) {
       if (this.data.activeRecordType === "outside") {
         outsidePlaceOriginalIds = this.data.outsidePlaces.map((place) => place.id)
@@ -1056,7 +1067,9 @@ Page({
       wx.showToast({ title: "请先完成排序", icon: "none" })
       return
     }
-    wx.navigateTo({ url: "/pages/menu/print/index" })
+    this.setData({ moreMenuVisible: false }, () => {
+      wx.navigateTo({ url: "/pages/menu/print/index" })
+    })
   },
 
   handleDayPlanTap() {

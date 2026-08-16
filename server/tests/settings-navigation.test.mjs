@@ -163,9 +163,15 @@ test("settings scrolls only its bounded content and disables empty bounce", asyn
     readFile(new URL("../../src/pages/settings/index.less", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/settings/index.json", import.meta.url), "utf8"),
   ]);
+  const settingsPageBlock = styles.match(/\.settings-page\s*\{([\s\S]*?)\}/)?.[1] || "";
   const pageBlock = styles.match(/\.page\s*\{([\s\S]*?)\}/)?.[1] || "";
+  const profileHeaderBlock = styles.match(/\.profile-header\s*\{([\s\S]*?)\}/)?.[1] || "";
 
-  assert.match(pageBlock, /height: calc\(100vh - var\(--app-navigation-height\)\)/);
-  assert.match(markup, /<scroll-view[\s\S]*?class="page"[\s\S]*?scroll-y[\s\S]*?bounces="\{\{false\}\}"/);
+  assert.match(settingsPageBlock, /height: calc\(100vh - var\(--app-navigation-height\)\)/);
+  assert.match(settingsPageBlock, /display: flex/);
+  assert.match(pageBlock, /flex: 1/);
+  assert.match(pageBlock, /min-height: 0/);
+  assert.match(profileHeaderBlock, /flex: none/);
+  assert.match(markup, /class="profile-header"[\s\S]*?class="profile-card"[\s\S]*?<scroll-view[\s\S]*?class="page"[\s\S]*?scroll-y[\s\S]*?bounces="\{\{false\}\}"/);
   assert.equal(JSON.parse(configSource).disableScroll, true);
 });

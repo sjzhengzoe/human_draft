@@ -11,7 +11,9 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
   ]);
   assert.match(page, />本周菜单</);
   assert.doesNotMatch(page, />随机菜单</);
-  assert.match(page, /wx:if="\{\{displayMode === 'quick' && !selectionMode\}\}" class="menu-toolbar"/);
+  assert.match(page, /class="view-switch"[\s\S]*?>速览<\/view>[\s\S]*?>翻阅<\/view>[\s\S]*?bindtap="handleDayPlanTap" role="tab">本周菜单<\/view>/);
+  assert.doesNotMatch(page, /class="menu-toolbar"/);
+  assert.match(page, /class="menu-command-row"[\s\S]*?class="menu-search"[\s\S]*?class="menu-command-actions"/);
   assert.match(page, /placeholder="\{\{activeRecordType === 'all' \? '搜索全部菜品或店铺'/);
   assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
   assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
@@ -34,9 +36,11 @@ test("weekly-menu selection defaults both dining scene and category to all", asy
   assert.match(page, /activeRecordType !== 'outside' && dishes\.length/);
   assert.match(page, /activeRecordType !== 'home' && outsidePlaces\.length/);
   assert.match(page, /搜索全部菜品或店铺/);
-  assert.match(logic, /activeFilter: "all",\s*activeRecordType: "all"/);
+  const pageData = logic.match(/Page\(\{\s*data:\s*\{([\s\S]*?)\n  \},\n\n  onLoad/)?.[1] || "";
+  assert.match(pageData, /activeFilter: "all",\s*activeRecordType: "all"/);
   assert.match(logic, /recordType === "outside"[\s\S]*recordType === "home"[\s\S]*listMenuPlaces/);
-  assert.match(page, /<button wx:if="\{\{canWrite \|\| guestMode\}\}" class="add-button" bindtap="handleAddTap">/);
+  assert.match(page, /class="menu-command-icon menu-command-icon--primary"[\s\S]*?aria-label="新增菜单记录"[\s\S]*?bindtap="handleAddTap"/);
+  assert.match(page, /<app-dialog[\s\S]*?visible="\{\{moreMenuVisible\}\}"[\s\S]*?placement="bottom"[\s\S]*?打印菜单[\s\S]*?编辑排序/);
   assert.match(logic, /handleAddTap\(\)[\s\S]*?activeRecordType === "outside"[\s\S]*?pages\/menu\/place-edit\/index[\s\S]*?pages\/menu\/edit\/index/);
 });
 

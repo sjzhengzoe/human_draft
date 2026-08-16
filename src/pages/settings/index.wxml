@@ -1,13 +1,7 @@
 <custom-navigation title="我的" show-back="{{false}}" background="{{themeColors.pageBackground}}" />
 
-<scroll-view
-  class="page"
-  scroll-y
-  enhanced
-  bounces="{{false}}"
-  show-scrollbar="{{false}}"
->
-  <view class="settings-content">
+<view class="settings-page">
+  <view class="profile-header">
     <view class="profile-card">
       <image
         wx:if="{{avatarUrl}}"
@@ -50,8 +44,17 @@
         bindtap="handleLoginTap"
       >登录</view>
     </view>
+  </view>
 
-    <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
+  <scroll-view
+    class="page"
+    scroll-y
+    enhanced
+    bounces="{{false}}"
+    show-scrollbar="{{false}}"
+  >
+    <view class="settings-content">
+      <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
         <view class="account-id-item">
@@ -71,7 +74,7 @@
       </view>
     </view>
 
-    <view wx:if="{{loggedIn}}" class="settings-section">
+      <view wx:if="{{loggedIn}}" class="settings-section">
       <view class="settings-section__title">存储空间</view>
       <view class="settings-list">
         <view class="storage-usage-item">
@@ -91,7 +94,7 @@
       </view>
     </view>
 
-    <view class="settings-section">
+      <view class="settings-section">
       <view class="settings-section__title">通用</view>
       <view class="settings-list">
         <view
@@ -119,7 +122,7 @@
       </view>
     </view>
 
-    <view wx:if="{{isAdmin}}" class="settings-section">
+      <view wx:if="{{isAdmin}}" class="settings-section">
       <view class="settings-section__title">管理</view>
       <view class="settings-list">
         <view
@@ -147,27 +150,28 @@
       </view>
     </view>
 
-    <view
-      wx:if="{{loggedIn}}"
-      class="settings-logout-button"
-      role="button"
-      aria-label="退出登录"
-      hover-class="settings-logout-button--hover"
-      hover-stay-time="80"
-      bindtap="handleLogoutTap"
-    >退出登录</view>
+      <view
+        wx:if="{{loggedIn}}"
+        class="settings-logout-button"
+        role="button"
+        aria-label="退出登录"
+        hover-class="settings-logout-button--hover"
+        hover-stay-time="80"
+        bindtap="handleLogoutTap"
+      >退出登录</view>
 
-    <view
-      wx:if="{{loggedIn}}"
-      class="settings-delete-account-button"
-      role="button"
-      aria-label="注销账号"
-      hover-class="settings-delete-account-button--hover"
-      hover-stay-time="80"
-      bindtap="handleDeleteAccountTap"
-    >注销账号</view>
-  </view>
-</scroll-view>
+      <view
+        wx:if="{{loggedIn}}"
+        class="settings-delete-account-button"
+        role="button"
+        aria-label="注销账号"
+        hover-class="settings-delete-account-button--hover"
+        hover-stay-time="80"
+        bindtap="handleDeleteAccountTap"
+      >注销账号</view>
+    </view>
+  </scroll-view>
+</view>
 
 <app-dialog
   visible="{{storageInfoDialogVisible}}"
