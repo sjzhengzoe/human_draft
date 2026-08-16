@@ -564,6 +564,7 @@ test("exercise home lets a tracked calendar day drive the completion date", asyn
   assert.match(pageSource, /revokeExerciseRestDay\(selectedDate\)/);
   assert.match(templateSource, /data-date="\{\{item\.date\}\}"/);
   assert.match(templateSource, /bindtap="handleCalendarDayTap"/);
+  assert.match(templateSource, /wx:if="\{\{item\.restUsed\}\}" class="calendar-day__corner-mark">休<\/text>[\s\S]*?wx:elif="\{\{item\.state === 'completed' \|\| item\.state === 'incomplete'\}\}"[\s\S]*?class="calendar-day__corner-mark"[\s\S]*?>\{\{item\.day\}\}<\/text>/);
   assert.match(templateSource, /\{\{selectedTaskTitle\}\}/);
   assert.match(templateSource, /\{\{restCreditBalance\}\}/);
   assert.match(templateSource, /本年未完成 \{\{yearIncompleteDays\}\} 天/);

@@ -84,7 +84,11 @@
             wx:if="{{item.state === 'future' || item.state === 'untracked'}}"
             class="calendar-day__number"
           >{{item.day}}</text>
-          <text wx:if="{{item.restUsed}}" class="calendar-day__rest-mark">休</text>
+          <text wx:if="{{item.restUsed}}" class="calendar-day__corner-mark">休</text>
+          <text
+            wx:elif="{{item.state === 'completed' || item.state === 'incomplete'}}"
+            class="calendar-day__corner-mark"
+          >{{item.day}}</text>
         </view>
       </view>
       <view class="mini-calendar__summary">
