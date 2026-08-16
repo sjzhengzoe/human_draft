@@ -32,8 +32,10 @@ function getStorageUsageState(usage: {
   is_near_limit: boolean
 }) {
   return {
-    storageUsageText: `${formatStorageBytes(usage.used_bytes)} / ${formatStorageBytes(usage.quota_bytes)}`,
-    storageImageCountText: `共 ${usage.image_count} 张图片 · 剩余 ${formatStorageBytes(usage.remaining_bytes)}`,
+    storageUsedText: formatStorageBytes(usage.used_bytes),
+    storageRemainingText: formatStorageBytes(usage.remaining_bytes),
+    storageImageCountText: `共 ${usage.image_count} 张图片`,
+    storageQuotaText: formatStorageBytes(usage.quota_bytes),
     storageUsageNearLimit: usage.is_near_limit,
     storageUsageLoading: false
   }
@@ -68,10 +70,13 @@ function getSettingsAccountState(failedAvatarSignature = "") {
 Component({
   data: {
     ...getSettingsAccountState(),
-    storageUsageText: "正在统计…",
+    storageUsedText: "正在统计…",
+    storageRemainingText: "",
     storageImageCountText: "",
+    storageQuotaText: "",
     storageUsageNearLimit: false,
     storageUsageLoading: false,
+    storageInfoDialogVisible: false,
     deleteAccountDialogVisible: false,
     themeColors: UI_COLORS
   },
@@ -182,8 +187,10 @@ Component({
       page.storageUsageRequestId = requestId
       this.setData({
         storageUsageLoading: true,
-        storageUsageText: "正在统计…",
-        storageImageCountText: ""
+        storageUsedText: "正在统计…",
+        storageRemainingText: "",
+        storageImageCountText: "",
+        storageQuotaText: ""
       })
       try {
         const usage = await getImageStorageUsage()
@@ -192,12 +199,20 @@ Component({
       } catch (_error) {
         if (page.storageUsageRequestId !== requestId) return
         this.setData({
-          storageUsageText: "暂时无法读取",
+          storageUsedText: "暂时无法读取",
+          storageRemainingText: "",
           storageImageCountText: "稍后重新进入页面即可重试",
+          storageQuotaText: "",
           storageUsageNearLimit: false,
           storageUsageLoading: false
         })
       }
+    },
+    handleStorageInfoTap() {
+      this.setData({ storageInfoDialogVisible: true })
+    },
+    handleStorageInfoClose() {
+      this.setData({ storageInfoDialogVisible: false })
     },
     handleModuleSettingsTap() {
       const page = this as SettingsPageInstance

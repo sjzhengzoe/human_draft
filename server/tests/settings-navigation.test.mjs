@@ -73,14 +73,20 @@ test("account section displays and copies the public UID", async () => {
   assert.match(profileLogic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);
   assert.match(profileLogic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
   assert.match(markup, /class="settings-section__title">存储空间</);
-  assert.match(markup, /图片空间[\s\S]*?\{\{storageUsageText\}\}/);
-  assert.match(markup, /达到 80 MB[\s\S]*?达到 100 MB/);
+  assert.match(markup, /图片空间[\s\S]*?aria-label="查看图片空间说明"[\s\S]*?<app-icon name="info" size="24"/);
+  assert.match(markup, /storageRemainingText \? '已用 ' \+ storageUsedText[\s\S]*?剩余 \{\{storageRemainingText\}\}/);
+  assert.match(markup, /<app-dialog[\s\S]*?visible="\{\{storageInfoDialogVisible\}\}"[\s\S]*?title="图片空间"[\s\S]*?达到 80 MB[\s\S]*?达到 100 MB/);
+  assert.doesNotMatch(markup, /storage-usage-item__count|storage-usage-item__note/);
   assert.match(logic, /getImageStorageUsage\(\)/);
   assert.match(logic, /getCachedImageStorageUsage\(\)/);
   assert.match(logic, /if \(cachedUsage\) this\.setData\(getStorageUsageState\(cachedUsage\)\)/);
   assert.match(logic, /if \(this\.data\.storageUsageLoading\) return/);
-  assert.match(logic, /formatStorageBytes\(usage\.used_bytes\)/);
-  assert.match(logic, /formatStorageBytes\(usage\.quota_bytes\)/);
+  assert.match(logic, /storageUsedText: formatStorageBytes\(usage\.used_bytes\)/);
+  assert.match(logic, /storageRemainingText: formatStorageBytes\(usage\.remaining_bytes\)/);
+  assert.match(logic, /storageQuotaText: formatStorageBytes\(usage\.quota_bytes\)/);
+  assert.match(logic, /handleStorageInfoTap\(\)[\s\S]*?storageInfoDialogVisible: true/);
+  assert.match(logic, /handleStorageInfoClose\(\)[\s\S]*?storageInfoDialogVisible: false/);
+  assert.match(styles, /\.storage-usage-item__info\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
   assert.doesNotMatch(logic, /总额度待定/);
 });
 

@@ -80,12 +80,21 @@
       <view class="settings-section__title">存储空间</view>
       <view class="settings-list">
         <view class="storage-usage-item">
-          <view class="storage-usage-item__header">
+          <view class="storage-usage-item__label-group">
             <view class="storage-usage-item__label">图片空间</view>
-            <view class="storage-usage-item__value {{storageUsageNearLimit ? 'storage-usage-item__value--warning' : ''}}">{{storageUsageText}}</view>
+            <view
+              class="storage-usage-item__info"
+              role="button"
+              aria-label="查看图片空间说明"
+              hover-class="storage-usage-item__info--hover"
+              hover-stay-time="80"
+              bindtap="handleStorageInfoTap"
+            ><app-icon name="info" size="24" /></view>
           </view>
-          <view wx:if="{{storageImageCountText}}" class="storage-usage-item__count">{{storageImageCountText}}</view>
-          <view class="storage-usage-item__note">达到 80 MB 后会提示空间不足；达到 100 MB 后暂停新增图片，删除图片即可释放空间。</view>
+          <view class="storage-usage-item__value {{storageUsageNearLimit ? 'storage-usage-item__value--warning' : ''}}">
+            <view>{{storageRemainingText ? '已用 ' + storageUsedText : storageUsedText}}</view>
+            <view wx:if="{{storageRemainingText}}">剩余 {{storageRemainingText}}</view>
+          </view>
         </view>
       </view>
     </view>
@@ -168,6 +177,38 @@
     >注销账号</view>
   </view>
 </scroll-view>
+
+<app-dialog
+  visible="{{storageInfoDialogVisible}}"
+  title="图片空间"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+>
+  <view slot="body" class="storage-info-dialog">
+    <view class="storage-info-dialog__stats">
+      <view class="storage-info-dialog__row">
+        <text>图片数量</text>
+        <text>{{storageImageCountText || '正在统计…'}}</text>
+      </view>
+      <view class="storage-info-dialog__row">
+        <text>已使用</text>
+        <text>{{storageUsedText}}</text>
+      </view>
+      <view class="storage-info-dialog__row">
+        <text>剩余空间</text>
+        <text>{{storageRemainingText || '正在统计…'}}</text>
+      </view>
+      <view class="storage-info-dialog__row">
+        <text>空间上限</text>
+        <text>{{storageQuotaText || '正在统计…'}}</text>
+      </view>
+    </view>
+    <view class="storage-info-dialog__note">达到 80 MB 后会提示空间不足；达到 100 MB 后暂停新增图片，删除图片即可释放空间。</view>
+  </view>
+  <view slot="actions" class="storage-info-dialog__actions">
+    <button class="storage-info-dialog__button" bindtap="handleStorageInfoClose">知道了</button>
+  </view>
+</app-dialog>
 
 <app-dialog
   visible="{{deleteAccountDialogVisible}}"

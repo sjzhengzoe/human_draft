@@ -20,7 +20,14 @@
         bindtap="handleGranularityTap"
       >{{item.label}}</view>
     </view>
-    <picker mode="date" value="{{anchorDate}}" start="1900-01-01" end="2100-12-31" bindchange="handleAnchorDateChange">
+    <picker
+      mode="date"
+      fields="{{activeGranularity}}"
+      value="{{anchorDate}}"
+      start="1900-01-01"
+      end="2100-12-31"
+      bindchange="handleAnchorDateChange"
+    >
       <view class="period-picker">
         <text>{{periodLabel}}</text>
         <app-icon name="chevron-down" size="27" />

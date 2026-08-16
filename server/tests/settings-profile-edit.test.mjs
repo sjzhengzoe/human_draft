@@ -21,6 +21,12 @@ test("settings profile editing uses a dedicated page with the shared cropper", a
   assert.match(config, /"app-input": "\/components\/app-input\/index"/);
   assert.match(config, /"image-cropper": "\/components\/image-cropper\/index"/);
   assert.match(markup, /custom-back="\{\{true\}\}"/);
+  assert.doesNotMatch(markup, /<scroll-view|scroll-y/);
+  assert.match(markup, /<view class="profile-content">/);
+  assert.equal(JSON.parse(config).disableScroll, true);
+  assert.match(styles, /\.profile-content\s*\{[\s\S]*?overflow: hidden/);
+  assert.doesNotMatch(markup, /头像会裁剪为正方形并安全保存|profile-hint/);
+  assert.doesNotMatch(styles, /\.profile-hint/);
   assert.match(markup, /<image-cropper[\s\S]*?shape="circle"[\s\S]*?bind:confirm="handleAvatarCropConfirm"/);
   assert.match(styles, /\.profile-avatar-editor__button\s*{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
   assert.match(logic, /handleAvatarCropConfirm[\s\S]*?sourceFilePath[\s\S]*?pendingAvatarCrop: crop \|\| null/);

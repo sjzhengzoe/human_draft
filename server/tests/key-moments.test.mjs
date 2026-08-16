@@ -223,6 +223,7 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
 
   assert.doesNotMatch(page, /settings-button|handleSettings|displayLayout/);
   assert.match(page, /activeGranularity === 'year'[\s\S]*?class="today-publisher"/);
+  assert.match(page, /<picker[\s\S]*?mode="date"[\s\S]*?fields="\{\{activeGranularity\}\}"[\s\S]*?bindchange="handleAnchorDateChange"/);
   assert.match(page, /class="today-publisher__label">今天<\/view>/);
   assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
   assert.match(page, /wx:if="\{\{item\.show_date_heading\}\}" class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
