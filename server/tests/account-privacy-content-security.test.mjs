@@ -179,7 +179,7 @@ test("public beta access migration separates cohort, access tier and registratio
   assert.doesNotMatch(migration, /create table|membership_orders|add column[^;]*(?:payment|balance)/i);
 });
 
-test("settings exposes public-beta terms, privacy details, and shared-dialog account deletion", async () => {
+test("settings keeps public-beta terms in about and uses shared-dialog account deletion", async () => {
   const [appSource, settingsMarkup, settingsLogic, settingsConfig, aboutMarkup, aboutStyles] =
     await Promise.all([
       readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
@@ -191,8 +191,7 @@ test("settings exposes public-beta terms, privacy details, and shared-dialog acc
     ]);
   assert.ok(JSON.parse(appSource).pages.includes("pages/settings/about/index"));
   assert.equal(JSON.parse(settingsConfig).usingComponents["app-dialog"], "/components/app-dialog/index");
-  assert.match(settingsMarkup, /公开测试期 · 当前免费/);
-  assert.match(settingsMarkup, /当前不提供会员、充值或付费入口/);
+  assert.doesNotMatch(settingsMarkup, /公开测试期 · 当前免费|public-beta-card/);
   assert.match(settingsMarkup, /关于、隐私与服务说明/);
   assert.match(settingsMarkup, /<app-dialog[\s\S]*?永久注销/);
   assert.doesNotMatch(settingsLogic.match(/handleDeleteAccountTap[\s\S]*?handleDeleteAccountConfirm/)?.[0] || "", /wx\.showModal/);

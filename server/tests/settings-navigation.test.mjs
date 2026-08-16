@@ -74,19 +74,25 @@ test("account section displays and copies the public UID", async () => {
   assert.match(profileLogic, /handleProfileSave\(\)[\s\S]*?updateAccountProfile\(displayName\)[\s\S]*?updateAccountAvatar\([\s\S]*?pendingAvatarUploadPath,[\s\S]*?pendingAvatarCrop/);
   assert.match(markup, /class="settings-section__title">存储空间</);
   assert.match(markup, /图片空间[\s\S]*?aria-label="查看图片空间说明"[\s\S]*?<app-icon name="info" size="24"/);
-  assert.match(markup, /storageRemainingText \? '已用 ' \+ storageUsedText[\s\S]*?剩余 \{\{storageRemainingText\}\}/);
+  assert.match(markup, /class="storage-usage-item__value[^>]*>\{\{storageUsageText\}\}<\/view>/);
   assert.match(markup, /<app-dialog[\s\S]*?visible="\{\{storageInfoDialogVisible\}\}"[\s\S]*?title="图片空间"[\s\S]*?达到 80 MB[\s\S]*?达到 100 MB/);
   assert.doesNotMatch(markup, /storage-usage-item__count|storage-usage-item__note/);
   assert.match(logic, /getImageStorageUsage\(\)/);
   assert.match(logic, /getCachedImageStorageUsage\(\)/);
   assert.match(logic, /if \(cachedUsage\) this\.setData\(getStorageUsageState\(cachedUsage\)\)/);
   assert.match(logic, /if \(this\.data\.storageUsageLoading\) return/);
+  assert.match(logic, /storageUsageText: `\$\{formatStorageBytes\(usage\.used_bytes\)\} \/ \$\{formatStorageBytes\(usage\.quota_bytes\)\}`/);
   assert.match(logic, /storageUsedText: formatStorageBytes\(usage\.used_bytes\)/);
   assert.match(logic, /storageRemainingText: formatStorageBytes\(usage\.remaining_bytes\)/);
   assert.match(logic, /storageQuotaText: formatStorageBytes\(usage\.quota_bytes\)/);
   assert.match(logic, /handleStorageInfoTap\(\)[\s\S]*?storageInfoDialogVisible: true/);
   assert.match(logic, /handleStorageInfoClose\(\)[\s\S]*?storageInfoDialogVisible: false/);
   assert.match(styles, /\.storage-usage-item__info\s*\{[\s\S]*?width: 56rpx;[\s\S]*?height: 56rpx/);
+  const generalSection = markup.match(/class="settings-section__title">通用<\/view>([\s\S]*?)<view wx:if="\{\{isAdmin\}\}" class="settings-section">/)?.[1] || "";
+  const managementSection = markup.match(/class="settings-section__title">管理<\/view>([\s\S]*?)class="settings-logout-button"/)?.[1] || "";
+  assert.match(generalSection, /bindtap="handleModuleSettingsTap"[\s\S]*?首页设置[\s\S]*?bindtap="handleAboutTap"[\s\S]*?关于、隐私与服务说明/);
+  assert.doesNotMatch(generalSection, /运营数据|运营控制|wx:if="\{\{isAdmin\}\}"/);
+  assert.match(managementSection, /bindtap="handleAnalyticsTap"[\s\S]*?运营数据[\s\S]*?bindtap="handleRuntimeControlsTap"[\s\S]*?运营控制/);
   assert.doesNotMatch(logic, /总额度待定/);
 });
 

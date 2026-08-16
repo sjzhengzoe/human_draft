@@ -32,6 +32,7 @@ function getStorageUsageState(usage: {
   is_near_limit: boolean
 }) {
   return {
+    storageUsageText: `${formatStorageBytes(usage.used_bytes)} / ${formatStorageBytes(usage.quota_bytes)}`,
     storageUsedText: formatStorageBytes(usage.used_bytes),
     storageRemainingText: formatStorageBytes(usage.remaining_bytes),
     storageImageCountText: `共 ${usage.image_count} 张图片`,
@@ -70,6 +71,7 @@ function getSettingsAccountState(failedAvatarSignature = "") {
 Component({
   data: {
     ...getSettingsAccountState(),
+    storageUsageText: "正在统计…",
     storageUsedText: "正在统计…",
     storageRemainingText: "",
     storageImageCountText: "",
@@ -187,6 +189,7 @@ Component({
       page.storageUsageRequestId = requestId
       this.setData({
         storageUsageLoading: true,
+        storageUsageText: "正在统计…",
         storageUsedText: "正在统计…",
         storageRemainingText: "",
         storageImageCountText: "",
@@ -199,6 +202,7 @@ Component({
       } catch (_error) {
         if (page.storageUsageRequestId !== requestId) return
         this.setData({
+          storageUsageText: "暂时无法读取",
           storageUsedText: "暂时无法读取",
           storageRemainingText: "",
           storageImageCountText: "稍后重新进入页面即可重试",

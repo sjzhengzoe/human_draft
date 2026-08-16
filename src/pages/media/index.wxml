@@ -12,46 +12,15 @@
       <view class="view-switch__item {{displayMode === 'record' ? 'view-switch__item--active' : ''}}" data-mode="record" bindtap="handleDisplayModeTap" role="tab">记录</view>
     </view>
 
-    <block wx:if="{{displayMode === 'overview'}}">
-      <view class="filter-heading">
-        <text>选择分类</text>
-      </view>
-      <view class="category-list category-list--wrap">
-        <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
-        <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
-      </view>
-      <view class="filter-heading filter-heading--status">
-        <text>选择状态</text>
-      </view>
-      <view class="category-list status-list">
-        <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">在看</view>
-        <view class="category-chip {{overviewStatus === 'planned' ? 'category-chip--active' : ''}}" data-status="planned" bindtap="handleOverviewStatusTap">想看</view>
-      </view>
-    </block>
-
-    <block wx:else>
-      <view class="filter-heading">
-        <text>选择分类</text>
-      </view>
-      <view class="category-list category-list--wrap">
-        <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
-        <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
-      </view>
-      <view class="filter-heading filter-heading--rating">
-        <text>选择评分</text>
-      </view>
-      <view class="category-list rating-list" role="group" aria-label="按评分筛选">
-        <view class="category-chip {{selectedRating === 0 ? 'category-chip--active' : ''}}" data-rating="0" bindtap="handleRatingTap">全部</view>
-        <view wx:for="{{ratingOptions}}" wx:key="value" class="category-chip {{selectedRating === item.value ? 'category-chip--active' : ''}}" data-rating="{{item.value}}" bindtap="handleRatingTap">{{item.label}}</view>
-      </view>
-      <view class="search-row">
-        <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
-        <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
-      </view>
-    </block>
-
-    <view wx:if="{{canWrite || guestMode}}" class="media-toolbar">
-      <view class="media-toolbar__actions">
+    <view class="media-filter-row media-filter-row--category">
+      <view class="media-filter-label">分类：</view>
+      <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="category-list" role="group" aria-label="按分类筛选">
+          <view class="category-chip {{selectedCategory === '' ? 'category-chip--active' : ''}}" data-type="" bindtap="handleCategoryTap">全部</view>
+          <view wx:for="{{mediaTypes}}" wx:key="*this" class="category-chip {{selectedCategory === item ? 'category-chip--active' : ''}}" data-type="{{item}}" bindtap="handleCategoryTap">{{item}}</view>
+        </view>
+      </scroll-view>
+      <view wx:if="{{canWrite || guestMode}}" class="media-filter-actions">
         <view class="icon-button" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">
           <app-icon name="settings-2" size="24" />
         </view>
@@ -60,6 +29,34 @@
         </view>
       </view>
     </view>
+
+    <block wx:if="{{displayMode === 'overview'}}">
+      <view class="media-filter-row">
+        <view class="media-filter-label">状态：</view>
+        <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+          <view class="category-list status-list" role="group" aria-label="按状态筛选">
+            <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">在看</view>
+            <view class="category-chip {{overviewStatus === 'planned' ? 'category-chip--active' : ''}}" data-status="planned" bindtap="handleOverviewStatusTap">想看</view>
+          </view>
+        </scroll-view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="media-filter-row">
+        <view class="media-filter-label">评分：</view>
+        <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+          <view class="category-list rating-list" role="group" aria-label="按评分筛选">
+            <view class="category-chip {{selectedRating === 0 ? 'category-chip--active' : ''}}" data-rating="0" bindtap="handleRatingTap">全部</view>
+            <view wx:for="{{ratingOptions}}" wx:key="value" class="category-chip {{selectedRating === item.value ? 'category-chip--active' : ''}}" data-rating="{{item.value}}" bindtap="handleRatingTap">{{item.label}}</view>
+          </view>
+        </scroll-view>
+      </view>
+      <view class="search-row">
+        <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
+      </view>
+    </block>
   </view>
 
   <scroll-view

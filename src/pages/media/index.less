@@ -11,7 +11,7 @@
   position: relative;
   z-index: 3;
   flex: 0 0 auto;
-  padding: 25rpx var(--ui-page-gutter) 22rpx;
+  padding: 20rpx var(--ui-page-gutter) 18rpx;
   border-bottom: 1rpx solid var(--ui-border);
   background: var(--ui-surface);
 }
@@ -44,28 +44,41 @@
   box-shadow: 0 2rpx 8rpx var(--ui-color-shadow);
 }
 
-.media-toolbar {
+.media-filter-row {
   display: flex;
-  min-height: 58rpx;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
-  margin-top: 24rpx;
-}
-
-.media-toolbar__actions {
-  display: flex;
-  flex: 0 0 auto;
+  min-width: 0;
   align-items: center;
   gap: 10rpx;
-  margin-left: auto;
+  margin-top: 14rpx;
+}
+
+.media-filter-label {
+  flex: none;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.media-filter-scroll {
+  width: auto;
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.media-filter-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8rpx;
 }
 
 .icon-button {
   position: relative;
   display: flex;
-  width: 54rpx;
-  height: 54rpx;
+  width: 56rpx;
+  height: 56rpx;
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
@@ -92,7 +105,6 @@
   opacity: 0.55;
 }
 
-.filter-heading,
 .record-heading,
 .section-heading {
   display: flex;
@@ -101,20 +113,6 @@
   gap: 16rpx;
 }
 
-.filter-heading {
-  margin-top: 24rpx;
-  color: var(--ui-color-text-default);
-  font-size: var(--ui-font-size-base);
-  font-weight: 600;
-  line-height: normal;
-}
-
-.filter-heading--status,
-.filter-heading--rating {
-  margin-top: 20rpx;
-}
-
-.filter-heading__hint,
 .section-heading__count {
   color: var(--ui-color-text-placeholder);
   font-size: var(--ui-font-size-small);
@@ -122,30 +120,10 @@
   line-height: normal;
 }
 
-.category-scroll {
-  width: 100%;
-  margin-top: 14rpx;
-  white-space: nowrap;
-}
-
 .category-list {
   display: inline-flex;
   gap: 8rpx;
   padding: 1rpx 2rpx;
-}
-
-.category-list--wrap {
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 14rpx;
-}
-
-.status-list {
-  margin-top: 14rpx;
-}
-
-.rating-list {
-  margin-top: 14rpx;
 }
 
 .rating-list .category-chip {
@@ -178,11 +156,11 @@
   display: flex;
   align-items: center;
   gap: 10rpx;
-  margin-top: 18rpx;
+  margin-top: 14rpx;
 }
 
 .search-row__input {
-  height: 58rpx;
+  height: 54rpx;
   box-sizing: border-box;
   padding: 0 20rpx;
   border: 1rpx solid var(--ui-color-border-subtle);
@@ -197,7 +175,7 @@
 .search-row__clear {
   display: flex;
   width: auto;
-  height: 58rpx;
+  height: 54rpx;
   box-sizing: border-box;
   flex: 0 0 auto;
   align-items: center;

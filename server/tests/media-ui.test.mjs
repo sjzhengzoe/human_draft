@@ -56,16 +56,16 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.doesNotMatch(page, /overview-list|overview-row/);
   assert.doesNotMatch(page, /swiper|status-badge/);
   assert.doesNotMatch(page, /overviewCategoryOptions|handleOverviewCategoryChange/);
-  assert.equal(page.match(/bindtap="handleCategoryTap"/g)?.length, 4);
+  assert.equal(page.match(/bindtap="handleCategoryTap"/g)?.length, 2);
   assert.match(logic, /selectedCategory:[ \t]*"" as MediaType/);
   assert.doesNotMatch(logic, /overviewCategory|activeRecordType/);
   assert.match(logic, /handleCategoryTap[\s\S]*loadCurrentView\(\{ reset: true \}\)/);
   assert.match(page, /bindtap="handleOverviewStatusTap"/);
-  assert.match(page, />选择评分<\/text>/);
+  assert.match(page, /class="media-filter-label">评分：<\/view>/);
   assert.match(page, /data-rating="0" bindtap="handleRatingTap">全部<\/view>/);
   assert.match(page, /wx:for="\{\{ratingOptions\}\}"[\s\S]*?data-rating="\{\{item\.value\}\}"[\s\S]*?bindtap="handleRatingTap">\{\{item\.label\}\}<\/view>/);
   assert.match(logic, /\{ value: 5, label: "五星" \}[\s\S]*\{ value: 1, label: "一星" \}/);
-  assert.ok(page.indexOf("<block wx:else>") < page.indexOf(">选择评分"));
+  assert.ok(page.indexOf("<block wx:else>") < page.indexOf(">评分："));
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);
   assert.match(page, /wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/);
@@ -87,8 +87,10 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.doesNotMatch(page, /record-card__body/);
   assert.doesNotMatch(styles, /\.record-card\s*\{[^}]*border:\s*1rpx|\.record-card\s*\{[^}]*box-shadow:/s);
   assert.doesNotMatch(page, /包含全部分类|包含全部记录|只展示所选状态|四列卡片/);
-  assert.ok(page.indexOf('class="search-row"') < page.indexOf('class="media-toolbar"'));
-  assert.ok(page.indexOf('class="category-list status-list"') < page.indexOf('class="media-toolbar"'));
+  assert.match(page, /class="media-filter-row media-filter-row--category"[\s\S]*?class="media-filter-label">分类：[\s\S]*?class="media-filter-scroll"[\s\S]*?class="media-filter-actions"/);
+  assert.match(page, /class="media-filter-label">状态：[\s\S]*?class="category-list status-list"/);
+  assert.ok(page.indexOf('class="category-list rating-list"') < page.indexOf('class="search-row"'));
+  assert.doesNotMatch(page, /filter-heading|media-toolbar|category-list--wrap/);
 });
 
 test("media controls are vertically centered and use shared typography sizes", async () => {
@@ -291,8 +293,11 @@ test("media UI keeps dense controls compact while improving long-list interactio
     readFile(detailStylesUrl, "utf8"),
   ]);
 
-  assert.match(page, /category-list category-list--wrap/);
-  assert.doesNotMatch(page, /category-scroll/);
+  assert.match(page, /<scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="\{\{false\}\}">/);
+  assert.equal(page.match(/class="media-filter-scroll"/g)?.length, 3);
+  assert.doesNotMatch(page, /category-scroll|category-list--wrap/);
+  assert.match(styles, /\.media-filter-scroll\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1;[^}]*white-space:\s*nowrap;/s);
+  assert.doesNotMatch(styles, /\.filter-heading|\.media-toolbar|\.category-list--wrap/);
   assert.match(page, /scroll-top="\{\{contentScrollTop\}\}"/);
   assert.match(page, /bindscroll="handleContentScroll"/);
   assert.match(page, /src="\{\{item\.coverImageUrl\}\}"/);

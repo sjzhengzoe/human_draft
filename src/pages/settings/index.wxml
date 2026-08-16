@@ -51,11 +51,6 @@
       >登录</view>
     </view>
 
-    <view class="public-beta-card">
-      <view class="public-beta-card__title">公开测试期 · 当前免费</view>
-      <view class="public-beta-card__text">功能仍在持续完善。当前不提供会员、充值或付费入口；如未来决定推出，会在启用前说明范围与规则。</view>
-    </view>
-
     <view wx:if="{{loggedIn}}" class="settings-section settings-section--account">
       <view class="settings-section__title">账号</view>
       <view class="settings-list">
@@ -91,10 +86,7 @@
               bindtap="handleStorageInfoTap"
             ><app-icon name="info" size="24" /></view>
           </view>
-          <view class="storage-usage-item__value {{storageUsageNearLimit ? 'storage-usage-item__value--warning' : ''}}">
-            <view>{{storageRemainingText ? '已用 ' + storageUsedText : storageUsedText}}</view>
-            <view wx:if="{{storageRemainingText}}">剩余 {{storageRemainingText}}</view>
-          </view>
+          <view class="storage-usage-item__value {{storageUsageNearLimit ? 'storage-usage-item__value--warning' : ''}}">{{storageUsageText}}</view>
         </view>
       </view>
     </view>
@@ -103,13 +95,12 @@
       <view class="settings-section__title">通用</view>
       <view class="settings-list">
         <view
-          wx:if="{{isAdmin}}"
           class="settings-item"
           hover-class="settings-item--hover"
           hover-stay-time="80"
-          bindtap="handleAnalyticsTap"
+          bindtap="handleModuleSettingsTap"
         >
-          <view class="settings-item__label-group"><app-icon name="layout-grid" size="27" /><text class="settings-item__label">运营数据</text></view>
+          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页设置</text></view>
           <view class="settings-item__right">
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>
@@ -125,23 +116,23 @@
             <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
           </view>
         </view>
-        <view
-          class="settings-item"
-          hover-class="settings-item--hover"
-          hover-stay-time="80"
-          bindtap="handleModuleSettingsTap"
-        >
-          <view class="settings-item__label-group"><app-icon name="settings-2" size="27" /><text class="settings-item__label">首页设置</text></view>
-          <view class="settings-item__right">
-            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
-          </view>
-        </view>
       </view>
     </view>
 
     <view wx:if="{{isAdmin}}" class="settings-section">
       <view class="settings-section__title">管理</view>
       <view class="settings-list">
+        <view
+          class="settings-item"
+          hover-class="settings-item--hover"
+          hover-stay-time="80"
+          bindtap="handleAnalyticsTap"
+        >
+          <view class="settings-item__label-group"><app-icon name="layout-grid" size="27" /><text class="settings-item__label">运营数据</text></view>
+          <view class="settings-item__right">
+            <view class="settings-item__arrow"><app-icon name="chevron-right" size="27" /></view>
+          </view>
+        </view>
         <view
           class="settings-item"
           hover-class="settings-item--hover"
