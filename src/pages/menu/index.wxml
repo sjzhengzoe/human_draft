@@ -236,6 +236,7 @@
   title="更多操作"
   custom-body="{{true}}"
   custom-actions="{{true}}"
+  bindcancel="handleMoreClose"
 >
   <view slot="body" class="more-action-list">
     <view wx:if="{{activeRecordType === 'home'}}" class="more-action-item" role="button" aria-label="打印菜单" bindtap="handlePrintTap">

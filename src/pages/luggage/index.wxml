@@ -263,6 +263,7 @@
     title="{{editorTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeEditor"
   >
     <view slot="body" class="editor-body">
       <app-input
@@ -303,6 +304,7 @@
     title="选择携带层级"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeGroupPicker"
   >
     <scroll-view slot="body" class="group-picker" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
       <view

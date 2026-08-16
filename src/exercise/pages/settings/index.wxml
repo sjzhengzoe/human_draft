@@ -51,6 +51,7 @@
     title="修改目标设置"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="handleSettingsEditorCancel"
   >
     <view slot="body" class="settings-editor">
       <view class="settings-editor__field">

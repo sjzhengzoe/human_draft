@@ -39,6 +39,10 @@ Component({
       type: Boolean,
       value: false
     },
+    closeOnOverlay: {
+      type: Boolean,
+      value: true
+    },
     placement: {
       type: String,
       value: "center"
@@ -74,8 +78,12 @@ Component({
   },
   methods: {
     noop() {},
+    handleOverlayTap() {
+      if (!this.properties.closeOnOverlay) return
+      this.triggerEvent("cancel", { source: "overlay" })
+    },
     handleCancel() {
-      this.triggerEvent("cancel")
+      this.triggerEvent("cancel", { source: "button" })
     },
     handleConfirm() {
       this.triggerEvent("confirm")

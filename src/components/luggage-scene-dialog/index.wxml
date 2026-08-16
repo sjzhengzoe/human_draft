@@ -5,6 +5,7 @@
   title="{{title}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"
+  bindcancel="handleCancel"
 >
   <view slot="body" class="scene-dialog__body">
     <app-input

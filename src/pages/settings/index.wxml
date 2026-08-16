@@ -178,6 +178,7 @@
   title="图片空间"
   custom-body="{{true}}"
   custom-actions="{{true}}"
+  bindcancel="handleStorageInfoClose"
 >
   <view slot="body" class="storage-info-dialog">
     <view class="storage-info-dialog__stats">

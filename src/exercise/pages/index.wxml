@@ -146,6 +146,7 @@
     title="{{minutesDialogTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeMinutesDialog"
   >
     <view slot="body" class="minutes-dialog-body">
       <view class="minutes-dialog-input">

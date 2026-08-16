@@ -25,11 +25,15 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   ]);
 
   assert.match(componentSource, /placement:[\s\S]*?value: "center"/);
+  assert.match(componentSource, /closeOnOverlay:[\s\S]*?value: true/);
+  assert.match(componentSource, /handleOverlayTap\(\)[\s\S]*?closeOnOverlay[\s\S]*?triggerEvent\("cancel", \{ source: "overlay" \}\)/);
   assert.match(componentSource, /wx\.onKeyboardHeightChange/);
   assert.match(componentSource, /wx\.offKeyboardHeightChange/);
   assert.match(template, /app-dialog--bottom/);
   assert.match(template, /app-dialog--keyboard-open/);
   assert.match(template, /padding-bottom: ' \+ keyboardHeight \+ 'px/);
+  assert.match(template, /bindtap="handleOverlayTap"/);
+  assert.match(template, /class="app-dialog__panel" catchtap="noop"/);
   assert.doesNotMatch(template, /translate3d/);
   assert.match(styles, /\.app-dialog__panel\s*{[^}]*max-height:\s*68vh/);
   assert.match(styles, /\.app-dialog--bottom\s*{[^}]*align-items:\s*flex-end/);
@@ -41,6 +45,23 @@ test("app dialog owns center, bottom, fullscreen, and keyboard-aware bottom plac
   assert.match(inputSource, /maxlength:[\s\S]*?value: 120/);
   assert.match(inputSource, /ready\(\)[\s\S]*?wx\.nextTick/);
   assert.match(inputSource, /nativeFocus: this\.properties\.focus && !this\.properties\.disabled && !this\.properties\.dialogMode/);
+});
+
+test("every controlled dialog handles the default overlay cancel event", async () => {
+  const templates = await sourceFiles(new URL("src/", projectRoot), ".wxml");
+  let dialogCount = 0;
+  for (const path of templates) {
+    const source = await readFile(path, "utf8");
+    for (const openingTag of source.match(/<app-dialog\b[\s\S]*?>/g) || []) {
+      dialogCount += 1;
+      assert.match(
+        openingTag,
+        /bind:?cancel=/,
+        `dialog must handle overlay cancellation: ${path.pathname}`,
+      );
+    }
+  }
+  assert.ok(dialogCount >= 30);
 });
 
 test("every dialog containing an input uses the shared bottom placement", async () => {

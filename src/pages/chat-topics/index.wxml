@@ -201,6 +201,7 @@
     title="我的话题 · 随机一组"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeRandomDialog"
   >
     <view slot="body" class="random-dialog-list">
       <view wx:for="{{randomDialogItems}}" wx:key="id" class="random-dialog-item">
@@ -224,6 +225,7 @@
     title="{{editingOfficialId ? '编辑官方话题' : '添加官方话题'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeOfficialEditor"
   >
     <view slot="body" class="topic-editor">
       <textarea
@@ -250,6 +252,7 @@
     title="{{editorTitle}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeEditor"
   >
     <view slot="body" class="topic-editor">
       <textarea

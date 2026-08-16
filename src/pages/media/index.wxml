@@ -45,7 +45,10 @@
 
     <view class="media-command-row">
       <view wx:if="{{displayMode === 'record'}}" class="search-row">
-        <app-input custom-class="search-row__input" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        <view class="search-row__field">
+          <app-icon name="search" size="24" />
+          <app-input custom-class="search-row__input" persistent value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+        </view>
         <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
       </view>
       <view wx:if="{{canWrite || guestMode}}" class="media-command-actions">
@@ -146,6 +149,7 @@
   title="更多操作"
   custom-body="{{true}}"
   custom-actions="{{true}}"
+  bindcancel="handleMoreClose"
 >
   <view slot="body" class="more-action-list">
     <view class="more-action-item" role="button" aria-label="管理影视分类" bindtap="handleManageCategories">

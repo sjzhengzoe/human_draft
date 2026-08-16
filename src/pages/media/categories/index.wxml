@@ -53,6 +53,7 @@
     title="{{editorId ? '编辑影视分类' : '新增影视分类'}}"
     custom-body="{{true}}"
     custom-actions="{{true}}"
+    bindcancel="closeEditor"
   >
     <view slot="body" class="category-editor">
       <app-input

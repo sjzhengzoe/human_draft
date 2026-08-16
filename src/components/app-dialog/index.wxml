@@ -3,8 +3,9 @@
   class="app-dialog {{fullscreen ? 'app-dialog--fullscreen' : ''}} {{placement === 'bottom' ? 'app-dialog--bottom' : ''}} {{placement === 'bottom' && keyboardHeight ? 'app-dialog--keyboard-open' : ''}}"
   style="{{placement === 'bottom' && keyboardHeight ? 'padding-bottom: ' + keyboardHeight + 'px;' : ''}}"
   catchtouchmove="noop"
+  bindtap="handleOverlayTap"
 >
-  <view class="app-dialog__panel">
+  <view class="app-dialog__panel" catchtap="noop">
     <view wx:if="{{placement === 'bottom'}}" class="app-dialog__handle" />
     <view wx:if="{{title}}" class="app-dialog__header">
       <view wx:if="{{title}}" class="app-dialog__title">{{title}}</view>

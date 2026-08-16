@@ -3,6 +3,7 @@
   fullscreen="{{true}}"
   custom-body="{{true}}"
   custom-actions="{{true}}"
+  bindcancel="handleCancel"
 >
   <view slot="body" class="crop-editor">
     <view class="crop-editor__topbar" style="padding-top: {{statusBarHeight}}px;">

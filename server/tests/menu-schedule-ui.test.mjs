@@ -13,7 +13,7 @@ test("menu exposes one shared weekly-menu entry and a searchable selection mode"
   assert.doesNotMatch(page, />随机菜单</);
   assert.match(page, /class="view-switch"[\s\S]*?>速览<\/view>[\s\S]*?>翻阅<\/view>[\s\S]*?bindtap="handleDayPlanTap" role="tab">本周菜单<\/view>/);
   assert.doesNotMatch(page, /class="menu-toolbar"/);
-  assert.match(page, /class="menu-command-row"[\s\S]*?class="menu-search"[\s\S]*?class="menu-command-actions"/);
+  assert.match(page, /class="menu-command-row"[\s\S]*?class="menu-search"[\s\S]*?<app-icon name="search" size="24"[\s\S]*?<app-input[\s\S]*?persistent[\s\S]*?class="menu-command-actions"/);
   assert.match(page, /placeholder="\{\{activeRecordType === 'all' \? '搜索全部菜品或店铺'/);
   assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
   assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
