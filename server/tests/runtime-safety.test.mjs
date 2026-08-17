@@ -246,6 +246,10 @@ test("admin runtime page uses the shared bottom dialog and exposes audited contr
   assert.match(markup, /<app-dialog[\s\S]*placement="bottom"/);
   assert.match(markup, /dialog-mode="\{\{true\}\}"/);
   assert.match(markup, /最近操作/);
+  assert.match(logic, /Page\(\{/);
+  assert.doesNotMatch(logic, /Page\(\{[\s\S]*?\n\s+methods:\s*\{/);
+  assert.match(logic, /\n\s+handleRegistrationAction\(\)\s*\{/);
+  assert.match(logic, /\n\s+handleWriteAction\(\)\s*\{/);
   assert.match(logic, /updateRuntimeControl/);
   assert.match(settingsMarkup, /wx:if="\{\{isAdmin\}\}"[\s\S]*运营控制/);
 });
