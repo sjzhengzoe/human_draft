@@ -28,7 +28,7 @@ import {
   updateCachedMenuScheduleMeal
 } from "../../../utils/menu-data-store"
 
-type TimeMode = "day" | "week" | "month" | "year"
+type TimeMode = "day" | "week"
 
 type PlanItem = {
   key: string
@@ -58,22 +58,6 @@ type WeekDay = {
       fallbackText: string
     }>
   }>
-}
-
-type MonthCell = {
-  key: string
-  date: string
-  day: string
-  inMonth: boolean
-  isToday: boolean
-  count: number
-}
-
-type YearMonth = {
-  month: number
-  label: string
-  count: number
-  mealCount: number
 }
 
 type ScheduleInputItem =
@@ -110,21 +94,6 @@ function addDays(value: string, amount: number): string {
   return formatDate(date)
 }
 
-function addMonths(value: string, amount: number): string {
-  const date = parseDate(value)
-  const day = date.getDate()
-  date.setDate(1)
-  date.setMonth(date.getMonth() + amount)
-  date.setDate(Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()))
-  return formatDate(date)
-}
-
-function addYears(value: string, amount: number): string {
-  const date = parseDate(value)
-  date.setFullYear(date.getFullYear() + amount)
-  return formatDate(date)
-}
-
 function startOfWeek(value: string): string {
   const date = parseDate(value)
   const offset = date.getDay() === 0 ? -6 : 1 - date.getDay()
@@ -133,23 +102,9 @@ function startOfWeek(value: string): string {
 }
 
 function rangeFor(mode: TimeMode, anchor: string): { start: string; end: string } {
-  const date = parseDate(anchor)
   if (mode === "day") return { start: anchor, end: anchor }
-  if (mode === "week") {
-    const start = startOfWeek(anchor)
-    return { start, end: addDays(start, 6) }
-  }
-  if (mode === "month") {
-    const start = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-01`
-    return {
-      start,
-      end: formatDate(new Date(date.getFullYear(), date.getMonth() + 1, 0))
-    }
-  }
-  return {
-    start: `${date.getFullYear()}-01-01`,
-    end: `${date.getFullYear()}-12-31`
-  }
+  const start = startOfWeek(anchor)
+  return { start, end: addDays(start, 6) }
 }
 
 function periodLabel(mode: TimeMode, anchor: string): string {
@@ -159,12 +114,8 @@ function periodLabel(mode: TimeMode, anchor: string): string {
     return `${date.getMonth() + 1}月${date.getDate()}日 · ${anchor === today ? "今天" : `星期${WEEKDAYS[date.getDay()]}`}`
   }
   const range = rangeFor(mode, anchor)
-  if (mode === "week") {
-    const end = parseDate(range.end)
-    return `${date.getFullYear()}年${parseDate(range.start).getMonth() + 1}月${parseDate(range.start).getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`
-  }
-  if (mode === "month") return `${date.getFullYear()}年${date.getMonth() + 1}月`
-  return `${date.getFullYear()}年`
+  const end = parseDate(range.end)
+  return `${date.getFullYear()}年${parseDate(range.start).getMonth() + 1}月${parseDate(range.start).getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`
 }
 
 function mealFor(meals: MenuScheduleMeal[], date: string, period: MealPeriod): MenuScheduleMeal | undefined {
@@ -210,42 +161,6 @@ function toWeekDays(meals: MenuScheduleMeal[], anchor: string): WeekDay[] {
           items
         }
       })
-    }
-  })
-}
-
-function toMonthCells(meals: MenuScheduleMeal[], anchor: string): MonthCell[] {
-  const current = parseDate(anchor)
-  const first = new Date(current.getFullYear(), current.getMonth(), 1)
-  const mondayOffset = first.getDay() === 0 ? 6 : first.getDay() - 1
-  const start = formatDate(new Date(current.getFullYear(), current.getMonth(), 1 - mondayOffset))
-  const today = formatDate(new Date())
-  return Array.from({ length: 42 }, (_value, index) => {
-    const date = addDays(start, index)
-    const parsed = parseDate(date)
-    return {
-      key: date,
-      date,
-      day: String(parsed.getDate()),
-      inMonth: parsed.getMonth() === current.getMonth(),
-      isToday: date === today,
-      count: meals
-        .filter((meal) => meal.meal_date === date)
-        .reduce((sum, meal) => sum + meal.items.length, 0)
-    }
-  })
-}
-
-function toYearMonths(meals: MenuScheduleMeal[], anchor: string): YearMonth[] {
-  const year = parseDate(anchor).getFullYear()
-  return Array.from({ length: 12 }, (_value, index) => {
-    const prefix = `${year}-${pad(index + 1)}-`
-    const monthMeals = meals.filter((meal) => meal.meal_date.startsWith(prefix))
-    return {
-      month: index + 1,
-      label: `${index + 1}月`,
-      count: monthMeals.reduce((sum, meal) => sum + meal.items.length, 0),
-      mealCount: monthMeals.filter((meal) => meal.items.length > 0).length
     }
   })
 }
@@ -310,8 +225,6 @@ Page({
     meals: [] as MenuScheduleMeal[],
     dayMeals: [] as MealSection[],
     weekDays: [] as WeekDay[],
-    monthCells: [] as MonthCell[],
-    yearMonths: [] as YearMonth[],
     dishes: [] as Dish[],
     loading: true,
     saving: false,
@@ -452,9 +365,7 @@ Page({
       meals,
       periodLabel: periodLabel(this.data.activeMode, this.data.selectedDate),
       dayMeals: toMealSections(meals, this.data.selectedDate),
-      weekDays: toWeekDays(meals, this.data.selectedDate),
-      monthCells: toMonthCells(meals, this.data.selectedDate),
-      yearMonths: toYearMonths(meals, this.data.selectedDate)
+      weekDays: toWeekDays(meals, this.data.selectedDate)
     })
   },
 
@@ -483,7 +394,7 @@ Page({
 
   handleModeTap(event: WechatMiniprogram.TouchEvent) {
     const mode = String(event.currentTarget.dataset.mode || "day") as TimeMode
-    if (!["day", "week", "month", "year"].includes(mode) || mode === this.data.activeMode) return
+    if (!["day", "week"].includes(mode) || mode === this.data.activeMode) return
     this.setData({
       activeMode: mode,
       periodLabel: periodLabel(mode, this.data.selectedDate)
@@ -492,13 +403,10 @@ Page({
 
   handlePeriodMove(event: WechatMiniprogram.TouchEvent) {
     const direction = Number(event.currentTarget.dataset.direction) < 0 ? -1 : 1
-    const selectedDate = this.data.activeMode === "day"
-      ? addDays(this.data.selectedDate, direction)
-      : this.data.activeMode === "week"
-        ? addDays(this.data.selectedDate, direction * 7)
-        : this.data.activeMode === "month"
-          ? addMonths(this.data.selectedDate, direction)
-          : addYears(this.data.selectedDate, direction)
+    const selectedDate = addDays(
+      this.data.selectedDate,
+      this.data.activeMode === "day" ? direction : direction * 7
+    )
     this.setData({
       selectedDate,
       periodLabel: periodLabel(this.data.activeMode, selectedDate)
@@ -510,28 +418,6 @@ Page({
     this.setData({
       selectedDate,
       periodLabel: periodLabel(this.data.activeMode, selectedDate)
-    }, () => this.loadSchedule())
-  },
-
-  handleMonthDayTap(event: WechatMiniprogram.TouchEvent) {
-    const selectedDate = String(event.currentTarget.dataset.date || "")
-    if (!selectedDate) return
-    this.setData({
-      selectedDate,
-      activeMode: "day",
-      periodLabel: periodLabel("day", selectedDate)
-    }, () => this.loadSchedule())
-  },
-
-  handleYearMonthTap(event: WechatMiniprogram.TouchEvent) {
-    const month = Number(event.currentTarget.dataset.month)
-    if (!month) return
-    const year = parseDate(this.data.selectedDate).getFullYear()
-    const selectedDate = `${year}-${pad(month)}-01`
-    this.setData({
-      selectedDate,
-      activeMode: "month",
-      periodLabel: periodLabel("month", selectedDate)
     }, () => this.loadSchedule())
   },
 
@@ -646,9 +532,8 @@ Page({
   },
 
   handleRanking() {
-    const dimension = this.data.activeMode === "day" ? "week" : this.data.activeMode
     wx.navigateTo({
-      url: `/pages/menu/ranking/index?dimension=${dimension}&date=${this.data.selectedDate}`
+      url: `/pages/menu/ranking/index?dimension=week&date=${this.data.selectedDate}`
     })
   }
 })

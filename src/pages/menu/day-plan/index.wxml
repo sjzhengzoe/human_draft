@@ -12,27 +12,18 @@
   <view class="planner-header">
     <view class="planner-toolbar">
       <view class="time-tabs" role="tablist" aria-label="查看范围">
-        <view wx:for="{{['day', 'week', 'month', 'year']}}" wx:key="*this" class="time-tab {{activeMode === item ? 'time-tab--active' : ''}}" data-mode="{{item}}" bindtap="handleModeTap">{{item === 'day' ? '日' : item === 'week' ? '周' : item === 'month' ? '月' : '年'}}</view>
+        <view wx:for="{{['day', 'week']}}" wx:key="*this" class="time-tab {{activeMode === item ? 'time-tab--active' : ''}}" data-mode="{{item}}" bindtap="handleModeTap">{{item === 'day' ? '日' : '周'}}</view>
       </view>
-      <button class="ranking-button" bindtap="handleRanking">排行榜</button>
-    </view>
-
-    <view class="period-bar">
       <view class="period-navigation">
-        <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="27" /></view>
+        <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="24" /></view>
         <view class="period-copy" bindtap="handleToday">
           <view class="period-label">{{periodLabel}}</view>
-          <view class="period-today">{{loading && hasLoaded ? '正在更新…' : '点击回到当前日期'}}</view>
+          <view wx:if="{{loading && hasLoaded}}" class="period-today">正在更新…</view>
         </view>
-        <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="27" /></view>
+        <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="24" /></view>
       </view>
-      <view wx:if="{{activeMode === 'day'}}" class="period-random">
-        <view class="period-random__copy">
-          <view class="period-random__title">今天吃什么</view>
-          <view class="period-random__hint">空餐随机三项，已有选择时每次补一项</view>
-        </view>
-        <button class="random-action random-action--primary" loading="{{saving}}" bindtap="handleRandomize">随机菜单</button>
-      </view>
+      <button wx:if="{{activeMode === 'day'}}" class="random-action random-action--primary" loading="{{saving}}" bindtap="handleRandomize">随机菜单</button>
+      <button class="ranking-button" bindtap="handleRanking">排行榜</button>
     </view>
   </view>
 
@@ -99,24 +90,6 @@
       </view>
     </view>
 
-    <view wx:elif="{{activeMode === 'month'}}" class="month-panel">
-      <view class="month-weekdays"><view wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</view></view>
-      <view class="month-grid">
-        <view wx:for="{{monthCells}}" wx:key="key" class="month-cell {{item.inMonth ? '' : 'month-cell--muted'}} {{item.isToday ? 'month-cell--today' : ''}}" data-date="{{item.date}}" bindtap="handleMonthDayTap">
-          <view class="month-cell__day">{{item.day}}</view>
-          <view wx:if="{{item.count}}" class="month-cell__count">{{item.count}}项</view>
-        </view>
-      </view>
-      <view class="view-hint">点击日期查看并编辑当天菜单</view>
-    </view>
-
-    <view wx:else class="year-grid">
-      <view wx:for="{{yearMonths}}" wx:key="month" class="year-card" data-month="{{item.month}}" bindtap="handleYearMonthTap">
-        <view class="year-card__month">{{item.label}}</view>
-        <view class="year-card__count">{{item.count}} 项</view>
-        <view class="year-card__meta">记录 {{item.mealCount}} 餐</view>
-      </view>
-    </view>
     </view>
   </scroll-view>
 </view>

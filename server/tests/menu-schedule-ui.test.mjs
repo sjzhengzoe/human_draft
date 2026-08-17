@@ -59,7 +59,7 @@ test("regular menu modes expose all filters and browse home dishes with outside 
   assert.match(page, /wx:for="\{\{browseItems\}\}"[\s\S]*?browseItem\.kind === 'place'[\s\S]*?dishes\[browseItem\.itemIndex\]\.name/);
 });
 
-test("weekly menu has day, week, month, year displays and embeds the original random flow", async () => {
+test("weekly menu keeps focused day and week displays with the random flow", async () => {
   const [page, logic, style, config] = await Promise.all([
     read("src/pages/menu/day-plan/index.wxml"),
     read("src/pages/menu/day-plan/index.ts"),
@@ -71,10 +71,12 @@ test("weekly menu has day, week, month, year displays and embeds the original ra
   assert.match(page, /class="planner-navigation"[\s\S]*class="planner-page"/);
   assert.match(page, /class="planner-header"[\s\S]*class="planner-content"/);
   assert.match(page, /bounces="\{\{false\}\}"/);
-  assert.match(page, /\['day', 'week', 'month', 'year'\]/);
+  assert.match(page, /\['day', 'week'\]/);
+  assert.doesNotMatch(page, /activeMode === 'month'|class="year-grid"/);
   assert.match(page, />随机菜单</);
-  assert.match(page, /loading && hasLoaded \? '正在更新…'/);
-  assert.match(page, /class="period-bar"[\s\S]*?class="period-navigation"[\s\S]*?class="period-random"[\s\S]*?>随机菜单<\/button>[\s\S]*?<\/view>\s*<\/view>\s*<scroll-view/);
+  assert.match(page, /wx:if="\{\{loading && hasLoaded\}\}" class="period-today">正在更新…/);
+  assert.match(page, /class="planner-toolbar"[\s\S]*?class="time-tabs"[\s\S]*?class="period-navigation"[\s\S]*?class="random-action random-action--primary"[\s\S]*?class="ranking-button"/);
+  assert.doesNotMatch(page, /class="period-bar"/);
   assert.doesNotMatch(page, /class="random-header"/);
   assert.match(page, /activeMode === 'week'/);
   assert.match(page, /class="week-matrix"/);
@@ -82,8 +84,7 @@ test("weekly menu has day, week, month, year displays and embeds the original ra
   assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
   assert.match(page, /week-matrix__cell--empty/);
   assert.doesNotMatch(page, /week-meal__summary/);
-  assert.match(page, /activeMode === 'month'/);
-  assert.match(page, /class="year-grid"/);
+  assert.doesNotMatch(logic, /addMonths|addYears|toMonthCells|toYearMonths|handleMonthDayTap|handleYearMonthTap/);
   assert.match(page, /bindtap="handleRanking"/);
   assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
   assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
