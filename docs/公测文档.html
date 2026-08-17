@@ -749,23 +749,23 @@
       </div>
       <aside class="decision" aria-label="当前决策">
         <div class="decision-label">当前应该做什么</div>
-        <strong>包含 8 月 16 日验收修复的新体验版已经上传。现在按阶段 0 清单完成真机回归，全部通过后提交微信审核。</strong>
+        <strong>阶段 0 真机回归已经通过。现在提交微信审核，审核通过后发布正式版并开始公开测试。</strong>
       </aside>
     </header>
 
     <p class="plan-note"><strong>文档用途：</strong>这是内部运营、收费和待办决策记录，供后续与 Agent 继续讨论，不是面向公测用户的宣传页。候选价格、成本模型和未定权益不得直接链接到小程序或公开笔记；对外只使用本文明确标注的公测说明与售后文案。</p>
-    <p class="plan-note"><strong>发布进度（更新于 2026-08-17）：</strong>阶段 0 当前确认完成 <strong>3／9</strong>：线上迁移与用户隔离、个人图片受控访问、图片成本优化已经验收。其余 6 项的主体开发、数据库迁移、服务端自动部署和自动化测试已经完成。8 月 15 日晚至 16 日完成的关键节点可靠性、底部弹窗键盘与焦点、菜单与个人页操作、影视筛选、搜索样式等验收修复已进入 <code>main</code>（修复基线 <code>e419978</code>），包含这些修复的新体验版已于 8 月 17 日上传，版本号和包大小待补录。下一步是“真机回归验收 6 项未完成清单 → 提交微信审核 → 审核通过后发布正式版 → 开始公开测试”。当前尚未提交审核或发布正式版。</p>
+    <p class="plan-note"><strong>发布进度（更新于 2026-08-17）：</strong>阶段 0 的 <strong>9／9 项</strong>已经全部完成。线上迁移与用户隔离、个人图片受控访问、图片成本优化此前已经验收；资源上限与运营开关、开放注册、运营数据、内容安全、隐私与账号注销、公测说明也已在 8 月 17 日上传的新体验版完成真机回归。8 月 15 日晚至 16 日完成的关键节点可靠性、底部弹窗键盘与焦点、菜单与个人页操作、影视筛选、搜索样式等修复已一并确认可用。体验版版本号和包大小待补录。下一步是“提交微信审核 → 审核通过后发布正式版 → 开始公开测试”。当前尚未提交审核或发布正式版。</p>
 
     <section class="progress-area" aria-labelledby="progress-heading">
       <div>
         <div class="progress-title">
           <span id="progress-heading">公开测试前完成度</span>
-          <span id="progress-text">0 / 9</span>
+          <span id="progress-text">9 / 9</span>
         </div>
-        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-label="阶段 0 完成进度">
-          <div class="progress-fill" id="progress-fill"></div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="9" aria-label="阶段 0 完成进度">
+          <div class="progress-fill" id="progress-fill" style="width: 100%"></div>
         </div>
-        <p class="progress-hint" id="progress-hint">阶段 0 尚未完成，先不要发布可能带来真实用户的笔记。</p>
+        <p class="progress-hint" id="progress-hint">阶段 0 已通过。下一步提交微信审核；审核通过并发布正式版后再开放自然用户。</p>
       </div>
       <div class="toolbar" aria-label="清单操作">
         <button type="button" id="expand-all">展开全部阶段</button>
@@ -809,7 +809,7 @@
       </div>
       <p class="plan-note"><strong>已经确定的不变原则：</strong>当前只做免费公测，不发生会员交易，也不向用户展示尚未决定的付费设计。若未来决定收费，不把用户已有数据作为付费筹码；方案变更不删除、不隐藏已有数据，超出安全额度时只暂停新增或上传，仍允许查看、导出和删除。</p>
       <p class="plan-note"><strong>2026-08-15 已实现：</strong>账号数据已把注册批次与内部访问层级分开，现有账号统一记录为早期公测批次和完整公测访问；新账号首次注册时保存经过校验的微信场景、活动、来源小程序与版本渠道。客户端只展示“公测体验中”，会员、充值、余额、订单、到期时间和付费权益入口均未建设或展示。</p>
-      <p class="plan-note"><strong>2026-08-16 验收修复：</strong>已完成关键节点图片排序、时间与加载可靠性优化，修复底部弹窗键盘闪退、输入失焦和间距问题，并继续整理菜单、个人设置、影视筛选、搜索与弹窗关闭交互。相关代码和聚焦测试已进入 <code>main</code>，新版体验包已上传，但不据此提前勾选阶段 0；必须以 8 月 17 日体验版真机回归结果为准。</p>
+      <p class="plan-note"><strong>2026-08-17 验收结论：</strong>关键节点图片排序、时间与加载可靠性，底部弹窗键盘、焦点和间距，以及菜单、个人设置、影视筛选、搜索与弹窗关闭交互均已随新版体验包完成真机回归；阶段 0 据此确认通过。</p>
     </section>
 
     <nav class="stage-nav" aria-label="路线阶段">
@@ -856,56 +856,56 @@
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="abuse-control" />
+          <input type="checkbox" data-check-id="abuse-control" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 风控</span>
             <span class="check-card-title">设置资源硬上限、限流与应急控制</span>
-            <span class="check-card-copy">10 MB 单文件、100 MB 图片总空间、接口防刷、注册总开关、紧急只读开关和数据库异常记录均已部署。包含 8 月 16 日修复的新体验版已经上传，待真机统一回归通过后勾选本项；不设置面向产品的每日上传额度，也暂不做主动通知。</span>
+            <span class="check-card-copy">10 MB 单文件、100 MB 图片总空间、接口防刷、注册总开关、紧急只读开关和数据库异常记录均已部署，并已于 2026-08-17 完成体验版真机回归；不设置面向产品的每日上传额度，也暂不做主动通知。</span>
           </span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="open-registration" />
+          <input type="checkbox" data-check-id="open-registration" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 准入</span>
             <span class="check-card-title">确认开放注册与紧急止损</span>
-            <span class="check-card-copy">实际走通一个新微信用户的首次注册与核心功能，并确认暂停注册时只阻止新账号、已有账号仍可登录；严重故障时可切换为只读。</span>
+            <span class="check-card-copy">已走通新微信用户首次注册与核心功能，并确认注册控制和紧急只读相关页面与流程可用；本项于 2026-08-17 完成体验版真机回归。</span>
           </span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="analytics" />
+          <input type="checkbox" data-check-id="analytics" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 观测</span>
             <span class="check-card-title">上线最小埋点与成本统计</span>
-            <span class="check-card-copy">正式运营观测体系已经完成开发和数据库迁移并纳入 main：记录注册、登录、模块打开、创建成功、上传字节数、错误和来源，并提供管理员运营数据页；不采集用户私人内容。待最新体验版真机验收后勾选。</span>
+            <span class="check-card-copy">正式运营观测体系已经完成开发和数据库迁移并纳入 main：记录注册、登录、模块打开、创建成功、上传字节数、错误和来源，并提供管理员运营数据页；不采集用户私人内容。本项于 2026-08-17 完成体验版真机回归。</span>
           </span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="backup-security" />
+          <input type="checkbox" data-check-id="backup-security" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 安全</span>
             <span class="check-card-title">审计内容安全（数据库备份暂缓）</span>
-            <span class="check-card-copy">文字与图片写入入口已经完成代码审计、统一内容安全检查、服务端发布和体验版上传，待最新体验版回归验收后勾选。数据库自动备份与恢复演练按当前决定延期，等出现稳定真实用户量或准备扩大公开测试时再评估，不作为现阶段开发阻塞项。</span>
+            <span class="check-card-copy">文字与图片写入入口已经完成代码审计、统一内容安全检查、服务端发布和体验版回归。数据库自动备份与恢复演练按当前决定延期，等出现稳定真实用户量或准备扩大公开测试时再评估，不作为现阶段开发阻塞项。</span>
           </span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="privacy-delete" />
+          <input type="checkbox" data-check-id="privacy-delete" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 用户权利</span>
             <span class="check-card-title">补齐隐私说明与账号注销</span>
-            <span class="check-card-copy">“关于与隐私”专页和账号注销闭环已经开发，注销要求重新获取微信凭证确认身份，原子删除数据库账号与个人数据，并可靠重试私有图片清理；数据库迁移、服务端发布和体验版上传已完成，待最新体验版回归验收后勾选。正式收费前再完成基础导出。</span>
+            <span class="check-card-copy">“关于与隐私”专页和账号注销闭环已经开发，注销要求重新获取微信凭证确认身份，原子删除数据库账号与个人数据，并可靠重试私有图片清理；数据库迁移、服务端发布和体验版真机回归已完成。正式收费前再完成基础导出。</span>
           </span>
         </label>
 
         <label class="check-card">
-          <input type="checkbox" data-check-id="beta-message" />
+          <input type="checkbox" data-check-id="beta-message" data-verified="true" checked />
           <span>
             <span class="priority-tag">P0 · 预期</span>
             <span class="check-card-title">明确公测全量免费不等于正式运营全量免费</span>
-            <span class="check-card-copy">“我的”常驻公测提示和“关于与隐私”完整说明已经开发，并随 <code>2026.08.15.1553</code> 体验版上传：当前公开测试统一免费，不展示免费用户等级、会员、充值、订单或付费入口；是否推出会员以及采用何种方案尚未决定，如未来立项会提前说明，且不因方案变化删除已有数据；待最新体验版回归验收后勾选。</span>
+            <span class="check-card-copy">“我的”常驻公测提示和“关于与隐私”完整说明已经开发并完成体验版真机回归：当前公开测试统一免费，不展示免费用户等级、会员、充值、订单或付费入口；是否推出会员以及采用何种方案尚未决定，如未来立项会提前说明，且不因方案变化删除已有数据。</span>
           </span>
         </label>
       </div>
@@ -1062,9 +1062,9 @@
       </details>
 
       <details class="reference stage-audit" open>
-        <summary>第 4 项实施记录 · 已部署并上传体验版，待人工验收（2026-08-15）</summary>
+        <summary>第 4 项实施记录 · 已完成体验版真机验收（2026-08-17）</summary>
         <div class="reference-body">
-          <p class="plan-note"><strong>当前结论：</strong>本项不再重复建设已经存在的 10 MB 单文件上限，也不设置产品层面的每日上传额度。本轮正式实现的每账号 100 MB 图片硬上限、80 MB 预警、接口防刷、注册总开关、紧急只读开关和数据库结构化异常记录均已部署；主动邮件、微信、短信及通知队列明确不在本轮范围。本项开发已完成，当前只等体验版人工验收，验收通过后勾选。</p>
+          <p class="plan-note"><strong>当前结论：</strong>本项不再重复建设已经存在的 10 MB 单文件上限，也不设置产品层面的每日上传额度。本轮正式实现的每账号 100 MB 图片硬上限、80 MB 预警、接口防刷、注册总开关、紧急只读开关和数据库结构化异常记录均已部署，并于 2026-08-17 完成体验版真机验收；主动邮件、微信、短信及通知队列明确不在本轮范围。</p>
 
           <h3>图片总空间与防刷</h3>
           <ul>
@@ -1087,15 +1087,15 @@
             <li>迁移前后均为 2 个账号、471 条有效图片台账，没有删除或改写业务记录。迁移为两个现有账号各建立 100 MiB 上限和 80 MiB 预警；当前最高账号约使用 57.8 MiB，不会因新规则立即被阻止。</li>
             <li>四张新表均启用 RLS，并撤销 <code>anon</code> 与 <code>authenticated</code> 的直接权限；小程序只能通过要求管理员身份的 Node 接口操作运营开关。默认注册和业务写入均保持开启，现有用户无需操作。</li>
             <li>代码提交 <code>f084b89</code> 已推送至 <code>main</code>；GitHub Actions 第 464 次运行部署成功，线上健康检查和新管理接口均已验证。小程序体验版本 <code>2026.08.15</code> 已上传，说明为“资源限额、接口限流与运营控制”，包大小 1,187,707 字节。</li>
-            <li>当前只待体验版人工验收。需检查“我的”页面空间用量展示、管理员运营控制入口及两个开关的状态展示；实际确认正常后再标记为已通过。</li>
+            <li>2026-08-17 已在体验版完成“我的”页面空间用量、管理员运营控制入口及开关状态等真机回归，本项确认通过。</li>
           </ul>
         </div>
       </details>
 
       <details class="reference stage-audit" open>
-        <summary>第 6 项实施记录 · 正式埋点已纳入 main 发布，待体验版验收（2026-08-15）</summary>
+        <summary>第 6 项实施记录 · 已完成体验版真机验收（2026-08-17）</summary>
         <div class="reference-body">
-          <p class="plan-note"><strong>当前结论：</strong>本项采用正式的公测运营观测结构，不使用可随意写入任意 JSON 的临时埋点表。数据库迁移、服务端、小程序采集和管理员运营数据页均已完成并发布，且已随 2026.08.15.1440 体验版上传；本项只因尚未完成人工页面验收而保持未勾选。</p>
+          <p class="plan-note"><strong>当前结论：</strong>本项采用正式的公测运营观测结构，不使用可随意写入任意 JSON 的临时埋点表。数据库迁移、服务端、小程序采集和管理员运营数据页均已完成并发布，且于 2026-08-17 完成体验版真机验收。</p>
 
           <h3>统计口径与可信来源</h3>
           <ul>
@@ -1118,15 +1118,15 @@
             <li><code>20260815052714_product_analytics.sql</code> 已先在真实开发库事务中完整执行并回滚预演，再正式登记为 <code>product_analytics</code> 迁移。新增一个服务端专用事件表和四个 <code>security_invoker</code> 只读汇总视图。</li>
             <li>迁移前后均为 2 个账号、477 条图片台账，没有删除或改写业务记录。两个现有账号只按真实注册时间补入来源未知的历史注册事件，不伪造历史登录、模块访问、创建或上传记录。</li>
             <li><code>product_events</code> 已启用 RLS；事件表和四个汇总视图对 <code>anon</code>、<code>authenticated</code> 均为 0 项权限，只允许服务端角色访问。事务写入与回滚验证通过，Supabase 安全和性能顾问均无新增错误或警告。</li>
-            <li>包含“运营数据”页的最新小程序已随 <code>2026.08.15.1553</code> 体验版上传；完成体验版人工确认后才把本项标记为已通过。</li>
+            <li>包含“运营数据”页的小程序此前已随 <code>2026.08.15.1553</code> 体验版上传；包含后续交互修复的新版体验包于 2026-08-17 完成真机确认，本项已标记为通过。</li>
           </ul>
         </div>
       </details>
 
       <details class="reference stage-audit" open>
-        <summary>第 7～9 项实施记录 · 已发布并上传体验版，待人工验收（2026-08-15）</summary>
+        <summary>第 7～9 项实施记录 · 已完成体验版真机验收（2026-08-17）</summary>
         <div class="reference-body">
-          <p class="plan-note"><strong>当前结论：</strong>内容安全全入口审计、隐私说明与账号注销、公测免费与会员方案未定说明已经按正式方案完成开发；账号注销数据库迁移、服务端自动部署和小程序体验版上传已经完成。三项开发均已完成，当前只等后续人工验收，因此在验收前保持未勾选。</p>
+          <p class="plan-note"><strong>当前结论：</strong>内容安全全入口审计、隐私说明与账号注销、公测免费与会员方案未定说明已经按正式方案完成开发；账号注销数据库迁移、服务端自动部署、小程序体验版上传及真机回归均已完成，三项确认通过。</p>
 
           <h3>内容安全覆盖</h3>
           <ul>
@@ -1148,8 +1148,8 @@
             <li><code>20260815061434_account_deletion.sql</code> 已正式迁移：新增 <code>account_deletion_jobs</code> 和 <code>delete_app_account</code>。任务表启用 RLS，匿名与普通登录角色没有表权限或函数执行权，只有服务端角色可以管理和调用。</li>
             <li>迁移前开发库为 2 个账号、477 条图片台账、6 条运营事件和 8,572 条账号关联记录（其中 3 条为登录会话）；迁移后账号、图片与运营事件数量不变，清理任务为 0，没有删除或改写任何现有用户业务数据。</li>
             <li>Supabase 顾问没有返回此次迁移新增的错误或警告；“RLS 已启用但无策略”是项目服务端专用表统一采用的拒绝直连模式，“新索引未使用”是空任务表尚未发生查询的预期信息。</li>
-            <li>内容安全、注销队列、隐私与公测说明的聚焦测试均已通过；完整服务端 297 项回归、TypeScript 类型检查、UI 颜色规则和差异格式检查也已通过。提交 <code>8c7defd</code> 已推送至 <code>main</code>，自动部署后线上健康接口正常，新注销接口已生效。小程序体验版本 <code>2026.08.15.1440</code> 已通过官方 CLI 上传，说明为“内容安全、隐私说明与账号注销”，包大小 1,211,762 字节；剩余步骤只有后续人工页面验收。</li>
-            <li>公测用户访问状态和对外展示经提交 <code>b9fca10</code> 补齐，最新体验版本 <code>2026.08.15.1553</code> 已通过官方 CLI 上传，说明为“完善公测身份与菜单浏览”，包大小 1,212,589 字节；付费相关能力仍未启用，剩余步骤只有后续人工页面验收。</li>
+            <li>内容安全、注销队列、隐私与公测说明的聚焦测试均已通过；完整服务端 297 项回归、TypeScript 类型检查、UI 颜色规则和差异格式检查也已通过。提交 <code>8c7defd</code> 已推送至 <code>main</code>，自动部署后线上健康接口正常，新注销接口已生效。小程序体验版本 <code>2026.08.15.1440</code> 已通过官方 CLI 上传，说明为“内容安全、隐私说明与账号注销”，包大小 1,211,762 字节。</li>
+            <li>公测用户访问状态和对外展示经提交 <code>b9fca10</code> 补齐，体验版本 <code>2026.08.15.1553</code> 已通过官方 CLI 上传，说明为“完善公测身份与菜单浏览”，包大小 1,212,589 字节；付费相关能力仍未启用。包含后续修复的新版体验包已于 2026-08-17 完成真机回归。</li>
           </ul>
         </div>
       </details>
@@ -1295,10 +1295,10 @@
       </details>
 
       <div class="publish-gate" id="publish-gate" aria-live="polite">
-        <span class="gate-icon">!</span>
+        <span class="gate-icon">✓</span>
         <span>
-          <strong>发布门槛：9 项全部完成</strong>
-          <span>达到这条线后即可开始发笔记并开放自然用户使用，不需要等待自动支付和所有新功能。</span>
+          <strong>阶段 0 已通过，可提交微信审核</strong>
+          <span>审核通过并发布正式版后，即可开始发笔记并开放自然用户使用；不需要等待自动支付和所有新功能。</span>
         </span>
       </div>
 
@@ -1432,7 +1432,7 @@
                 </article>
                 <article class="rule-card">
                   <h3>用户可见信息</h3>
-                  <p>“我的”页面当前只展示“公测体验中”、可复制的用户 ID 和空间已用 / 总额，不展示免费用户、到期时间、会员或购买入口。100 MB 公测安全硬上限已经部署并在体验版显示，待用户补做人工验收。</p>
+                  <p>“我的”页面当前只展示“公测体验中”、可复制的用户 ID 和空间已用 / 总额，不展示免费用户、到期时间、会员或购买入口。100 MB 公测安全硬上限已经部署，并于 2026-08-17 完成体验版真机验收。</p>
                 </article>
                 <article class="rule-card">
                   <h3>条款与退款</h3>
@@ -1624,7 +1624,7 @@
 
           <p>100 MB 只是当前公测期防止资源异常消耗的安全硬上限，不是已确定的未来免费基础版产品额度；体验 300 MB 和年度会员 2 GB 也只是内部研究假设，不在商业方案立项前对外承诺。当前图片最多的账号有 470 个有效图片对象，处理后实际占用 60,564,380 字节，即 57.8 MiB，说明 100 MB 对现有重度使用仍保留约 42.2 MiB 余量。该账号以压缩后影视封面和菜单图片为主，不能直接代表以后全部高清原图；对新规格图片做容量压力估算时，暂按每张处理后约 1 MB、保守 2 MB 计算，因此 100 MB 大约覆盖 50～100 张高清照片，或数百张尺寸较小的封面和菜单图片。</p>
 
-          <p class="plan-note"><strong>公测空间执行规则（2026-08-15 已部署，待体验版人工验收）：</strong>账号用量达到 80 MB 时提示空间即将用完；达到 100 MB 后，只暂停会增加实际图片字节的新增上传，以及处理后新文件大于旧文件的替换。已有图片和业务数据不删除、不隐藏，用户仍可查看、下载、导出和删除，也可继续编辑不增加空间的文字内容。删除图片后立即按实际释放字节恢复可用空间。公测空间只按服务端处理后写入腾讯云 COS 的实际对象字节计算，不按 10 MB 原始上传上限估算，也不另设图片张数上限。</p>
+          <p class="plan-note"><strong>公测空间执行规则（2026-08-15 已部署，2026-08-17 已完成体验版真机验收）：</strong>账号用量达到 80 MB 时提示空间即将用完；达到 100 MB 后，只暂停会增加实际图片字节的新增上传，以及处理后新文件大于旧文件的替换。已有图片和业务数据不删除、不隐藏，用户仍可查看、下载、导出和删除，也可继续编辑不增加空间的文字内容。删除图片后立即按实际释放字节恢复可用空间。公测空间只按服务端处理后写入腾讯云 COS 的实际对象字节计算，不按 10 MB 原始上传上限估算，也不另设图片张数上限。</p>
 
           <p>“记录不限量”只面向正常个人使用，不允许自动化批量写入、公共图床、存放与个人生活记录无关的大量文件或绕过技术限制。公测上限按用户理解的主要对象计算，不按数据库内部关联行数计算。</p>
 
@@ -1938,9 +1938,9 @@
         progressTrack.setAttribute("aria-valuenow", String(completed));
 
         if (completed === total) {
-          progressHint.textContent = "公开测试发布门槛已满足，可以开始发研发笔记并开放自然用户使用。";
+          progressHint.textContent = "阶段 0 已通过。下一步提交微信审核；审核通过并发布正式版后再开放自然用户。";
           publishGate.querySelector(".gate-icon").textContent = "✓";
-          publishGate.querySelector("strong").textContent = "发布门槛已满足";
+          publishGate.querySelector("strong").textContent = "阶段 0 已通过，可提交微信审核";
         } else {
           progressHint.textContent = `还剩 ${total - completed} 项。阶段 0 完成前，先不要发布可能带来真实用户的笔记。`;
           publishGate.querySelector(".gate-icon").textContent = "!";
