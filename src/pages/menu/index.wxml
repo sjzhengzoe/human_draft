@@ -10,9 +10,10 @@
     <view wx:if="{{!selectionMode}}" class="view-switch" role="tablist" aria-label="菜单浏览方式">
       <view class="view-switch__item {{displayMode === 'quick' ? 'view-switch__item--active' : ''}}" data-mode="quick" bindtap="handleDisplayModeTap" role="tab">速览</view>
       <view class="view-switch__item {{displayMode === 'browse' ? 'view-switch__item--active' : ''}}" data-mode="browse" bindtap="handleDisplayModeTap" role="tab">翻阅</view>
-      <view class="view-switch__item" bindtap="handleDayPlanTap" role="tab">本周菜单</view>
+      <view class="view-switch__item {{displayMode === 'plan' ? 'view-switch__item--active' : ''}}" data-mode="plan" bindtap="handleDisplayModeTap" role="tab">今日菜单</view>
     </view>
 
+    <block wx:if="{{displayMode !== 'plan'}}">
     <view class="menu-section-row">
       <view class="record-filter-group">
         <view class="menu-filter-label">用餐场景：</view>
@@ -68,6 +69,7 @@
       </scroll-view>
       <view wx:else class="favorite-strip__empty">还没有常吃项，点击设置添加</view>
     </view>
+    </block>
 
   </view>
 
@@ -171,6 +173,8 @@
     </block>
     <view wx:if="{{!contentLoading && !errorMessage && (dishes.length > 0 || outsidePlaces.length > 0)}}" class="quick-footer">没有更多了</view>
   </scroll-view>
+
+  <menu-week-planner wx:elif="{{displayMode === 'plan'}}" class="week-planner-host" />
 
   <view wx:elif="{{contentLoading}}" class="browse-state content-loading">
     <view class="content-loading__spinner" />

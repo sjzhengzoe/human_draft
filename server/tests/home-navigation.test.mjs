@@ -130,7 +130,6 @@ test("login prompts wait for a write action instead of blocking management pages
     ["src/exercise/pages/index.ts", "handleSettings"],
     ["src/pages/menu/index.ts", "handleFavoritesManage"],
     ["src/pages/menu/index.ts", "handlePrintTap"],
-    ["src/pages/menu/index.ts", "handleDayPlanTap"],
   ]
 
   for (const [path, handler] of parentChecks) {

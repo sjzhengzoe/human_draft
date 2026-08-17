@@ -59,6 +59,15 @@ type WeekDay = {
   }>
 }
 
+type WeekRailItem = {
+  key: "previous" | "current" | "next"
+  direction: -1 | 0 | 1
+  label: string
+  rangeLabel: string
+  selected: boolean
+  ariaLabel: string
+}
+
 type ScheduleInputItem =
   | { source_kind: "dish"; dish_id: string }
   | { source_kind: "place"; place_id: string }
@@ -106,15 +115,93 @@ function rangeFor(mode: TimeMode, anchor: string): { start: string; end: string 
   return { start, end: addDays(start, 6) }
 }
 
-function periodLabel(mode: TimeMode, anchor: string): string {
-  const date = parseDate(anchor)
-  const today = formatDate(new Date())
-  if (mode === "day") {
-    return `${date.getMonth() + 1}月${date.getDate()}日 · ${anchor === today ? "今天" : `星期${WEEKDAYS[date.getDay()]}`}`
-  }
-  const range = rangeFor(mode, anchor)
+function shortWeekRange(anchor: string): string {
+  const range = rangeFor("week", anchor)
+  const start = parseDate(range.start)
   const end = parseDate(range.end)
-  return `${date.getFullYear()}年${parseDate(range.start).getMonth() + 1}月${parseDate(range.start).getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`
+  return `${start.getMonth() + 1}.${start.getDate()}—${end.getMonth() + 1}.${end.getDate()}`
+}
+
+function shortDayLabel(anchor: string): string {
+  const date = parseDate(anchor)
+  return `${date.getMonth() + 1}.${date.getDate()} · 周${WEEKDAYS[date.getDay()]}`
+}
+
+function toDayRailItems(anchor: string): WeekRailItem[] {
+  const today = formatDate(new Date())
+  const dayOffset = Math.round(
+    (parseDate(anchor).getTime() - parseDate(today).getTime()) / (24 * 60 * 60 * 1000)
+  )
+  const currentLabel = dayOffset === 0
+    ? "今天"
+    : dayOffset > 0
+      ? `后${dayOffset}天`
+      : `前${Math.abs(dayOffset)}天`
+  return [
+    {
+      key: "previous",
+      direction: -1,
+      label: "上一天",
+      rangeLabel: shortDayLabel(addDays(anchor, -1)),
+      selected: false,
+      ariaLabel: "切换到上一天"
+    },
+    {
+      key: "current",
+      direction: 0,
+      label: currentLabel,
+      rangeLabel: shortDayLabel(anchor),
+      selected: true,
+      ariaLabel: `当前查看${currentLabel}`
+    },
+    {
+      key: "next",
+      direction: 1,
+      label: "下一天",
+      rangeLabel: shortDayLabel(addDays(anchor, 1)),
+      selected: false,
+      ariaLabel: "切换到下一天"
+    }
+  ]
+}
+
+function toWeekRailItems(anchor: string): WeekRailItem[] {
+  const selectedWeek = startOfWeek(anchor)
+  const currentWeek = startOfWeek(formatDate(new Date()))
+  const weekOffset = Math.round(
+    (parseDate(selectedWeek).getTime() - parseDate(currentWeek).getTime()) / (7 * 24 * 60 * 60 * 1000)
+  )
+  const currentLabel = weekOffset === 0
+    ? "本周"
+    : weekOffset > 0
+      ? `后${weekOffset}周`
+      : `前${Math.abs(weekOffset)}周`
+  return [
+    {
+      key: "previous",
+      direction: -1,
+      label: "上一周",
+      rangeLabel: shortWeekRange(addDays(selectedWeek, -7)),
+      selected: false,
+      ariaLabel: "切换到上一周"
+    },
+    {
+      key: "current",
+      direction: 0,
+      label: currentLabel,
+      rangeLabel: shortWeekRange(selectedWeek),
+      selected: true,
+      ariaLabel: `当前查看${currentLabel}`
+    },
+    {
+      key: "next",
+      direction: 1,
+      label: "下一周",
+      rangeLabel: shortWeekRange(addDays(selectedWeek, 7)),
+      selected: false,
+      ariaLabel: "切换到下一周"
+    }
+  ]
 }
 
 function mealFor(meals: MenuScheduleMeal[], date: string, period: MealPeriod): MenuScheduleMeal | undefined {
@@ -248,11 +335,12 @@ async function listAllDishes(): Promise<Dish[]> {
   return dishes
 }
 
-Page({
+Component({
   data: {
     activeMode: "day" as TimeMode,
     selectedDate: formatDate(new Date()),
-    periodLabel: periodLabel("day", formatDate(new Date())),
+    dayRailItems: toDayRailItems(formatDate(new Date())),
+    weekRailItems: toWeekRailItems(formatDate(new Date())),
     meals: [] as MenuScheduleMeal[],
     dayMeals: [] as MealSection[],
     weekDays: [] as WeekDay[],
@@ -266,35 +354,41 @@ Page({
     errorMessage: ""
   },
 
-  onLoad() {
-    activateAsyncPage(this)
-    if (!getCurrentUser()) {
-      this.showGuestPlan()
-      return
-    }
-    this.loadInitialData()
-  },
+  lifetimes: {
+    attached() {
+      activateAsyncPage(this)
+      if (!getCurrentUser()) {
+        this.showGuestPlan()
+        return
+      }
+      this.loadInitialData()
+    },
 
-  onShow() {
-    activateAsyncPage(this)
-    if (!getCurrentUser()) {
-      if (!this.data.guestMode) this.showGuestPlan()
-      return
-    }
-    if (this.data.guestMode) {
-      this.setData({ guestMode: false, hasLoaded: false })
-      this.loadInitialData()
-      return
-    }
-    if (!this.data.hasLoaded) return
-    if (this.data.loadedRevision !== getMenuDataRevision() || !this.restoreScheduleFromStore(true)) {
-      this.loadInitialData()
+    detached() {
+      deactivateAsyncPage(this)
     }
   },
 
-  onUnload() {
-    deactivateAsyncPage(this)
+  pageLifetimes: {
+    show() {
+      activateAsyncPage(this)
+      if (!getCurrentUser()) {
+        if (!this.data.guestMode) this.showGuestPlan()
+        return
+      }
+      if (this.data.guestMode) {
+        this.setData({ guestMode: false, hasLoaded: false })
+        this.loadInitialData()
+        return
+      }
+      if (!this.data.hasLoaded) return
+      if (this.data.loadedRevision !== getMenuDataRevision() || !this.restoreScheduleFromStore(true)) {
+        this.loadInitialData()
+      }
+    }
   },
+
+  methods: {
 
   showGuestPlan() {
     this.applySchedule([])
@@ -395,7 +489,8 @@ Page({
   applySchedule(meals: MenuScheduleMeal[]) {
     this.setData({
       meals,
-      periodLabel: periodLabel(this.data.activeMode, this.data.selectedDate),
+      dayRailItems: toDayRailItems(this.data.selectedDate),
+      weekRailItems: toWeekRailItems(this.data.selectedDate),
       dayMeals: toMealSections(meals, this.data.selectedDate),
       weekDays: toWeekDays(meals, this.data.selectedDate)
     })
@@ -459,29 +554,21 @@ Page({
   handleModeTap(event: WechatMiniprogram.TouchEvent) {
     const mode = String(event.currentTarget.dataset.mode || "day") as TimeMode
     if (!["day", "week"].includes(mode) || mode === this.data.activeMode) return
-    this.setData({
-      activeMode: mode,
-      periodLabel: periodLabel(mode, this.data.selectedDate)
-    }, () => this.loadSchedule())
+    this.setData({ activeMode: mode }, () => this.loadSchedule())
   },
 
   handlePeriodMove(event: WechatMiniprogram.TouchEvent) {
-    const direction = Number(event.currentTarget.dataset.direction) < 0 ? -1 : 1
+    const rawDirection = Number(event.currentTarget.dataset.direction)
+    if (rawDirection === 0) return
+    const direction = rawDirection < 0 ? -1 : 1
     const selectedDate = addDays(
       this.data.selectedDate,
       this.data.activeMode === "day" ? direction : direction * 7
     )
     this.setData({
       selectedDate,
-      periodLabel: periodLabel(this.data.activeMode, selectedDate)
-    }, () => this.loadSchedule())
-  },
-
-  handleToday() {
-    const selectedDate = formatDate(new Date())
-    this.setData({
-      selectedDate,
-      periodLabel: periodLabel(this.data.activeMode, selectedDate)
+      dayRailItems: toDayRailItems(selectedDate),
+      weekRailItems: toWeekRailItems(selectedDate)
     }, () => this.loadSchedule())
   },
 
@@ -633,5 +720,6 @@ Page({
     wx.navigateTo({
       url: `/pages/menu/ranking/index?dimension=week&date=${this.data.selectedDate}`
     })
+  }
   }
 })

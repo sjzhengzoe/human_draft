@@ -1,7 +1,4 @@
 {
-  "navigationBarTitleText": "本周菜单",
-  "navigationBarBackgroundColor": "#f6f7f1",
-  "navigationBarTextStyle": "black",
-  "disableScroll": true,
-  "usingComponents": {}
+  "component": true,
+  "styleIsolation": "apply-shared"
 }

@@ -1,36 +1,65 @@
-<view class="planner-shell">
-  <view class="planner-navigation">
-    <custom-navigation title="本周菜单" />
-  </view>
-
-  <view wx:if="{{loading && !hasLoaded}}" class="fullscreen-loading">
-    <view class="fullscreen-loading__spinner" />
-    <view class="fullscreen-loading__text">正在准备菜单…</view>
-  </view>
-
-<view wx:else class="planner-page">
+<view class="menu-week-planner">
+<view class="planner-page">
   <view class="planner-header">
-    <view class="planner-toolbar">
+    <view class="planner-toolbar planner-toolbar--spread">
       <view class="time-tabs" role="tablist" aria-label="查看范围">
         <view wx:for="{{['day', 'week']}}" wx:key="*this" class="time-tab {{activeMode === item ? 'time-tab--active' : ''}}" data-mode="{{item}}" bindtap="handleModeTap">{{item === 'day' ? '日' : '周'}}</view>
       </view>
-      <view class="period-navigation">
-        <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="24" /></view>
-        <view class="period-copy" bindtap="handleToday">
-          <view class="period-label">{{periodLabel}}</view>
-          <view wx:if="{{loading && hasLoaded}}" class="period-today">正在更新…</view>
-        </view>
-        <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="24" /></view>
+      <view class="planner-toolbar__actions">
+        <button wx:if="{{activeMode === 'day'}}" class="random-action random-action--primary" loading="{{randomizing}}" bindtap="handleRandomize">随机点菜</button>
+        <button class="ranking-button" bindtap="handleRanking">排行榜</button>
       </view>
-      <button wx:if="{{activeMode === 'day'}}" class="random-action random-action--primary" loading="{{randomizing}}" bindtap="handleRandomize">随机点菜</button>
-      <button class="ranking-button" bindtap="handleRanking">排行榜</button>
+    </view>
+    <view class="week-rail" aria-label="{{activeMode === 'week' ? '切换周次' : '切换日期'}}">
+      <view wx:for="{{activeMode === 'week' ? weekRailItems : dayRailItems}}" wx:key="key" class="week-rail__item {{item.selected ? 'week-rail__item--selected' : ''}}" role="button" aria-label="{{item.ariaLabel}}" data-direction="{{item.direction}}" bindtap="handlePeriodMove">
+        <view class="week-rail__visual">
+          <view class="week-rail__label">{{item.label}}</view>
+          <view class="week-rail__range">{{item.rangeLabel}}</view>
+        </view>
+      </view>
     </view>
   </view>
 
-  <scroll-view class="planner-content" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+  <view wx:if="{{activeMode === 'week' && hasLoaded && !errorMessage}}" class="week-table">
+    <view class="week-matrix week-matrix--header">
+      <view class="week-matrix__header">
+        <view class="week-matrix__corner" />
+        <view wx:for="{{['早餐', '午餐', '下午茶', '晚餐']}}" wx:key="*this" class="week-matrix__heading">{{item}}</view>
+      </view>
+    </view>
+    <scroll-view class="week-table__content" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+      <view class="week-table__inner">
+        <view class="week-matrix week-matrix--body">
+          <view wx:for="{{weekDays}}" wx:key="date" wx:for-item="day" wx:for-index="dayIndex" class="week-matrix__row {{dayIndex === weekDays.length - 1 ? 'week-matrix__row--last' : ''}}">
+            <view class="week-matrix__day {{day.isToday ? 'week-matrix__day--today' : ''}}">
+              <view class="week-matrix__day-label">{{day.dayLabel}}</view>
+              <view class="week-matrix__date">{{day.dateLabel}}</view>
+            </view>
+            <view wx:for="{{day.meals}}" wx:key="key" wx:for-item="meal" class="week-matrix__cell {{meal.count ? 'week-matrix__cell--filled' : 'week-matrix__cell--empty'}}" role="button" aria-label="{{meal.count ? day.dayLabel + meal.label + '，已选择' + meal.count + '项' : '安排' + day.dayLabel + meal.label}}" data-date="{{day.date}}" data-period="{{meal.key}}" bindtap="handleMealEdit">
+              <block wx:if="{{meal.count}}">
+                <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="entry" class="week-matrix__item">
+                  <image wx:if="{{entry.imageUrl}}" class="week-matrix__thumbnail" src="{{entry.imageUrl}}" mode="aspectFit" lazy-load />
+                  <view wx:else class="week-matrix__thumbnail week-matrix__thumbnail--fallback">{{entry.fallbackText}}</view>
+                  <view class="week-matrix__item-name">{{entry.name}}</view>
+                </view>
+              </block>
+              <app-icon wx:else name="plus" size="24" />
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <scroll-view wx:else class="planner-content" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
     <view class="planner-content__inner">
 
-    <view wx:if="{{errorMessage}}" class="state-card">
+    <view wx:if="{{loading && !hasLoaded}}" class="planner-initial-loading content-loading">
+      <view class="content-loading__spinner" />
+      <view class="content-loading__text">正在准备菜单…</view>
+    </view>
+
+    <view wx:elif="{{errorMessage}}" class="state-card">
       <view class="state-card__title">暂时没能打开菜单</view>
       <view class="state-card__description">{{errorMessage}}</view>
       <button class="retry-button" bindtap="handleRetry">重试</button>
@@ -67,32 +96,9 @@
       </view>
     </block>
 
-    <view wx:elif="{{activeMode === 'week'}}" class="week-matrix">
-      <view class="week-matrix__header">
-        <view class="week-matrix__corner" />
-        <view wx:for="{{['早餐', '午餐', '下午茶', '晚餐']}}" wx:key="*this" class="week-matrix__heading">{{item}}</view>
-      </view>
-      <view wx:for="{{weekDays}}" wx:key="date" wx:for-item="day" wx:for-index="dayIndex" class="week-matrix__row {{dayIndex === weekDays.length - 1 ? 'week-matrix__row--last' : ''}}">
-        <view class="week-matrix__day {{day.isToday ? 'week-matrix__day--today' : ''}}">
-          <view class="week-matrix__day-label">{{day.dayLabel}}</view>
-          <view class="week-matrix__date">{{day.dateLabel}}</view>
-        </view>
-        <view wx:for="{{day.meals}}" wx:key="key" wx:for-item="meal" class="week-matrix__cell {{meal.count ? 'week-matrix__cell--filled' : 'week-matrix__cell--empty'}}" role="button" aria-label="{{meal.count ? day.dayLabel + meal.label + '，已选择' + meal.count + '项' : '安排' + day.dayLabel + meal.label}}" data-date="{{day.date}}" data-period="{{meal.key}}" bindtap="handleMealEdit">
-          <block wx:if="{{meal.count}}">
-            <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="entry" class="week-matrix__item">
-              <image wx:if="{{entry.imageUrl}}" class="week-matrix__thumbnail" src="{{entry.imageUrl}}" mode="aspectFill" lazy-load />
-              <view wx:else class="week-matrix__thumbnail week-matrix__thumbnail--fallback">{{entry.fallbackText}}</view>
-              <view class="week-matrix__item-name">{{entry.name}}</view>
-            </view>
-          </block>
-          <app-icon wx:else name="plus" size="24" />
-        </view>
-      </view>
-    </view>
-
     </view>
   </scroll-view>
 </view>
-</view>
 
 <login-required-dialog id="login-required-dialog" />
+</view>

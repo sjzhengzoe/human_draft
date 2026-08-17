@@ -66,7 +66,7 @@ type MealPeriodTag = {
   label: string
 }
 
-type DisplayMode = "quick" | "browse"
+type DisplayMode = "quick" | "browse" | "plan"
 type RecordTypeFilter = "all" | "home" | "outside"
 
 type MenuDish = Dish & {
@@ -1003,7 +1003,7 @@ Page({
       return
     }
     const displayMode = String(event.currentTarget.dataset.mode || "quick") as DisplayMode
-    if (displayMode !== "quick" && displayMode !== "browse") return
+    if (!(["quick", "browse", "plan"] as DisplayMode[]).includes(displayMode)) return
     if (displayMode === this.data.displayMode) return
     if (displayMode === "browse" && this.data.searchKeyword) {
       if (searchTimer) clearTimeout(searchTimer)
@@ -1141,15 +1141,6 @@ Page({
     this.setData({ moreMenuVisible: false }, () => {
       wx.navigateTo({ url: "/pages/menu/print/index" })
     })
-  },
-
-  handleDayPlanTap() {
-    if (this.data.sorting || this.data.contentLoading) return
-    if (this.data.sortEditing) {
-      wx.showToast({ title: "请先完成排序", icon: "none" })
-      return
-    }
-    wx.navigateTo({ url: "/pages/menu/day-plan/index" })
   },
 
   handleDishTap(event: WechatMiniprogram.TouchEvent) {
