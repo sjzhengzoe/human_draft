@@ -10,6 +10,15 @@ import {
 
 type RankingDimension = "week" | "month" | "year"
 
+type RankingPeriodRailItem = {
+  key: "previous" | "current" | "next"
+  direction: -1 | 0 | 1
+  label: string
+  rangeLabel: string
+  selected: boolean
+  ariaLabel: string
+}
+
 function pad(value: number): string { return String(value).padStart(2, "0") }
 function formatDate(date: Date): string { return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` }
 function parseDate(value: string): Date {
@@ -31,11 +40,15 @@ function startOfWeek(value: string): string {
   date.setDate(date.getDate() + (date.getDay() === 0 ? -6 : 1 - date.getDay()))
   return formatDate(date)
 }
+function shortDate(value: string): string {
+  const date = parseDate(value)
+  return `${date.getMonth() + 1}.${date.getDate()}`
+}
 function rangeFor(dimension: RankingDimension, anchor: string) {
   const date = parseDate(anchor)
   if (dimension === "week") {
     const start = startOfWeek(anchor)
-    return { start, end: addDays(start, 6), label: `${start.slice(5).replace("-", ".")}—${addDays(start, 6).slice(5).replace("-", ".")}` }
+    return { start, end: addDays(start, 6), label: `${shortDate(start)}—${shortDate(addDays(start, 6))}` }
   }
   if (dimension === "month") {
     return {
@@ -47,11 +60,67 @@ function rangeFor(dimension: RankingDimension, anchor: string) {
   return { start: `${date.getFullYear()}-01-01`, end: `${date.getFullYear()}-12-31`, label: `${date.getFullYear()}年` }
 }
 
+function periodOffset(dimension: RankingDimension, anchor: string): number {
+  const selected = parseDate(anchor)
+  const today = new Date()
+  if (dimension === "week") {
+    return Math.round(
+      (parseDate(startOfWeek(anchor)).getTime() - parseDate(startOfWeek(formatDate(today))).getTime())
+      / (7 * 24 * 60 * 60 * 1000)
+    )
+  }
+  if (dimension === "month") {
+    return (selected.getFullYear() - today.getFullYear()) * 12 + selected.getMonth() - today.getMonth()
+  }
+  return selected.getFullYear() - today.getFullYear()
+}
+
+function currentPeriodLabel(dimension: RankingDimension, anchor: string): string {
+  const offset = periodOffset(dimension, anchor)
+  if (offset === 0) return dimension === "week" ? "本周" : dimension === "month" ? "本月" : "今年"
+  const unit = dimension === "week" ? "周" : dimension === "month" ? "个月" : "年"
+  return `${offset > 0 ? "后" : "前"}${Math.abs(offset)}${unit}`
+}
+
+function toPeriodRailItems(dimension: RankingDimension, anchor: string): RankingPeriodRailItem[] {
+  const previousAnchor = moveDate(anchor, dimension, -1)
+  const nextAnchor = moveDate(anchor, dimension, 1)
+  const previousLabel = dimension === "week" ? "上一周" : dimension === "month" ? "上个月" : "上一年"
+  const nextLabel = dimension === "week" ? "下一周" : dimension === "month" ? "下个月" : "下一年"
+  const currentLabel = currentPeriodLabel(dimension, anchor)
+  return [
+    {
+      key: "previous",
+      direction: -1,
+      label: previousLabel,
+      rangeLabel: rangeFor(dimension, previousAnchor).label,
+      selected: false,
+      ariaLabel: `切换到${previousLabel}`
+    },
+    {
+      key: "current",
+      direction: 0,
+      label: currentLabel,
+      rangeLabel: rangeFor(dimension, anchor).label,
+      selected: true,
+      ariaLabel: `当前查看${currentLabel}`
+    },
+    {
+      key: "next",
+      direction: 1,
+      label: nextLabel,
+      rangeLabel: rangeFor(dimension, nextAnchor).label,
+      selected: false,
+      ariaLabel: `切换到${nextLabel}`
+    }
+  ]
+}
+
 Page({
   data: {
     dimension: "week" as RankingDimension,
     anchorDate: formatDate(new Date()),
-    periodLabel: "",
+    periodRailItems: toPeriodRailItems("week", formatDate(new Date())),
     effectiveLabel: "",
     items: [] as MenuRankingItem[],
     loading: true,
@@ -69,9 +138,8 @@ Page({
       : formatDate(new Date())
     this.setData({ dimension, anchorDate }, () => {
       if (!getCurrentUser()) {
-        const range = rangeFor(dimension, anchorDate)
         this.setData({
-          periodLabel: range.label,
+          periodRailItems: toPeriodRailItems(dimension, anchorDate),
           effectiveLabel: "",
           items: [],
           loading: false,
@@ -95,13 +163,17 @@ Page({
 
   async loadData() {
     if (!getCurrentUser()) {
-      const range = rangeFor(this.data.dimension, this.data.anchorDate)
-      this.setData({ periodLabel: range.label, effectiveLabel: "", items: [], loading: false })
+      this.setData({ periodRailItems: toPeriodRailItems(this.data.dimension, this.data.anchorDate), effectiveLabel: "", items: [], loading: false })
       return
     }
     const generation = beginAsyncPageRequest(this)
     const range = rangeFor(this.data.dimension, this.data.anchorDate)
-    this.setData({ loading: true, errorMessage: "", periodLabel: range.label })
+    this.setData({
+      loading: true,
+      errorMessage: "",
+      effectiveLabel: "",
+      periodRailItems: toPeriodRailItems(this.data.dimension, this.data.anchorDate)
+    })
     try {
       const result = await getMenuRanking(range.start, range.end)
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -125,7 +197,9 @@ Page({
   },
 
   handleMove(event: WechatMiniprogram.TouchEvent) {
-    const direction = Number(event.currentTarget.dataset.direction) < 0 ? -1 : 1
+    const rawDirection = Number(event.currentTarget.dataset.direction)
+    if (rawDirection === 0) return
+    const direction = rawDirection < 0 ? -1 : 1
     this.setData({ anchorDate: moveDate(this.data.anchorDate, this.data.dimension, direction) }, () => this.loadData())
   }
 })

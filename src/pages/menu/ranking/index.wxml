@@ -6,11 +6,15 @@
     <view class="dimension-tab {{dimension === 'year' ? 'dimension-tab--active' : ''}}" data-dimension="year" bindtap="handleDimensionTap">年</view>
   </view>
 
-  <view class="period-bar">
-    <view class="period-arrow" role="button" aria-label="上一个统计范围" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-left" size="27" /></view>
-    <view class="period-copy"><view class="period-label">{{periodLabel}}</view><view class="period-effective">{{effectiveLabel}}</view></view>
-    <view class="period-arrow" role="button" aria-label="下一个统计范围" data-direction="1" bindtap="handleMove"><app-icon name="arrow-right" size="27" /></view>
+  <view class="period-rail" aria-label="切换排行榜统计日期">
+    <view wx:for="{{periodRailItems}}" wx:key="key" class="period-rail__item {{item.selected ? 'period-rail__item--selected' : ''}}" role="button" aria-label="{{item.ariaLabel}}" data-direction="{{item.direction}}" bindtap="handleMove">
+      <view class="period-rail__visual">
+        <view class="period-rail__label">{{item.label}}</view>
+        <view class="period-rail__range">{{item.rangeLabel}}</view>
+      </view>
+    </view>
   </view>
+  <view wx:if="{{effectiveLabel}}" class="period-effective">{{effectiveLabel}}</view>
 
   <view wx:if="{{loading}}" class="state">正在统计…</view>
   <view wx:elif="{{errorMessage}}" class="state">{{errorMessage}}</view>

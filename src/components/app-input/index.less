@@ -5,12 +5,29 @@
   flex: 1;
 }
 
+.app-input__field {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
 .app-input__control,
 .app-input__display {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  flex: 1;
   font-family: var(--ui-font-family);
+}
+
+.app-input__clear {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: 0 0 56rpx;
+  align-items: center;
+  justify-content: center;
 }
 
 .app-input__display {

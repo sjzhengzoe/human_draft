@@ -21,6 +21,8 @@ test("menu exposes one embedded weekly-menu tab and a searchable selection mode"
   assert.ok(!JSON.parse(appConfig).subPackages.find((item) => item.root === "pages/menu")?.pages.includes("day-plan/index"));
   assert.doesNotMatch(page, /class="menu-toolbar"/);
   assert.match(page, /class="menu-command-row"[\s\S]*?class="menu-search"[\s\S]*?<app-icon name="search" size="24"[\s\S]*?<app-input[\s\S]*?persistent[\s\S]*?class="menu-command-actions"/);
+  assert.match(page, /<app-input[^>]*persistent[^>]*clearable[^>]*clear-aria-label="清空菜单搜索"[^>]*bindinput="handleSearchInput"/);
+  assert.match(logic, /if \(!searchKeyword\)[\s\S]*?searchRequestId \+= 1[\s\S]*?refreshData\(false, true\)/);
   assert.match(page, /placeholder="\{\{activeRecordType === 'all' \? '搜索全部菜品或店铺'/);
   assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
   assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
@@ -169,12 +171,21 @@ test("weekly menu component keeps focused day and week displays with the random 
 });
 
 test("ranking mixes dishes and stores while the server caps statistics at today", async () => {
-  const [page, logic] = await Promise.all([
+  const [page, pageLogic, style, logic] = await Promise.all([
     read("src/pages/menu/ranking/index.wxml"),
+    read("src/pages/menu/ranking/index.ts"),
+    read("src/pages/menu/ranking/index.less"),
     read("server/domains/menu/schedule.mjs"),
   ]);
   assert.match(page, /item\.type === 'place' \? '店铺' : '菜品'/);
   assert.doesNotMatch(page, /菜品排行|店铺排行/);
+  assert.doesNotMatch(page, /class="period-bar"|class="period-arrow"/);
+  assert.match(page, /class="period-rail"[\s\S]*?wx:for="\{\{periodRailItems\}\}"[\s\S]*?data-direction="\{\{item\.direction\}\}"[\s\S]*?bindtap="handleMove"/);
+  assert.match(pageLogic, /function toPeriodRailItems\(dimension: RankingDimension, anchor: string\): RankingPeriodRailItem\[\]/);
+  assert.match(pageLogic, /if \(rawDirection === 0\) return/);
+  assert.match(style, /\.period-rail \{[^}]*grid-template-columns: 1fr 1\.16fr 1fr/);
+  assert.match(style, /\.period-rail__item \{[^}]*min-height: 88rpx/);
+  assert.match(style, /\.period-rail__item--selected \.period-rail__visual \{[^}]*background: var\(--ui-color-action-primary\)[^}]*color: var\(--ui-color-text-inverse\)/);
   assert.match(logic, /const effectiveEnd = range\.end < today \? range\.end : today/);
   assert.match(logic, /seenInMeal\.has\(key\)/);
   assert.match(logic, /item\.record_type === "outside" \|\| item\.source_kind === "place"/);

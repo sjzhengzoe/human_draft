@@ -39,7 +39,7 @@ test("shared app-input keeps the project font outside native editing", async () 
   ]);
 
   assert.equal(template.match(/<input\b/g)?.length, 1);
-  assert.match(template, /always-embed="\{\{true\}\}"/);
+  assert.match(template, /always-embed="\{\{dialogMode \? false : true\}\}"/);
   assert.match(template, /font-family: HumanDraftUI/);
   assert.match(template, /font-size: \{\{fontSize\}\}/);
   assert.match(template, /placeholder-style="[^"]*font-size: \{\{fontSize\}\}/);
@@ -49,6 +49,10 @@ test("shared app-input keeps the project font outside native editing", async () 
   assert.match(template, /wx:else[\s\S]*app-input__display/);
   assert.match(logic, /externalClasses:\s*\["custom-class"\]/);
   assert.match(logic, /persistent:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
+  assert.match(logic, /clearable:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
+  assert.match(template, /clearable && localValue && !disabled[\s\S]*?class="app-input__clear"[\s\S]*?<app-icon name="x-muted" size="22"/);
+  assert.match(logic, /handleClear\(\)[\s\S]*?localValue: ""[\s\S]*?this\.triggerEvent\("input", \{ value: "", cursor: 0 \}\)/);
+  assert.match(styles, /\.app-input__clear[^}]*width:\s*56rpx[^}]*height:\s*56rpx/);
   assert.match(logic, /dialogMode:\s*\{[\s\S]*?type:\s*Boolean,[\s\S]*?value:\s*false/);
   assert.doesNotMatch(logic, /dialogCursorSpacing/);
   assert.match(logic, /fontSize:\s*UI_FONT_SIZES\.base/);

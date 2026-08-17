@@ -4,11 +4,14 @@ page { background: var(--ui-color-background-page); }
 .dimension-tabs { display: flex; padding: 5rpx; border-radius: 999rpx; background: var(--ui-color-background-subtle); }
 .dimension-tab { display: flex; min-height: 58rpx; flex: 1; align-items: center; justify-content: center; border-radius: 999rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-base); }
 .dimension-tab--active { background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); }
-.period-bar { display: flex; align-items: center; margin: 22rpx 0; padding: 16rpx; border: 1rpx solid var(--ui-color-border); border-radius: 22rpx; background: var(--ui-color-background-surface); }
-.period-arrow { display: flex; width: 56rpx; height: 56rpx; align-items: center; justify-content: center; }
-.period-copy { flex: 1; text-align: center; }
-.period-label { font-size: var(--ui-font-size-large); font-weight: 700; }
-.period-effective { margin-top: 5rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-small); }
+.period-rail { display: grid; grid-template-columns: 1fr 1.16fr 1fr; gap: 8rpx; margin-top: 22rpx; }
+.period-rail__item { display: flex; min-width: 0; min-height: 88rpx; align-items: center; justify-content: stretch; padding: 2rpx; }
+.period-rail__visual { display: flex; width: 100%; min-width: 0; min-height: 80rpx; box-sizing: border-box; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; padding: 8rpx; border: 1rpx solid var(--ui-color-border); border-radius: 18rpx; background: var(--ui-color-background-surface); color: var(--ui-color-text-muted); }
+.period-rail__item--selected .period-rail__visual { border-color: var(--ui-color-action-primary); background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); box-shadow: 0 3rpx 9rpx var(--ui-color-shadow-soft); }
+.period-rail__label, .period-rail__range { max-width: 100%; overflow: hidden; font-size: var(--ui-font-size-small); text-overflow: ellipsis; white-space: nowrap; }
+.period-rail__label { font-weight: 650; }
+.period-rail__range { margin-top: 4rpx; font-weight: 400; }
+.period-effective { margin: 8rpx 0 18rpx; color: var(--ui-color-text-muted); font-size: var(--ui-font-size-small); text-align: center; }
 .ranking-list { overflow: hidden; border: 1rpx solid var(--ui-color-border); border-radius: 24rpx; background: var(--ui-color-background-surface); }
 .ranking-row { display: flex; min-height: 112rpx; align-items: center; gap: 16rpx; padding: 14rpx 20rpx; border-top: 1rpx solid var(--ui-color-border); }
 .ranking-row:first-child { border-top: 0; }

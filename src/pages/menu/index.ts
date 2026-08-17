@@ -795,7 +795,9 @@ Page({
     this.setData({ searchKeyword })
     if (searchTimer) clearTimeout(searchTimer)
     if (!searchKeyword) {
-      this.setData({ searching: false }, () => this.refreshData(false, true))
+      searchTimer = null
+      searchRequestId += 1
+      this.setData({ searching: false, contentLoading: true }, () => this.refreshData(false, true))
       return
     }
     searchTimer = setTimeout(() => this.performSearch(searchKeyword), 260)

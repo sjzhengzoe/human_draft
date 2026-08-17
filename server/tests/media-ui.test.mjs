@@ -90,6 +90,8 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(page, /class="media-filter-row media-filter-row--category"[\s\S]*?class="media-filter-label">分类：[\s\S]*?class="media-filter-scroll"/);
   assert.match(page, /class="media-filter-row media-filter-row--secondary"[\s\S]*?class="media-filter-label">状态：[\s\S]*?class="category-list status-list"/);
   assert.match(page, /class="media-command-row"[\s\S]*?class="search-row"[\s\S]*?<app-icon name="search" size="24"[\s\S]*?<app-input[\s\S]*?persistent[\s\S]*?class="media-command-actions"[\s\S]*?aria-label="新增影视"[\s\S]*?aria-label="更多影视操作"/);
+  assert.match(page, /<app-input[^>]*persistent[^>]*clearable[^>]*clear-aria-label="清空作品搜索"/);
+  assert.doesNotMatch(page, /search-row__clear|>清除<\/view>/);
   assert.match(page, /<app-dialog[\s\S]*?visible="\{\{moreMenuVisible\}\}"[\s\S]*?placement="bottom"[\s\S]*?管理影视分类/);
   assert.doesNotMatch(page, /class="media-filter-actions"/);
   assert.ok(page.indexOf('class="category-list rating-list"') < page.indexOf('class="search-row"'));
@@ -121,7 +123,6 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /\.icon-button\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.media-command-row\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/s);
   assert.match(styles, /\.search-row__field\s*\{[^}]*min-height:\s*58rpx;[^}]*gap:\s*12rpx;[^}]*padding:\s*0 18rpx;/s);
-  assert.match(styles, /\.search-row__button,[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/);
 });
 
 test("the whole media module follows the shared three-tier typography", async () => {

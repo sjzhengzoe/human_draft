@@ -43,6 +43,14 @@ Component({
       type: Boolean,
       value: false
     },
+    clearable: {
+      type: Boolean,
+      value: false
+    },
+    clearAriaLabel: {
+      type: String,
+      value: "清空输入内容"
+    },
     dialogMode: {
       type: Boolean,
       value: false
@@ -138,6 +146,12 @@ Component({
       if (!this.properties.confirmHold) {
         this.setData({ editing: false, nativeFocus: false })
       }
+    },
+    handleClear() {
+      if (this.properties.disabled || !this.data.localValue) return
+      this.setData({ localValue: "", editing: true, nativeFocus: true })
+      this.triggerEvent("input", { value: "", cursor: 0 })
+      this.triggerEvent("clear", { value: "" })
     }
   }
 })

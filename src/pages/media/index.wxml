@@ -47,9 +47,8 @@
       <view wx:if="{{displayMode === 'record'}}" class="search-row">
         <view class="search-row__field">
           <app-icon name="search" size="24" />
-          <app-input custom-class="search-row__input" persistent value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
+          <app-input custom-class="search-row__input" persistent clearable clear-aria-label="清空作品搜索" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
         </view>
-        <view wx:if="{{appliedKeyword}}" class="search-row__clear" bindtap="handleClearSearch">清除</view>
       </view>
       <view wx:if="{{canWrite || guestMode}}" class="media-command-actions">
         <view class="icon-button icon-button--primary" role="button" aria-label="新增影视" bindtap="handleAdd">

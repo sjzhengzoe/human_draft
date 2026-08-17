@@ -41,7 +41,7 @@
     <view class="menu-command-row">
       <view class="menu-search">
         <app-icon name="search" size="24" />
-        <app-input custom-class="menu-search__input" persistent value="{{searchKeyword}}" placeholder="{{activeRecordType === 'all' ? '搜索全部菜品或店铺' : activeRecordType === 'outside' ? '搜索店铺或店内菜品' : '搜索全部在家菜品'}}" bindinput="handleSearchInput" />
+        <app-input custom-class="menu-search__input" persistent clearable clear-aria-label="清空菜单搜索" value="{{searchKeyword}}" placeholder="{{activeRecordType === 'all' ? '搜索全部菜品或店铺' : activeRecordType === 'outside' ? '搜索店铺或店内菜品' : '搜索全部在家菜品'}}" bindinput="handleSearchInput" />
       </view>
       <view class="menu-command-actions">
         <view wx:if="{{sortEditing}}" class="menu-command-finish" role="button" aria-label="完成菜单排序" bindtap="handleSortEditingToggle">完成排序</view>

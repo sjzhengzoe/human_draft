@@ -645,6 +645,11 @@ Page({
     this.setData({ keyword })
     if (this.data.displayMode !== "record") return
     if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
+    if (!keyword.trim()) {
+      mediaSearchTimer = null
+      this.applySearch("")
+      return
+    }
     mediaSearchTimer = setTimeout(() => {
       mediaSearchTimer = null
       if (this.data.displayMode !== "record") return
@@ -670,12 +675,6 @@ Page({
       recordTotal: 0,
       recordLoaded: false
     }, () => void this.loadCurrentView({ reset: true }))
-  },
-
-  handleClearSearch() {
-    if (mediaSearchTimer) clearTimeout(mediaSearchTimer)
-    mediaSearchTimer = null
-    this.setData({ keyword: "" }, () => this.applySearch(""))
   },
 
   handleContentLower() {
