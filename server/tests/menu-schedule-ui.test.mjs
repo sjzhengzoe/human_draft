@@ -102,13 +102,15 @@ test("weekly menu component keeps focused day and week displays with the random 
   assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
   assert.match(page, /class="meal-slot__remove"[\s\S]*?catchtap="handleRemoveMealItem"/);
   assert.match(page, /class="meal-slot__remove"[\s\S]*?<app-icon name="x-muted" size="18"/);
-  assert.match(page, /class="meal-slot__image"[^>]*mode="aspectFit"/);
+  assert.match(page, /class="meal-slot__image"[^>]*mode="aspectFit"[^>]*fade-in="\{\{false\}\}"/);
   assert.doesNotMatch(page, /meal-list__line|meal-section__marker/);
   assert.match(page, /class="meal-section__count">\{\{meal\.items\.length \? meal\.items\.length \+ ' 道' : '未安排'\}\}/);
   assert.doesNotMatch(page, /operation-loading/);
   assert.doesNotMatch(page, /空档位|handleAddSlot|handleRemoveSlotRequest|showRemoveDialog/);
   assert.doesNotMatch(page, /全部解锁|handleResetLocks|meal-slot--locked|已锁/);
   assert.match(logic, /items: toPlanItems\(meal\?\.items \|\| \[\], date, definition\.key\)/);
+  assert.match(logic, /function scheduleItemKey\(item: MenuScheduleItem[\s\S]*?item\.source_kind === "dish" \? item\.dish_id : item\.place_id/);
+  assert.match(logic, /key: scheduleItemKey\(item, date, period, index\)/);
   assert.match(logic, /Component\(\{/);
   assert.match(logic, /lifetimes:\s*\{[\s\S]*?attached\(\)[\s\S]*?detached\(\)/);
   assert.match(logic, /pageLifetimes:\s*\{[\s\S]*?show\(\)/);

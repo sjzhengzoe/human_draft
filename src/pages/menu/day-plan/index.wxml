@@ -77,7 +77,7 @@
             <view class="meal-grid">
               <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="planItem" wx:for-index="itemIndex" class="meal-slot">
                 <view class="meal-slot__image-wrap">
-                  <image wx:if="{{planItem.item.image_url}}" class="meal-slot__image" src="{{planItem.item.image_url}}" mode="aspectFit" lazy-load />
+                  <image wx:if="{{planItem.item.image_url}}" class="meal-slot__image" src="{{planItem.item.image_url}}" mode="aspectFit" fade-in="{{false}}" lazy-load />
                   <view wx:else class="meal-slot__placeholder"><view>暂无图片</view></view>
                   <view class="meal-slot__type">{{planItem.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
                 </view>

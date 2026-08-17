@@ -208,13 +208,18 @@ function mealFor(meals: MenuScheduleMeal[], date: string, period: MealPeriod): M
   return meals.find((meal) => meal.meal_date === date && meal.meal_period === period)
 }
 
+function scheduleItemKey(item: MenuScheduleItem, date: string, period: MealPeriod, index: number): string {
+  const sourceId = item.source_kind === "dish" ? item.dish_id : item.place_id
+  return `${date}:${period}:${item.source_kind}:${sourceId || item.id || index}`
+}
+
 function toPlanItems(
   items: MenuScheduleItem[],
   date: string,
   period: MealPeriod
 ): PlanItem[] {
   return items.map((item, index) => ({
-    key: `${date}:${period}:${item.id || index}`,
+    key: scheduleItemKey(item, date, period, index),
     item
   }))
 }
@@ -243,7 +248,7 @@ function toWeekDays(meals: MenuScheduleMeal[], anchor: string): WeekDay[] {
       meals: MEAL_DEFINITIONS.map((definition) => {
         const meal = mealFor(meals, date, definition.key)
         const items = (meal?.items || []).map((item, itemIndex) => ({
-          key: `${date}:${definition.key}:${item.id || itemIndex}`,
+          key: scheduleItemKey(item, date, definition.key, itemIndex),
           name: item.name,
           imageUrl: item.image_url || item.place_image_url || "",
           fallbackText: item.name.slice(0, 1)
@@ -698,13 +703,6 @@ Component({
         if (currentUser) {
           updateCachedMenuScheduleMeal(currentUser.uid, getMenuDataRevision(), savedMeal)
         }
-        this.setData({
-          [`dayMeals[${mealIndex}].items`]: toPlanItems(
-            savedMeal.items,
-            this.data.selectedDate,
-            savedMeal.meal_period
-          )
-        })
       }
     } catch (error) {
       if (isAsyncPageActive(this)) {
