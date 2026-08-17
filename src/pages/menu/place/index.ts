@@ -1,18 +1,20 @@
-import { ensureLogin } from "../../../services/auth"
+import { ensureLogin, getCurrentUser } from "../../../services/auth"
 import { getMenuPlace, listDishes } from "../../../services/menu"
-import type { Dish, MenuPlace } from "../../../types/api"
+import type { MenuPlace, MenuPlaceDishPreview } from "../../../types/api"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
   deactivateAsyncPage,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { getMenuDataRevision } from "../../../utils/menu-data-revision"
+import { cacheMenuPlace, getCachedMenuPlace } from "../../../utils/menu-data-store"
 
 Page({
   data: {
     placeId: "",
     place: null as MenuPlace | null,
-    dishes: [] as Dish[],
+    dishes: [] as MenuPlaceDishPreview[],
     canWrite: false,
     loading: true,
     errorMessage: ""
@@ -25,6 +27,21 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
+    const user = getCurrentUser()
+    const cachedPlace = user
+      ? getCachedMenuPlace(user.uid, getMenuDataRevision(), this.data.placeId)
+      : null
+    if (user && cachedPlace) {
+      wx.setNavigationBarTitle({ title: cachedPlace.name })
+      this.setData({
+        place: cachedPlace,
+        dishes: cachedPlace.dishes,
+        canWrite: user.can_write,
+        loading: false,
+        errorMessage: ""
+      })
+      return
+    }
     this.loadData()
   },
 
@@ -46,6 +63,10 @@ Page({
         listDishes({ place_id: this.data.placeId, sort: "custom", page_size: 100 })
       ])
       if (!isAsyncPageRequestCurrent(this, generation)) return
+      cacheMenuPlace(session.user.uid, getMenuDataRevision(), {
+        ...place,
+        dishes
+      })
       wx.setNavigationBarTitle({ title: place.name })
       this.setData({
         place,

@@ -3,6 +3,7 @@ import type { ApiEnvelope, AppUser, AuthSession } from "../types/api"
 import { clearKeyMomentDataCache } from "../utils/key-moment-data-cache"
 import { clearLuggageDataCache } from "../utils/luggage-data-cache"
 import { clearMediaDataCache } from "../utils/media-data-cache"
+import { clearMenuDataStore } from "../utils/menu-data-store"
 import { applyHiddenHomeModuleKeys } from "../utils/home-modules"
 import { clearStoredSession, getStoredSession, setStoredSession } from "./session"
 import { getProductAttribution } from "./analytics-context"
@@ -134,6 +135,7 @@ export function clearLocalAccountState(): void {
   clearStoredSession()
   clearLuggageDataCache()
   clearMediaDataCache()
+  clearMenuDataStore()
   clearKeyMomentDataCache()
   applyHiddenHomeModuleKeys([])
   try {

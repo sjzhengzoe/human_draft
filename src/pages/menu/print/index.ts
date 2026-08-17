@@ -12,6 +12,11 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { requireLoginForAction } from "../../../utils/login-required"
+import { getMenuDataRevision } from "../../../utils/menu-data-revision"
+import {
+  getCachedMenuContent,
+  getCachedMenuMetadata
+} from "../../../utils/menu-data-store"
 
 type PrintDish = Dish & { selectionOrder: number }
 
@@ -293,7 +298,35 @@ Page({
   },
 
   async loadData() {
-    if (!getCurrentUser()) return
+    const currentUser = getCurrentUser()
+    if (!currentUser) return
+    const revision = getMenuDataRevision()
+    const metadata = getCachedMenuMetadata(currentUser.uid, revision)
+    const content = getCachedMenuContent(currentUser.uid, revision, "all")
+    if (metadata && content) {
+      const activeCategoryId = this.data.activeCategoryId
+      const activePrintStatus = this.data.activePrintStatus
+      const selectedIds = this.data.selectedIds
+      const dishes = content.value.dishes
+        .filter((dish) => dish.record_type === "home")
+        .filter((dish) => !activeCategoryId || dish.category_id === activeCategoryId)
+        .filter((dish) => activePrintStatus === "all"
+          || (activePrintStatus === "printed" ? Boolean(dish.printed_at) : !dish.printed_at))
+        .map((dish) => ({
+          ...dish,
+          selectionOrder: selectedIds.indexOf(dish.id) + 1
+        }))
+      this.setData({
+        categories: metadata.value.categories,
+        dishes,
+        canWrite: metadata.value.canWrite,
+        loading: false,
+        contentLoading: false,
+        hasLoaded: true,
+        errorMessage: ""
+      })
+      return
+    }
     const generation = beginAsyncPageRequest(this)
     const activeCategoryId = this.data.activeCategoryId
     const activePrintStatus = this.data.activePrintStatus

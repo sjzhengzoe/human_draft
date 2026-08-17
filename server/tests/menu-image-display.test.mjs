@@ -223,8 +223,11 @@ test("menu supports 4:3 dish images, 1:1 store images, and matching previews", a
   assert.match(menuService, /include_dishes\?: boolean/);
   assert.match(menuPlaces, /if \(!includeDishes\) \{[\s\S]*?return places\.map/);
   assert.match(menuLogic, /metadataLoaded:\s*false/);
-  assert.match(menuLogic, /menuContentCache = new Map/);
-  assert.match(menuLogic, /revisionChanged[\s\S]*cacheExpired/);
+  assert.match(menuLogic, /getCachedMenuContent/);
+  assert.match(menuLogic, /restoreMenuDataFromStore/);
+  assert.doesNotMatch(menuLogic, /onUnload\(\)[\s\S]*?menuContentCache\.clear\(\)/);
+  assert.match(menuLogic, /revisionChanged/);
+  assert.doesNotMatch(menuLogic, /cacheExpired/);
   assert.match(menuLogic, /this\.refreshData\(false, true\)/);
   assert.match(menuService, /markMenuDataChanged\(\)/);
   assert.match(diningService, /markMenuDataChanged\(\)/);

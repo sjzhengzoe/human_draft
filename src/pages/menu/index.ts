@@ -38,6 +38,12 @@ import {
 import {
   getMenuDataRevision
 } from "../../utils/menu-data-revision"
+import {
+  cacheMenuContent,
+  cacheMenuMetadata,
+  getCachedMenuContent,
+  getCachedMenuMetadata
+} from "../../utils/menu-data-store"
 import { requireLoginForAction } from "../../utils/login-required"
 
 let dragSourceIndex = -1
@@ -110,13 +116,6 @@ type SelectableFavorite = MenuFavorite & {
   selected: boolean
 }
 
-type CachedMenuContent = {
-  revision: number
-  cachedAt: number
-  dishes: MenuDish[]
-  outsidePlaces: QuickMenuPlace[]
-}
-
 const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
   breakfast: "早餐",
   lunch: "午餐",
@@ -125,8 +124,6 @@ const MEAL_PERIOD_TEXT: Record<MealPeriod, string> = {
 }
 
 const BROWSE_WINDOW_RADIUS = 1
-const MENU_CACHE_MAX_AGE_MS = 5 * 60 * 1000
-const menuContentCache = new Map<string, CachedMenuContent>()
 
 function isBrowseItemVisible(index: number, currentIndex: number): boolean {
   return Math.abs(index - currentIndex) <= BROWSE_WINDOW_RADIUS
@@ -411,7 +408,6 @@ Page({
     hasLoaded: false,
     metadataLoaded: false,
     loadedRevision: -1,
-    lastLoadedAt: 0,
     errorMessage: "",
     searchKeyword: "",
     searching: false,
@@ -453,7 +449,8 @@ Page({
 
   onShow() {
     activateAsyncPage(this)
-    if (!getCurrentUser()) {
+    const currentUser = getCurrentUser()
+    if (!currentUser) {
       this.setData({
         guestMode: true,
         loading: false,
@@ -470,10 +467,9 @@ Page({
     if (this.data.selectionMode && !this.data.selectionLoaded) {
       this.loadSelectionContext()
     }
+    if (!this.data.metadataLoaded && this.restoreMenuDataFromStore(currentUser.uid)) return
     const revisionChanged = this.data.loadedRevision !== getMenuDataRevision()
-    const cacheExpired = Date.now() - this.data.lastLoadedAt > MENU_CACHE_MAX_AGE_MS
-    if (!this.data.metadataLoaded || revisionChanged || cacheExpired) {
-      menuContentCache.clear()
+    if (!this.data.metadataLoaded || revisionChanged) {
       this.refreshData(true)
     }
   },
@@ -484,10 +480,62 @@ Page({
     sortOriginalIds = []
     outsideSortOriginalIds.clear()
     outsidePlaceOriginalIds = []
-    menuContentCache.clear()
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = null
     searchRequestId += 1
+  },
+
+  restoreMenuDataFromStore(userId: string): boolean {
+    const revision = getMenuDataRevision()
+    const metadata = getCachedMenuMetadata(userId, revision)
+    if (!metadata) return false
+    const activeFilter = resolveCategoryFilter(
+      this.data.activeFilter,
+      metadata.value.categories,
+      metadata.value.outsideCategories
+    )
+    const content = getCachedMenuContent(userId, revision, activeFilter)
+    if (!content) return false
+    const activeRecordType = recordTypeFromFilter(activeFilter)
+    const itemCount = activeRecordType === "outside"
+      ? content.value.outsidePlaces.length
+      : activeRecordType === "all"
+        ? content.value.dishes.length + content.value.outsidePlaces.length
+        : content.value.dishes.length
+    const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
+    const dishes = applyBrowseWindow(
+      content.value.dishes.map(toMenuDish),
+      browsePosition.browseCurrentIndex
+    )
+    const outsidePlaces = applyBrowseWindow(
+      content.value.outsidePlaces.map(toQuickMenuPlace),
+      browsePosition.browseCurrentIndex
+    )
+    this.setData({
+      categories: metadata.value.categories,
+      outsideCategories: metadata.value.outsideCategories,
+      dishes,
+      outsidePlaces,
+      browseItems: buildBrowseItems(
+        dishes,
+        outsidePlaces,
+        activeRecordType,
+        browsePosition.browseCurrentIndex
+      ),
+      homePlaceId: metadata.value.homePlaceId,
+      activeFilter,
+      activeRecordType,
+      ...browsePosition,
+      canWrite: metadata.value.canWrite,
+      canReorder: metadata.value.canWrite && activeRecordType !== "all",
+      loading: false,
+      contentLoading: false,
+      hasLoaded: true,
+      metadataLoaded: true,
+      loadedRevision: revision,
+      errorMessage: ""
+    }, () => this.applySelectionMarks())
+    return true
   },
 
   async loadSelectionContext() {
@@ -554,32 +602,31 @@ Page({
   },
 
   async refreshData(reloadMetadata: boolean, allowCache = false) {
-    if (!getCurrentUser()) return
+    const currentUser = getCurrentUser()
+    if (!currentUser) return
     const generation = beginAsyncPageRequest(this)
     const currentRevision = getMenuDataRevision()
-    if (currentRevision !== this.data.loadedRevision) menuContentCache.clear()
     if (!reloadMetadata && allowCache) {
       const activeFilter = resolveCategoryFilter(
         this.data.activeFilter,
         this.data.categories,
         this.data.outsideCategories
       )
-      const cached = menuContentCache.get(activeFilter)
-      if (
-        cached
-        && cached.revision === currentRevision
-        && Date.now() - cached.cachedAt <= MENU_CACHE_MAX_AGE_MS
-      ) {
+      const cached = getCachedMenuContent(currentUser.uid, currentRevision, activeFilter)
+      if (cached) {
         const activeRecordType = recordTypeFromFilter(activeFilter)
         const itemCount = activeRecordType === "outside"
-          ? cached.outsidePlaces.length
+          ? cached.value.outsidePlaces.length
           : activeRecordType === "all"
-            ? cached.dishes.length + cached.outsidePlaces.length
-            : cached.dishes.length
+            ? cached.value.dishes.length + cached.value.outsidePlaces.length
+            : cached.value.dishes.length
         const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
-        const dishes = applyBrowseWindow(cached.dishes, browsePosition.browseCurrentIndex)
+        const dishes = applyBrowseWindow(
+          cached.value.dishes.map(toMenuDish),
+          browsePosition.browseCurrentIndex
+        )
         const outsidePlaces = applyBrowseWindow(
-          cached.outsidePlaces,
+          cached.value.outsidePlaces.map(toQuickMenuPlace),
           browsePosition.browseCurrentIndex
         )
         this.setData({
@@ -599,7 +646,6 @@ Page({
           contentLoading: false,
           hasLoaded: true,
           loadedRevision: currentRevision,
-          lastLoadedAt: cached.cachedAt,
           errorMessage: ""
         }, () => this.applySelectionMarks())
         return
@@ -665,15 +711,22 @@ Page({
           : dishes.length
       const browsePosition = getBrowsePosition(itemCount, this.data.browseCurrentIndex)
       const loadedRevision = getMenuDataRevision()
-      const loadedAt = Date.now()
       const menuDishes = dishes.map(toMenuDish)
       const quickOutsidePlaces = outsidePlaces.map(toQuickMenuPlace)
-      menuContentCache.set(activeFilter, {
-        revision: loadedRevision,
-        cachedAt: loadedAt,
-        dishes: menuDishes,
-        outsidePlaces: quickOutsidePlaces
-      })
+      cacheMenuContent(
+        currentUser.uid,
+        loadedRevision,
+        activeFilter,
+        { dishes, outsidePlaces }
+      )
+      if (reloadMetadata) {
+        cacheMenuMetadata(currentUser.uid, loadedRevision, {
+          categories,
+          outsideCategories,
+          homePlaceId,
+          canWrite
+        })
+      }
       const nextDishes = applyBrowseWindow(
         menuDishes,
         browsePosition.browseCurrentIndex
@@ -698,7 +751,6 @@ Page({
         canWrite,
         canReorder: canWrite && activeRecordType !== "all",
         loadedRevision,
-        lastLoadedAt: loadedAt,
         draggingIndex: -1,
         dragTargetIndex: -1
       }
