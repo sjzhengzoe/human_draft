@@ -148,7 +148,7 @@ test("login prompts wait for a write action instead of blocking management pages
     ["src/pages/luggage/scenes/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
     ["src/exercise/pages/settings/index.ts", ["handleSave", "handleReset"]],
     ["src/pages/menu/favorites/index.ts", ["handleAdd", "handleRemove", "handleMove"]],
-    ["src/pages/menu/day-plan/index.ts", ["handleMealEdit", "handleRandomize", "handleAddSlot", "handleRemoveSlotRequest"]],
+    ["src/pages/menu/day-plan/index.ts", ["handleMealEdit", "handleRandomize", "handleRemoveMealItem"]],
     ["src/pages/menu/print/index.ts", ["handleConfirmPrinted"]],
   ]
 

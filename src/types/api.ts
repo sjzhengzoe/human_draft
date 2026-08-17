@@ -240,7 +240,6 @@ export type MenuScheduleMeal = {
   id: string
   meal_date: string
   meal_period: MealPeriod
-  slot_count: number
   items: MenuScheduleItem[]
   created_at: string
   updated_at: string

@@ -95,7 +95,7 @@ export async function listMenuSchedule(supabase, uid, query = {}) {
   const { start, end } = normalizeRange(query);
   const { data: meals, error } = await supabase
     .from("menu_schedule_meals")
-    .select("id, meal_date, meal_period, slot_count, created_at, updated_at")
+    .select("id, meal_date, meal_period, created_at, updated_at")
     .eq("uid", uid)
     .gte("meal_date", start)
     .lte("meal_date", end)
@@ -158,7 +158,6 @@ export async function listMenuSchedule(supabase, uid, query = {}) {
       id: meal.id,
       meal_date: meal.meal_date,
       meal_period: meal.meal_period,
-      slot_count: Number(meal.slot_count || 3),
       items: itemsByMeal.get(meal.id) || [],
       created_at: meal.created_at,
       updated_at: meal.updated_at,
@@ -166,8 +165,8 @@ export async function listMenuSchedule(supabase, uid, query = {}) {
   };
 }
 
-function normalizeScheduleItems(items, slotCount) {
-  assertCondition(Array.isArray(items) && items.length <= slotCount, 400, "INVALID_MEAL_ITEMS", "所选菜品数量超过当前档位。" );
+function normalizeScheduleItems(items) {
+  assertCondition(Array.isArray(items), 400, "INVALID_MEAL_ITEMS", "所选菜单无效。" );
   const seen = new Set();
   return items.map((item) => {
     if (item?.archived_item_id !== undefined) {
@@ -199,14 +198,11 @@ function normalizeScheduleItems(items, slotCount) {
 export async function replaceMenuScheduleMeal(supabase, uid, body = {}) {
   assertCondition(isDate(body.meal_date), 400, "INVALID_MEAL_DATE", "用餐日期无效。" );
   assertCondition(MEAL_PERIODS.has(body.meal_period), 400, "INVALID_MEAL_PERIOD", "餐次无效。" );
-  const slotCount = Number(body.slot_count);
-  assertCondition(Number.isInteger(slotCount) && slotCount >= 1 && slotCount <= 12, 400, "INVALID_SLOT_COUNT", "菜品档位应在 1 到 12 个之间。" );
-  const items = normalizeScheduleItems(body.items, slotCount);
+  const items = normalizeScheduleItems(body.items);
   const { error } = await supabase.rpc("replace_menu_schedule_meal", {
     p_uid: uid,
     p_meal_date: body.meal_date,
     p_meal_period: body.meal_period,
-    p_slot_count: slotCount,
     p_items: items,
   });
   throwSupabaseError(error, "保存本周菜单失败。", {

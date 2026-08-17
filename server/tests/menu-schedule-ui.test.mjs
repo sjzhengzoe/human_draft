@@ -73,6 +73,9 @@ test("weekly menu has day, week, month, year displays and embeds the original ra
   assert.match(page, /bounces="\{\{false\}\}"/);
   assert.match(page, /\['day', 'week', 'month', 'year'\]/);
   assert.match(page, />随机菜单</);
+  assert.match(page, /loading && hasLoaded \? '正在更新…'/);
+  assert.match(page, /class="period-bar"[\s\S]*?class="period-navigation"[\s\S]*?class="period-random"[\s\S]*?>随机菜单<\/button>[\s\S]*?<\/view>\s*<\/view>\s*<scroll-view/);
+  assert.doesNotMatch(page, /class="random-header"/);
   assert.match(page, /activeMode === 'week'/);
   assert.match(page, /class="week-matrix"/);
   assert.match(page, /class="week-matrix__thumbnail"/);
@@ -82,9 +85,20 @@ test("weekly menu has day, week, month, year displays and embeds the original ra
   assert.match(page, /activeMode === 'month'/);
   assert.match(page, /class="year-grid"/);
   assert.match(page, /bindtap="handleRanking"/);
-  assert.match(logic, /slot_count \|\| DEFAULT_SLOT_COUNT/);
+  assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
+  assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
+  assert.match(page, /class="meal-slot__remove"[\s\S]*?catchtap="handleRemoveMealItem"/);
+  assert.doesNotMatch(page, /空档位|handleAddSlot|handleRemoveSlotRequest|showRemoveDialog/);
+  assert.doesNotMatch(page, /全部解锁|handleResetLocks|meal-slot--locked|已锁/);
+  assert.match(logic, /items: \(meal\?\.items \|\| \[\]\)\.map/);
+  assert.match(logic, /randomAdditionCount = meal\.items\.length === 0 \? DEFAULT_RANDOM_ITEM_COUNT : 1/);
+  assert.match(logic, /items: \[\.\.\.meal\.items, \.\.\.additions\]/);
+  assert.match(logic, /meal\.items\.length >= DEFAULT_RANDOM_ITEM_COUNT/);
+  assert.match(logic, /handleRemoveMealItem/);
+  assert.match(logic, /restoreScheduleFromStore/);
+  assert.match(logic, /if \(showInitialLoading\) this\.setData\(\{ errorMessage: message \}\)[\s\S]*?wx\.showToast/);
+  assert.doesNotMatch(logic, /slotCount|slot_count|locked|handleMealItemTap|handleResetLocks/);
   assert.match(logic, /imageUrl: item\.image_url \|\| item\.place_image_url/);
-  assert.match(logic, /if \(slot\.locked && slot\.item\)/);
   assert.match(style, /\.planner-shell \{[^}]*height: 100vh[^}]*overflow: hidden/);
   assert.match(style, /\.planner-page \{[^}]*height: 0[^}]*flex: 1/);
   assert.match(style, /\.planner-content \{[^}]*flex: 1/);
@@ -102,4 +116,24 @@ test("ranking mixes dishes and stores while the server caps statistics at today"
   assert.match(logic, /const effectiveEnd = range\.end < today \? range\.end : today/);
   assert.match(logic, /seenInMeal\.has\(key\)/);
   assert.match(logic, /item\.record_type === "outside" \|\| item\.source_kind === "place"/);
+});
+
+test("menu schedule persistence stores selected items without a slot limit", async () => {
+  const [pageLogic, service, types, domain, migration] = await Promise.all([
+    read("src/pages/menu/index.ts"),
+    read("src/services/menu.ts"),
+    read("src/types/api.ts"),
+    read("server/domains/menu/schedule.mjs"),
+    read("supabase/migrations/20260817034505_make_menu_schedule_item_count_dynamic.sql"),
+  ]);
+
+  assert.doesNotMatch(pageLogic, /selectionSlotCount|slotCount:/);
+  assert.doesNotMatch(service, /slot_count: input\.slotCount/);
+  assert.doesNotMatch(types, /MenuScheduleMeal[\s\S]*?slot_count/);
+  assert.doesNotMatch(domain, /INVALID_SLOT_COUNT|p_slot_count|items\.length <= slotCount/);
+  assert.match(domain, /normalizeScheduleItems\(body\.items\)/);
+  assert.match(migration, /drop column if exists slot_count/);
+  assert.match(migration, /drop function if exists public\.replace_menu_schedule_meal\(text, date, text, integer, jsonb\)/);
+  assert.match(migration, /create or replace function public\.replace_menu_schedule_meal\([\s\S]*?p_items jsonb/);
+  assert.match(migration, /MENU_SCHEDULE_ITEM_COUNT_INVALID/);
 });

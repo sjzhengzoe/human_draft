@@ -147,7 +147,6 @@ export async function getMenuScheduleRange(
 export async function replaceMenuScheduleMeal(input: {
   mealDate: string
   mealPeriod: MealPeriod
-  slotCount: number
   items: Array<
     | { source_kind: "dish"; dish_id: string }
     | { source_kind: "place"; place_id: string }
@@ -160,7 +159,6 @@ export async function replaceMenuScheduleMeal(input: {
     data: {
       meal_date: input.mealDate,
       meal_period: input.mealPeriod,
-      slot_count: input.slotCount,
       items: input.items
     }
   })

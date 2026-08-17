@@ -18,12 +18,21 @@
     </view>
 
     <view class="period-bar">
-      <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="27" /></view>
-      <view class="period-copy" bindtap="handleToday">
-        <view class="period-label">{{periodLabel}}</view>
-        <view class="period-today">点击回到当前日期</view>
+      <view class="period-navigation">
+        <view class="period-arrow" role="button" aria-label="上一个时间范围" data-direction="-1" bindtap="handlePeriodMove"><app-icon name="arrow-left" size="27" /></view>
+        <view class="period-copy" bindtap="handleToday">
+          <view class="period-label">{{periodLabel}}</view>
+          <view class="period-today">{{loading && hasLoaded ? '正在更新…' : '点击回到当前日期'}}</view>
+        </view>
+        <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="27" /></view>
       </view>
-      <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="27" /></view>
+      <view wx:if="{{activeMode === 'day'}}" class="period-random">
+        <view class="period-random__copy">
+          <view class="period-random__title">今天吃什么</view>
+          <view class="period-random__hint">空餐随机三项，已有选择时每次补一项</view>
+        </view>
+        <button class="random-action random-action--primary" loading="{{saving}}" bindtap="handleRandomize">随机菜单</button>
+      </view>
     </view>
   </view>
 
@@ -37,41 +46,29 @@
     </view>
 
     <block wx:elif="{{activeMode === 'day'}}">
-      <view class="random-header">
-        <view>
-          <view class="random-header__title">今天吃什么</view>
-          <view class="random-header__hint">点选菜品可锁定，随机时会保留</view>
-        </view>
-        <view class="random-actions">
-          <button class="random-action random-action--secondary" bindtap="handleResetLocks">全部解锁</button>
-          <button class="random-action random-action--primary" loading="{{saving}}" bindtap="handleRandomize">随机菜单</button>
-        </view>
-      </view>
-
       <view class="meal-list">
         <view wx:for="{{dayMeals}}" wx:key="key" wx:for-item="meal" wx:for-index="mealIndex" class="meal-section meal-section--{{meal.key}}">
           <view class="meal-section__header">
-            <view class="meal-section__copy" data-period="{{meal.key}}" data-date="{{selectedDate}}" bindtap="handleMealEdit">
+            <view class="meal-section__copy">
               <view class="meal-section__title">{{meal.label}}</view>
               <view class="meal-section__english">{{meal.englishLabel}}</view>
-            </view>
-            <view class="meal-section__tools">
-              <view class="meal-tool" role="button" aria-label="选择{{meal.label}}" data-period="{{meal.key}}" data-date="{{selectedDate}}" bindtap="handleMealEdit"><app-icon name="pencil" size="24" /></view>
-              <view class="meal-tool" role="button" aria-label="增加一个档位" data-meal-index="{{mealIndex}}" bindtap="handleAddSlot"><app-icon name="plus" size="24" /></view>
-              <view class="meal-tool {{meal.slotCount <= 1 ? 'meal-tool--disabled' : ''}}" role="button" aria-label="删除最后一个档位" data-meal-index="{{mealIndex}}" bindtap="handleRemoveSlotRequest"><app-icon name="x-muted" size="24" /></view>
             </view>
           </view>
 
           <scroll-view class="meal-grid-scroll" scroll-x enhanced show-scrollbar="{{false}}">
             <view class="meal-grid">
-              <view wx:for="{{meal.slots}}" wx:key="key" wx:for-item="slot" wx:for-index="slotIndex" class="meal-slot {{slot.locked ? 'meal-slot--locked' : ''}} {{!slot.item ? 'meal-slot--empty' : ''}}" data-meal-index="{{mealIndex}}" data-slot-index="{{slotIndex}}" bindtap="handleSlotTap">
+              <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="planItem" wx:for-index="itemIndex" class="meal-slot">
                 <view class="meal-slot__image-wrap">
-                  <image wx:if="{{slot.item && slot.item.image_url}}" class="meal-slot__image" src="{{slot.item.image_url}}" mode="aspectFill" lazy-load />
-                  <view wx:else class="meal-slot__placeholder"><app-icon name="plus" size="27" /><view>{{slot.item ? '暂无图片' : '选择菜品'}}</view></view>
-                  <view wx:if="{{slot.item}}" class="meal-slot__type">{{slot.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
-                  <view wx:if="{{slot.locked}}" class="meal-slot__lock">已锁</view>
+                  <image wx:if="{{planItem.item.image_url}}" class="meal-slot__image" src="{{planItem.item.image_url}}" mode="aspectFill" lazy-load />
+                  <view wx:else class="meal-slot__placeholder"><view>暂无图片</view></view>
+                  <view class="meal-slot__type">{{planItem.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
+                  <view class="meal-slot__remove" role="button" aria-label="移除{{planItem.item.name}}" data-meal-index="{{mealIndex}}" data-item-index="{{itemIndex}}" catchtap="handleRemoveMealItem"><app-icon name="x-muted" size="24" /></view>
                 </view>
-                <view class="meal-slot__name">{{slot.item ? slot.item.name : '空档位'}}</view>
+                <view class="meal-slot__name">{{planItem.item.name}}</view>
+              </view>
+              <view class="meal-slot meal-slot--add" role="button" aria-label="添加{{meal.label}}菜品" data-period="{{meal.key}}" data-date="{{selectedDate}}" bindtap="handleMealEdit">
+                <app-icon name="plus" size="27" />
+                <view>选择菜品</view>
               </view>
             </view>
           </scroll-view>
@@ -125,6 +122,5 @@
 </view>
 </view>
 
-<app-dialog visible="{{showRemoveDialog}}" title="删除一个档位" content="最后一个档位中的菜品也会一起移除。" confirmText="删除" bind:cancel="handleRemoveCancel" bind:confirm="handleRemoveConfirm" />
 <operation-loading visible="{{saving}}" text="正在保存菜单…" />
 <login-required-dialog id="login-required-dialog" />

@@ -42,7 +42,10 @@ import {
   cacheMenuContent,
   cacheMenuMetadata,
   getCachedMenuContent,
-  getCachedMenuMetadata
+  getCachedMenuMetadata,
+  getCachedMenuScheduleRange,
+  cacheMenuScheduleRange,
+  updateCachedMenuScheduleMeal
 } from "../../utils/menu-data-store"
 import { requireLoginForAction } from "../../utils/login-required"
 
@@ -416,7 +419,6 @@ Page({
     selectionDate: "",
     selectionPeriod: "lunch" as MealPeriod,
     selectionTitle: "选择菜品",
-    selectionSlotCount: 3,
     selectionLoaded: false,
     selectedItems: [] as SelectionItem[],
     favorites: [] as SelectableFavorite[],
@@ -554,13 +556,27 @@ Page({
         this.setData({ favorites, selectionLoaded: true })
         return
       }
-      const schedule = await getMenuScheduleRange(this.data.selectionDate, this.data.selectionDate)
+      const currentUser = getCurrentUser()
+      const revision = getMenuDataRevision()
+      const cachedMeals = currentUser
+        ? getCachedMenuScheduleRange(
+          currentUser.uid,
+          revision,
+          this.data.selectionDate,
+          this.data.selectionDate
+        )
+        : null
+      const schedule = cachedMeals
+        ? { start: this.data.selectionDate, end: this.data.selectionDate, meals: cachedMeals }
+        : await getMenuScheduleRange(this.data.selectionDate, this.data.selectionDate)
       if (!isAsyncPageActive(this)) return
+      if (currentUser && !cachedMeals) {
+        cacheMenuScheduleRange(currentUser.uid, revision, schedule.start, schedule.end, schedule.meals)
+      }
       const meal = schedule.meals.find((item) => item.meal_period === this.data.selectionPeriod)
       this.setData({
         favorites,
         selectedItems: (meal?.items || []).map(selectionFromScheduleItem),
-        selectionSlotCount: meal?.slot_count || 3,
         selectionLoaded: true
       }, () => this.applySelectionMarks())
     } catch (error) {
@@ -912,12 +928,15 @@ Page({
             scheduleItems.push({ source_kind: "place", place_id: item.place_id })
           }
         })
-        await replaceMenuScheduleMeal({
+        const savedMeal = await replaceMenuScheduleMeal({
           mealDate: this.data.selectionDate,
           mealPeriod: this.data.selectionPeriod,
-          slotCount: Math.max(1, this.data.selectionSlotCount, scheduleItems.length),
           items: scheduleItems
         })
+        const currentUser = getCurrentUser()
+        if (currentUser) {
+          updateCachedMenuScheduleMeal(currentUser.uid, getMenuDataRevision(), savedMeal)
+        }
       }
       if (!isAsyncPageActive(this)) return
       this.setData({ showBasketDialog: false })

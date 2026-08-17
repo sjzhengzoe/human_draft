@@ -1,7 +1,8 @@
 import type {
   Category,
   Dish,
-  MenuPlace
+  MenuPlace,
+  MenuScheduleMeal
 } from "../types/api"
 import type { DiningScene } from "../types/dining"
 
@@ -27,6 +28,9 @@ type MenuDataStore = {
   metadata: CachedValue<MenuDataMetadata> | null
   contentByFilter: Map<string, CachedValue<MenuDataContent>>
   placesById: Map<string, MenuPlace>
+  allDishes: Dish[] | null
+  scheduleByDate: Map<string, MenuScheduleMeal[]>
+  loadedScheduleDates: Set<string>
 }
 
 let store: MenuDataStore | null = null
@@ -79,6 +83,30 @@ function cloneContent(content: MenuDataContent): MenuDataContent {
   }
 }
 
+function cloneScheduleMeal(meal: MenuScheduleMeal): MenuScheduleMeal {
+  return {
+    ...meal,
+    items: meal.items.map((item) => ({ ...item }))
+  }
+}
+
+function datesInRange(start: string, end: string): string[] {
+  if (start > end) return []
+  const dates: string[] = []
+  const current = new Date(`${start}T00:00:00Z`)
+  const last = new Date(`${end}T00:00:00Z`)
+  while (
+    Number.isFinite(current.getTime())
+    && Number.isFinite(last.getTime())
+    && current <= last
+    && dates.length <= 366
+  ) {
+    dates.push(current.toISOString().slice(0, 10))
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+  return dates
+}
+
 function matchesScope(userId: string, revision: number): boolean {
   return Boolean(store && store.userId === userId && store.revision === revision)
 }
@@ -90,7 +118,10 @@ function ensureScope(userId: string, revision: number): MenuDataStore {
       revision,
       metadata: null,
       contentByFilter: new Map(),
-      placesById: new Map()
+      placesById: new Map(),
+      allDishes: null,
+      scheduleByDate: new Map(),
+      loadedScheduleDates: new Set()
     }
   }
   return store as MenuDataStore
@@ -138,6 +169,9 @@ export function cacheMenuContent(
   currentStore.contentByFilter.set(activeFilter, {
     value: cloneContent(content)
   })
+  if (activeFilter === "all") {
+    currentStore.allDishes = content.dishes.map(cloneDish)
+  }
   content.outsidePlaces.forEach((place) => {
     currentStore.placesById.set(place.id, cloneMenuPlace(place))
   })
@@ -159,6 +193,73 @@ export function cacheMenuPlace(
   place: MenuPlace
 ): void {
   ensureScope(userId, revision).placesById.set(place.id, cloneMenuPlace(place))
+}
+
+export function getCachedMenuDishes(
+  userId: string,
+  revision: number
+): Dish[] | null {
+  if (!matchesScope(userId, revision) || !store?.allDishes) return null
+  return store.allDishes.map(cloneDish)
+}
+
+export function cacheMenuDishes(
+  userId: string,
+  revision: number,
+  dishes: Dish[]
+): void {
+  ensureScope(userId, revision).allDishes = dishes.map(cloneDish)
+}
+
+export function getCachedMenuScheduleRange(
+  userId: string,
+  revision: number,
+  start: string,
+  end: string
+): MenuScheduleMeal[] | null {
+  if (!matchesScope(userId, revision) || !store) return null
+  const dates = datesInRange(start, end)
+  if (!dates.length || dates.some((date) => !store?.loadedScheduleDates.has(date))) return null
+  return dates.flatMap((date) => (
+    store?.scheduleByDate.get(date)?.map(cloneScheduleMeal) || []
+  ))
+}
+
+export function cacheMenuScheduleRange(
+  userId: string,
+  revision: number,
+  start: string,
+  end: string,
+  meals: MenuScheduleMeal[]
+): void {
+  const currentStore = ensureScope(userId, revision)
+  const dates = datesInRange(start, end)
+  dates.forEach((date) => {
+    currentStore.loadedScheduleDates.add(date)
+    currentStore.scheduleByDate.set(date, [])
+  })
+  meals.forEach((meal) => {
+    if (!currentStore.loadedScheduleDates.has(meal.meal_date)) return
+    const dateMeals = currentStore.scheduleByDate.get(meal.meal_date) || []
+    dateMeals.push(cloneScheduleMeal(meal))
+    currentStore.scheduleByDate.set(meal.meal_date, dateMeals)
+  })
+}
+
+export function updateCachedMenuScheduleMeal(
+  userId: string,
+  revision: number,
+  meal: MenuScheduleMeal
+): boolean {
+  if (!matchesScope(userId, revision) || !store?.loadedScheduleDates.has(meal.meal_date)) {
+    return false
+  }
+  const dateMeals = store.scheduleByDate.get(meal.meal_date) || []
+  store.scheduleByDate.set(meal.meal_date, [
+    ...dateMeals.filter((item) => item.meal_period !== meal.meal_period),
+    cloneScheduleMeal(meal)
+  ])
+  return true
 }
 
 export function clearMenuDataStore(): void {

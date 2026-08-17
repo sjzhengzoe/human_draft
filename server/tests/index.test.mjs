@@ -986,8 +986,8 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         menu_schedule_meals: [
-          { id: firstMealId, uid: UID, meal_date: "2026-08-03", meal_period: "lunch", slot_count: 3 },
-          { id: secondMealId, uid: UID, meal_date: "2026-08-04", meal_period: "dinner", slot_count: 3 },
+          { id: firstMealId, uid: UID, meal_date: "2026-08-03", meal_period: "lunch" },
+          { id: secondMealId, uid: UID, meal_date: "2026-08-04", meal_period: "dinner" },
         ],
         menu_schedule_items: [
           { id: "41000000-0000-4000-8000-000000000001", uid: UID, meal_id: firstMealId, source_kind: "dish", record_type: "home", dish_id: homeDishId, place_id: DINING_ID, snapshot_name: "番茄炒鸡蛋", snapshot_place_name: "", snapshot_image_path: "home.webp", position: 0 },
@@ -1039,6 +1039,43 @@ test("menu schedule lists dated meals and ranks outside dishes by their store", 
   );
 });
 
+test("menu schedule accepts a dynamic number of selected items without slot metadata", async (t) => {
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      menu_schedule_meals: [],
+      menu_schedule_items: [],
+    }),
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+  const items = Array.from({ length: 13 }, (_value, index) => ({
+    source_kind: "dish",
+    dish_id: `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+  }));
+
+  const response = await app.inject({
+    method: "PUT",
+    url: "/api/menu-schedule/meal",
+    headers: authHeaders,
+    payload: {
+      meal_date: "2026-08-06",
+      meal_period: "lunch",
+      items,
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(supabase.rpcCalls.at(-1), {
+    name: "replace_menu_schedule_meal",
+    params: {
+      p_uid: UID,
+      p_meal_date: "2026-08-06",
+      p_meal_period: "lunch",
+      p_items: items,
+    },
+  });
+});
+
 test("menu schedule falls back to an archived snapshot after its source is deleted", async (t) => {
   const mealId = "42000000-0000-4000-8000-000000000001";
   const deletedDishId = "42000000-0000-4000-8000-000000000002";
@@ -1047,7 +1084,7 @@ test("menu schedule falls back to an archived snapshot after its source is delet
     supabase: createFakeSupabase({
       tables: authenticatedTables({
         menu_schedule_meals: [
-          { id: mealId, uid: UID, meal_date: "2026-08-05", meal_period: "lunch", slot_count: 1 },
+          { id: mealId, uid: UID, meal_date: "2026-08-05", meal_period: "lunch" },
         ],
         menu_schedule_items: [
           { id: "42000000-0000-4000-8000-000000000003", uid: UID, meal_id: mealId, source_kind: "dish", record_type: "home", dish_id: deletedDishId, place_id: null, snapshot_name: "已经删除的菜", snapshot_place_name: "", snapshot_image_path: "users/archive/history.webp", snapshot_place_image_path: "", position: 0 },
