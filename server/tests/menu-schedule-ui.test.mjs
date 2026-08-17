@@ -73,7 +73,7 @@ test("weekly menu keeps focused day and week displays with the random flow", asy
   assert.match(page, /bounces="\{\{false\}\}"/);
   assert.match(page, /\['day', 'week'\]/);
   assert.doesNotMatch(page, /activeMode === 'month'|class="year-grid"/);
-  assert.match(page, />随机菜单</);
+  assert.match(page, />随机点菜</);
   assert.match(page, /wx:if="\{\{loading && hasLoaded\}\}" class="period-today">正在更新…/);
   assert.match(page, /class="planner-toolbar"[\s\S]*?class="time-tabs"[\s\S]*?class="period-navigation"[\s\S]*?class="random-action random-action--primary"[\s\S]*?class="ranking-button"/);
   assert.doesNotMatch(page, /class="period-bar"/);
@@ -89,6 +89,10 @@ test("weekly menu keeps focused day and week displays with the random flow", asy
   assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
   assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
   assert.match(page, /class="meal-slot__remove"[\s\S]*?catchtap="handleRemoveMealItem"/);
+  assert.match(page, /class="meal-slot__remove"[\s\S]*?<app-icon name="x-muted" size="18"/);
+  assert.match(page, /class="meal-slot__image"[^>]*mode="aspectFit"/);
+  assert.doesNotMatch(page, /meal-list__line|meal-section__marker/);
+  assert.match(page, /class="meal-section__count">\{\{meal\.items\.length \? meal\.items\.length \+ ' 道' : '未安排'\}\}/);
   assert.doesNotMatch(page, /operation-loading/);
   assert.doesNotMatch(page, /空档位|handleAddSlot|handleRemoveSlotRequest|showRemoveDialog/);
   assert.doesNotMatch(page, /全部解锁|handleResetLocks|meal-slot--locked|已锁/);
@@ -107,7 +111,17 @@ test("weekly menu keeps focused day and week displays with the random flow", asy
   assert.match(style, /\.planner-shell \{[^}]*height: 100vh[^}]*overflow: hidden/);
   assert.match(style, /\.planner-page \{[^}]*height: 0[^}]*flex: 1/);
   assert.match(style, /\.planner-content \{[^}]*flex: 1/);
-  assert.match(style, /\.meal-slot__remove \{[^}]*top: -28rpx[^}]*right: -28rpx[^}]*background: transparent/);
+  assert.match(style, /\.ranking-button \{[^}]*background: var\(--ui-color-action-primary\)[^}]*color: var\(--ui-color-text-inverse\)/);
+  assert.match(style, /\.meal-slot__image-wrap \{[^}]*aspect-ratio: 4 \/ 3/);
+  assert.match(style, /\.meal-section \{[^}]*flex-direction: column/);
+  assert.match(style, /\.meal-section \{[^}]*border-bottom: 1rpx solid var\(--ui-color-border\)/);
+  assert.match(style, /\.meal-section--last \{[^}]*border-bottom: 0/);
+  assert.doesNotMatch(style, /\.meal-list__line|\.meal-section__marker/);
+  assert.match(style, /\.meal-section__title \{[^}]*color: var\(--ui-color-text-primary\)[^}]*font-size: var\(--ui-font-size-large\)[^}]*font-weight: 750/);
+  assert.match(style, /\.meal-slot \{[^}]*width: 176rpx[^}]*height: 194rpx/);
+  assert.match(style, /\.meal-slot--add \{[^}]*width: 176rpx[^}]*height: 194rpx/);
+  assert.match(style, /\.meal-slot__remove \{[^}]*top: -28rpx[^}]*right: -28rpx[^}]*width: 56rpx[^}]*height: 56rpx/);
+  assert.match(style, /\.meal-slot__remove-visual \{[^}]*width: 38rpx[^}]*height: 38rpx[^}]*border-radius: 50%[^}]*background: var\(--ui-color-background-subtle\)/);
   assert.doesNotMatch(style, /\.page-scroll \{[^}]*height: 100vh/);
   const pageConfig = JSON.parse(config);
   assert.equal(pageConfig.disableScroll, true);

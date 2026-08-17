@@ -315,8 +315,8 @@ test("menu pages use only the 20rpx, 23rpx, and 25rpx business typography sizes"
   assert.match(styles[1], /\.field__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.match(styles[1], /\.item-entry__input[^}]*font-size:\s*var\(--ui-font-size-base\)/);
   assert.doesNotMatch(editPage, /font-size="23rpx"/);
-  assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*var\(--ui-font-size-base\)/);
-  assert.match(styles[4], /\.meal-section__english[^}]*font-size:\s*var\(--ui-font-size-small\)/);
+  assert.match(styles[4], /\.meal-section__title[^}]*font-size:\s*var\(--ui-font-size-large\)/);
+  assert.doesNotMatch(styles[4], /\.meal-section__english/);
   assert.match(styles[5], /\.dish-card__name[^}]*font-size:\s*var\(--ui-font-size-large\)/);
   assert.match(styles[5], /\.dish-card__category[^}]*font-size:\s*var\(--ui-font-size-small\)/);
   assert.match(styles[5], /\.print-status-filter__item[^}]*font-size:\s*var\(--ui-font-size-base\)/);

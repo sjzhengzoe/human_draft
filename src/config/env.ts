@@ -1,7 +1,7 @@
 const PRODUCTION_API_BASE_URL = "https://gufeifei.cn"
 
-// 微信开发者工具需要直连本机服务时，可临时填写局域网地址；不要提交私密信息。
-const DEVELOPMENT_API_BASE_URL = "http://127.0.0.1:3000"
+// 微信开发者工具需要直连本机服务时，可临时填写局域网地址；默认留空并使用线上服务。
+const DEVELOPMENT_API_BASE_URL = ""
 
 function getEnvVersion(): "develop" | "trial" | "release" {
   try {

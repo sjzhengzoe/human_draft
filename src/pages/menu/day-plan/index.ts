@@ -38,7 +38,6 @@ type PlanItem = {
 type MealSection = {
   key: MealPeriod
   label: string
-  englishLabel: string
   items: PlanItem[]
 }
 
@@ -68,11 +67,11 @@ type ScheduleInputItem =
 const DEFAULT_RANDOM_ITEM_COUNT = 3
 const DEFAULT_MEAL_PERIODS: MealPeriod[] = ["lunch", "dinner"]
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"]
-const MEAL_DEFINITIONS: Array<Pick<MealSection, "key" | "label" | "englishLabel">> = [
-  { key: "breakfast", label: "早餐", englishLabel: "GOOD MORNING" },
-  { key: "lunch", label: "午餐", englishLabel: "LUNCH TIME" },
-  { key: "afternoon_tea", label: "下午茶", englishLabel: "TEA TIME" },
-  { key: "dinner", label: "晚餐", englishLabel: "DINNER TIME" }
+const MEAL_DEFINITIONS: Array<Pick<MealSection, "key" | "label">> = [
+  { key: "breakfast", label: "早餐" },
+  { key: "lunch", label: "午餐" },
+  { key: "afternoon_tea", label: "下午茶" },
+  { key: "dinner", label: "晚餐" }
 ]
 
 function pad(value: number): string {

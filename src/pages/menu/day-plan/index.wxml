@@ -22,7 +22,7 @@
         </view>
         <view class="period-arrow" role="button" aria-label="下一个时间范围" data-direction="1" bindtap="handlePeriodMove"><app-icon name="arrow-right" size="24" /></view>
       </view>
-      <button wx:if="{{activeMode === 'day'}}" class="random-action random-action--primary" loading="{{randomizing}}" bindtap="handleRandomize">随机菜单</button>
+      <button wx:if="{{activeMode === 'day'}}" class="random-action random-action--primary" loading="{{randomizing}}" bindtap="handleRandomize">随机点菜</button>
       <button class="ranking-button" bindtap="handleRanking">排行榜</button>
     </view>
   </view>
@@ -38,23 +38,23 @@
 
     <block wx:elif="{{activeMode === 'day'}}">
       <view class="meal-list">
-        <view wx:for="{{dayMeals}}" wx:key="key" wx:for-item="meal" wx:for-index="mealIndex" class="meal-section meal-section--{{meal.key}}">
+        <view wx:for="{{dayMeals}}" wx:key="key" wx:for-item="meal" wx:for-index="mealIndex" class="meal-section meal-section--{{meal.key}} {{mealIndex === dayMeals.length - 1 ? 'meal-section--last' : ''}}">
           <view class="meal-section__header">
-            <view class="meal-section__copy">
-              <view class="meal-section__title">{{meal.label}}</view>
-              <view class="meal-section__english">{{meal.englishLabel}}</view>
-            </view>
+            <view class="meal-section__title">{{meal.label}}</view>
+            <view class="meal-section__count">{{meal.items.length ? meal.items.length + ' 道' : '未安排'}}</view>
           </view>
 
           <scroll-view class="meal-grid-scroll" scroll-x enhanced show-scrollbar="{{false}}">
             <view class="meal-grid">
               <view wx:for="{{meal.items}}" wx:key="key" wx:for-item="planItem" wx:for-index="itemIndex" class="meal-slot">
                 <view class="meal-slot__image-wrap">
-                  <image wx:if="{{planItem.item.image_url}}" class="meal-slot__image" src="{{planItem.item.image_url}}" mode="aspectFill" lazy-load />
+                  <image wx:if="{{planItem.item.image_url}}" class="meal-slot__image" src="{{planItem.item.image_url}}" mode="aspectFit" lazy-load />
                   <view wx:else class="meal-slot__placeholder"><view>暂无图片</view></view>
                   <view class="meal-slot__type">{{planItem.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
                 </view>
-                <view class="meal-slot__remove" role="button" aria-label="移除{{planItem.item.name}}" data-meal-index="{{mealIndex}}" data-item-index="{{itemIndex}}" catchtap="handleRemoveMealItem"><app-icon name="x-muted" size="24" /></view>
+                <view class="meal-slot__remove" role="button" aria-label="移除{{planItem.item.name}}" data-meal-index="{{mealIndex}}" data-item-index="{{itemIndex}}" catchtap="handleRemoveMealItem">
+                  <view class="meal-slot__remove-visual"><app-icon name="x-muted" size="18" /></view>
+                </view>
                 <view class="meal-slot__name">{{planItem.item.name}}</view>
               </view>
               <view class="meal-slot meal-slot--add" role="button" aria-label="添加{{meal.label}}菜品" data-period="{{meal.key}}" data-date="{{selectedDate}}" bindtap="handleMealEdit">
