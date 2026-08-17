@@ -32,7 +32,7 @@ type TimeMode = "day" | "week"
 
 type PlanItem = {
   key: string
-  item: MenuScheduleItem | null
+  item: MenuScheduleItem
 }
 
 type MealSection = {
@@ -122,15 +122,23 @@ function mealFor(meals: MenuScheduleMeal[], date: string, period: MealPeriod): M
   return meals.find((meal) => meal.meal_date === date && meal.meal_period === period)
 }
 
+function toPlanItems(
+  items: MenuScheduleItem[],
+  date: string,
+  period: MealPeriod
+): PlanItem[] {
+  return items.map((item, index) => ({
+    key: `${date}:${period}:${item.id || index}`,
+    item
+  }))
+}
+
 function toMealSections(meals: MenuScheduleMeal[], date: string): MealSection[] {
   return MEAL_DEFINITIONS.map((definition) => {
     const meal = mealFor(meals, date, definition.key)
     return {
       ...definition,
-      items: (meal?.items || []).map((item, index) => ({
-        key: `${date}:${definition.key}:${item.id || index}`,
-        item
-      }))
+      items: toPlanItems(meal?.items || [], date, definition.key)
     }
   })
 }
@@ -165,6 +173,30 @@ function toWeekDays(meals: MenuScheduleMeal[], anchor: string): WeekDay[] {
   })
 }
 
+function hasSamePlanItems(left: PlanItem[], right: PlanItem[]): boolean {
+  return left.length === right.length && left.every((entry, index) => {
+    const other = right[index]
+    return Boolean(other)
+      && entry.item.id === other.item.id
+      && entry.item.name === other.item.name
+      && entry.item.image_url === other.item.image_url
+      && entry.item.place_image_url === other.item.place_image_url
+  })
+}
+
+function hasSameWeekMeal(
+  left: WeekDay["meals"][number],
+  right: WeekDay["meals"][number]
+): boolean {
+  return left.items.length === right.items.length && left.items.every((entry, index) => {
+    const other = right.items[index]
+    return Boolean(other)
+      && entry.key === other.key
+      && entry.name === other.name
+      && entry.imageUrl === other.imageUrl
+  })
+}
+
 function mealPeriodsFor(dish: Dish): MealPeriod[] {
   return Array.isArray(dish.meal_periods) && dish.meal_periods.length > 0
     ? dish.meal_periods
@@ -194,11 +226,11 @@ function temporaryScheduleItem(dish: Dish, position: number): MenuScheduleItem {
 function scheduleInputsFromItems(planItems: PlanItem[]): ScheduleInputItem[] {
   const items: ScheduleInputItem[] = []
   planItems.forEach((planItem) => {
-    if (planItem.item?.archived) {
+    if (planItem.item.archived) {
       items.push({ archived_item_id: planItem.item.id })
-    } else if (planItem.item?.source_kind === "dish" && planItem.item.dish_id) {
+    } else if (planItem.item.source_kind === "dish" && planItem.item.dish_id) {
       items.push({ source_kind: "dish", dish_id: planItem.item.dish_id })
-    } else if (planItem.item?.source_kind === "place" && planItem.item.place_id) {
+    } else if (planItem.item.source_kind === "place" && planItem.item.place_id) {
       items.push({ source_kind: "place", place_id: planItem.item.place_id })
     }
   })
@@ -228,6 +260,7 @@ Page({
     dishes: [] as Dish[],
     loading: true,
     saving: false,
+    randomizing: false,
     hasLoaded: false,
     loadedRevision: -1,
     guestMode: false,
@@ -255,7 +288,7 @@ Page({
       return
     }
     if (!this.data.hasLoaded) return
-    if (this.data.loadedRevision !== getMenuDataRevision() || !this.restoreScheduleFromStore()) {
+    if (this.data.loadedRevision !== getMenuDataRevision() || !this.restoreScheduleFromStore(true)) {
       this.loadInitialData()
     }
   },
@@ -369,22 +402,54 @@ Page({
     })
   },
 
-  restoreScheduleFromStore(): boolean {
+  applyScheduleSilently(meals: MenuScheduleMeal[]) {
+    const patch: WechatMiniprogram.IAnyObject = {}
+    if (this.data.activeMode === "day") {
+      const nextMeals = toMealSections(meals, this.data.selectedDate)
+      if (this.data.dayMeals.length !== nextMeals.length) {
+        this.applySchedule(meals)
+        return
+      }
+      nextMeals.forEach((meal, mealIndex) => {
+        if (!hasSamePlanItems(this.data.dayMeals[mealIndex]?.items || [], meal.items)) {
+          patch[`dayMeals[${mealIndex}].items`] = meal.items
+        }
+      })
+    } else {
+      const nextDays = toWeekDays(meals, this.data.selectedDate)
+      if (this.data.weekDays.length !== nextDays.length) {
+        this.applySchedule(meals)
+        return
+      }
+      nextDays.forEach((day, dayIndex) => {
+        day.meals.forEach((meal, mealIndex) => {
+          const currentMeal = this.data.weekDays[dayIndex]?.meals[mealIndex]
+          if (!currentMeal || !hasSameWeekMeal(currentMeal, meal)) {
+            patch[`weekDays[${dayIndex}].meals[${mealIndex}]`] = meal
+          }
+        })
+      })
+    }
+    if (Object.keys(patch).length) this.setData(patch)
+  },
+
+  restoreScheduleFromStore(silent = false): boolean {
     const currentUser = getCurrentUser()
     if (!currentUser) return false
     const revision = getMenuDataRevision()
     const range = rangeFor(this.data.activeMode, this.data.selectedDate)
     const meals = getCachedMenuScheduleRange(currentUser.uid, revision, range.start, range.end)
     if (!meals) return false
+    if (silent) this.applyScheduleSilently(meals)
+    else this.applySchedule(meals)
+    const patch: WechatMiniprogram.IAnyObject = {}
     const dishes = getCachedMenuDishes(currentUser.uid, revision)
-    this.applySchedule(meals)
-    this.setData({
-      dishes: dishes || this.data.dishes,
-      loading: false,
-      hasLoaded: true,
-      loadedRevision: revision,
-      errorMessage: ""
-    })
+    if (dishes && !this.data.dishes.length) patch.dishes = dishes
+    if (this.data.loading) patch.loading = false
+    if (!this.data.hasLoaded) patch.hasLoaded = true
+    if (this.data.loadedRevision !== revision) patch.loadedRevision = revision
+    if (this.data.errorMessage) patch.errorMessage = ""
+    if (Object.keys(patch).length) this.setData(patch)
     return true
   },
 
@@ -439,16 +504,16 @@ Page({
     }
     const usedAcrossDay = new Set<string>()
     this.data.dayMeals.forEach((meal) => meal.items.forEach((planItem) => {
-      if (planItem.item?.dish_id) usedAcrossDay.add(planItem.item.dish_id)
+      if (planItem.item.dish_id) usedAcrossDay.add(planItem.item.dish_id)
     }))
     const nextMeals = this.data.dayMeals.map((meal) => {
       if (meal.key === "afternoon_tea" || meal.items.length >= DEFAULT_RANDOM_ITEM_COUNT) return meal
       const pool = this.data.dishes.filter((dish) => mealPeriodsFor(dish).includes(meal.key))
       const usedInMeal = new Set(
-        meal.items.flatMap((planItem) => planItem.item?.dish_id ? [planItem.item.dish_id] : [])
+        meal.items.flatMap((planItem) => planItem.item.dish_id ? [planItem.item.dish_id] : [])
       )
       const additions: PlanItem[] = []
-      const randomAdditionCount = meal.items.length === 0 ? DEFAULT_RANDOM_ITEM_COUNT : 1
+      const randomAdditionCount = DEFAULT_RANDOM_ITEM_COUNT - meal.items.length
       for (let index = 0; index < randomAdditionCount; index += 1) {
         let candidates = pool.filter((dish) =>
           !usedAcrossDay.has(dish.id) && !usedInMeal.has(dish.id)
@@ -473,7 +538,19 @@ Page({
       wx.showToast({ title: "每餐已安排三项", icon: "none" })
       return
     }
-    this.setData({ dayMeals: nextMeals, saving: true })
+    const previousMeals = this.data.dayMeals.map((meal) => ({
+      ...meal,
+      items: [...meal.items]
+    }))
+    const optimisticPatch: WechatMiniprogram.IAnyObject = {
+      saving: true,
+      randomizing: true
+    }
+    changedMeals.forEach((meal) => {
+      const mealIndex = nextMeals.findIndex((item) => item.key === meal.key)
+      if (mealIndex >= 0) optimisticPatch[`dayMeals[${mealIndex}].items`] = meal.items
+    })
+    this.setData(optimisticPatch)
     try {
       const savedMeals = await Promise.all(changedMeals.map((meal) => replaceMenuScheduleMeal({
           mealDate: this.data.selectedDate,
@@ -486,12 +563,26 @@ Page({
         const revision = getMenuDataRevision()
         savedMeals.forEach((meal) => updateCachedMenuScheduleMeal(currentUser.uid, revision, meal))
       }
+      const savedPatch: WechatMiniprogram.IAnyObject = {}
+      savedMeals.forEach((meal) => {
+        const mealIndex = this.data.dayMeals.findIndex((item) => item.key === meal.meal_period)
+        if (mealIndex >= 0) {
+          savedPatch[`dayMeals[${mealIndex}].items`] = toPlanItems(
+            meal.items,
+            this.data.selectedDate,
+            meal.meal_period
+          )
+        }
+      })
+      this.setData(savedPatch)
       wx.showToast({ title: "已补充随机菜品", icon: "success" })
-      if (!this.restoreScheduleFromStore()) await this.loadSchedule()
     } catch (error) {
-      if (isAsyncPageActive(this)) wx.showToast({ title: error instanceof Error ? error.message : "随机失败", icon: "none" })
+      if (isAsyncPageActive(this)) {
+        this.setData({ dayMeals: previousMeals })
+        wx.showToast({ title: error instanceof Error ? error.message : "随机失败", icon: "none" })
+      }
     } finally {
-      if (isAsyncPageActive(this)) this.setData({ saving: false })
+      if (isAsyncPageActive(this)) this.setData({ saving: false, randomizing: false })
     }
   },
 
@@ -501,13 +592,15 @@ Page({
     const itemIndex = Number(event.currentTarget.dataset.itemIndex)
     const meal = this.data.dayMeals[mealIndex]
     if (!meal?.items[itemIndex]) return
-    const previousMeals = this.data.dayMeals
+    const previousItems = meal.items
     const nextMeal = {
       ...meal,
       items: meal.items.filter((_item, index) => index !== itemIndex)
     }
-    const nextMeals = previousMeals.map((item, index) => index === mealIndex ? nextMeal : item)
-    this.setData({ dayMeals: nextMeals, saving: true })
+    this.setData({
+      [`dayMeals[${mealIndex}].items`]: nextMeal.items,
+      saving: true
+    })
     try {
       const savedMeal = await replaceMenuScheduleMeal({
         mealDate: this.data.selectedDate,
@@ -519,11 +612,17 @@ Page({
         if (currentUser) {
           updateCachedMenuScheduleMeal(currentUser.uid, getMenuDataRevision(), savedMeal)
         }
-        if (!this.restoreScheduleFromStore()) await this.loadSchedule()
+        this.setData({
+          [`dayMeals[${mealIndex}].items`]: toPlanItems(
+            savedMeal.items,
+            this.data.selectedDate,
+            savedMeal.meal_period
+          )
+        })
       }
     } catch (error) {
       if (isAsyncPageActive(this)) {
-        this.setData({ dayMeals: previousMeals })
+        this.setData({ [`dayMeals[${mealIndex}].items`]: previousItems })
         wx.showToast({ title: error instanceof Error ? error.message : "移除失败", icon: "none" })
       }
     } finally {

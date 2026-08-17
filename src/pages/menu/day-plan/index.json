@@ -3,8 +3,5 @@
   "navigationBarBackgroundColor": "#f6f7f1",
   "navigationBarTextStyle": "black",
   "disableScroll": true,
-  "usingComponents": {
-    "app-dialog": "/components/app-dialog/index",
-    "operation-loading": "/components/operation-loading/index"
-  }
+  "usingComponents": {}
 }

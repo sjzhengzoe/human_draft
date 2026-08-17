@@ -89,13 +89,17 @@ test("weekly menu keeps focused day and week displays with the random flow", asy
   assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
   assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
   assert.match(page, /class="meal-slot__remove"[\s\S]*?catchtap="handleRemoveMealItem"/);
+  assert.doesNotMatch(page, /operation-loading/);
   assert.doesNotMatch(page, /空档位|handleAddSlot|handleRemoveSlotRequest|showRemoveDialog/);
   assert.doesNotMatch(page, /全部解锁|handleResetLocks|meal-slot--locked|已锁/);
-  assert.match(logic, /items: \(meal\?\.items \|\| \[\]\)\.map/);
-  assert.match(logic, /randomAdditionCount = meal\.items\.length === 0 \? DEFAULT_RANDOM_ITEM_COUNT : 1/);
+  assert.match(logic, /items: toPlanItems\(meal\?\.items \|\| \[\], date, definition\.key\)/);
+  assert.match(logic, /randomAdditionCount = DEFAULT_RANDOM_ITEM_COUNT - meal\.items\.length/);
   assert.match(logic, /items: \[\.\.\.meal\.items, \.\.\.additions\]/);
   assert.match(logic, /meal\.items\.length >= DEFAULT_RANDOM_ITEM_COUNT/);
   assert.match(logic, /handleRemoveMealItem/);
+  assert.match(logic, /applyScheduleSilently/);
+  assert.match(logic, /dayMeals\[\$\{mealIndex\}\]\.items/);
+  assert.doesNotMatch(logic, /if \(!this\.restoreScheduleFromStore\(\)\) await this\.loadSchedule\(\)/);
   assert.match(logic, /restoreScheduleFromStore/);
   assert.match(logic, /if \(showInitialLoading\) this\.setData\(\{ errorMessage: message \}\)[\s\S]*?wx\.showToast/);
   assert.doesNotMatch(logic, /slotCount|slot_count|locked|handleMealItemTap|handleResetLocks/);
@@ -103,8 +107,11 @@ test("weekly menu keeps focused day and week displays with the random flow", asy
   assert.match(style, /\.planner-shell \{[^}]*height: 100vh[^}]*overflow: hidden/);
   assert.match(style, /\.planner-page \{[^}]*height: 0[^}]*flex: 1/);
   assert.match(style, /\.planner-content \{[^}]*flex: 1/);
+  assert.match(style, /\.meal-slot__remove \{[^}]*top: -28rpx[^}]*right: -28rpx[^}]*background: transparent/);
   assert.doesNotMatch(style, /\.page-scroll \{[^}]*height: 100vh/);
-  assert.equal(JSON.parse(config).disableScroll, true);
+  const pageConfig = JSON.parse(config);
+  assert.equal(pageConfig.disableScroll, true);
+  assert.equal(pageConfig.usingComponents?.["operation-loading"], undefined);
 });
 
 test("ranking mixes dishes and stores while the server caps statistics at today", async () => {
