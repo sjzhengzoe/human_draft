@@ -66,6 +66,7 @@ function shanghaiParts(value: string): {
 
 function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
   return items.map((item, index) => {
+    const timelineState = item as Partial<KeyMomentTimelineItem>
     const parts = shanghaiParts(item.occurred_at)
     const previousParts = index > 0 ? shanghaiParts(items[index - 1].occurred_at) : null
     const showDateHeading = !previousParts
@@ -74,6 +75,9 @@ function toTimelineItems(items: KeyMoment[]): KeyMomentTimelineItem[] {
       || previousParts.day !== parts.day
     return {
       ...item,
+      content_expandable: timelineState.content_expandable ?? false,
+      content_expanded: timelineState.content_expanded ?? false,
+      content_measurement_complete: timelineState.content_measurement_complete ?? !item.content,
       show_date_heading: showDateHeading,
       show_year_heading: !previousParts || previousParts.year !== parts.year,
       show_item_divider: index < items.length - 1,
@@ -172,6 +176,42 @@ Page({
     })
   },
 
+  measureCollapsedContent() {
+    const pendingIds = this.data.items
+      .filter((item) => item.content && !item.content_measurement_complete)
+      .map((item) => item.id)
+    if (!pendingIds.length) return
+
+    wx.nextTick(() => {
+      if (!isAsyncPageActive(this)) return
+      const query = wx.createSelectorQuery()
+      query.selectAll(".moment-content__text--pending").boundingClientRect()
+      query.selectAll(".moment-content__measure").boundingClientRect()
+      query.exec((results) => {
+        if (!isAsyncPageActive(this)) return
+        const collapsedRects = (results[0] || []) as Array<{ height: number }>
+        const fullRects = (results[1] || []) as Array<{ height: number }>
+        if (collapsedRects.length !== pendingIds.length || fullRects.length !== pendingIds.length) return
+
+        const expandableById = new Map(
+          pendingIds.map((id, index) => [
+            id,
+            fullRects[index].height > collapsedRects[index].height + 1
+          ])
+        )
+        this.setData({
+          items: this.data.items.map((item) => expandableById.has(item.id)
+            ? {
+                ...item,
+                content_expandable: Boolean(expandableById.get(item.id)),
+                content_measurement_complete: true
+              }
+            : item)
+        })
+      })
+    })
+  },
+
   syncItemsFromCache(input?: {
     granularity: KeyMomentGranularity
     date: string
@@ -186,7 +226,7 @@ Page({
       items: toTimelineItems(cached.items),
       nextCursor: cached.nextCursor,
       keyMomentRevision: getKeyMomentDataRevision()
-    })
+    }, () => this.measureCollapsedContent())
     return true
   },
 
@@ -235,7 +275,10 @@ Page({
       }
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) {
-        this.setData({ loading: false, contentLoading: false, hasLoaded: true })
+        this.setData(
+          { loading: false, contentLoading: false, hasLoaded: true },
+          () => this.measureCollapsedContent()
+        )
       }
     }
   },
@@ -268,7 +311,7 @@ Page({
         items: timelineItems,
         nextCursor: page.next_cursor,
         keyMomentRevision: getKeyMomentDataRevision()
-      })
+      }, () => this.measureCollapsedContent())
     } catch (error) {
       if (isAsyncPageRequestCurrent(this, generation)) {
         wx.showToast({
@@ -338,6 +381,13 @@ Page({
     wx.navigateTo({
       url: `/pages/key-moments/detail/index?id=${encodeURIComponent(item.id)}`
     })
+  },
+
+  handleExpandContent(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || "")
+    const index = this.data.items.findIndex((item) => item.id === id)
+    if (index < 0 || !this.data.items[index].content_expandable) return
+    this.setData({ [`items[${index}].content_expanded`]: true })
   },
 
   openEditor(url: string) {

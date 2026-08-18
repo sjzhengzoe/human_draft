@@ -97,7 +97,24 @@
           <view wx:else class="timeline-date timeline-date--empty" />
           <view class="timeline-main">
             <view class="moment-card {{item.image_count === 0 ? 'moment-card--text-only' : ''}}">
-              <view wx:if="{{item.content}}" class="moment-content moment-content--clamped">{{item.content}}</view>
+              <view wx:if="{{item.content}}" class="moment-content">
+                <view
+                  class="moment-content__text {{item.content_expanded ? '' : 'moment-content__text--clamped'}} {{item.content_measurement_complete ? '' : 'moment-content__text--pending'}}"
+                >{{item.content}}</view>
+                <view
+                  wx:if="{{item.content_expandable && !item.content_expanded}}"
+                  class="moment-content__expand"
+                  data-id="{{item.id}}"
+                  role="button"
+                  aria-label="展开当前人生节点全文"
+                  catchtap="handleExpandContent"
+                >展开全文</view>
+                <view
+                  wx:if="{{!item.content_measurement_complete}}"
+                  class="moment-content__measure"
+                  aria-hidden="{{true}}"
+                >{{item.content}}</view>
+              </view>
               <view
                 wx:if="{{item.image_count}}"
                 class="moment-gallery moment-gallery--count-{{item.image_count}}"

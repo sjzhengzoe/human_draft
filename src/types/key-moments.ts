@@ -33,6 +33,9 @@ export type KeyMomentDetailItem = KeyMoment & {
 }
 
 export type KeyMomentTimelineItem = KeyMoment & {
+  content_expandable: boolean
+  content_expanded: boolean
+  content_measurement_complete: boolean
   show_date_heading: boolean
   show_year_heading: boolean
   show_item_divider: boolean

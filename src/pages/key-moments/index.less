@@ -210,9 +210,9 @@
 }
 
 .moment-content {
+  position: relative;
   min-width: 0;
   flex: 1;
-  padding: 2rpx 0;
   color: var(--ui-color-text-strong);
   font-size: var(--ui-font-size-base);
   line-height: 1.65;
@@ -220,11 +220,37 @@
   word-break: break-word;
 }
 
-.moment-content--clamped {
+.moment-content__text,
+.moment-content__measure {
+  padding: 2rpx 0;
+}
+
+.moment-content__text--clamped {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 7;
+}
+
+.moment-content__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.moment-content__expand {
+  display: inline-flex;
+  min-height: 56rpx;
+  align-items: center;
+  margin: 2rpx 0 -8rpx -12rpx;
+  padding: 0 12rpx;
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
 }
 
 .moment-time {

@@ -102,7 +102,7 @@ test("key moment editor selects up to nine original images and displays a WeChat
   ]);
 
   assert.match(page, /class="moment-gallery moment-gallery--count-\{\{item\.image_count\}\}"/);
-  assert.match(page, /class="moment-content moment-content--clamped"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /class="moment-content"[\s\S]*?moment-content__text--clamped[\s\S]*?class="moment-gallery/);
   assert.match(page, /wx:for="\{\{item\.image_urls\}\}"[\s\S]*?mode="aspectFill"/);
   assert.match(editorPage, /wx:for="\{\{editorImages\}\}"[\s\S]*?class="image-grid__preview"[\s\S]*?mode="aspectFill"/);
   assert.ok(editorPage.indexOf('class="content-editor') < editorPage.indexOf('class="image-grid'));
@@ -228,7 +228,9 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(page, /class="timeline-year-heading">\{\{item\.heading_year\}\}<\/view>/);
   assert.match(page, /wx:if="\{\{item\.show_date_heading\}\}" class="timeline-date"[\s\S]*?timeline-date__month[\s\S]*?timeline-date__day/);
   assert.match(page, /class="moment-time">\{\{item\.heading_time\}\}<\/view>/);
-  assert.match(page, /class="moment-content moment-content--clamped"[\s\S]*?class="moment-gallery/);
+  assert.match(page, /class="moment-content"[\s\S]*?moment-content__text--clamped[\s\S]*?class="moment-gallery/);
+  assert.match(page, /class="moment-content__expand"[\s\S]*?catchtap="handleExpandContent"[\s\S]*?>展开全文<\/view>/);
+  assert.match(page, /class="moment-content__measure"[\s\S]*?aria-hidden="\{\{true\}\}"/);
   assert.match(page, /item\.show_item_divider[\s\S]*?class="item-divider"/);
   assert.doesNotMatch(page, /interval_after|timeline-gap/);
   assert.match(
@@ -240,6 +242,8 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(styles, /\.moment-card--text-only[\s\S]*?min-height: 142rpx[\s\S]*?padding-bottom: 40rpx/);
   assert.match(styles, /\.timeline-entry[\s\S]*?grid-template-columns: 116rpx minmax\(0, 1fr\)/);
   assert.match(styles, /\.moment-image\s*\{[\s\S]*?width: 100%;[\s\S]*?height: 166rpx/);
+  assert.match(styles, /\.moment-content__text--clamped[\s\S]*?-webkit-line-clamp: 7/);
+  assert.match(styles, /\.moment-content__expand[\s\S]*?min-height: 56rpx[\s\S]*?font-size: var\(--ui-font-size-base\)/);
   assert.doesNotMatch(styles, /moment-card--vertical|moment-card--horizontal/);
   assert.doesNotMatch(logic, /getKeyMomentDisplayLayout|handleSettings|displayLayout/);
   assert.match(logic, /activeGranularity: "year" as KeyMomentGranularity/);
@@ -247,6 +251,8 @@ test("key moments use one WeChat-style layout and remove obsolete layout setting
   assert.match(logic, /show_item_divider: index < items\.length - 1/);
   assert.match(logic, /heading_time: `\$\{pad\(parts\.hour\)\}:\$\{pad\(parts\.minute\)\}`/);
   assert.match(logic, /show_date_heading: showDateHeading/);
+  assert.match(logic, /measureCollapsedContent\(\)[\s\S]*?fullRects\[index\]\.height > collapsedRects\[index\]\.height \+ 1/);
+  assert.match(logic, /handleExpandContent\([\s\S]*?content_expanded`\]: true/);
   assert.match(logic, /previousParts\.year !== parts\.year[\s\S]*?previousParts\.month !== parts\.month[\s\S]*?previousParts\.day !== parts\.day/);
   assert.doesNotMatch(logic, /show_date_divider|isSameShanghaiDate/);
   assert.doesNotMatch(logic, /intervalLabel|interval_after/);
