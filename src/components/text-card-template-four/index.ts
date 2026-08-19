@@ -182,14 +182,6 @@ function getBlankLineSeparatedContent(content: string) {
     const parsedContent = getBlankLineSeparatedContent(content);
     return parsedContent ? getContentSlides(parsedContent) : [];
   }
-    "",
-    "02",
-    "这里填写第二张卡片的内容",
-    "可以继续添加更多文字",
-    "",
-    "03",
-    "这里填写第三张卡片的内容",
-  ].join("\n");
 
   let renderRequestId = 0;
   const enqueueRender = createRenderQueue();
