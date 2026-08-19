@@ -1,7 +1,8 @@
-export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
+export type TextCardTemplate = "xiaohongshu" | "xiaohongshu4" | "douyin2" | "douyin3";
 
 export const TEXT_CARD_STORAGE_KEYS: Record<TextCardTemplate, string> = {
   xiaohongshu: "TEXT_CARD_CONTENT_XIAOHONGSHU",
+  xiaohongshu4: "TEXT_CARD_CONTENT_XIAOHONGSHU4",
   douyin2: "TEXT_CARD_CONTENT_DOUYIN2",
   douyin3: "TEXT_CARD_CONTENT_DOUYIN3",
 };

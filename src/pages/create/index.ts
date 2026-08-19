@@ -109,6 +109,7 @@ Component({
       const nextPath =
         key === "text-card" &&
         (lastTemplate === "xiaohongshu" ||
+          lastTemplate === "xiaohongshu4" ||
           lastTemplate === "douyin2" ||
           lastTemplate === "douyin3")
           ? `${String(path)}?template=${lastTemplate}`

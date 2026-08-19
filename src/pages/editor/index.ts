@@ -2,7 +2,7 @@ import { checkTextContent } from "../../services/content-security"
 import { initializeUIFont } from "../../services/ui-font"
 import { TEXT_CARD_STORAGE_KEYS } from "../../utils/text-card-storage"
 
-type EditorSource = "xiaohongshu" | "douyin2" | "douyin3"
+type EditorSource = "xiaohongshu" | "xiaohongshu4" | "douyin2" | "douyin3"
 
 type EditorConfig = {
   title: string
@@ -22,6 +22,10 @@ const EDITOR_CONFIG: Record<EditorSource, EditorConfig> = {
     title: "编辑文案",
     storageKey: TEXT_CARD_STORAGE_KEYS.xiaohongshu
   },
+  xiaohongshu4: {
+    title: "编辑文案",
+    storageKey: TEXT_CARD_STORAGE_KEYS.xiaohongshu4
+  },
   douyin2: {
     title: "编辑文案",
     storageKey: TEXT_CARD_STORAGE_KEYS.douyin2
@@ -33,7 +37,9 @@ const EDITOR_CONFIG: Record<EditorSource, EditorConfig> = {
 }
 
 function normalizeSource(source: string | undefined): EditorSource {
-  return source === "douyin2" || source === "douyin3"
+  return source === "douyin2" ||
+    source === "douyin3" ||
+    source === "xiaohongshu4"
     ? source
     : "xiaohongshu"
 }

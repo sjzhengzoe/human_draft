@@ -45,5 +45,13 @@
     >
       <text-card-template-three id="text-card-template-douyin3" />
     </view>
+
+    <view
+      wx:if="{{mountedTemplates.xiaohongshu4}}"
+      hidden="{{activeTemplate !== 'xiaohongshu4'}}"
+      class="text-card-page__template"
+    >
+      <text-card-template-four id="text-card-template-xiaohongshu4" />
+    </view>
   </view>
 </view>

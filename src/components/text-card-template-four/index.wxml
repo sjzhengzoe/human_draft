@@ -1,0 +1,37 @@
+<!-- Template one content rendered inside the shared text-card page. -->
+<text-card-workspace
+  embedded="{{true}}"
+  active-template="xiaohongshu4"
+  disabled="{{isGenerating}}"
+  is-example-content="{{isExampleContent}}"
+  has-custom-content="{{hasCustomContent}}"
+  rendered-image-urls="{{renderedImageUrls}}"
+  active-index="{{activeIndex}}"
+  render-error="{{renderError}}"
+  render-error-message="{{renderErrorMessage}}"
+  is-rendering-cards="{{isRenderingCards}}"
+  processing-text="正在处理图片中"
+  render-progress-text="{{renderProgressText}}"
+  content-count="{{slides.length}}"
+  preview-count="{{previewCount}}"
+  merge-start-index="{{slides.length}}"
+  fit-adaptive-images="{{true}}"
+  progressive-rendering="{{true}}"
+  export-ready="{{hasCustomContent && !isRenderingCards && !renderError && renderedImageUrls.length === previewCount}}"
+  action-label="小红书图文操作"
+  show-append="{{true}}"
+  show-clear-undo="{{showClearUndo}}"
+  bind:copytemplate="handleCopyTemplate"
+  bind:swiperchange="handleSwiperChange"
+  bind:previewimageload="handlePreviewImageLoad"
+  bind:retrypreview="retryPreview"
+  bind:action="handleAction"
+  bind:undoclear="handleUndoClear"
+/>
+
+<canvas
+  type="2d"
+  id="xiaohongshu4ExportCanvas"
+  class="export-canvas"
+  style="width: 1px; height: 1px;"
+/>

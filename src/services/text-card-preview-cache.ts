@@ -1,4 +1,4 @@
-export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3"
+export type TextCardTemplate = "xiaohongshu" | "xiaohongshu4" | "douyin2" | "douyin3"
 
 const MAX_PREVIEW_CACHE_ENTRIES = 8
 const previewCache = new Map<string, string[]>()

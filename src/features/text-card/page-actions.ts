@@ -2,7 +2,7 @@ import { checkTextContent } from "../../services/content-security";
 import { saveImageToPhotosAlbum } from "../../utils/text-card-render";
 import { trackTextCardCreated } from "../../services/analytics";
 
-export type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
+export type TextCardTemplate = "xiaohongshu" | "xiaohongshu4" | "douyin2" | "douyin3";
 
 export function copyTextCardTemplate(content: string) {
   wx.setClipboardData({

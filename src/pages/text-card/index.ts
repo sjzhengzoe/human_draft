@@ -1,5 +1,5 @@
 // The only full-page host for all three text-card templates.
-type TextCardTemplate = "xiaohongshu" | "douyin2" | "douyin3";
+type TextCardTemplate = "xiaohongshu" | "xiaohongshu4" | "douyin2" | "douyin3";
 
 const LAST_TEMPLATE_STORAGE_KEY = "TEXT_CARD_LAST_TEMPLATE";
 
@@ -9,12 +9,14 @@ Page({
       { key: "xiaohongshu", label: "模板一" },
       { key: "douyin2", label: "模板二" },
       { key: "douyin3", label: "模板三" },
+      { key: "xiaohongshu4", label: "模板四" },
     ],
     activeTemplate: "xiaohongshu" as TextCardTemplate,
     mountedTemplates: {
       xiaohongshu: true,
       douyin2: false,
       douyin3: false,
+      xiaohongshu4: false,
     },
   },
 
@@ -49,7 +51,12 @@ Page({
 });
 
 function normalizeTemplate(value: unknown): TextCardTemplate | undefined {
-  if (value === "xiaohongshu" || value === "douyin2" || value === "douyin3") {
+  if (
+    value === "xiaohongshu" ||
+    value === "xiaohongshu4" ||
+    value === "douyin2" ||
+    value === "douyin3"
+  ) {
     return value;
   }
   return undefined;
