@@ -42,7 +42,7 @@ test("media category names use the shared bottom editor", async () => {
   assert.ok(!mediaPackage.pages.includes("category-edit/index"));
 });
 
-test("media overview stays minimal while records show five-star personal ratings", async () => {
+test("finished media shows five-star personal ratings in every list", async () => {
   const [page, styles, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(stylesUrl, "utf8"),
@@ -67,8 +67,8 @@ test("media overview stays minimal while records show five-star personal ratings
   assert.match(logic, /\{ value: 5, label: "五星" \}[\s\S]*\{ value: 1, label: "一星" \}/);
   assert.ok(page.indexOf("<block wx:else>") < page.indexOf(">评分："));
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
-  assert.equal(page.match(/class="record-card__rating"/g)?.length, 1);
-  assert.match(page, /wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/);
+  assert.equal(page.match(/class="record-card__rating"/g)?.length, 2);
+  assert.equal(page.match(/wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/g)?.length, 2);
   assert.match(page, /wx:for="\{\{item\.ratingStars\}\}"/);
   assert.match(page, /ratingStar\.filled \? '★' : '☆'/);
   assert.doesNotMatch(page, /handleRevisitableTap|record-card__revisit|值得重温/);
@@ -123,6 +123,20 @@ test("media controls are vertically centered and use shared typography sizes", a
   assert.match(styles, /\.icon-button\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/s);
   assert.match(styles, /\.media-command-row\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/s);
   assert.match(styles, /\.search-row__field\s*\{[^}]*min-height:\s*58rpx;[^}]*gap:\s*12rpx;[^}]*padding:\s*0 18rpx;/s);
+});
+
+test("media result headings stay fixed while only result lists scroll to a safe bottom", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(pageUrl, "utf8"),
+    readFile(stylesUrl, "utf8"),
+  ]);
+
+  const scrollStart = page.indexOf('<scroll-view\n    class="content-scroll"');
+  assert.ok(scrollStart > 0);
+  assert.ok(page.indexOf('class="section-heading content-heading"') < scrollStart);
+  assert.ok(page.indexOf('class="record-heading content-heading"') < scrollStart);
+  assert.match(styles, /\.content-scroll\s*\{[^}]*min-height:\s*0;[^}]*height:\s*0;[^}]*flex:\s*1;/s);
+  assert.match(styles, /\.record-grid\s*\{[^}]*padding:[^;]*env\(safe-area-inset-bottom\)/s);
 });
 
 test("the whole media module follows the shared three-tier typography", async () => {
@@ -263,6 +277,9 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
   assert.match(page, /data-status="planned"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="in_progress"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="completed"[\s\S]*?bindtap="handleWatchStatusTap"/);
+  assert.ok(page.indexOf('aria-label="编辑作品"') < page.indexOf('class="special-favorite-toggle'));
+  assert.match(page, /class="detail-title-actions"[\s\S]*?aria-label="编辑作品"[\s\S]*?class="special-favorite-toggle/);
+  assert.doesNotMatch(page, /detail-attribute__label">特别喜爱/);
   assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('detail-attribute__label">名称'));
   assert.match(page, /detail-attribute__label">名称[\s\S]*?\{\{entry\.title\}\}/);
   assert.ok(page.indexOf('class="detail-fixed"') < page.indexOf('class="detail-attribute-scroll"'));
@@ -337,6 +354,9 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(detailLogic, /updateMediaEntry\(entry\.id, \{ personal_rating: personalRating \}\)/);
   assert.match(detailLogic, /if \(entry\.watch_status !== "completed"\) return/);
   assert.match(detailLogic, /personalRating < 1 \|\| personalRating > 5/);
+  assert.match(detailLogic, /handleSpecialFavoriteChange\(\)[\s\S]*?wx\.showLoading\(\{ title: "更新中", mask: true \}\)[\s\S]*?finally \{[\s\S]*?wx\.hideLoading\(\)/);
+  assert.match(detailLogic, /async setPersonalRating\(personalRating: number\)[\s\S]*?wx\.showLoading\(\{ title: "更新中", mask: true \}\)[\s\S]*?finally \{[\s\S]*?wx\.hideLoading\(\)/);
+  assert.match(detailLogic, /async handleWatchStatusTap[\s\S]*?wx\.showLoading\(\{ title: "更新中", mask: true \}\)[\s\S]*?finally \{[\s\S]*?wx\.hideLoading\(\)/);
   assert.doesNotMatch(detailPage, /detail-heart|值得重温|值得重听/);
   assert.doesNotMatch(createPage, /值得重温|值得重听|handleRevisitableChange/);
   assert.match(detailPage, /index < visibleEpisodeCount/);

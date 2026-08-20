@@ -678,6 +678,7 @@ Page({
       },
       operating: true
     })
+    wx.showLoading({ title: "更新中", mask: true })
     void (async () => {
       try {
         const persistedEntry = await updateMediaEntry(entry.id, {
@@ -702,6 +703,7 @@ Page({
           })
         }
       } finally {
+        wx.hideLoading()
         if (isAsyncPageActive(this)) this.setData({ operating: false })
       }
     })()
@@ -891,6 +893,7 @@ Page({
       },
       operating: true
     })
+    wx.showLoading({ title: "更新中", mask: true })
     try {
       const persistedEntry = await updateMediaEntry(entry.id, { personal_rating: personalRating })
       const mediaRevision = markMediaDataChanged()
@@ -902,9 +905,10 @@ Page({
         this.setData({ entry, operating: false })
         wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })
       }
-      return
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ operating: false })
     }
-    if (isAsyncPageActive(this)) this.setData({ operating: false })
   },
 
   async handleWatchStatusTap(event: WechatMiniprogram.TouchEvent) {
@@ -924,6 +928,7 @@ Page({
       entry: { ...entry, watch_status: watchStatus, personal_rating: personalRating },
       operating: true
     })
+    wx.showLoading({ title: "更新中", mask: true })
     try {
       const persistedEntry = await updateMediaEntry(entry.id, { watch_status: watchStatus })
       const mediaRevision = markMediaDataChanged()
@@ -934,6 +939,7 @@ Page({
         wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })
       }
     } finally {
+      wx.hideLoading()
       if (isAsyncPageActive(this)) this.setData({ operating: false })
     }
   },

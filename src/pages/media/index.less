@@ -247,12 +247,9 @@
 
 .content-scroll {
   min-height: 0;
+  height: 0;
   flex: 1;
   box-sizing: border-box;
-}
-
-.overview-section {
-  padding: 28rpx 0 0;
 }
 
 .section-heading__title,
@@ -277,10 +274,6 @@
   word-break: break-word;
 }
 
-.overview-section .section-heading {
-  padding: 0 var(--ui-page-gutter) 16rpx;
-}
-
 .section-empty {
   display: flex;
   min-height: 116rpx;
@@ -293,8 +286,10 @@
   font-size: var(--ui-font-size-base);
 }
 
-.record-heading {
+.content-heading {
+  flex: 0 0 auto;
   padding: 28rpx var(--ui-page-gutter) 16rpx;
+  background: var(--ui-color-background-surface);
 }
 
 .record-heading__main {
@@ -317,7 +312,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 12rpx;
-  padding: 0 var(--ui-page-gutter-compact);
+  padding: 0 var(--ui-page-gutter-compact) calc(36rpx + env(safe-area-inset-bottom));
 }
 
 .record-card {
@@ -393,6 +388,7 @@
 }
 
 .load-more {
+  margin-top: calc(-36rpx - env(safe-area-inset-bottom));
   padding: 24rpx var(--ui-page-gutter) calc(24rpx + env(safe-area-inset-bottom));
   color: var(--ui-color-text-disabled);
   font-size: var(--ui-font-size-base);

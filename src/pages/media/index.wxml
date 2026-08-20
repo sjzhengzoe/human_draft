@@ -61,6 +61,23 @@
     </view>
   </view>
 
+  <view
+    wx:if="{{!contentLoading && !errorMessage && displayMode === 'overview' && overviewItems.length}}"
+    class="section-heading content-heading"
+  >
+    <view class="section-heading__title">{{overviewStatus === 'all' ? '全部' : overviewStatus === 'in_progress' ? '在看' : overviewStatus === 'planned' ? '想看' : '特别喜爱'}}</view>
+    <view class="section-heading__count">{{overviewTotal}} 部</view>
+  </view>
+  <view
+    wx:if="{{!contentLoading && !errorMessage && displayMode === 'record' && recordItems.length}}"
+    class="record-heading content-heading"
+  >
+    <view class="record-heading__main">
+      <view class="record-heading__title">{{selectedCategory || '全部记录'}}</view>
+      <view class="record-heading__count">{{recordTotal}} 条记录</view>
+    </view>
+  </view>
+
   <scroll-view
     class="content-scroll"
     scroll-y
@@ -85,36 +102,32 @@
     </view>
 
     <block wx:elif="{{displayMode === 'overview'}}">
-      <view class="overview-section">
-      <view wx:if="{{overviewItems.length}}" class="section-heading">
-          <view class="section-heading__title">{{overviewStatus === 'all' ? '全部' : overviewStatus === 'in_progress' ? '在看' : overviewStatus === 'planned' ? '想看' : '特别喜爱'}}</view>
-          <view class="section-heading__count">{{overviewTotal}} 部</view>
-        </view>
-        <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
+      <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
           <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
             <view class="record-card__cover-frame">
               <image wx:if="{{item.coverImageUrl}}" class="record-card__cover" src="{{item.coverImageUrl}}" mode="aspectFill" lazy-load />
               <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
               <view class="record-card__overlay">
                 <view class="record-card__title">{{item.title}}</view>
+                <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
+                  <text
+                    wx:for="{{item.ratingStars}}"
+                    wx:for-item="ratingStar"
+                    wx:key="position"
+                    class="record-card__rating-star {{ratingStar.filled ? 'record-card__rating-star--filled' : ''}}"
+                  >{{ratingStar.filled ? '★' : '☆'}}</text>
+                </view>
               </view>
             </view>
           </view>
         </view>
-        <view wx:else class="state-block">
-          <text>目前还没有任何数据哦~</text>
-        </view>
+      <view wx:else class="state-block">
+        <text>目前还没有任何数据哦~</text>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>
 
     <block wx:else>
-      <view wx:if="{{recordItems.length}}" class="record-heading">
-        <view class="record-heading__main">
-          <view class="record-heading__title">{{selectedCategory || '全部记录'}}</view>
-          <view class="record-heading__count">{{recordTotal}} 条记录</view>
-        </view>
-      </view>
       <view wx:if="{{recordItems.length}}" class="record-grid">
         <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
           <view class="record-card__cover-frame">

@@ -48,6 +48,13 @@
               aria-label="编辑作品"
               bindtap="handleEditEntry"
             ><app-icon name="pencil" size="24" /></view>
+            <view
+              wx:if="{{canWrite && !editingEntry}}"
+              class="special-favorite-toggle {{entry.is_special_favorite ? 'special-favorite-toggle--active' : ''}} {{operating || savingEntry ? 'special-favorite-toggle--disabled' : ''}}"
+              role="button"
+              aria-label="{{entry.is_special_favorite ? '取消特别喜爱' : '设为特别喜爱'}}"
+              bindtap="handleSpecialFavoriteChange"
+            ><text class="special-favorite-toggle__icon">{{entry.is_special_favorite ? '♥' : '♡'}}</text></view>
             <block wx:if="{{canWrite && editingEntry}}">
               <view
                 class="detail-icon-button"
@@ -154,25 +161,6 @@
               >{{item.name}}</view>
             </view>
             <view wx:else class="detail-attribute__value">{{platformText}}</view>
-          </view>
-          <view class="detail-attribute">
-            <view class="detail-attribute__label">特别喜爱</view>
-            <view wx:if="{{editingEntry}}" class="detail-attribute__value">
-              <view
-                class="special-favorite-toggle {{entryDraftIsSpecialFavorite ? 'special-favorite-toggle--active' : ''}}"
-                role="button"
-                aria-label="{{entryDraftIsSpecialFavorite ? '取消特别喜爱' : '设为特别喜爱'}}"
-                bindtap="handleSpecialFavoriteChange"
-              >{{entryDraftIsSpecialFavorite ? '♥' : '♡'}}</view>
-            </view>
-            <view wx:else class="detail-attribute__value">
-              <view
-                class="special-favorite-toggle {{entry.is_special_favorite ? 'special-favorite-toggle--active' : ''}} {{!canWrite || operating || savingEntry ? 'special-favorite-toggle--disabled' : ''}}"
-                role="button"
-                aria-label="{{entry.is_special_favorite ? '取消特别喜爱' : '设为特别喜爱'}}"
-                bindtap="handleSpecialFavoriteChange"
-              >{{entry.is_special_favorite ? '♥' : '♡'}}</view>
-            </view>
           </view>
           <view wx:if="{{editingEntry ? (isEpisodic || entryDraftIsEpisodic) : isEpisodic}}" class="detail-attribute">
             <view class="detail-attribute__label">剧集</view>
