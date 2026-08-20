@@ -132,6 +132,7 @@ test("key moment editor saves the complete ordered gallery instead of incrementa
 
   assert.match(editorPage, /catchlongpress="handleImageLongPress"/);
   assert.match(editorPage, /catchtouchmove="handleImageTouchMove"/);
+  assert.doesNotMatch(editorPage, /drag-handle/);
   assert.doesNotMatch(editorPage, /长按图片可拖动排序|image-sort-hint/);
   assert.match(editorPage, /class="image-drag-ghost"/);
   assert.match(editorStyles, /\.image-grid__item--dragging[\s\S]*?opacity/);

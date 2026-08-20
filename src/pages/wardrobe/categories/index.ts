@@ -11,11 +11,16 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
-import { hasSameOrder } from "../../../utils/drag-sort"
+import {
+  createDragSortController,
+  createDragSortData,
+  hasSameOrder
+} from "../../../utils/drag-sort"
 import { requireLoginForAction } from "../../../utils/login-required"
 
 type DisplayCategory = WardrobeCategory & { fieldSummary: string }
 let wardrobeCategorySortOriginalIds: string[] = []
+const wardrobeCategoryDragSort = createDragSortController()
 
 Page({
   data: {
@@ -27,7 +32,8 @@ Page({
     moving: false,
     sortEditing: false,
     guestMode: false,
-    errorMessage: ""
+    errorMessage: "",
+    ...createDragSortData()
   },
 
   onShow() {
@@ -51,6 +57,7 @@ Page({
   },
 
   onUnload() {
+    wardrobeCategoryDragSort.dispose()
     deactivateAsyncPage(this)
     wardrobeCategorySortOriginalIds = []
   },
@@ -152,19 +159,30 @@ Page({
     }
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.sortEditing || this.data.moving || this.data.contentLoading) return
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    const source = this.data.categories[index]
-    const target = this.data.categories[targetIndex]
-    if (!source || !target) return
+    const category = this.data.categories[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!category || !touch) return
+    wardrobeCategoryDragSort.start(this, {
+      items: this.data.categories,
+      sourceIndex: index,
+      keyOf: (item) => item.id,
+      touch,
+      selector: ".js-category-sort-item",
+      title: category.name,
+      meta: category.fieldSummary
+    })
+  },
 
-    const categories = [...this.data.categories]
-    categories[index] = target
-    categories[targetIndex] = source
-    this.setData({ categories })
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    wardrobeCategoryDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const result = wardrobeCategoryDragSort.finish(this, this.data.categories, (item) => item.id)
+    if (result) this.setData({ categories: result.items })
   },
 
   handleRetry() {

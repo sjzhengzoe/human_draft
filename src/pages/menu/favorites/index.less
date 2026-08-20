@@ -7,7 +7,8 @@ page { background: var(--ui-color-background-page); }
 .add-favorite { display: flex; width: auto !important; min-height: 62rpx; flex: none; align-items: center; gap: 8rpx; margin: 0 !important; padding: 0 22rpx; border-radius: 999rpx; background: var(--ui-color-action-primary); color: var(--ui-color-text-inverse); font-size: var(--ui-font-size-base); line-height: normal; }
 .add-favorite::after { border: 0; }
 .favorite-list { overflow: hidden; border: 1rpx solid var(--ui-color-border); border-radius: 24rpx; background: var(--ui-color-background-surface); }
-.favorite-row { display: flex; min-height: 112rpx; align-items: center; gap: 16rpx; padding: 14rpx 18rpx; border-top: 1rpx solid var(--ui-color-border); }
+.favorite-row { display: flex; min-height: 112rpx; align-items: center; gap: 16rpx; padding: 14rpx 18rpx; border-top: 1rpx solid var(--ui-color-border); transition: transform 160ms ease; }
+.favorite-row--dragging { opacity: 0; }
 .favorite-row:first-child { border-top: 0; }
 .favorite-image { width: 82rpx; height: 82rpx; flex: none; border-radius: 15rpx; background: var(--ui-color-background-subtle); }
 .favorite-image--empty { display: flex; align-items: center; justify-content: center; color: var(--ui-color-text-placeholder); font-size: var(--ui-font-size-small); }

@@ -24,7 +24,7 @@ test("menu exposes one embedded weekly-menu tab and a searchable selection mode"
   assert.match(page, /<app-input[^>]*persistent[^>]*clearable[^>]*clear-aria-label="清空菜单搜索"[^>]*bindinput="handleSearchInput"/);
   assert.match(logic, /if \(!searchKeyword\)[\s\S]*?searchRequestId \+= 1[\s\S]*?refreshData\(false, true\)/);
   assert.match(page, /placeholder="\{\{activeRecordType === 'all' \? '搜索全部菜品或店铺'/);
-  assert.match(page, /class="quick-card \{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
+  assert.match(page, /class="quick-card [^"]*\{\{item\.selected \? 'quick-card--selected' : ''\}\}"/);
   assert.match(page, /class="favorite-item \{\{item\.selected \? 'favorite-item--selected' : ''\}\}"/);
   assert.match(page, /wx:if="\{\{item\.selected\}\}" class="favorite-item__selected">已选</);
   assert.match(page, /class="selection-basket"/);

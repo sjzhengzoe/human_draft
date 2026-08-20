@@ -192,6 +192,11 @@
     transform 0.16s ease;
 }
 
+.quick-card--dragging,
+.outside-store--dragging {
+  opacity: 0;
+}
+
 .quick-card:active {
   opacity: 0.72;
   transform: scale(0.985);
@@ -349,6 +354,10 @@
   display: flex;
   flex-direction: column;
   gap: 38rpx;
+}
+
+.outside-store {
+  transition: transform 160ms ease;
 }
 
 .outside-store__header {

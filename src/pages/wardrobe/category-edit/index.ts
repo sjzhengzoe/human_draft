@@ -12,11 +12,19 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { UI_COLORS } from "../../../styles/colors"
+import { createDragSortController, createDragSortData } from "../../../utils/drag-sort"
 
-type EditableField = { id: string; name: string }
+type EditableField = { key: string; id: string; name: string }
 
 const UPPER_FIELDS = ["肩宽", "胸围", "衣长", "袖长"]
 const LOWER_FIELDS = ["腰围", "臀围", "裤长", "腿围", "脚口"]
+const fieldDragSort = createDragSortController()
+let fieldSequence = 0
+
+function fieldKey(id = "") {
+  fieldSequence += 1
+  return id || `field_${Date.now()}_${fieldSequence}`
+}
 
 Page({
   data: {
@@ -25,7 +33,8 @@ Page({
     fields: [] as EditableField[],
     loading: false,
     saving: false,
-    deleting: false
+    deleting: false,
+    ...createDragSortData()
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -37,6 +46,7 @@ Page({
   },
 
   onUnload() {
+    fieldDragSort.dispose()
     deactivateAsyncPage(this)
   },
 
@@ -48,7 +58,7 @@ Page({
       if (!isAsyncPageRequestCurrent(this, generation)) return
       this.setData({
         name: category.name,
-        fields: category.fields.map((field) => ({ ...field }))
+        fields: category.fields.map((field) => ({ ...field, key: fieldKey(field.id) }))
       })
     } catch (error) {
       if (!isAsyncPageRequestCurrent(this, generation)) return
@@ -76,7 +86,7 @@ Page({
   },
 
   handleAddField() {
-    this.setData({ fields: [...this.data.fields, { id: "", name: "" }] })
+    this.setData({ fields: [...this.data.fields, { key: fieldKey(), id: "", name: "" }] })
   },
 
   handleRemoveField(event: WechatMiniprogram.TouchEvent) {
@@ -86,16 +96,30 @@ Page({
     this.setData({ fields })
   },
 
-  handleMoveField(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.saving || this.data.deleting) return
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    if (!this.data.fields[index] || !this.data.fields[targetIndex]) return
-    const fields = [...this.data.fields]
-    const source = fields[index]
-    fields[index] = fields[targetIndex]
-    fields[targetIndex] = source
-    this.setData({ fields })
+    const field = this.data.fields[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!field || !touch) return
+    fieldDragSort.start(this, {
+      items: this.data.fields,
+      sourceIndex: index,
+      keyOf: (item) => item.key,
+      touch,
+      selector: ".js-field-sort-item",
+      title: field.name || "未命名属性",
+      meta: "衣物属性"
+    })
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    fieldDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const result = fieldDragSort.finish(this, this.data.fields, (item) => item.key)
+    if (result) this.setData({ fields: result.items })
   },
 
   handlePreset(event: WechatMiniprogram.TouchEvent) {
@@ -106,7 +130,7 @@ Page({
     )
     const fields = [...this.data.fields]
     names.forEach((name) => {
-      if (!existingNames.has(name)) fields.push({ id: "", name })
+      if (!existingNames.has(name)) fields.push({ key: fieldKey(), id: "", name })
     })
     this.setData({ fields })
   },

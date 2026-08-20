@@ -6,10 +6,15 @@
 </view>
 
 <view wx:else class="page page--with-navigation">
-  <scroll-view class="season-manager-scroll" scroll-y scroll-top="{{managerScrollTop}}" enhanced bounces="{{false}}" show-scrollbar="{{false}}" bindscroll="handleManagerScroll">
+  <scroll-view class="season-manager-scroll" scroll-y="{{draggingSortKey === ''}}" scroll-top="{{managerScrollTop}}" enhanced bounces="{{false}}" show-scrollbar="{{false}}" bindscroll="handleManagerScroll">
     <view class="season-list">
-      <view wx:for="{{draftSeasons}}" wx:key="key" class="season-card js-season-sort-item {{draggingKind === 'season' && draggingKey === item.key ? 'season-card--dragging' : ''}}">
-        <view class="season-card__header">
+      <view
+        wx:for="{{draftSeasons}}"
+        wx:key="key"
+        style="{{dragSortKind === 'season' ? dragSortPreviewStyles[index] : ''}}"
+        class="season-card js-season-sort-item {{draggingSortKey === item.key ? 'season-card--dragging' : ''}}"
+      >
+        <view class="season-card__header js-season-sort-anchor">
           <view
             class="season-card__drag-handle"
             role="button"
@@ -19,7 +24,7 @@
             catchtouchmove="handleSortDragMove"
             catchtouchend="handleSortDragEnd"
             catchtouchcancel="handleSortDragEnd"
-          ><app-icon name="layout-grid" size="27" /></view>
+          ><app-icon name="drag-handle" size="27" /></view>
           <view class="season-card__heading" role="button" aria-label="{{expandedSeasonKey === item.key ? '收起' : '展开'}}{{item.name}}" data-key="{{item.key}}" bindtap="handleSeasonToggle">
             <view class="season-card__heading-copy">
               <view class="season-card__name">{{item.name || '未命名季'}}</view>
@@ -52,7 +57,14 @@
           <view class="episode-editor-heading">单集详情</view>
           <view wx:if="{{item.episodes.length === 0}}" class="episode-editor-empty">当前季还没有单集</view>
           <view wx:else class="episode-editor-list">
-            <view wx:for="{{item.episodes}}" wx:for-item="episode" wx:for-index="episodeIndex" wx:key="key" class="episode-editor-row js-episode-sort-item {{draggingKind === 'episode' && draggingKey === episode.key ? 'episode-editor-row--dragging' : ''}}">
+            <view
+              wx:for="{{item.episodes}}"
+              wx:for-item="episode"
+              wx:for-index="episodeIndex"
+              wx:key="key"
+              style="{{dragSortKind === 'episode' ? dragSortPreviewStyles[episodeIndex] : ''}}"
+              class="episode-editor-row js-episode-sort-item {{draggingSortKey === episode.key ? 'episode-editor-row--dragging' : ''}}"
+            >
               <view
                 class="episode-editor-row__drag-handle"
                 role="button"
@@ -63,7 +75,7 @@
                 catchtouchmove="handleSortDragMove"
                 catchtouchend="handleSortDragEnd"
                 catchtouchcancel="handleSortDragEnd"
-              ><app-icon name="layout-grid" size="27" /></view>
+              ><app-icon name="drag-handle" size="27" /></view>
               <view class="episode-editor-row__number">第 {{episodeIndex + 1}} 集</view>
               <app-input custom-class="episode-editor-row__input" value="{{episode.plot_summary}}" maxlength="20" placeholder="用一句话记录本集剧情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindinput="handleEpisodeSummaryInput" />
               <view class="episode-editor-row__favorite {{episode.is_favorite ? 'episode-editor-row__favorite--active' : ''}}" role="button" aria-label="{{episode.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeFavoriteTap">{{episode.is_favorite ? '♥' : '♡'}}</view>
@@ -81,13 +93,7 @@
     <button class="season-manager-save" disabled="{{!dirty || saving}}" bindtap="handleSaveRequest">保存</button>
   </view>
 
-  <view wx:if="{{draggingKind && dragGhostStyle}}" class="sort-drag-ghost sort-drag-ghost--{{draggingKind}}" style="{{dragGhostStyle}}">
-    <view class="sort-drag-ghost__handle"><app-icon name="layout-grid" size="27" /></view>
-    <view class="sort-drag-ghost__copy">
-      <view class="sort-drag-ghost__title">{{dragGhostTitle}}</view>
-      <view wx:if="{{dragGhostMeta}}" class="sort-drag-ghost__meta">{{dragGhostMeta}}</view>
-    </view>
-  </view>
+  <sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 </view>
 
 <operation-loading visible="{{saving}}" text="正在保存剧集…" />

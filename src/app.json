@@ -117,7 +117,8 @@
   "usingComponents": {
     "app-icon": "/components/app-icon/index",
     "custom-navigation": "/components/custom-navigation/index",
-    "login-required-dialog": "/components/login-required-dialog/index"
+    "login-required-dialog": "/components/login-required-dialog/index",
+    "sort-drag-ghost": "/components/sort-drag-ghost/index"
   },
   "tabBar": {
     "custom": true,

@@ -25,12 +25,14 @@ import {
   activateAsyncPage,
   beginAsyncPageRequest,
   deactivateAsyncPage,
-  invalidateAsyncPageRequests,
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
-import { findClosestSortTarget, hasSameOrder } from "../../utils/drag-sort"
-import type { SortableRect } from "../../utils/drag-sort"
+import {
+  createDragSortController,
+  createDragSortData,
+  hasSameOrder
+} from "../../utils/drag-sort"
 import {
   normalizeCookingTypes,
   normalizeTasteTags
@@ -49,12 +51,8 @@ import {
 } from "../../utils/menu-data-store"
 import { requireLoginForAction } from "../../utils/login-required"
 
-let dragSourceIndex = -1
-let dragTargetIndex = -1
-let dragRects: SortableRect[] = []
-let dragItemIds: string[] = []
 let suppressDishTapUntil = 0
-let dragInsertAfter = false
+const menuDragSort = createDragSortController()
 let sortOriginalIds: string[] = []
 let outsideSortOriginalIds = new Map<string, string[]>()
 let outsidePlaceOriginalIds: string[] = []
@@ -301,14 +299,6 @@ function getBrowsePosition(itemCount: number, requestedIndex: number) {
   }
 }
 
-function resetDragSession(): void {
-  dragSourceIndex = -1
-  dragTargetIndex = -1
-  dragRects = []
-  dragItemIds = []
-  dragInsertAfter = false
-}
-
 function selectionKey(sourceKind: MenuScheduleSourceKind, id: string | null): string {
   return `${sourceKind}:${id || ""}`
 }
@@ -397,15 +387,9 @@ Page({
     guestMode: false,
     canReorder: false,
     sortEditing: false,
-    draggingIndex: -1,
-    dragTargetIndex: -1,
-    dragInsertAfter: false,
     sorting: false,
     ordering: false,
-    dragGhostVisible: false,
-    dragGhostLabel: "",
-    dragGhostX: 0,
-    dragGhostY: 0,
+    ...createDragSortData(),
     loading: true,
     contentLoading: false,
     hasLoaded: false,
@@ -478,7 +462,7 @@ Page({
 
   onUnload() {
     deactivateAsyncPage(this)
-    resetDragSession()
+    menuDragSort.dispose()
     sortOriginalIds = []
     outsideSortOriginalIds.clear()
     outsidePlaceOriginalIds = []
@@ -767,8 +751,8 @@ Page({
         canWrite,
         canReorder: canWrite && activeRecordType !== "all",
         loadedRevision,
-        draggingIndex: -1,
-        dragTargetIndex: -1
+        sorting: false,
+        ...createDragSortData()
       }
       if (reloadMetadata) {
         Object.assign(dataPatch, {
@@ -1211,65 +1195,7 @@ Page({
     if (id) wx.navigateTo({ url: `/pages/menu/place/index?id=${id}` })
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      targetIndex < 0 ||
-      targetIndex >= this.data.dishes.length
-    ) return
-    const dishes = [...this.data.dishes]
-    const [dish] = dishes.splice(index, 1)
-    dishes.splice(targetIndex, 0, dish)
-    this.setData({ dishes })
-  },
-
-  handleOutsideMove(event: WechatMiniprogram.TouchEvent) {
-    const placeIndex = Number(event.currentTarget.dataset.placeIndex)
-    const dishIndex = Number(event.currentTarget.dataset.dishIndex)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = dishIndex + direction
-    const place = this.data.outsidePlaces[placeIndex]
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      !place ||
-      targetIndex < 0 ||
-      targetIndex >= place.dishes.length
-    ) return
-
-    const outsidePlaces = [...this.data.outsidePlaces]
-    const dishes = [...place.dishes]
-    const [dish] = dishes.splice(dishIndex, 1)
-    dishes.splice(targetIndex, 0, dish)
-    outsidePlaces[placeIndex] = { ...place, dishes }
-    this.setData({ outsidePlaces })
-  },
-
-  handleOutsidePlaceMove(event: WechatMiniprogram.TouchEvent) {
-    const placeIndex = Number(event.currentTarget.dataset.placeIndex)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = placeIndex + direction
-    if (
-      !this.data.canReorder ||
-      !this.data.sortEditing ||
-      this.data.ordering ||
-      targetIndex < 0 ||
-      targetIndex >= this.data.outsidePlaces.length
-    ) return
-
-    const outsidePlaces = [...this.data.outsidePlaces]
-    const [place] = outsidePlaces.splice(placeIndex, 1)
-    outsidePlaces.splice(targetIndex, 0, place)
-    this.setData({ outsidePlaces })
-  },
-
-  handleDragStart(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (
       !this.data.canReorder ||
       !this.data.sortEditing ||
@@ -1277,91 +1203,101 @@ Page({
       this.data.loading ||
       this.data.contentLoading
     ) return
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || index < 0 || index >= this.data.dishes.length) return
-
-    dragSourceIndex = index
-    dragTargetIndex = index
-    dragItemIds = this.data.dishes.map((dish) => dish.id)
-    suppressDishTapUntil = Date.now() + 1000
-    const touch = event.touches[0] || event.changedTouches[0]
-    invalidateAsyncPageRequests(this)
-    this.setData({
-      draggingIndex: index,
-      dragTargetIndex: index,
-      sorting: true,
-      loading: false,
-      dragGhostVisible: true,
-      dragGhostLabel: this.data.dishes[index].name,
-      dragGhostX: touch?.clientX || 0,
-      dragGhostY: touch?.clientY || 0
-    })
-
-    wx.createSelectorQuery()
-      .selectAll(".js-sortable-dish")
-      .boundingClientRect((result) => {
-        if (!isAsyncPageActive(this)) return
-        const rects = result as unknown as SortableRect[]
-        if (rects.length !== dragItemIds.length) {
-          resetDragSession()
-          this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false })
-          return
-        }
-        dragRects = rects
-      })
-      .exec()
-  },
-
-  handleDragMove(event: WechatMiniprogram.TouchEvent) {
-    if (dragSourceIndex < 0 || dragRects.length === 0) return
+    const kind = String(event.currentTarget.dataset.kind || "")
     const touch = event.touches[0] || event.changedTouches[0]
     if (!touch) return
-    this.setData({ dragGhostX: touch.clientX, dragGhostY: touch.clientY })
-    const target = findClosestSortTarget(dragRects, touch.clientX, touch.clientY)
-    if (target < 0) return
-    const insertAfter = touch.clientY > (dragRects[target].top + dragRects[target].bottom) / 2
-    if (target === dragTargetIndex && insertAfter === dragInsertAfter) return
-    dragTargetIndex = target
-    dragInsertAfter = insertAfter
-    this.setData({ dragTargetIndex: target, dragInsertAfter: insertAfter })
+    let started = false
+    if (kind === "home") {
+      const index = Number(event.currentTarget.dataset.index)
+      const dish = this.data.dishes[index]
+      if (dish) {
+        started = menuDragSort.start(this, {
+          items: this.data.dishes,
+          sourceIndex: index,
+          keyOf: (item) => item.id,
+          touch,
+          selector: ".js-menu-home-sort-item",
+          axis: "free",
+          kind,
+          title: dish.name,
+          meta: "在家菜品"
+        })
+      }
+    } else if (kind === "outside-place") {
+      const placeIndex = Number(event.currentTarget.dataset.placeIndex)
+      const place = this.data.outsidePlaces[placeIndex]
+      if (place) {
+        started = menuDragSort.start(this, {
+          items: this.data.outsidePlaces,
+          sourceIndex: placeIndex,
+          keyOf: (item) => item.id,
+          touch,
+          selector: ".js-menu-place-sort-anchor",
+          layoutSelector: ".js-menu-place-sort-item",
+          kind,
+          title: place.name,
+          meta: `${place.dish_count} 道菜`
+        })
+      }
+    } else if (kind === "outside-dish") {
+      const placeIndex = Number(event.currentTarget.dataset.placeIndex)
+      const dishIndex = Number(event.currentTarget.dataset.dishIndex)
+      const place = this.data.outsidePlaces[placeIndex]
+      const dish = place?.dishes[dishIndex]
+      if (place && dish) {
+        started = menuDragSort.start(this, {
+          items: place.dishes,
+          sourceIndex: dishIndex,
+          keyOf: (item) => item.id,
+          touch,
+          selector: `.js-menu-outside-dish-sort-${placeIndex}`,
+          axis: "horizontal",
+          kind,
+          contextKey: place.id,
+          context: { placeIndex },
+          title: dish.name,
+          meta: place.name
+        })
+      }
+    }
+    if (started) {
+      suppressDishTapUntil = Date.now() + 1000
+      this.setData({ sorting: true })
+    }
   },
 
-  handleDragCancel() {
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, sorting: false, dragGhostVisible: false })
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    menuDragSort.move(this, event)
   },
 
-  handleDragEnd() {
-    const source = dragSourceIndex
-    const target = dragTargetIndex
-    const sourceId = dragItemIds[source] || ""
-    const targetId = dragItemIds[target] || ""
-    const insertAfter = dragInsertAfter
-    resetDragSession()
-    this.setData({ draggingIndex: -1, dragTargetIndex: -1, dragGhostVisible: false })
-    if (
-      source < 0 ||
-      target < 0 ||
-      source === target ||
-      !sourceId ||
-      !targetId
-    ) {
-      this.setData({ sorting: false })
+  handleSortDragEnd() {
+    const kind = this.data.dragSortKind
+    if (kind === "home") {
+      const result = menuDragSort.finish(this, this.data.dishes, (item) => item.id)
+      this.setData({ sorting: false, ...(result ? { dishes: result.items } : {}) })
       return
     }
-
-    suppressDishTapUntil = Date.now() + 500
-    const dishes = [...this.data.dishes]
-    const currentSourceIndex = dishes.findIndex((dish) => dish.id === sourceId)
-    const currentTargetIndex = dishes.findIndex((dish) => dish.id === targetId)
-    if (currentSourceIndex < 0 || currentTargetIndex < 0) {
-      this.setData({ sorting: false })
+    if (kind === "outside-place") {
+      const result = menuDragSort.finish(this, this.data.outsidePlaces, (item) => item.id)
+      this.setData({ sorting: false, ...(result ? { outsidePlaces: result.items } : {}) })
       return
     }
-    const [sourceDish] = dishes.splice(currentSourceIndex, 1)
-    const nextTargetIndex = dishes.findIndex((dish) => dish.id === targetId)
-    dishes.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, sourceDish)
-    this.setData({ dishes, sorting: false })
+    if (kind === "outside-dish") {
+      const placeIndex = this.data.outsidePlaces.findIndex((place) => place.id === this.data.dragSortContextKey)
+      const place = this.data.outsidePlaces[placeIndex]
+      if (place) {
+        const result = menuDragSort.finish(this, place.dishes, (item) => item.id)
+        if (result) {
+          const outsidePlaces = [...this.data.outsidePlaces]
+          outsidePlaces[placeIndex] = { ...place, dishes: result.items }
+          this.setData({ outsidePlaces, sorting: false })
+          return
+        }
+      } else {
+        menuDragSort.cancel(this)
+      }
+    }
+    this.setData({ sorting: false })
   },
 
   handleRetry() {

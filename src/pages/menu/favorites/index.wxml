@@ -9,17 +9,17 @@
   <view wx:elif="{{errorMessage}}" class="state">{{errorMessage}}</view>
   <view wx:elif="{{items.length === 0}}" class="state">还没有常吃的菜品或店铺</view>
   <view wx:else class="favorite-list">
-    <view wx:for="{{items}}" wx:key="id" class="favorite-row">
+    <view wx:for="{{items}}" wx:key="id" style="{{dragSortPreviewStyles[index]}}" class="favorite-row js-favorite-sort-item {{draggingSortKey === item.id ? 'favorite-row--dragging' : ''}}">
       <image wx:if="{{item.image_url}}" class="favorite-image" src="{{item.image_url}}" mode="aspectFill" lazy-load />
       <view wx:else class="favorite-image favorite-image--empty">无图</view>
       <view class="favorite-copy"><view class="favorite-name">{{item.name}}</view><view class="favorite-type">{{item.source_kind === 'place' ? '店铺' : '菜品'}}</view></view>
       <view class="favorite-actions">
-        <view class="favorite-action {{index === 0 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="上移{{item.name}}" data-index="{{index}}" data-direction="-1" bindtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
-        <view class="favorite-action {{index === items.length - 1 ? 'favorite-action--disabled' : ''}}" role="button" aria-label="下移{{item.name}}" data-index="{{index}}" data-direction="1" bindtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
+        <view class="favorite-action" role="button" aria-label="长按拖拽调整{{item.name}}顺序" data-index="{{index}}" catchlongpress="handleSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
         <view class="favorite-action" role="button" aria-label="删除{{item.name}}" data-id="{{item.id}}" bindtap="handleRemove"><app-icon name="trash-2-danger" size="24" /></view>
       </view>
     </view>
   </view>
 </view>
 <operation-loading visible="{{saving}}" text="正在保存常吃清单…" />
+<sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 <login-required-dialog id="login-required-dialog" />

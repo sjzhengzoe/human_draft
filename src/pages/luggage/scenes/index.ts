@@ -13,11 +13,16 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
-import { hasSameOrder } from "../../../utils/drag-sort"
+import {
+  createDragSortController,
+  createDragSortData,
+  hasSameOrder
+} from "../../../utils/drag-sort"
 import { getLuggageDataRevision } from "../../../utils/luggage-data-cache"
 import { requireLoginForAction } from "../../../utils/login-required"
 
 let luggageSceneSortOriginalIds: string[] = []
+const luggageSceneDragSort = createDragSortController()
 
 Page({
   data: {
@@ -34,7 +39,8 @@ Page({
     sortEditing: false,
     guestMode: false,
     luggageRevision: -1,
-    errorMessage: ""
+    errorMessage: "",
+    ...createDragSortData()
   },
 
   onShow() {
@@ -57,6 +63,7 @@ Page({
   },
 
   onUnload() {
+    luggageSceneDragSort.dispose()
     deactivateAsyncPage(this)
     luggageSceneSortOriginalIds = []
   },
@@ -196,18 +203,31 @@ Page({
     }
   },
 
-  handleSceneMove(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (!requireLoginForAction(this)) return
     if (!this.data.sortEditing || this.data.savingOrder || this.data.deleting) return
     const index = Number(event.currentTarget.dataset.index)
-    const targetIndex = index + Number(event.currentTarget.dataset.direction)
-    const source = this.data.scenes[index]
-    const target = this.data.scenes[targetIndex]
-    if (!source || !target) return
-    const scenes = [...this.data.scenes]
-    scenes[index] = target
-    scenes[targetIndex] = source
-    this.setData({ scenes })
+    const scene = this.data.scenes[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!scene || !touch) return
+    luggageSceneDragSort.start(this, {
+      items: this.data.scenes,
+      sourceIndex: index,
+      keyOf: (item) => item.id,
+      touch,
+      selector: ".js-scene-sort-item",
+      title: scene.name,
+      meta: `${scene.group_count} 个层级 · ${scene.item_count} 件物品`
+    })
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    luggageSceneDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const result = luggageSceneDragSort.finish(this, this.data.scenes, (item) => item.id)
+    if (result) this.setData({ scenes: result.items })
   },
 
   async handleSortEditingToggle() {

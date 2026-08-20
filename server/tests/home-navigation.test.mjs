@@ -143,10 +143,10 @@ test("login prompts wait for a write action instead of blocking management pages
   const writeChecks = [
     ["src/pages/media/categories/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
     ["src/pages/wardrobe/categories/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
-    ["src/pages/activities/manage/index.ts", ["handleManagerEdit", "handleManagerMove", "handleDeleteRequest"]],
+    ["src/pages/activities/manage/index.ts", ["handleManagerEdit", "handleSortDragLongPress", "handleDeleteRequest"]],
     ["src/pages/luggage/scenes/index.ts", ["handleAdd", "handleEdit", "handleSortEditingToggle"]],
     ["src/exercise/pages/settings/index.ts", ["handleSave", "handleReset"]],
-    ["src/pages/menu/favorites/index.ts", ["handleAdd", "handleRemove", "handleMove"]],
+    ["src/pages/menu/favorites/index.ts", ["handleAdd", "handleRemove", "handleSortDragLongPress"]],
     ["src/pages/menu/day-plan/index.ts", ["handleMealEdit", "handleRandomize", "handleRemoveMealItem"]],
     ["src/pages/menu/print/index.ts", ["handleConfirmPrinted"]],
   ]

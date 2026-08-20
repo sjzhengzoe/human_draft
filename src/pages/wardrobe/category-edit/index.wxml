@@ -53,7 +53,7 @@
 
       <view wx:if="{{fields.length === 0}}" class="attribute-empty">暂无属性，也可以保存为空白分类。</view>
       <view wx:else class="attribute-list">
-        <view wx:for="{{fields}}" wx:key="index" class="attribute-row">
+        <view wx:for="{{fields}}" wx:key="key" style="{{dragSortPreviewStyles[index]}}" class="attribute-row js-field-sort-item {{draggingSortKey === item.key ? 'attribute-row--dragging' : ''}}">
           <app-input
             custom-class="attribute-input"
             value="{{item.name}}"
@@ -63,18 +63,7 @@
             bindinput="handleFieldInput"
           />
           <view class="attribute-tools">
-            <view
-              class="tool {{index === 0 ? 'tool--disabled' : ''}}"
-              data-index="{{index}}"
-              data-direction="-1"
-              bindtap="handleMoveField"
-            ><app-icon name="arrow-up" size="24" /></view>
-            <view
-              class="tool {{index === fields.length - 1 ? 'tool--disabled' : ''}}"
-              data-index="{{index}}"
-              data-direction="1"
-              bindtap="handleMoveField"
-            ><app-icon name="arrow-down" size="24" /></view>
+            <view class="tool" role="button" aria-label="长按拖拽调整{{item.name || '未命名属性'}}顺序" data-index="{{index}}" catchlongpress="handleSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
             <view class="tool tool--danger" role="button" aria-label="删除属性" data-index="{{index}}" bindtap="handleRemoveField"><app-icon name="x-danger" size="24" /></view>
           </view>
         </view>
@@ -85,4 +74,5 @@
       <button class="save-button" loading="{{saving}}" disabled="{{saving || deleting}}" bindtap="handleSave">保存分类</button>
       <button wx:if="{{categoryId}}" class="delete-button" loading="{{deleting}}" disabled="{{saving || deleting}}" bindtap="handleDelete"><app-icon name="trash-2-danger" size="24" /><text>删除分类</text></button>
     </view>
+    <sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 </view>

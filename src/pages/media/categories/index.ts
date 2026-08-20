@@ -14,7 +14,11 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
-import { hasSameOrder } from "../../../utils/drag-sort"
+import {
+  createDragSortController,
+  createDragSortData,
+  hasSameOrder
+} from "../../../utils/drag-sort"
 import { requireLoginForAction } from "../../../utils/login-required"
 import {
   getMediaDataRevision,
@@ -22,6 +26,7 @@ import {
 } from "../../../utils/media-data-revision"
 
 let mediaCategorySortOriginalIds: string[] = []
+const mediaCategoryDragSort = createDragSortController()
 
 Page({
   data: {
@@ -40,7 +45,8 @@ Page({
     deleting: false,
     guestMode: false,
     mediaRevision: -1,
-    errorMessage: ""
+    errorMessage: "",
+    ...createDragSortData()
   },
 
   onShow() {
@@ -65,6 +71,7 @@ Page({
   },
 
   onUnload() {
+    mediaCategoryDragSort.dispose()
     deactivateAsyncPage(this)
     mediaCategorySortOriginalIds = []
   },
@@ -266,17 +273,30 @@ Page({
     }
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.sortEditing || this.data.moving || this.data.contentLoading) return
     const index = Number(event.currentTarget.dataset.index)
-    const targetIndex = index + Number(event.currentTarget.dataset.direction)
-    const source = this.data.categories[index]
-    const target = this.data.categories[targetIndex]
-    if (!source || !target) return
-    const categories = [...this.data.categories]
-    categories[index] = target
-    categories[targetIndex] = source
-    this.setData({ categories })
+    const category = this.data.categories[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!category || !touch) return
+    mediaCategoryDragSort.start(this, {
+      items: this.data.categories,
+      sourceIndex: index,
+      keyOf: (item) => item.id,
+      touch,
+      selector: ".js-category-sort-item",
+      title: category.name,
+      meta: "影视分类"
+    })
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    mediaCategoryDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const result = mediaCategoryDragSort.finish(this, this.data.categories, (item) => item.id)
+    if (result) this.setData({ categories: result.items })
   },
 
   handleRetry() {

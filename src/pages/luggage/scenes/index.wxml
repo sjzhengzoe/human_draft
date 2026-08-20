@@ -45,7 +45,8 @@
       <view
         wx:for="{{scenes}}"
         wx:key="id"
-        class="scene-card {{sortEditing ? 'scene-card--sorting' : 'scene-card--editable'}}"
+        style="{{dragSortPreviewStyles[index]}}"
+        class="scene-card js-scene-sort-item {{sortEditing ? 'scene-card--sorting' : 'scene-card--editable'}} {{draggingSortKey === item.id ? 'scene-card--dragging' : ''}}"
         role="{{sortEditing ? '' : 'button'}}"
         aria-label="{{sortEditing ? item.name : '编辑' + item.name + '场景'}}"
         data-id="{{item.id}}"
@@ -57,29 +58,13 @@
           <view class="scene-card__fields">{{item.group_count}} 个层级 · {{item.item_count}} 件物品</view>
         </view>
         <view wx:if="{{sortEditing}}" class="scene-card__sort">
-          <view
-            class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}"
-            role="button"
-            aria-label="上移{{item.name}}"
-            aria-disabled="{{index === 0}}"
-            data-index="{{index}}"
-            data-direction="-1"
-            catchtap="handleSceneMove"
-          ><app-icon name="arrow-up" size="24" /></view>
-          <view
-            class="sort-control {{index === scenes.length - 1 ? 'sort-control--disabled' : ''}}"
-            role="button"
-            aria-label="下移{{item.name}}"
-            aria-disabled="{{index === scenes.length - 1}}"
-            data-index="{{index}}"
-            data-direction="1"
-            catchtap="handleSceneMove"
-          ><app-icon name="arrow-down" size="24" /></view>
+          <view class="sort-control" role="button" aria-label="长按拖拽调整{{item.name}}场景顺序" data-index="{{index}}" catchlongpress="handleSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
         </view>
         <view wx:else class="scene-card__arrow"><app-icon name="chevron-right" size="27" /></view>
       </view>
     </view>
   </scroll-view>
+  <sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 
   <luggage-scene-dialog
     wx:if="{{sceneDialogVisible}}"

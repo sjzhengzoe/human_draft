@@ -62,7 +62,7 @@ test("luggage item rows edit while only the square checkbox changes packing stat
     readFile("src/pages/luggage/index.less", "utf8"),
   ]);
 
-  const itemRow = page.match(/class="luggage-item"[\s\S]*?<\/view>\n            <view wx:if="\{\{group\.visible_items\.length/)?.[0] || "";
+  const itemRow = page.match(/class="luggage-item [^"]*"[\s\S]*?<\/view>\n            <view wx:if="\{\{group\.visible_items\.length/)?.[0] || "";
   assert.match(itemRow, /bindtap="openItemEditor"/);
   assert.match(itemRow, /class="packing-checkbox-hit"[\s\S]*?catchtap="handlePackingItemToggle"/);
   assert.match(itemRow, /aria-checked="\{\{luggageItem\.is_packed\}\}"/);
@@ -243,12 +243,14 @@ test("luggage scene manager reorders locally and saves one final snapshot on com
 
   assert.match(page, /aria-label="\{\{sortEditing \? '完成行李场景排序' : '调整行李场景顺序'\}\}"/);
   assert.match(page, /name="\{\{sortEditing \? 'check-white' : 'settings-2'\}\}"/);
-  assert.match(page, /class="scene-card__sort"[\s\S]*?catchtap="handleSceneMove"/);
+  assert.match(page, /class="scene-card__sort"[\s\S]*?catchlongpress="handleSortDragLongPress"[\s\S]*?name="drag-handle"/);
+  assert.match(page, /<sort-drag-ghost/);
   assert.match(page, /visible="\{\{savingOrder \|\| deleting\}\}"/);
   assert.match(styles, /\.sort-control\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx/s);
 
-  const localMove = logic.match(/handleSceneMove\([\s\S]*?\n  },\n\n  async handleSortEditingToggle/)?.[0] || "";
-  assert.match(localMove, /this\.setData\(\{ scenes \}\)/);
+  const localMove = logic.match(/handleSortDragEnd\([\s\S]*?\n  },\n\n  async handleSortEditingToggle/)?.[0] || "";
+  assert.match(localMove, /luggageSceneDragSort\.finish/);
+  assert.match(localMove, /this\.setData\(\{ scenes: result\.items \}\)/);
   assert.doesNotMatch(localMove, /reorderLuggageScenes|listLuggageScenes/);
 
   const saveOrder = logic.match(/async handleSortEditingToggle\([\s\S]*?\n  },\n\n  handleRetry/)?.[0] || "";

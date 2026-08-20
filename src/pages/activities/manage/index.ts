@@ -13,8 +13,10 @@ import {
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
 import { requireLoginForAction } from "../../../utils/login-required"
+import { createDragSortController, createDragSortData } from "../../../utils/drag-sort"
 
 const ACTIVITY_TYPES: ActivityType[] = ["室内", "户外", "居家"]
+const activityDragSort = createDragSortController()
 
 function activityType(value: string | undefined): ActivityType {
   return ACTIVITY_TYPES.includes(value as ActivityType) ? value as ActivityType : "室内"
@@ -31,7 +33,8 @@ Page({
     showDeleteDialog: false,
     pendingDeleteId: "",
     pendingDeleteName: "",
-    guestMode: false
+    guestMode: false,
+    ...createDragSortData()
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -50,6 +53,7 @@ Page({
   },
 
   onUnload() {
+    activityDragSort.dispose()
     deactivateAsyncPage(this)
   },
 
@@ -91,29 +95,53 @@ Page({
     })
   },
 
-  async handleManagerMove(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (!requireLoginForAction(this)) return
-    if (this.data.ordering) return
+    if (this.data.ordering || this.data.deleting) return
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const targetIndex = index + direction
-    const source = this.data.items[index]
-    const target = this.data.items[targetIndex]
-    if (!source || !target) return
+    const item = this.data.items[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!item || !touch) return
+    activityDragSort.start(this, {
+      items: this.data.items,
+      sourceIndex: index,
+      keyOf: (entry) => entry.id,
+      touch,
+      selector: ".js-activity-sort-item",
+      title: item.name,
+      meta: this.data.activeType
+    })
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    activityDragSort.move(this, event)
+  },
+
+  async handleSortDragEnd() {
+    const previousItems = this.data.items
+    const result = activityDragSort.finish(this, previousItems, (item) => item.id)
+    if (!result) return
     this.setData({ ordering: true })
+    this.setData({ items: result.items })
     try {
-      await swapActivityItemSortOrders(source.id, target.id)
-      if (!isAsyncPageActive(this)) return
-      const items = [...this.data.items]
-      items[index] = target
-      items[targetIndex] = source
-      this.setData({ items })
+      const movingId = previousItems[result.sourceIndex]?.id || ""
+      const direction = result.sourceIndex < result.targetIndex ? 1 : -1
+      for (
+        let index = result.sourceIndex + direction;
+        index !== result.targetIndex + direction;
+        index += direction
+      ) {
+        const targetId = previousItems[index]?.id || ""
+        if (!movingId || !targetId) throw new Error("活动排序数据已变化，请重新加载")
+        await swapActivityItemSortOrders(movingId, targetId)
+      }
     } catch (error) {
       if (isAsyncPageActive(this)) {
         wx.showToast({
           title: error instanceof Error ? error.message : "排序保存失败",
           icon: "none"
         })
+        await this.loadItems(true)
       }
     } finally {
       if (isAsyncPageActive(this)) this.setData({ ordering: false })

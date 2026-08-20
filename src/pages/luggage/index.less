@@ -223,6 +223,12 @@ page,
   border: 1rpx solid var(--ui-color-border);
   border-radius: var(--ui-radius-card);
   background: var(--ui-color-background-surface);
+  transition: transform 160ms ease;
+}
+
+.group-card--dragging,
+.luggage-item--dragging {
+  opacity: 0;
 }
 
 .group-header {
@@ -298,6 +304,7 @@ page,
   min-height: 82rpx;
   align-items: center;
   border-bottom: 1rpx solid var(--ui-color-border);
+  transition: transform 160ms ease;
 }
 
 .packing-checkbox {

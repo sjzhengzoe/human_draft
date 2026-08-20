@@ -32,19 +32,19 @@
   </view>
   <view wx:elif="{{categories.length === 0}}" class="state">还没有分类</view>
   <view wx:else class="category-list">
-    <view wx:for="{{categories}}" wx:key="id" class="category-card" data-id="{{item.id}}" bindtap="handleEdit" role="button" aria-label="编辑{{item.name}}分类">
+    <view wx:for="{{categories}}" wx:key="id" style="{{dragSortPreviewStyles[index]}}" class="category-card js-category-sort-item {{draggingSortKey === item.id ? 'category-card--dragging' : ''}}" data-id="{{item.id}}" bindtap="handleEdit" role="button" aria-label="编辑{{item.name}}分类">
       <view class="category-card__main">
         <view class="category-card__name">{{item.name}}</view>
         <view class="category-card__fields">点击修改分类名称</view>
       </view>
       <view wx:if="{{sortEditing}}" class="category-card__sort">
-        <view class="sort-control {{index === 0 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="-1" catchtap="handleMove"><app-icon name="arrow-up" size="24" /></view>
-        <view class="sort-control {{index === categories.length - 1 ? 'sort-control--disabled' : ''}}" data-index="{{index}}" data-direction="1" catchtap="handleMove"><app-icon name="arrow-down" size="24" /></view>
+        <view class="sort-control" role="button" aria-label="长按拖拽调整{{item.name}}分类顺序" data-index="{{index}}" catchlongpress="handleSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
       </view>
       <view class="category-card__arrow"><app-icon name="pencil" size="24" /></view>
     </view>
   </view>
   <operation-loading visible="{{moving}}" text="正在保存排序…" />
+  <sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 
   <app-dialog
     wx:if="{{editorVisible}}"

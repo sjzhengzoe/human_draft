@@ -106,7 +106,7 @@
       </view>
     </view>
 
-    <scroll-view class="group-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <scroll-view class="group-scroll" scroll-y="{{draggingSortKey === ''}}" enhanced bounces="{{false}}" show-scrollbar="{{false}}">
       <view wx:if="{{contentLoading}}" class="content-loading content-loading--compact">
         <view class="content-loading__spinner" />
         <view class="content-loading__text">正在加载清单…</view>
@@ -139,7 +139,8 @@
           wx:for-item="group"
           wx:for-index="groupIndex"
           wx:key="id"
-          class="group-card"
+          style="{{dragSortKind === 'group' ? dragSortPreviewStyles[groupIndex] : ''}}"
+          class="group-card js-luggage-group-sort-item {{draggingSortKey === group.id ? 'group-card--dragging' : ''}}"
         >
           <view class="group-header">
             <view class="group-index">{{groupIndex < 9 ? '0' : ''}}{{groupIndex + 1}}</view>
@@ -151,24 +152,7 @@
               <view class="group-count">{{group.packing_count_label}}</view>
             </view>
             <view wx:if="{{sortEditing}}" class="sort-actions">
-              <view
-                class="sort-icon {{groupIndex === 0 ? 'sort-icon--disabled' : ''}}"
-                role="button"
-                aria-label="上移{{group.name}}"
-                aria-disabled="{{groupIndex === 0}}"
-                data-index="{{groupIndex}}"
-                data-direction="-1"
-                catchtap="handleGroupMove"
-              ><app-icon name="arrow-up" size="24" /></view>
-              <view
-                class="sort-icon {{groupIndex === packingGroups.length - 1 ? 'sort-icon--disabled' : ''}}"
-                role="button"
-                aria-label="下移{{group.name}}"
-                aria-disabled="{{groupIndex === packingGroups.length - 1}}"
-                data-index="{{groupIndex}}"
-                data-direction="1"
-                catchtap="handleGroupMove"
-              ><app-icon name="arrow-down" size="24" /></view>
+              <view class="sort-icon" role="button" aria-label="长按拖拽调整{{group.name}}层级顺序" data-index="{{groupIndex}}" catchlongpress="handleGroupSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
             </view>
             <view
               wx:elif="{{canWrite}}"
@@ -188,7 +172,8 @@
               wx:for-item="luggageItem"
               wx:for-index="itemIndex"
               wx:key="id"
-              class="luggage-item"
+              style="{{dragSortKind === 'item' && dragSortContextKey === group.id ? dragSortPreviewStyles[itemIndex] : ''}}"
+              class="luggage-item js-luggage-item-sort-{{groupIndex}} {{draggingSortKey === luggageItem.id ? 'luggage-item--dragging' : ''}}"
             >
               <view
                 wx:if="{{!sortEditing}}"
@@ -214,26 +199,7 @@
               >
                 <view class="luggage-item__name {{luggageItem.is_packed ? 'luggage-item__name--packed' : ''}}">{{luggageItem.name}}</view>
                 <view wx:if="{{sortEditing}}" class="sort-actions">
-                  <view
-                    class="sort-icon {{itemIndex === 0 ? 'sort-icon--disabled' : ''}}"
-                    role="button"
-                    aria-label="上移{{luggageItem.name}}"
-                    aria-disabled="{{itemIndex === 0}}"
-                    data-group-id="{{group.id}}"
-                    data-index="{{itemIndex}}"
-                    data-direction="-1"
-                    catchtap="handleItemMove"
-                  ><app-icon name="arrow-up" size="24" /></view>
-                  <view
-                    class="sort-icon {{itemIndex === group.visible_items.length - 1 ? 'sort-icon--disabled' : ''}}"
-                    role="button"
-                    aria-label="下移{{luggageItem.name}}"
-                    aria-disabled="{{itemIndex === group.visible_items.length - 1}}"
-                    data-group-id="{{group.id}}"
-                    data-index="{{itemIndex}}"
-                    data-direction="1"
-                    catchtap="handleItemMove"
-                  ><app-icon name="arrow-down" size="24" /></view>
+                  <view class="sort-icon" role="button" aria-label="长按拖拽调整{{luggageItem.name}}顺序" data-group-id="{{group.id}}" data-group-index="{{groupIndex}}" data-index="{{itemIndex}}" catchlongpress="handleItemSortDragLongPress" catchtouchmove="handleSortDragMove" catchtouchend="handleSortDragEnd" catchtouchcancel="handleSortDragEnd"><app-icon name="drag-handle" size="27" /></view>
                 </view>
               </view>
             </view>
@@ -352,6 +318,7 @@
     visible="{{ordering || deleting}}"
     text="{{deleting ? '正在删除…' : '正在保存排序…'}}"
   />
+  <sort-drag-ghost visible="{{draggingSortKey !== ''}}" title="{{dragSortGhostTitle}}" meta="{{dragSortGhostMeta}}" custom-style="{{dragSortGhostStyle}}" />
 </view>
 
 <login-required-dialog id="login-required-dialog" />

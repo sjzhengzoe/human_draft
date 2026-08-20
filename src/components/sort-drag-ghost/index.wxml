@@ -1,0 +1,7 @@
+<view wx:if="{{visible && customStyle}}" class="sort-drag-ghost" style="{{customStyle}}">
+  <view class="sort-drag-ghost__handle"><app-icon name="drag-handle" size="27" /></view>
+  <view class="sort-drag-ghost__copy">
+    <view class="sort-drag-ghost__title">{{title}}</view>
+    <view wx:if="{{meta}}" class="sort-drag-ghost__meta">{{meta}}</view>
+  </view>
+</view>

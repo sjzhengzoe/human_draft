@@ -3,6 +3,9 @@ import { getCurrentUser } from "../../../services/auth"
 import type { MenuFavorite } from "../../../types/api"
 import { activateAsyncPage, deactivateAsyncPage, isAsyncPageActive } from "../../../utils/async-page"
 import { requireLoginForAction } from "../../../utils/login-required"
+import { createDragSortController, createDragSortData } from "../../../utils/drag-sort"
+
+const favoriteDragSort = createDragSortController()
 
 function toInput(item: MenuFavorite) {
   return item.source_kind === "dish"
@@ -16,7 +19,8 @@ Page({
     loading: true,
     saving: false,
     guestMode: false,
-    errorMessage: ""
+    errorMessage: "",
+    ...createDragSortData()
   },
 
   onShow() {
@@ -28,7 +32,10 @@ Page({
     if (this.data.guestMode) this.setData({ guestMode: false })
     this.loadData()
   },
-  onUnload() { deactivateAsyncPage(this) },
+  onUnload() {
+    favoriteDragSort.dispose()
+    deactivateAsyncPage(this)
+  },
 
   async loadData() {
     if (!getCurrentUser()) return
@@ -72,15 +79,30 @@ Page({
     this.saveItems(this.data.items.filter((item) => item.id !== id))
   },
 
-  handleMove(event: WechatMiniprogram.TouchEvent) {
+  handleSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     if (!requireLoginForAction(this)) return
+    if (this.data.saving) return
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
-    const target = index + direction
-    if (target < 0 || target >= this.data.items.length) return
-    const items = [...this.data.items]
-    const [item] = items.splice(index, 1)
-    items.splice(target, 0, item)
-    this.saveItems(items)
+    const item = this.data.items[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!item || !touch) return
+    favoriteDragSort.start(this, {
+      items: this.data.items,
+      sourceIndex: index,
+      keyOf: (entry) => entry.id,
+      touch,
+      selector: ".js-favorite-sort-item",
+      title: item.name,
+      meta: item.source_kind === "place" ? "店铺" : "菜品"
+    })
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    favoriteDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const result = favoriteDragSort.finish(this, this.data.items, (item) => item.id)
+    if (result) void this.saveItems(result.items)
   }
 })

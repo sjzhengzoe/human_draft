@@ -28,6 +28,7 @@ import {
   hasCachedLuggageScenes
 } from "../../utils/luggage-data-cache"
 import { requireLoginForAction } from "../../utils/login-required"
+import { createDragSortController, createDragSortData } from "../../utils/drag-sort"
 
 type LuggageOrderSnapshot = {
   groupIds: string[]
@@ -51,6 +52,7 @@ type LuggagePackingGroupView = LuggageScene["groups"][number] & {
 const COLLAPSED_SCENE_TAB_LIMIT = 6
 
 let luggageSortOriginalOrder: LuggageOrderSnapshot | null = null
+const luggageDragSort = createDragSortController()
 let luggagePackingUid = ""
 let luggagePackedItemIds = new Set<string>()
 
@@ -225,7 +227,8 @@ Page({
     confirmTitle: "",
     confirmContent: "",
     resetConfirmVisible: false,
-    groupPickerVisible: false
+    groupPickerVisible: false,
+    ...createDragSortData()
   },
 
   onShow() {
@@ -241,6 +244,7 @@ Page({
   },
 
   onUnload() {
+    luggageDragSort.dispose()
     deactivateAsyncPage(this)
     luggageSortOriginalOrder = null
     luggagePackingUid = ""
@@ -655,51 +659,80 @@ Page({
     }
   },
 
-  handleGroupMove(event: WechatMiniprogram.TouchEvent) {
+  handleGroupSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
     const scene = this.data.activeScene
     const groups = scene?.groups || []
-    const targetIndex = index + direction
+    const group = groups[index]
+    const touch = event.touches[0] || event.changedTouches[0]
     if (
       !scene || !this.data.canWrite || !this.data.sortEditing || this.data.ordering ||
-      targetIndex < 0 || targetIndex >= groups.length
+      !group || !touch
     ) return
-
-    const nextGroups = [...groups]
-    const [group] = nextGroups.splice(index, 1)
-    nextGroups.splice(targetIndex, 0, group)
-    const nextScene = { ...scene, groups: nextGroups }
-    const packing = buildPackingPresentation(
-      nextScene,
-      luggagePackedItemIds,
-      this.data.packingView,
-      true
-    )
-    this.setData({
-      activeScene: nextScene,
-      scenes: replaceScene(this.data.scenes, nextScene),
-      packingGroups: packing.groups
+    luggageDragSort.start(this, {
+      items: groups,
+      sourceIndex: index,
+      keyOf: (item) => item.id,
+      touch,
+      selector: ".js-luggage-group-sort-item",
+      kind: "group",
+      title: group.name,
+      meta: `${group.items.length} 件物品`
     })
   },
 
-  handleItemMove(event: WechatMiniprogram.TouchEvent) {
+  handleItemSortDragLongPress(event: WechatMiniprogram.TouchEvent) {
     const groupId = String(event.currentTarget.dataset.groupId || "")
+    const groupIndex = Number(event.currentTarget.dataset.groupIndex)
     const index = Number(event.currentTarget.dataset.index)
-    const direction = Number(event.currentTarget.dataset.direction)
     const scene = this.data.activeScene
-    const items = scene?.groups.find((group) => group.id === groupId)?.items || []
-    const targetIndex = index + direction
+    const group = scene?.groups.find((item) => item.id === groupId)
+    const items = group?.items || []
+    const item = items[index]
+    const touch = event.touches[0] || event.changedTouches[0]
     if (
       !scene || !this.data.canWrite || !this.data.sortEditing || this.data.ordering ||
-      targetIndex < 0 || targetIndex >= items.length
+      !group || !item || !touch
     ) return
+    luggageDragSort.start(this, {
+      items,
+      sourceIndex: index,
+      keyOf: (entry) => entry.id,
+      touch,
+      selector: `.js-luggage-item-sort-${groupIndex}`,
+      kind: "item",
+      contextKey: groupId,
+      context: { groupId },
+      title: item.name,
+      meta: group.name
+    })
+  },
 
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    luggageDragSort.move(this, event)
+  },
+
+  handleSortDragEnd() {
+    const scene = this.data.activeScene
+    if (!scene) {
+      luggageDragSort.cancel(this)
+      return
+    }
     const nextScene = cloneLuggageScene(scene)
-    const nextItems = nextScene.groups.find((group) => group.id === groupId)?.items
-    if (!nextItems) return
-    const [item] = nextItems.splice(index, 1)
-    nextItems.splice(targetIndex, 0, item)
+    if (this.data.dragSortKind === "group") {
+      const result = luggageDragSort.finish(this, nextScene.groups, (item) => item.id)
+      if (!result) return
+      nextScene.groups = result.items
+    } else {
+      const group = nextScene.groups.find((item) => item.id === this.data.dragSortContextKey)
+      if (!group) {
+        luggageDragSort.cancel(this)
+        return
+      }
+      const result = luggageDragSort.finish(this, group.items, (item) => item.id)
+      if (!result) return
+      group.items = result.items
+    }
     const packing = buildPackingPresentation(
       nextScene,
       luggagePackedItemIds,
