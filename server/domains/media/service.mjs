@@ -374,21 +374,18 @@ export async function createMediaEntry(supabase, uid, body) {
       "只有看过或听过的作品可以评分。",
     );
   }
-  const createMediaEntryParams = {
-    p_uid: uid,
-    p_title: title,
-    p_media_type: mediaType,
-    p_watch_status: watchStatusValue,
-    p_platforms: platforms,
-    p_personal_rating: personalRatingValue ?? null,
-  };
-  if (isSpecialFavoriteValue !== undefined) {
-    createMediaEntryParams.p_is_special_favorite = isSpecialFavoriteValue;
-  }
   await assertMediaTitleAvailable(supabase, uid, title, mediaType);
   const { data, error } = await supabase
     .rpc("create_media_entry_at_end", {
-      ...createMediaEntryParams,
+      p_uid: uid,
+      p_title: title,
+      p_media_type: mediaType,
+      p_watch_status: watchStatusValue,
+      p_platforms: platforms,
+      p_personal_rating: personalRatingValue ?? null,
+      ...(isSpecialFavoriteValue === undefined
+        ? {}
+        : { p_is_special_favorite: isSpecialFavoriteValue }),
     })
     .single();
   throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
