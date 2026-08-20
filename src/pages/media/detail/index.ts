@@ -265,6 +265,7 @@ Page({
     entryDraftMediaTypeIndex: 0,
     entryDraftWatchStatus: "completed" as MediaStatus,
     entryDraftPlatforms: [] as string[],
+    entryDraftIsSpecialFavorite: false,
     entryPlatformOptions: platformOptions([]),
     entryDraftIsAudio: false,
     entryDraftIsEpisodic: false,
@@ -296,6 +297,7 @@ Page({
     textSheetValue: "",
     textSheetInputType: "text",
     textSheetConfirmText: "确定",
+    themeColors: UI_COLORS,
     pendingSeasonName: "",
     pendingRenameSeasonId: "",
     detailScrollTop: 0,
@@ -619,6 +621,7 @@ Page({
       entryDraftMediaTypeIndex: Math.max(0, mediaTypes.indexOf(entry.media_type)),
       entryDraftWatchStatus: entry.watch_status,
       entryDraftPlatforms: supportedPlatforms(entry.platforms),
+      entryDraftIsSpecialFavorite: entry.is_special_favorite,
       entryPlatformOptions: platformOptions(entry.platforms),
       entryDraftIsAudio: entry.media_type === "广播剧",
       entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
@@ -631,10 +634,11 @@ Page({
   handleEntryEditCancel() {
     if (this.data.savingEntry || this.data.selectingEntryImage) return
     wx.disableAlertBeforeUnload()
-    this.setData({
+      this.setData({
       editingEntry: false,
       entryDraftTitle: "",
       entryDraftPlatforms: [],
+      entryDraftIsSpecialFavorite: false,
       entryPlatformOptions: platformOptions([]),
       selectedEntryImagePath: "",
       selectedEntryImageUploadPath: "",
@@ -657,6 +661,52 @@ Page({
       entryDraftIsAudio: mediaType === "广播剧",
       entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType)
     })
+  },
+
+  handleSpecialFavoriteChange() {
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    if (this.data.editingEntry) {
+      this.setData({
+        entryDraftIsSpecialFavorite: !this.data.entryDraftIsSpecialFavorite
+      })
+      return
+    }
+    const isSpecialFavorite = !entry.is_special_favorite
+    this.setData({
+      entry: {
+        ...entry,
+        is_special_favorite: isSpecialFavorite
+      },
+      operating: true
+    })
+    void (async () => {
+      try {
+        const persistedEntry = await updateMediaEntry(entry.id, {
+          is_special_favorite: isSpecialFavorite
+        })
+        const mediaRevision = markMediaDataChanged()
+        if (isAsyncPageActive(this)) {
+          this.setData({
+            entry: persistedEntry,
+            mediaRevision
+          })
+        }
+      } catch (error) {
+        if (isAsyncPageActive(this)) {
+          this.setData({
+            entry,
+            operating: false
+          })
+          wx.showToast({
+            title: error instanceof Error ? error.message : "更新失败",
+            icon: "none"
+          })
+        }
+      } finally {
+        if (isAsyncPageActive(this)) this.setData({ operating: false })
+      }
+    })()
   },
 
   handleEntryPlatformTap(event: WechatMiniprogram.TouchEvent) {
@@ -756,7 +806,8 @@ Page({
         title,
         media_type: mediaType,
         watch_status: this.data.entryDraftWatchStatus,
-        platforms
+        platforms,
+        is_special_favorite: this.data.entryDraftIsSpecialFavorite
       })
       if (this.data.selectedEntryImageUploadPath) {
         persistedEntry = await replaceMediaEntryCover(
@@ -780,6 +831,7 @@ Page({
         editingEntry: false,
         entryDraftTitle: "",
         entryDraftPlatforms: [],
+        entryDraftIsSpecialFavorite: false,
         entryPlatformOptions: platformOptions([]),
         selectedEntryImagePath: "",
         selectedEntryImageUploadPath: "",

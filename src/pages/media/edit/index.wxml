@@ -41,6 +41,15 @@
       <view class="field-help rating-help">新增时默认为 3 星</view>
     </view>
     <view class="field">
+      <view class="field-label">特别喜爱</view>
+      <view
+        class="special-favorite-toggle {{isSpecialFavorite ? 'special-favorite-toggle--active' : ''}}"
+        role="button"
+        aria-label="{{isSpecialFavorite ? '取消特别喜爱' : '设为特别喜爱'}}"
+        bindtap="handleSpecialFavoriteChange"
+      >{{isSpecialFavorite ? '♥' : '♡'}}</view>
+    </view>
+    <view class="field">
       <view class="field-label">封面（选填）</view>
       <view class="cover-editor" bindtap="handleChooseImage">
         <image wx:if="{{selectedImagePath}}" class="cover-editor__preview" src="{{selectedImagePath}}" mode="aspectFill" />

@@ -27,8 +27,10 @@
         <view class="media-filter-label">状态：</view>
         <scroll-view class="media-filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
           <view class="category-list status-list" role="group" aria-label="按状态筛选">
+            <view class="category-chip {{overviewStatus === 'all' ? 'category-chip--active' : ''}}" data-status="all" bindtap="handleOverviewStatusTap">全部</view>
             <view class="category-chip {{overviewStatus === 'in_progress' ? 'category-chip--active' : ''}}" data-status="in_progress" bindtap="handleOverviewStatusTap">在看</view>
             <view class="category-chip {{overviewStatus === 'planned' ? 'category-chip--active' : ''}}" data-status="planned" bindtap="handleOverviewStatusTap">想看</view>
+            <view class="category-chip {{overviewStatus === 'special_favorite' ? 'category-chip--active' : ''}}" data-status="special_favorite" bindtap="handleOverviewStatusTap">特别喜爱</view>
           </view>
         </scroll-view>
       </block>
@@ -44,7 +46,7 @@
     </view>
 
     <view class="media-command-row">
-      <view wx:if="{{displayMode === 'record'}}" class="search-row">
+      <view class="search-row">
         <view class="search-row__field">
           <app-icon name="search" size="24" />
           <app-input custom-class="search-row__input" persistent clearable clear-aria-label="清空作品搜索" value="{{keyword}}" placeholder="搜索作品名" confirm-type="search" bindinput="handleKeywordInput" bindconfirm="handleSearch" />
@@ -84,8 +86,8 @@
 
     <block wx:elif="{{displayMode === 'overview'}}">
       <view class="overview-section">
-        <view class="section-heading">
-          <view class="section-heading__title">{{overviewStatus === 'in_progress' ? '在看' : '想看'}}</view>
+      <view wx:if="{{overviewItems.length}}" class="section-heading">
+          <view class="section-heading__title">{{overviewStatus === 'all' ? '全部' : overviewStatus === 'in_progress' ? '在看' : overviewStatus === 'planned' ? '想看' : '特别喜爱'}}</view>
           <view class="section-heading__count">{{overviewTotal}} 部</view>
         </view>
         <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
@@ -99,16 +101,15 @@
             </view>
           </view>
         </view>
-        <view wx:else class="section-empty">
-          <text>{{overviewStatus === 'in_progress' ? '没有在看的作品' : '还没有想看的作品'}}</text>
-          <view wx:if="{{canWrite || guestMode}}" class="empty-action" bindtap="handleAdd">新增</view>
+        <view wx:else class="state-block">
+          <text>目前还没有任何数据哦~</text>
         </view>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>
 
     <block wx:else>
-      <view class="record-heading">
+      <view wx:if="{{recordItems.length}}" class="record-heading">
         <view class="record-heading__main">
           <view class="record-heading__title">{{selectedCategory || '全部记录'}}</view>
           <view class="record-heading__count">{{recordTotal}} 条记录</view>
@@ -134,8 +135,7 @@
         </view>
       </view>
       <view wx:else class="state-block">
-        <text>{{appliedKeyword || selectedRating ? '没有找到符合筛选的作品' : '这个分类还没有记录'}}</text>
-        <view wx:if="{{(canWrite || guestMode) && !appliedKeyword && !selectedRating}}" class="empty-action" bindtap="handleAdd">新增</view>
+        <text>目前还没有任何数据哦~</text>
       </view>
       <view wx:if="{{loadingMore}}" class="load-more">正在加载…</view>
     </block>

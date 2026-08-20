@@ -16,6 +16,7 @@ export type MediaEntryQuery = {
   mediaType?: string
   status?: MediaStatus
   personalRating?: number
+  specialFavorite?: boolean
   keyword?: string
   sort?: "created_desc" | "rating_desc"
   page?: number
@@ -44,6 +45,7 @@ function entryPageKey(input: MediaEntryQuery) {
     mediaType: input.mediaType || "",
     status: input.status || "",
     personalRating: input.personalRating || 0,
+    specialFavorite: input.specialFavorite || false,
     keyword: String(input.keyword || "").trim().toLocaleLowerCase(),
     sort: input.sort || "",
     page: input.page || 1,
@@ -55,6 +57,7 @@ function entryMatchesQuery(entry: MediaEntry, input: MediaEntryQuery) {
   const keyword = String(input.keyword || "").trim().toLocaleLowerCase()
   return (!input.mediaType || entry.media_type === input.mediaType) &&
     (!input.status || entry.watch_status === input.status) &&
+    (!input.specialFavorite || input.specialFavorite === entry.is_special_favorite) &&
     (!input.personalRating || (
       entry.watch_status === "completed"
       && entry.personal_rating === input.personalRating

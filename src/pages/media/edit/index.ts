@@ -36,6 +36,7 @@ type MediaCreateDraft = {
   mediaType: string
   watchStatus: MediaStatus
   personalRating: number
+  isSpecialFavorite: boolean
   platforms: string[]
 }
 
@@ -56,6 +57,7 @@ Page({
     mediaTypeIndex: 0,
     watchStatus: "completed" as MediaStatus,
     personalRating: 3,
+    isSpecialFavorite: false,
     ratingOptions: [1, 2, 3, 4, 5],
     isEpisodic: false,
     isAudio: false,
@@ -115,6 +117,7 @@ Page({
         mediaTypeIndex,
         watchStatus: savedDraft?.watchStatus || "completed",
         personalRating: savedDraft?.personalRating || 3,
+        isSpecialFavorite: savedDraft?.isSpecialFavorite === true,
         selectedBuiltinPlatforms,
         platformOptions: BUILTIN_PLATFORMS.map((name) => ({
           name,
@@ -157,6 +160,7 @@ Page({
         personalRating: Number.isInteger(value.personalRating)
           ? Math.min(5, Math.max(1, Number(value.personalRating)))
           : 3,
+        isSpecialFavorite: value.isSpecialFavorite === true,
         platforms: Array.isArray(value.platforms) ? value.platforms.map(String) : []
       }
     } catch (_error) {
@@ -171,6 +175,7 @@ Page({
       mediaType,
       watchStatus: this.data.watchStatus,
       personalRating: this.data.personalRating,
+      isSpecialFavorite: this.data.isSpecialFavorite,
       platforms: [...this.data.selectedBuiltinPlatforms]
     }
     try {
@@ -281,6 +286,12 @@ Page({
     this.setData({ personalRating }, () => this.markDraftDirty())
   },
 
+  handleSpecialFavoriteChange() {
+    this.setData({
+      isSpecialFavorite: !this.data.isSpecialFavorite
+    }, () => this.markDraftDirty())
+  },
+
   handlePlatformsChange(event: WechatMiniprogram.CheckboxGroupChange) {
     const selectedBuiltinPlatforms = event.detail.value
       .filter((name) => BUILTIN_PLATFORMS.includes(name))
@@ -326,7 +337,8 @@ Page({
       personal_rating: this.data.watchStatus === "completed"
         ? this.data.personalRating
         : undefined,
-      platforms: selectedPlatforms
+      platforms: selectedPlatforms,
+      ...(this.data.isSpecialFavorite ? { is_special_favorite: true } : {})
     }
     let entryCreated = false
     let toast: { title: string; icon: "success" | "none" } | null = null

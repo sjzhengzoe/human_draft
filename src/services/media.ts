@@ -47,6 +47,7 @@ export async function listMediaEntries(input: {
   status?: MediaStatus
   personalRating?: number
   keyword?: string
+  specialFavorite?: boolean
   sort?: "created_desc" | "rating_desc"
   page?: number
   pageSize?: number
@@ -58,6 +59,7 @@ export async function listMediaEntries(input: {
       media_type: input.mediaType,
       watch_status: input.status,
       personal_rating: input.personalRating ? String(input.personalRating) : undefined,
+      special_favorite: input.specialFavorite === true ? "true" : undefined,
       keyword: input.keyword,
       sort: input.sort,
       page: input.page ? String(input.page) : undefined,
@@ -135,6 +137,7 @@ export async function createMediaEntry(input: {
   media_type: MediaType
   watch_status: MediaStatus
   platforms: string[]
+  is_special_favorite?: boolean
   personal_rating?: number | null
 }): Promise<MediaEntry> {
   const data = await request<{ item: MediaEntry }>({
@@ -153,6 +156,7 @@ export async function updateMediaEntry(
     media_type?: MediaType
     watch_status?: MediaStatus
     platforms?: string[]
+    is_special_favorite?: boolean
     personal_rating?: number | null
   }
 ): Promise<MediaEntry> {

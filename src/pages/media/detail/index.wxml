@@ -155,6 +155,25 @@
             </view>
             <view wx:else class="detail-attribute__value">{{platformText}}</view>
           </view>
+          <view class="detail-attribute">
+            <view class="detail-attribute__label">特别喜爱</view>
+            <view wx:if="{{editingEntry}}" class="detail-attribute__value">
+              <view
+                class="special-favorite-toggle {{entryDraftIsSpecialFavorite ? 'special-favorite-toggle--active' : ''}}"
+                role="button"
+                aria-label="{{entryDraftIsSpecialFavorite ? '取消特别喜爱' : '设为特别喜爱'}}"
+                bindtap="handleSpecialFavoriteChange"
+              >{{entryDraftIsSpecialFavorite ? '♥' : '♡'}}</view>
+            </view>
+            <view wx:else class="detail-attribute__value">
+              <view
+                class="special-favorite-toggle {{entry.is_special_favorite ? 'special-favorite-toggle--active' : ''}} {{!canWrite || operating || savingEntry ? 'special-favorite-toggle--disabled' : ''}}"
+                role="button"
+                aria-label="{{entry.is_special_favorite ? '取消特别喜爱' : '设为特别喜爱'}}"
+                bindtap="handleSpecialFavoriteChange"
+              >{{entry.is_special_favorite ? '♥' : '♡'}}</view>
+            </view>
+          </view>
           <view wx:if="{{editingEntry ? (isEpisodic || entryDraftIsEpisodic) : isEpisodic}}" class="detail-attribute">
             <view class="detail-attribute__label">剧集</view>
             <view class="detail-attribute__value">{{entry.season_count || 0}} 季 · {{entry.episode_count || 0}} 集 · {{entry.favorite_episode_count || 0}} 集喜欢</view>

@@ -286,6 +286,20 @@ export async function listMediaEntries(supabase, uid, query) {
       enumValue(query.watch_status, MEDIA_STATUSES, "观看状态"),
     );
   }
+  if (query.special_favorite !== undefined && query.special_favorite !== "") {
+    const isSpecialFavorite = query.special_favorite === "true"
+      ? true
+      : query.special_favorite === "false"
+        ? false
+        : undefined;
+    assertCondition(
+      isSpecialFavorite !== undefined,
+      400,
+      "INVALID_BOOLEAN",
+      "是否特别喜爱无效。",
+    );
+    request = request.eq("is_special_favorite", isSpecialFavorite);
+  }
   if (query.personal_rating !== undefined && query.personal_rating !== "") {
     request = request.eq(
       "completed_personal_rating",
@@ -343,6 +357,9 @@ export async function createMediaEntry(supabase, uid, body) {
   } else if (watchStatusValue === "completed") {
     personalRatingValue = 3;
   }
+  const isSpecialFavoriteValue = body.is_special_favorite === undefined
+    ? undefined
+    : booleanValue(body.is_special_favorite, "是否特别喜爱");
   assertCondition(
     watchStatusValue !== "completed" || personalRatingValue !== null,
     400,
@@ -357,15 +374,21 @@ export async function createMediaEntry(supabase, uid, body) {
       "只有看过或听过的作品可以评分。",
     );
   }
+  const createMediaEntryParams = {
+    p_uid: uid,
+    p_title: title,
+    p_media_type: mediaType,
+    p_watch_status: watchStatusValue,
+    p_platforms: platforms,
+    p_personal_rating: personalRatingValue ?? null,
+  };
+  if (isSpecialFavoriteValue !== undefined) {
+    createMediaEntryParams.p_is_special_favorite = isSpecialFavoriteValue;
+  }
   await assertMediaTitleAvailable(supabase, uid, title, mediaType);
   const { data, error } = await supabase
     .rpc("create_media_entry_at_end", {
-      p_uid: uid,
-      p_title: title,
-      p_media_type: mediaType,
-      p_watch_status: watchStatusValue,
-      p_platforms: platforms,
-      p_personal_rating: personalRatingValue ?? null,
+      ...createMediaEntryParams,
     })
     .single();
   throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
@@ -406,6 +429,9 @@ export async function updateMediaEntry(supabase, uid, id, body) {
       "只有看过或听过的作品可以评分。",
     );
   }
+  if (body.is_special_favorite !== undefined) {
+    changes.is_special_favorite = booleanValue(body.is_special_favorite, "是否特别喜爱");
+  }
   assertCondition(Object.keys(changes).length > 0, 400, "NO_CHANGES", "没有需要更新的内容。" );
   if (changes.title !== undefined || changes.media_type !== undefined) {
     await assertMediaTitleAvailable(
@@ -427,6 +453,9 @@ export async function updateMediaEntry(supabase, uid, id, body) {
         p_media_type: changes.media_type,
         p_watch_status: changes.watch_status ?? null,
         p_platforms: changes.platforms ?? null,
+        ...(changes.is_special_favorite === undefined
+          ? {}
+          : { p_is_special_favorite: changes.is_special_favorite }),
       })
       .single();
     throwSupabaseError(error, "更新影视条目失败。", {
