@@ -1,5 +1,5 @@
 import { ensureLogin } from "../../../services/auth"
-import { getMediaEntry, listMediaSeasons, saveMediaSeasonDrafts } from "../../../services/media"
+import { listMediaSeasons, saveMediaSeasonDrafts } from "../../../services/media"
 import type { MediaSeason } from "../../../types/media"
 import {
   activateAsyncPage,
@@ -58,7 +58,6 @@ function deletionCounts(originalSeasons: MediaSeason[], drafts: DraftSeason[]) {
 Page({
   data: {
     id: "",
-    mediaTitle: "",
     originalSeasons: [] as MediaSeason[],
     draftSeasons: [] as DraftSeason[],
     expandedSeasonKey: "",
@@ -90,16 +89,14 @@ Page({
     const generation = beginAsyncPageRequest(this)
     this.setData({ loading: true })
     try {
-      const [session, entry, seasons] = await Promise.all([
+      const [session, seasons] = await Promise.all([
         ensureLogin(),
-        getMediaEntry(this.data.id),
         listMediaSeasons(this.data.id, { forceRefresh: true })
       ])
       if (!session.user.can_write) throw new Error("当前账号没有编辑权限")
       if (!isAsyncPageRequestCurrent(this, generation)) return
       const draftSeasons = seasons.map(createSeasonDraft)
       this.setData({
-        mediaTitle: entry.title,
         originalSeasons: seasons,
         draftSeasons,
         expandedSeasonKey: draftSeasons[0]?.key || "",
