@@ -1,0 +1,68 @@
+<custom-navigation title="剧集管理" custom-back bind:back="handleBack" />
+
+<view wx:if="{{loading}}" class="fullscreen-loading">
+  <view class="fullscreen-loading__spinner" />
+  <view class="fullscreen-loading__text">正在加载剧集…</view>
+</view>
+
+<view wx:else class="page page--with-navigation">
+  <scroll-view class="season-manager-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+    <view class="season-list">
+      <view wx:for="{{draftSeasons}}" wx:key="key" class="season-card">
+        <view class="season-card__header">
+          <view class="season-card__heading" role="button" aria-label="{{expandedSeasonKey === item.key ? '收起' : '展开'}}{{item.name}}" data-key="{{item.key}}" bindtap="handleSeasonToggle">
+            <view class="season-card__heading-copy">
+              <view class="season-card__name">{{item.name || '未命名季'}}</view>
+              <view class="season-card__count">{{item.episodes.length}} 集</view>
+            </view>
+            <app-icon name="{{expandedSeasonKey === item.key ? 'arrow-up' : 'chevron-down'}}" size="24" />
+          </view>
+          <view class="season-card__delete" role="button" aria-label="删除{{item.name}}" data-index="{{index}}" catchtap="handleSeasonDeleteRequest">
+            <app-icon name="trash-2-danger" size="24" />
+          </view>
+        </view>
+
+        <view wx:if="{{expandedSeasonKey === item.key}}" class="season-editor">
+          <view class="season-editor__fields">
+            <view class="season-field">
+              <view class="season-field__label">季名称</view>
+              <app-input custom-class="season-field__input" value="{{item.name}}" maxlength="80" placeholder="例如：第一季" data-index="{{index}}" bindinput="handleSeasonNameInput" />
+            </view>
+
+            <view class="season-field season-field--count">
+              <view class="season-field__label">总集数</view>
+              <view class="episode-count-editor">
+                <view class="episode-count-editor__button" role="button" aria-label="减少一集" data-index="{{index}}" data-delta="-1" bindtap="handleEpisodeCountStep">−</view>
+                <app-input custom-class="episode-count-editor__input" type="number" value="{{item.episodes.length}}" persistent data-index="{{index}}" bindblur="handleEpisodeCountInput" />
+                <view class="episode-count-editor__button" role="button" aria-label="增加一集" data-index="{{index}}" data-delta="1" bindtap="handleEpisodeCountStep">＋</view>
+              </view>
+            </view>
+          </view>
+
+          <view class="episode-editor-heading">单集详情</view>
+          <view wx:if="{{item.episodes.length === 0}}" class="episode-editor-empty">当前季还没有单集</view>
+          <view wx:else class="episode-editor-list">
+            <view wx:for="{{item.episodes}}" wx:for-item="episode" wx:for-index="episodeIndex" wx:key="key" class="episode-editor-row">
+              <view class="episode-editor-row__number">第 {{episodeIndex + 1}} 集</view>
+              <app-input custom-class="episode-editor-row__input" value="{{episode.plot_summary}}" maxlength="20" placeholder="用一句话记录本集剧情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindinput="handleEpisodeSummaryInput" />
+              <view class="episode-editor-row__favorite {{episode.is_favorite ? 'episode-editor-row__favorite--active' : ''}}" role="button" aria-label="{{episode.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeFavoriteTap">{{episode.is_favorite ? '♥' : '♡'}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <button class="season-add" bindtap="handleSeasonAdd"><app-icon name="plus" size="24" /><text>新增季</text></button>
+    <view class="season-manager-safe-area" />
+  </scroll-view>
+
+  <view class="season-manager-save-bar">
+    <button class="season-manager-save" disabled="{{!dirty || saving}}" bindtap="handleSaveRequest">保存</button>
+  </view>
+</view>
+
+<operation-loading visible="{{saving}}" text="正在保存剧集…" />
+
+<app-dialog wx:if="{{confirmDialogVisible}}" visible="{{true}}" title="{{confirmDialogPurpose === 'leave' ? '放弃修改' : '确认保存'}}" content="{{confirmDialogContent}}" confirm-text="{{confirmDialogPurpose === 'leave' ? '放弃' : '保存'}}" bind:cancel="handleConfirmCancel" bind:confirm="handleConfirmAction" />
+
+<app-dialog wx:if="{{deleteDialogVisible}}" visible="{{true}}" title="删除本季" content="删除后，该季和其中的单集会在最终保存时一并删除。" confirm-text="删除" bind:cancel="handleSeasonDeleteCancel" bind:confirm="handleSeasonDeleteConfirm" />

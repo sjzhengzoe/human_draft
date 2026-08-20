@@ -2061,6 +2061,7 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
         },
         error: null,
       }),
+      save_media_season_drafts: { data: null, error: null },
     },
   });
   const app = buildServer({ logger: false, supabase });
@@ -2096,6 +2097,32 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
       p_media_entry_id: MEDIA_ID,
       p_name: "第二季",
       p_episode_count: 12,
+    },
+  });
+
+  const saveSeasonsResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/seasons`,
+    headers: authHeaders,
+    payload: {
+      seasons: [{
+        id: SEASON_ID,
+        name: "第一季",
+        episodes: [{ id: EPISODE_ID, plot_summary: "两人在车站重逢", is_favorite: true }],
+      }],
+    },
+  });
+  assert.equal(saveSeasonsResponse.statusCode, 200);
+  assert.deepEqual(supabase.rpcCalls.at(-1), {
+    name: "save_media_season_drafts",
+    params: {
+      p_uid: UID,
+      p_media_entry_id: MEDIA_ID,
+      p_seasons: [{
+        id: SEASON_ID,
+        name: "第一季",
+        episodes: [{ id: EPISODE_ID, plot_summary: "两人在车站重逢", is_favorite: true }],
+      }],
     },
   });
 

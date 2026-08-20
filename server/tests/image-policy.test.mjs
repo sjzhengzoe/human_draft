@@ -29,7 +29,7 @@ test("every business image page uploads the selected original plus crop metadata
   for (const source of sources) {
     assert.match(source, /sizeType:\s*\["original"\]/);
     assert.match(source, /sourceFilePath/);
-    assert.match(source, /(?:selectedImageUploadPath|selectedEntryImageUploadPath|pendingAvatarUploadPath)/);
+    assert.match(source, /(?:selectedImageUploadPath|selectedEntryImageUploadPath|pendingAvatarUploadPath|saveEntryCover\(sourceFilePath, crop)/);
     assert.doesNotMatch(source, /outputSize|outputType|outputQuality|wx\.compressImage/);
   }
 });

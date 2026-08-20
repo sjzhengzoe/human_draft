@@ -37,18 +37,22 @@ test("tab pages use bounded vertical scroll containers without empty bounce", as
 });
 
 test("fixed media pages keep their own vertical scroll containers", async () => {
-  const [configSource, page, detailConfigSource, detailPage] = await Promise.all([
+  const [configSource, page, detailConfigSource, detailPage, managerConfigSource, managerPage] = await Promise.all([
     readFile(new URL("../../src/pages/media/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/media/index.wxml", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/media/detail/index.json", import.meta.url), "utf8"),
     readFile(new URL("../../src/pages/media/detail/index.wxml", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/season-manage/index.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/pages/media/season-manage/index.wxml", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(configSource).disableScroll, true);
   assert.match(page, /<scroll-view[\s\S]*?class="content-scroll"[\s\S]*?scroll-y/);
   assert.equal(JSON.parse(detailConfigSource).disableScroll, true);
   assert.match(detailPage, /<scroll-view[\s\S]*?class="detail-attribute-scroll"[\s\S]*?scroll-y/);
-  assert.match(detailPage, /<scroll-view[\s\S]*?class="records-content[^\"]*"[\s\S]*?scroll-y/);
+  assert.doesNotMatch(detailPage, /class="records-content|>剧情记录<|detail-tabs/);
+  assert.equal(JSON.parse(managerConfigSource).disableScroll, true);
+  assert.match(managerPage, /<scroll-view[\s\S]*?class="season-manager-scroll"[\s\S]*?scroll-y/);
 });
 
 async function listWxmlFiles(directory) {

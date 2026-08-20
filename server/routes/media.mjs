@@ -15,6 +15,7 @@ import {
   listMediaSeasons,
   reorderMediaEntries,
   replaceMediaEntryCover,
+  saveMediaSeasonDrafts,
   setMediaEntryCoverFromSeason,
   swapMediaCategorySortOrders,
   swapMediaEntrySortOrders,
@@ -151,6 +152,31 @@ export function registerMediaRoutes(app, context) {
       request.body || {},
     );
     return reply.code(201).send({ ok: true, data: { item } });
+  });
+
+  app.put("/api/media/:id/seasons", { preHandler: authenticated }, async (request) => {
+    const seasons = Array.isArray(request.body?.seasons) ? request.body.seasons : [];
+    await checkUserText(
+      contentSecurity,
+      request.auth.user.openid,
+      ...seasons.flatMap((season) => [
+        season?.name,
+        ...(Array.isArray(season?.episodes)
+          ? season.episodes.map((episode) => episode?.plot_summary)
+          : []),
+      ]),
+    );
+    return {
+      ok: true,
+      data: {
+        items: await saveMediaSeasonDrafts(
+          getSupabaseAdmin(),
+          request.auth.user.uid,
+          request.params.id,
+          request.body || {},
+        ),
+      },
+    };
   });
 
   app.put("/api/media/:id/cover", { preHandler: authenticated }, async (request) => ({

@@ -11,12 +11,17 @@ const detailPageUrl = new URL("../../src/pages/media/detail/index.wxml", import.
 const detailLogicUrl = new URL("../../src/pages/media/detail/index.ts", import.meta.url);
 const detailStylesUrl = new URL("../../src/pages/media/detail/index.less", import.meta.url);
 const detailConfigUrl = new URL("../../src/pages/media/detail/index.json", import.meta.url);
+const seasonManagePageUrl = new URL("../../src/pages/media/season-manage/index.wxml", import.meta.url);
+const seasonManageLogicUrl = new URL("../../src/pages/media/season-manage/index.ts", import.meta.url);
+const seasonManageStylesUrl = new URL("../../src/pages/media/season-manage/index.less", import.meta.url);
+const seasonManageConfigUrl = new URL("../../src/pages/media/season-manage/index.json", import.meta.url);
 
 const mediaPageBases = [
   "../../src/pages/media/index",
   "../../src/pages/media/categories/index",
   "../../src/pages/media/edit/index",
   "../../src/pages/media/detail/index",
+  "../../src/pages/media/season-manage/index",
   "../../src/pages/media/episode-edit/index",
 ];
 
@@ -180,7 +185,7 @@ test("media cards show only titles, record ratings, and category-specific placeh
   }
 });
 
-test("media detail inline editing supports a shared 3:4 cover crop and deferred save", async () => {
+test("media detail attributes edit independently and cover crop saves immediately", async () => {
   const [page, logic, config, createPage, createLogic] = await Promise.all([
     readFile(detailPageUrl, "utf8"),
     readFile(detailLogicUrl, "utf8"),
@@ -195,9 +200,15 @@ test("media detail inline editing supports a shared 3:4 cover crop and deferred 
   assert.doesNotMatch(page, /compact-typography/);
   assert.match(page, /selectedEntryImagePath/);
   assert.match(logic, /wx\.chooseMedia\(/);
-  assert.match(logic, /async handleCompleteEntryEdit\(\)/);
-  assert.match(logic, /persistedEntry = await updateMediaEntry\(entry\.id,/);
-  assert.match(logic, /persistedEntry = await replaceMediaEntryCover\(/);
+  assert.doesNotMatch(page, /aria-label="编辑作品"|handleEditEntry|完成编辑|取消编辑/);
+  assert.match(page, /aria-label="更换作品封面"[\s\S]*?bindtap="handleEntryCoverTap"/);
+  assert.match(logic, /async saveEntryCover\(/);
+  assert.match(logic, /const persistedEntry = await replaceMediaEntryCover\(/);
+  assert.match(page, /aria-label="修改名称"[\s\S]*?bindtap="handleEntryTitleTap"/);
+  assert.match(page, /aria-label="修改分类"[\s\S]*?bindtap="handleEntryCategoryTap"/);
+  assert.match(page, /aria-label="修改平台或来源"[\s\S]*?bindtap="handleEntryPlatformsTap"/);
+  assert.match(logic, /async saveEntryProperties\(/);
+  assert.doesNotMatch(logic, /handleCompleteEntryEdit|editingEntry/);
   assert.doesNotMatch(logic, /pages\/media\/edit\/index\?id|MEDIA_EDIT_ITEM/);
   assert.match(createPage, /<custom-navigation title="新增影视"/);
   assert.doesNotMatch(createPage, /record-overview/);
@@ -221,7 +232,7 @@ test("media platform/source is optional and no longer offers the pending placeho
   assert.match(detailLogic, /platforms = \[\.\.\.new Set\(this\.data\.entryDraftPlatforms\)\]/);
 });
 
-test("all media cards open the shared read-only detail page before editing", async () => {
+test("all media cards open the shared detail page with property-level editors", async () => {
   const [indexLogic, detailPage, detailLogic] = await Promise.all([
     readFile(logicUrl, "utf8"),
     readFile(detailPageUrl, "utf8"),
@@ -235,14 +246,14 @@ test("all media cards open the shared read-only detail page before editing", asy
   assert.match(openEntry, /pages\/media\/detail\/index\?id=\$\{id\}/);
   assert.doesNotMatch(openEntry, /pages\/media\/edit|EPISODIC_MEDIA_TYPES|MEDIA_EDIT_ITEM/);
   assert.match(detailPage, /wx:if="\{\{isEpisodic\}\}"/);
-  assert.match(detailPage, /bindtap="handleEditEntry"/);
-  assert.match(detailPage, /aria-label="完成编辑"[\s\S]*?bindtap="handleCompleteEntryEdit"[\s\S]*?name="check"/);
-  assert.match(detailPage, /wx:if="\{\{editingEntry\}\}"/);
+  assert.doesNotMatch(detailPage, /handleEditEntry|handleCompleteEntryEdit|editingEntry/);
+  assert.match(detailPage, /bindtap="handleEntryTitleTap"/);
+  assert.match(detailPage, /entryChoiceDialogVisible/);
   assert.doesNotMatch(detailLogic, /wx\.navigateTo\(\{ url: `\/pages\/media\/edit/);
   assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
 });
 
-test("media detail defaults to the detail tab and keeps plot records fully expanded", async () => {
+test("media detail embeds a ranged episode picker with short plot summaries", async () => {
   const [page, logic, styles, config] = await Promise.all([
     readFile(detailPageUrl, "utf8"),
     readFile(detailLogicUrl, "utf8"),
@@ -252,56 +263,106 @@ test("media detail defaults to the detail tab and keeps plot records fully expan
 
   assert.equal(JSON.parse(config).disableScroll, true);
   assert.match(page, /class="page page--fixed"/);
-  assert.ok(page.indexOf('class="detail-tabs"') < page.indexOf('class="detail-content"'));
-  assert.match(page, /data-tab="detail"[\s\S]*?>详情<\/view>/);
-  assert.match(page, /data-tab="records"[\s\S]*?>剧情记录<\/view>/);
-  assert.match(logic, /activeDetailTab:\s*"detail"/);
-  assert.match(page, /wx:elif="\{\{item\.plot_summary \|\| item\.timeline_notes\.length\}\}" class="episode-row__preview"/);
-  assert.doesNotMatch(logic, /handleEpisodePreviewTap|expandedEpisodeId/);
-  assert.doesNotMatch(page, /episode-row__chevron|chevron-down/);
-  assert.match(page, /catchtap="handleEpisodeEdit"/);
-  assert.match(page, /bindsubmit="handleEpisodeSave"/);
-  assert.match(page, /class="episode-edit-save-bar"/);
-  assert.match(page, /bindtap="handleEpisodeStickySave"/);
-  assert.match(page, /wx:if="\{\{editingEpisodeId === item\.id\}\}" class="episode-editor"/);
-  assert.match(page, /episode-editor__label">单集标题/);
-  assert.match(page, /episode-editor__label">整集概括/);
-  assert.match(page, /episode-editor__label">记录类型/);
-  assert.match(page, /episode-editor__label">时间/);
-  assert.match(page, /episode-editor__label">剧情内容/);
-  assert.match(logic, /const updatedEpisode = await updateMediaEpisode\(id,/);
-  assert.doesNotMatch(logic, /MEDIA_EPISODE_EDIT|pages\/media\/episode-edit/);
-  assert.match(page, /<view class="timeline-filter-panel">/);
-  assert.doesNotMatch(logic, /timelineFilterOpen|handleTimelineFilterToggle/);
-  assert.match(page, /aria-label="新增季"/);
+  assert.doesNotMatch(page, /detail-tabs|data-tab="records"|>剧情记录<\/view>/);
+  assert.ok(page.indexOf('class="detail-attributes"') < page.indexOf('class="episode-picker"'));
+  assert.match(page, /class="episode-picker__title">选集<\/view>/);
+  assert.match(page, /wx:if="\{\{episodeRangeOptions\.length > 1\}\}" class="episode-picker__range-row"/);
+  assert.match(page, /bindtap="handleEpisodeRangeDialogOpen"/);
+  assert.match(page, /class="episode-picker__episodes-scroll" scroll-x/);
+  assert.match(page, /wx:for="\{\{episodePickerEpisodes\}\}"/);
+  assert.match(page, /class="episode-picker__track"/);
+  assert.match(page, /title="快速选集"[\s\S]*?custom-actions="\{\{true\}\}"/);
+  assert.match(page, /class="episode-range-dialog__option[\s\S]*?bindtap="handleEpisodeRangeTap"/);
+  assert.match(page, /class="episode-card__number">第 \{\{item\.episode_number\}\} 集/);
+  assert.match(page, /\{\{item\.plot_summary \|\| '点击添加剧情详情'\}\}/);
+  assert.match(page, /catchtap="handleFavoriteTap"/);
+  assert.match(page, /bindtap="handleEpisodeSummaryTap"/);
+  assert.match(page, /placement="bottom"[\s\S]*?maxlength="\{\{textSheetMaxlength\}\}"/);
+  assert.match(page, /textSheetPurpose === 'episode-summary'[\s\S]*?\{\{textSheetValue\.length\}\} \/ 20/);
+  assert.match(logic, /const EPISODE_RANGE_SIZE = 50/);
+  assert.match(logic, /Math\.ceil\(episodeCount \/ EPISODE_RANGE_SIZE\)/);
+  assert.match(logic, /handleEpisodeRangeDialogOpen/);
+  assert.match(logic, /episodeRangeDialogVisible: false/);
+  assert.match(logic, /handleEpisodeSummaryTap/);
+  assert.match(logic, /textSheetMaxlength: 20/);
+  assert.match(logic, /剧情详情不能超过 20 个字/);
+  assert.match(logic, /updateMediaEpisode\(episodeId, \{ plot_summary: plotSummary \}\)/);
+  assert.match(page, /aria-label="管理季和集"[\s\S]*?bindtap="handleSeasonManage"/);
+  assert.doesNotMatch(page, /aria-label="新增季"/);
   assert.match(page, /data-status="planned"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="in_progress"[\s\S]*?bindtap="handleWatchStatusTap"/);
   assert.match(page, /data-status="completed"[\s\S]*?bindtap="handleWatchStatusTap"/);
-  assert.ok(page.indexOf('aria-label="编辑作品"') < page.indexOf('class="special-favorite-toggle'));
-  assert.match(page, /class="detail-title-actions"[\s\S]*?aria-label="编辑作品"[\s\S]*?class="special-favorite-toggle/);
+  assert.doesNotMatch(page, /aria-label="编辑作品"|handleEditEntry|完成编辑/);
+  assert.match(page, /class="detail-title-actions"[\s\S]*?class="special-favorite-toggle/);
+  assert.match(page, /title="\{\{entryChoiceDialogPurpose === 'category' \? '修改分类' : '修改平台\/来源'\}\}"/);
+  assert.match(styles, /\.entry-choice-dialog__option--active\s*\{[^}]*background:\s*var\(--ui-color-action-primary\);[^}]*color:\s*var\(--ui-color-text-inverse\);/s);
   assert.doesNotMatch(page, /detail-attribute__label">特别喜爱/);
-  assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('detail-attribute__label">名称'));
-  assert.match(page, /detail-attribute__label">名称[\s\S]*?\{\{entry\.title\}\}/);
+  assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('class="detail-minimal"'));
+  assert.match(page, /class="detail-minimal__title"[\s\S]*?bindtap="handleEntryTitleTap"[\s\S]*?\{\{entry\.title\}\}/);
+  assert.match(page, /class="detail-minimal__meta"[\s\S]*?bindtap="handleEntryCategoryTap"[\s\S]*?detail-minimal__separator[\s\S]*?bindtap="handleEntryPlatformsTap"/);
+  assert.doesNotMatch(page, /detail-attribute__label">名称|detail-attribute__label">分类|detail-attribute__label">平台\/来源/);
+  const minimalDetails = page.slice(page.indexOf('class="detail-minimal"'), page.indexOf('</view>\n        </view>\n\n        <view wx:if="{{isEpisodic}}"'));
+  assert.doesNotMatch(minimalDetails, /<app-icon|chevron-right|name="pencil"/);
   assert.ok(page.indexOf('class="detail-fixed"') < page.indexOf('class="detail-attribute-scroll"'));
   assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('class="detail-attribute-scroll"'));
   assert.match(page, /class="detail-attribute-scroll"[\s\S]*?bindrefresherrefresh="handleDetailPullRefresh"[\s\S]*?class="detail-attributes"/);
-  assert.match(page, /class="records-content \{\{editingEpisodeId[\s\S]*?bindscrolltolower="handleRecordsLower"/);
   assert.match(logic, /updateMediaEntry\(entry\.id, \{ watch_status: watchStatus \}\)/);
+  assert.match(logic, /pages\/media\/season-manage\/index\?id=/);
   assert.doesNotMatch(logic, /onPageScroll|pageScrollTo|savedPageScrollTop/);
   assert.doesNotMatch(page, /detail-attribute__label">状态/);
+  assert.doesNotMatch(page, /detail-attribute__label">剧集/);
   assert.doesNotMatch(page, /handleDeleteEntry/);
   assert.match(styles, /\.detail-cover\s*\{[^}]*width:\s*320rpx;[^}]*height:\s*427rpx;/s);
   assert.match(styles, /\.detail-attributes\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
   assert.match(styles, /\.page\s*\{[^}]*display:\s*flex;[^}]*overflow:\s*hidden;/s);
   assert.match(styles, /\.detail-content\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;[^}]*flex-direction:\s*column;/s);
   assert.match(styles, /\.detail-attribute-scroll\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s);
-  assert.match(styles, /\.records-content\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s);
   assert.doesNotMatch(styles, /\.detail-attributes\s*\{[^}]*grid-template-columns:/s);
-  assert.match(styles, /\.active-season-bar__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
-  assert.match(page, /wx:if="\{\{activeSeason\.cover_url\}\}" class="active-season-bar__cover" src="\{\{activeSeason\.cover_url\}\}"/);
-  assert.match(styles, /\.active-season-bar__cover\s*\{[^}]*width:\s*112rpx;[^}]*height:\s*149rpx;/s);
-  assert.match(styles, /\.episode-row__title\s*\{[^}]*font-size:\s*var\(--ui-font-size-base\);/s);
-  assert.match(styles, /\.episode-row__meta\s*\{[^}]*font-size:\s*var\(--ui-font-size-small\);/s);
+  assert.match(styles, /\.detail-minimal__title\s*\{[^}]*min-height:\s*56rpx;[^}]*font-size:\s*var\(--ui-font-size-large\);/s);
+  assert.match(styles, /\.detail-minimal__meta-item\s*\{[^}]*min-height:\s*56rpx;/s);
+  assert.doesNotMatch(styles, /\.episode-picker\s*\{[^}]*border-top:/s);
+  assert.match(styles, /\.episode-picker__track\s*\{[^}]*display:\s*inline-flex;/s);
+  assert.match(styles, /\.episode-card\s*\{[^}]*width:\s*284rpx;[^}]*flex:\s*0 0 284rpx;/s);
+  assert.match(styles, /\.episode-picker__tab--active\s*\{[^}]*background:\s*var\(--ui-color-action-primary\);[^}]*color:\s*var\(--ui-color-text-inverse\);/s);
+  assert.match(styles, /\.episode-range-dialog__option--active\s*\{[^}]*background:\s*var\(--ui-color-action-primary\);[^}]*color:\s*var\(--ui-color-text-inverse\);/s);
+  assert.match(styles, /\.episode-card__favorite\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx;/s);
+});
+
+test("season management uses one accordion draft page and saves once", async () => {
+  const [page, logic, styles, config, appConfig, service] = await Promise.all([
+    readFile(seasonManagePageUrl, "utf8"),
+    readFile(seasonManageLogicUrl, "utf8"),
+    readFile(seasonManageStylesUrl, "utf8"),
+    readFile(seasonManageConfigUrl, "utf8"),
+    readFile(new URL("../../src/app.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/services/media.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(config).disableScroll, true);
+  assert.match(page, /custom-back bind:back="handleBack"/);
+  assert.match(page, /wx:for="\{\{draftSeasons\}\}"/);
+  assert.match(page, /expandedSeasonKey === item\.key/);
+  assert.match(page, /bindtap="handleSeasonToggle"/);
+  assert.match(page, /maxlength="20"[\s\S]*?bindinput="handleEpisodeSummaryInput"/);
+  assert.match(page, /episode-editor-row__favorite[\s\S]*?bindtap="handleEpisodeFavoriteTap"/);
+  assert.match(page, /season-card__delete[^>]*catchtap="handleSeasonDeleteRequest"[\s\S]*?name="trash-2-danger"/);
+  assert.doesNotMatch(page, />删除本季</);
+  assert.match(page, /bindtap="handleSeasonAdd"/);
+  assert.match(page, /bindtap="handleSaveRequest">保存/);
+  assert.match(page, /confirmDialogPurpose === 'leave'/);
+  assert.match(logic, /expandedSeasonKey: draftSeasons\[0\]\?\.key \|\| ""/);
+  assert.match(logic, /this\.data\.expandedSeasonKey === key \? "" : key/);
+  assert.match(logic, /dirty: true/);
+  assert.match(logic, /saveMediaSeasonDrafts/);
+  assert.doesNotMatch(logic, /updateMediaSeason|updateMediaEpisode|createMediaSeason|addNextMediaEpisode/);
+  assert.match(service, /method: "PUT"[\s\S]*?data: \{ seasons \}/);
+  assert.match(styles, /\.season-manager-save-bar\s*\{[^}]*border-top:/s);
+  assert.match(styles, /\.season-list\s*\{[^}]*border-top:[^}]*\}/s);
+  assert.match(styles, /\.season-card\s*\{[^}]*border-bottom:[^}]*\}/s);
+  assert.doesNotMatch(styles, /\.season-card\s*\{[^}]*border-radius:/s);
+  assert.match(styles, /\.episode-editor-row__favorite\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx;/s);
+  const mediaPackage = JSON.parse(appConfig).subPackages.find((item) => item.root === "pages/media");
+  assert.ok(mediaPackage.pages.includes("season-manage/index"));
 });
 
 test("media UI keeps dense controls compact while improving long-list interactions", async () => {
@@ -332,9 +393,9 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createPage, /field-label">名称[\s\S]*field-label">封面（选填）/);
   assert.match(createLogic, /MEDIA_CREATE_DRAFT_KEY/);
   assert.match(createLogic, /enableAlertBeforeUnload/);
-  assert.match(detailPage, /\{\{item\.is_favorite \? '★' : '☆'\}\}/);
+  assert.match(detailPage, /\{\{item\.is_favorite \? '♥' : '♡'\}\}/);
   assert.match(detailPage, />我的评分<\/text>/);
-  assert.match(detailPage, /wx:if="\{\{\(editingEntry \? entryDraftWatchStatus : entry\.watch_status\) === 'completed'\}\}" class="detail-rating"/);
+  assert.match(detailPage, /wx:if="\{\{entry\.watch_status === 'completed'\}\}" class="detail-rating"/);
   assert.match(detailPage, /bindtap="handlePersonalRatingTap"/);
   assert.doesNotMatch(detailPage, /handlePersonalRatingClear|detail-rating__clear|>清除<\/view>/);
   assert.match(detailPage, /data-rating="\{\{item\}\}"/);
@@ -349,8 +410,6 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createLogic, /toast\.icon === "none" \? ERROR_TOAST_DURATION/);
   assert.match(detailPage, /scroll-top="\{\{detailScrollTop\}\}"/);
   assert.match(detailPage, /bindscroll="handleDetailScroll"/);
-  assert.match(detailPage, /scroll-top="\{\{recordsScrollTop\}\}"/);
-  assert.match(detailPage, /bindscroll="handleRecordsScroll"/);
   assert.match(detailLogic, /updateMediaEntry\(entry\.id, \{ personal_rating: personalRating \}\)/);
   assert.match(detailLogic, /if \(entry\.watch_status !== "completed"\) return/);
   assert.match(detailLogic, /personalRating < 1 \|\| personalRating > 5/);
@@ -359,9 +418,8 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(detailLogic, /async handleWatchStatusTap[\s\S]*?wx\.showLoading\(\{ title: "更新中", mask: true \}\)[\s\S]*?finally \{[\s\S]*?wx\.hideLoading\(\)/);
   assert.doesNotMatch(detailPage, /detail-heart|值得重温|值得重听/);
   assert.doesNotMatch(createPage, /值得重温|值得重听|handleRevisitableChange/);
-  assert.match(detailPage, /index < visibleEpisodeCount/);
-  assert.match(detailLogic, /EPISODE_RENDER_BATCH = 20/);
-  assert.match(detailLogic, /persistEpisodeDraft/);
-  assert.match(detailLogic, /savingEpisode: false,[\s\S]*?mediaRevision[\s\S]*?restoreRecordsScroll\(\)/);
-  assert.match(detailStyles, /\.episode-edit-save-bar\s*\{[^}]*position:\s*fixed;/s);
+  assert.match(detailPage, /wx:for="\{\{episodePickerEpisodes\}\}"/);
+  assert.match(detailLogic, /EPISODE_RANGE_SIZE = 50/);
+  assert.match(detailLogic, /episodePickerEpisodes: episodesInRange/);
+  assert.match(detailStyles, /\.episode-picker__track\s*\{[^}]*display:\s*inline-flex;/s);
 });

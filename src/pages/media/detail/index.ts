@@ -64,6 +64,7 @@ const BUILTIN_PLATFORMS = [
   "Books"
 ]
 const EPISODE_RENDER_BATCH = 20
+const EPISODE_RANGE_SIZE = 50
 const EPISODE_DRAFT_PREFIX = "media:episode-draft:v1:"
 const RATING_OPTIONS = [1, 2, 3, 4, 5]
 
@@ -175,6 +176,21 @@ function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
 }
 
+function episodeRangeOptions(season: MediaSeason | null) {
+  const episodeCount = season?.episodes.length || 0
+  return Array.from({ length: Math.ceil(episodeCount / EPISODE_RANGE_SIZE) }, (_, index) => {
+    const start = index * EPISODE_RANGE_SIZE + 1
+    const end = Math.min((index + 1) * EPISODE_RANGE_SIZE, episodeCount)
+    return { label: `${start}-${end}`, start, end }
+  })
+}
+
+function episodesInRange(season: MediaSeason | null, rangeIndex: number): MediaEpisode[] {
+  if (!season) return []
+  const startIndex = Math.max(0, rangeIndex) * EPISODE_RANGE_SIZE
+  return season.episodes.slice(startIndex, startIndex + EPISODE_RANGE_SIZE)
+}
+
 function supportedPlatforms(platforms: string[]) {
   return platforms.filter((name) => BUILTIN_PLATFORMS.includes(name))
 }
@@ -249,6 +265,10 @@ Page({
     visibleEpisodeCount: EPISODE_RENDER_BATCH,
     activeSeasonIndex: 0,
     activeSeasonFavoriteCount: 0,
+    activeEpisodeRangeIndex: 0,
+    episodeRangeOptions: [] as Array<{ label: string; start: number; end: number }>,
+    episodePickerEpisodes: [] as MediaEpisode[],
+    episodeRangeDialogVisible: false,
     activeSeasonIsEntryCover: false,
     timelineFilterOptions,
     timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
@@ -260,18 +280,12 @@ Page({
     isEpisodic: false,
     isAudio: false,
     activeDetailTab: "detail" as "detail" | "records",
-    editingEntry: false,
-    entryDraftTitle: "",
     entryDraftMediaTypeIndex: 0,
-    entryDraftWatchStatus: "completed" as MediaStatus,
     entryDraftPlatforms: [] as string[],
-    entryDraftIsSpecialFavorite: false,
     entryPlatformOptions: platformOptions([]),
-    entryDraftIsAudio: false,
-    entryDraftIsEpisodic: false,
+    entryChoiceDialogVisible: false,
+    entryChoiceDialogPurpose: "" as "" | "category" | "platforms",
     selectedEntryImagePath: "",
-    selectedEntryImageUploadPath: "",
-    selectedEntryImageCrop: null as ImageCrop | null,
     selectingEntryImage: false,
     showEntryImageCropper: false,
     entryCropSourcePath: "",
@@ -297,9 +311,11 @@ Page({
     textSheetValue: "",
     textSheetInputType: "text",
     textSheetConfirmText: "确定",
+    textSheetMaxlength: 120,
     themeColors: UI_COLORS,
     pendingSeasonName: "",
     pendingRenameSeasonId: "",
+    pendingEpisodeId: "",
     detailScrollTop: 0,
     recordsScrollTop: 0,
     errorMessage: "",
@@ -411,6 +427,10 @@ Page({
       ? requestedIndex
       : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
     const activeSeason = normalizedSeasons[activeSeasonIndex] || null
+    const activeEpisodeRangeIndex = Math.min(
+      this.data.activeEpisodeRangeIndex,
+      Math.max(0, episodeRangeOptions(activeSeason).length - 1)
+    )
     const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
     const activeDetailTab = isEpisodic ? this.data.activeDetailTab : "detail"
     this.setData({
@@ -422,6 +442,9 @@ Page({
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: Math.max(EPISODE_RENDER_BATCH, this.data.visibleEpisodeCount),
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      activeEpisodeRangeIndex,
+      episodeRangeOptions: episodeRangeOptions(activeSeason),
+      episodePickerEpisodes: episodesInRange(activeSeason, activeEpisodeRangeIndex),
       coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
       platformText: platformText(entry.platforms),
       mediaTypes: categories.map((category) => category.name),
@@ -490,8 +513,31 @@ Page({
       activeSeasonIsEntryCover: mediaCoversMatch(this.data.entry, activeSeason),
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: EPISODE_RENDER_BATCH,
-      activeSeasonFavoriteCount: favoriteCount(activeSeason)
+      activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      activeEpisodeRangeIndex: 0,
+      episodeRangeOptions: episodeRangeOptions(activeSeason),
+      episodePickerEpisodes: episodesInRange(activeSeason, 0)
     })
+  },
+
+  handleEpisodeRangeTap(event: WechatMiniprogram.TouchEvent) {
+    const activeEpisodeRangeIndex = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(activeEpisodeRangeIndex) || activeEpisodeRangeIndex < 0) return
+    if (!this.data.episodeRangeOptions[activeEpisodeRangeIndex]) return
+    this.setData({
+      activeEpisodeRangeIndex,
+      episodePickerEpisodes: episodesInRange(this.data.activeSeason, activeEpisodeRangeIndex),
+      episodeRangeDialogVisible: false
+    })
+  },
+
+  handleEpisodeRangeDialogOpen() {
+    if (this.data.episodeRangeOptions.length <= 1) return
+    this.setData({ episodeRangeDialogVisible: true })
+  },
+
+  handleEpisodeRangeDialogClose() {
+    this.setData({ episodeRangeDialogVisible: false })
   },
 
   handleDetailTabTap(event: WechatMiniprogram.TouchEvent) {
@@ -499,10 +545,6 @@ Page({
     if (!(["detail", "records"] as string[]).includes(activeDetailTab)) return
     if (activeDetailTab === "records" && !this.data.isEpisodic) return
     if (activeDetailTab === this.data.activeDetailTab) return
-    if (this.data.editingEntry) {
-      wx.showToast({ title: "请先完成或取消作品编辑", icon: "none" })
-      return
-    }
     if (this.data.editingEpisodeId) {
       wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
       return
@@ -606,70 +648,125 @@ Page({
     }
   },
 
-  handleEditEntry() {
+  handleEntryTitleTap() {
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    this.setData({
+      textSheetVisible: true,
+      textSheetPurpose: "entry-title",
+      textSheetTitle: "修改名称",
+      textSheetPlaceholder: "输入作品名称",
+      textSheetValue: entry.title,
+      textSheetInputType: "text",
+      textSheetConfirmText: "保存",
+      textSheetMaxlength: 120,
+      pendingEpisodeId: "",
+      pendingSeasonName: "",
+      pendingRenameSeasonId: ""
+    })
+  },
+
+  handleEntryCategoryTap() {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
     const mediaTypes = this.data.mediaTypes.includes(entry.media_type)
       ? this.data.mediaTypes
       : [...this.data.mediaTypes, entry.media_type]
     this.setData({
-      editingEntry: true,
       mediaTypes,
-      entryDraftTitle: entry.title,
       entryDraftMediaTypeIndex: Math.max(0, mediaTypes.indexOf(entry.media_type)),
-      entryDraftWatchStatus: entry.watch_status,
-      entryDraftPlatforms: supportedPlatforms(entry.platforms),
-      entryDraftIsSpecialFavorite: entry.is_special_favorite,
-      entryPlatformOptions: platformOptions(entry.platforms),
-      entryDraftIsAudio: entry.media_type === "广播剧",
-      entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(entry.media_type),
-      selectedEntryImagePath: "",
-      selectedEntryImageUploadPath: "",
-      selectedEntryImageCrop: null
-    }, () => wx.enableAlertBeforeUnload({ message: "作品修改还没有保存，确定离开吗？" }))
-  },
-
-  handleEntryEditCancel() {
-    if (this.data.savingEntry || this.data.selectingEntryImage) return
-    wx.disableAlertBeforeUnload()
-      this.setData({
-      editingEntry: false,
-      entryDraftTitle: "",
-      entryDraftPlatforms: [],
-      entryDraftIsSpecialFavorite: false,
-      entryPlatformOptions: platformOptions([]),
-      selectedEntryImagePath: "",
-      selectedEntryImageUploadPath: "",
-      selectedEntryImageCrop: null,
-      showEntryImageCropper: false,
-      entryCropSourcePath: ""
+      entryChoiceDialogVisible: true,
+      entryChoiceDialogPurpose: "category"
     })
   },
 
-  handleEntryTitleInput(event: WechatMiniprogram.Input) {
-    this.setData({ entryDraftTitle: event.detail.value })
-  },
-
-  handleEntryTypeChange(event: WechatMiniprogram.PickerChange) {
-    const entryDraftMediaTypeIndex = Number(event.detail.value)
-    const mediaType = this.data.mediaTypes[entryDraftMediaTypeIndex]
-    if (!mediaType) return
+  handleEntryPlatformsTap() {
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    const entryDraftPlatforms = supportedPlatforms(entry.platforms)
     this.setData({
-      entryDraftMediaTypeIndex,
-      entryDraftIsAudio: mediaType === "广播剧",
-      entryDraftIsEpisodic: EPISODIC_MEDIA_TYPES.includes(mediaType)
+      entryDraftPlatforms,
+      entryPlatformOptions: platformOptions(entryDraftPlatforms),
+      entryChoiceDialogVisible: true,
+      entryChoiceDialogPurpose: "platforms"
     })
+  },
+
+  handleEntryTypeOptionTap(event: WechatMiniprogram.TouchEvent) {
+    const entryDraftMediaTypeIndex = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(entryDraftMediaTypeIndex) || !this.data.mediaTypes[entryDraftMediaTypeIndex]) return
+    this.setData({ entryDraftMediaTypeIndex })
+  },
+
+  handleEntryChoiceDialogCancel() {
+    if (this.data.savingEntry) return
+    this.setData({
+      entryChoiceDialogVisible: false,
+      entryChoiceDialogPurpose: "",
+      entryDraftPlatforms: [],
+      entryPlatformOptions: platformOptions([])
+    })
+  },
+
+  handleEntryChoiceDialogConfirm() {
+    const purpose = this.data.entryChoiceDialogPurpose
+    if (purpose === "category") {
+      const mediaType = this.data.mediaTypes[this.data.entryDraftMediaTypeIndex]
+      if (!mediaType) return
+      this.setData({ entryChoiceDialogVisible: false, entryChoiceDialogPurpose: "" })
+      void this.saveEntryProperties({ media_type: mediaType })
+      return
+    }
+    if (purpose === "platforms") {
+      const platforms = [...new Set(this.data.entryDraftPlatforms)]
+        .filter((name) => BUILTIN_PLATFORMS.includes(name))
+      this.setData({
+        entryChoiceDialogVisible: false,
+        entryChoiceDialogPurpose: "",
+        entryDraftPlatforms: [],
+        entryPlatformOptions: platformOptions([])
+      })
+      void this.saveEntryProperties({ platforms })
+    }
+  },
+
+  async saveEntryProperties(input: {
+    title?: string
+    media_type?: MediaType
+    platforms?: string[]
+  }) {
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
+    this.setData({ savingEntry: true })
+    wx.showLoading({ title: "保存中", mask: true })
+    try {
+      const persistedEntry = await updateMediaEntry(entry.id, input)
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      const isEpisodic = this.data.seasons.length > 0
+        || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type)
+      this.setData({
+        entry: persistedEntry,
+        platformText: platformText(persistedEntry.platforms),
+        isAudio: persistedEntry.media_type === "广播剧",
+        isEpisodic,
+        mediaRevision
+      })
+      wx.setNavigationBarTitle({ title: persistedEntry.title })
+      wx.showToast({ title: "已保存", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ savingEntry: false })
+    }
   },
 
   handleSpecialFavoriteChange() {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
-    if (this.data.editingEntry) {
-      this.setData({
-        entryDraftIsSpecialFavorite: !this.data.entryDraftIsSpecialFavorite
-      })
-      return
-    }
     const isSpecialFavorite = !entry.is_special_favorite
     this.setData({
       entry: {
@@ -724,7 +821,7 @@ Page({
 
   handleEntryCoverTap() {
     if (
-      !this.data.editingEntry
+      !this.data.canWrite
       || this.data.savingEntry
       || this.data.selectingEntryImage
       || this.data.showEntryImageCropper
@@ -763,11 +860,38 @@ Page({
     if (!tempFilePath || !sourceFilePath) return
     this.setData({
       selectedEntryImagePath: tempFilePath,
-      selectedEntryImageUploadPath: sourceFilePath,
-      selectedEntryImageCrop: crop || null,
       showEntryImageCropper: false,
       entryCropSourcePath: ""
     })
+    void this.saveEntryCover(sourceFilePath, crop || null)
+  },
+
+  async saveEntryCover(imagePath: string, crop: ImageCrop | null) {
+    const entry = this.data.entry
+    if (!entry || !imagePath || this.data.savingEntry) return
+    this.setData({ savingEntry: true })
+    wx.showLoading({ title: "保存中", mask: true })
+    try {
+      const persistedEntry = await replaceMediaEntryCover(entry.id, imagePath, crop)
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        entry: persistedEntry,
+        coverUrl: persistedEntry.cover_url,
+        selectedEntryImagePath: "",
+        activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
+        mediaRevision
+      })
+      wx.showToast({ title: "封面已保存", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        this.setData({ selectedEntryImagePath: "" })
+        wx.showToast({ title: error instanceof Error ? error.message : "封面保存失败", icon: "none" })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ savingEntry: false })
+    }
   },
 
   handleEntryImageCropError(
@@ -780,97 +904,6 @@ Page({
     })
   },
 
-  async handleCompleteEntryEdit() {
-    const entry = this.data.entry
-    if (
-      !this.data.canWrite
-      || !entry
-      || !this.data.editingEntry
-      || this.data.savingEntry
-      || this.data.selectingEntryImage
-      || this.data.showEntryImageCropper
-    ) return
-    const title = this.data.entryDraftTitle.trim()
-    const mediaType = this.data.mediaTypes[this.data.entryDraftMediaTypeIndex]
-    const platforms = [...new Set(this.data.entryDraftPlatforms)]
-      .filter((name) => BUILTIN_PLATFORMS.includes(name))
-    if (!title || !mediaType) {
-      wx.showToast({ title: "请填写名称和分类", icon: "none" })
-      return
-    }
-    this.setData({ savingEntry: true })
-    wx.showLoading({ title: "保存中", mask: true })
-    let persistedEntry: MediaEntry | null = null
-    try {
-      persistedEntry = await updateMediaEntry(entry.id, {
-        title,
-        media_type: mediaType,
-        watch_status: this.data.entryDraftWatchStatus,
-        platforms,
-        is_special_favorite: this.data.entryDraftIsSpecialFavorite
-      })
-      if (this.data.selectedEntryImageUploadPath) {
-        persistedEntry = await replaceMediaEntryCover(
-          entry.id,
-          this.data.selectedEntryImageUploadPath,
-          this.data.selectedEntryImageCrop
-        )
-      }
-      const mediaRevision = markMediaDataChanged()
-      if (!isAsyncPageActive(this)) return
-      const isEpisodic = this.data.seasons.length > 0
-        || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type)
-      this.setData({
-        entry: persistedEntry,
-        coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
-        activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
-        platformText: platformText(persistedEntry.platforms),
-        isAudio: persistedEntry.media_type === "广播剧",
-        isEpisodic,
-        activeDetailTab: isEpisodic ? this.data.activeDetailTab : "detail",
-        editingEntry: false,
-        entryDraftTitle: "",
-        entryDraftPlatforms: [],
-        entryDraftIsSpecialFavorite: false,
-        entryPlatformOptions: platformOptions([]),
-        selectedEntryImagePath: "",
-        selectedEntryImageUploadPath: "",
-        selectedEntryImageCrop: null,
-        savingEntry: false,
-        mediaRevision
-      }, () => this.restoreDetailScroll())
-      wx.disableAlertBeforeUnload()
-      wx.setNavigationBarTitle({ title: persistedEntry.title })
-      wx.showToast({ title: "编辑完成", icon: "success" })
-    } catch (error) {
-      if (!isAsyncPageActive(this)) return
-      if (persistedEntry) {
-        const mediaRevision = markMediaDataChanged()
-        this.setData({
-          entry: persistedEntry,
-          coverUrl: persistedEntry.cover_url || this.data.seasons[0]?.cover_url || "",
-          activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
-          platformText: platformText(persistedEntry.platforms),
-          isAudio: persistedEntry.media_type === "广播剧",
-          isEpisodic: this.data.seasons.length > 0
-            || EPISODIC_MEDIA_TYPES.includes(persistedEntry.media_type),
-          mediaRevision
-        })
-      }
-      const message = error instanceof Error ? error.message : "保存失败，请稍后重试"
-      wx.showToast({
-        title: persistedEntry && this.data.selectedEntryImagePath
-          ? `资料已保存，封面上传失败：${message}`
-          : message,
-        icon: "none",
-        duration: 3000
-      })
-    } finally {
-      wx.hideLoading()
-      if (isAsyncPageActive(this)) this.setData({ savingEntry: false })
-    }
-  },
-
   handlePersonalRatingTap(event: WechatMiniprogram.TouchEvent) {
     const personalRating = Number(event.currentTarget.dataset.rating)
     if (!Number.isInteger(personalRating) || personalRating < 1 || personalRating > 5) return
@@ -880,10 +913,6 @@ Page({
   async setPersonalRating(personalRating: number) {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
-    if (this.data.editingEntry) {
-      wx.showToast({ title: "请先完成或取消作品编辑", icon: "none" })
-      return
-    }
     if (entry.watch_status !== "completed") return
     if (entry.personal_rating === personalRating) return
     this.setData({
@@ -916,10 +945,6 @@ Page({
     const watchStatus = String(event.currentTarget.dataset.status || "") as MediaStatus
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
     if (!(["planned", "in_progress", "completed"] as string[]).includes(watchStatus)) return
-    if (this.data.editingEntry) {
-      this.setData({ entryDraftWatchStatus: watchStatus })
-      return
-    }
     if (entry.watch_status === watchStatus) return
     const personalRating = watchStatus === "completed"
       ? Number(entry.personal_rating) || 3
@@ -954,8 +979,10 @@ Page({
       textSheetValue: "",
       textSheetInputType: "text",
       textSheetConfirmText: "下一步",
+      textSheetMaxlength: 120,
       pendingSeasonName: "",
-      pendingRenameSeasonId: ""
+      pendingRenameSeasonId: "",
+      pendingEpisodeId: ""
     })
   },
 
@@ -969,13 +996,24 @@ Page({
       textSheetVisible: false,
       textSheetPurpose: "",
       textSheetValue: "",
+      textSheetMaxlength: 120,
       pendingSeasonName: "",
-      pendingRenameSeasonId: ""
+      pendingRenameSeasonId: "",
+      pendingEpisodeId: ""
     })
   },
 
   handleTextSheetConfirm() {
     const value = this.data.textSheetValue.trim()
+    if (this.data.textSheetPurpose === "entry-title") {
+      if (!value) {
+        wx.showToast({ title: "请填写名称", icon: "none" })
+        return
+      }
+      this.handleTextSheetCancel()
+      void this.saveEntryProperties({ title: value })
+      return
+    }
     if (this.data.textSheetPurpose === "add-season-name") {
       if (!value) {
         wx.showToast({ title: "请填写名称", icon: "none" })
@@ -1011,6 +1049,73 @@ Page({
       const seasonId = this.data.pendingRenameSeasonId
       this.handleTextSheetCancel()
       void this.saveSeasonName(seasonId, value)
+      return
+    }
+    if (this.data.textSheetPurpose === "episode-summary") {
+      if (value.length > 20) {
+        wx.showToast({ title: "剧情详情不能超过 20 个字", icon: "none" })
+        return
+      }
+      const episodeId = this.data.pendingEpisodeId
+      this.handleTextSheetCancel()
+      void this.saveEpisodeSummary(episodeId, value)
+    }
+  },
+
+  handleEpisodeSummaryTap(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canWrite || this.data.operating) return
+    const episodeId = String(event.currentTarget.dataset.id || "")
+    const episode = this.data.activeSeason?.episodes.find((item) => item.id === episodeId)
+    if (!episode) return
+    this.setData({
+      textSheetVisible: true,
+      textSheetPurpose: "episode-summary",
+      textSheetTitle: `第 ${episode.episode_number} 集剧情详情`,
+      textSheetPlaceholder: "用一句话记录本集剧情",
+      textSheetValue: episode.plot_summary,
+      textSheetInputType: "text",
+      textSheetConfirmText: "保存",
+      textSheetMaxlength: 20,
+      pendingEpisodeId: episode.id,
+      pendingSeasonName: "",
+      pendingRenameSeasonId: ""
+    })
+  },
+
+  async saveEpisodeSummary(episodeId: string, plotSummary: string) {
+    const activeSeason = this.data.activeSeason
+    if (!episodeId || !activeSeason || !isAsyncPageActive(this)) return
+    this.setData({ operating: true })
+    try {
+      const updatedEpisode = await updateMediaEpisode(episodeId, { plot_summary: plotSummary })
+      const seasons = [...this.data.seasons]
+      const nextActiveSeason = {
+        ...activeSeason,
+        episodes: activeSeason.episodes.map((episode) =>
+          episode.id === episodeId ? { ...episode, ...updatedEpisode } : episode
+        )
+      }
+      seasons[this.data.activeSeasonIndex] = nextActiveSeason
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        seasons,
+        activeSeason: nextActiveSeason,
+        episodePickerEpisodes: episodesInRange(nextActiveSeason, this.data.activeEpisodeRangeIndex),
+        filteredEpisodes: filterTimelineEpisodes(
+          nextActiveSeason,
+          this.data.timelineTypeFilters,
+          this.data.favoriteEpisodesOnly
+        ),
+        mediaRevision
+      })
+      wx.showToast({ title: "已保存", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "保存失败", icon: "none" })
+      }
+    } finally {
+      if (isAsyncPageActive(this)) this.setData({ operating: false })
     }
   },
 
@@ -1038,15 +1143,9 @@ Page({
   },
 
   handleSeasonManage() {
-    const season = this.data.activeSeason
-    if (!this.data.canWrite || !season || this.data.operating) return
-    wx.showActionSheet({
-      itemList: ["修改名称", "增加下一集", "删除本季"],
-      success: (result) => {
-        if (result.tapIndex === 0) this.renameSeason(season)
-        else if (result.tapIndex === 1) this.addEpisode(season)
-        else if (result.tapIndex === 2) this.removeSeason(season)
-      }
+    if (!this.data.canWrite || !this.data.id || this.data.operating) return
+    wx.navigateTo({
+      url: `/pages/media/season-manage/index?id=${encodeURIComponent(this.data.id)}`
     })
   },
 
@@ -1059,8 +1158,10 @@ Page({
       textSheetValue: season.name,
       textSheetInputType: "text",
       textSheetConfirmText: "保存",
+      textSheetMaxlength: 120,
       pendingSeasonName: "",
-      pendingRenameSeasonId: season.id
+      pendingRenameSeasonId: season.id,
+      pendingEpisodeId: ""
     })
   },
 
@@ -1541,6 +1642,7 @@ Page({
         this.data.favoriteEpisodesOnly
       ),
       activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      episodePickerEpisodes: episodesInRange(activeSeason, this.data.activeEpisodeRangeIndex),
       entry: this.data.entry
         ? {
             ...this.data.entry,

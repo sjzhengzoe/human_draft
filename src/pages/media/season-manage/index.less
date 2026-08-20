@@ -1,0 +1,225 @@
+.page {
+  display: flex;
+  height: calc(100vh - var(--app-navigation-height));
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-page-background);
+}
+
+.season-manager-scroll {
+  min-height: 0;
+  flex: 1;
+}
+
+.season-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--ui-page-gutter);
+  border-top: 1rpx solid var(--ui-color-border);
+}
+
+.season-card {
+  border-bottom: 1rpx solid var(--ui-color-border);
+}
+
+.season-card__header {
+  display: flex;
+  align-items: center;
+}
+
+.season-card__heading {
+  display: flex;
+  min-width: 0;
+  min-height: 92rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 0 8rpx 0 2rpx;
+}
+
+.season-card__delete {
+  display: flex;
+  width: 64rpx;
+  height: 64rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.season-card__heading-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 14rpx;
+}
+
+.season-card__name {
+  overflow: hidden;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.season-card__count {
+  flex: none;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+}
+
+.season-editor {
+  padding: 12rpx 0 28rpx;
+  border-top: 1rpx solid var(--ui-color-border);
+}
+
+.season-editor__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224rpx;
+  gap: 18rpx;
+}
+
+.season-field {
+  min-width: 0;
+  padding-top: 18rpx;
+}
+
+.season-field__label,
+.episode-editor-heading {
+  margin-bottom: 10rpx;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+}
+
+.season-field__input,
+.episode-editor-row__input {
+  width: 100%;
+  height: 72rpx;
+  box-sizing: border-box;
+  padding: 0 18rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-surface);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.episode-count-editor {
+  display: flex;
+  height: 72rpx;
+  align-items: center;
+  overflow: hidden;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-color-background-subtle);
+}
+
+.episode-count-editor__button {
+  display: flex;
+  width: 76rpx;
+  height: 72rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-large);
+}
+
+.episode-count-editor__input {
+  min-width: 0;
+  height: 72rpx;
+  flex: 1;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.episode-editor-heading {
+  margin-top: 26rpx;
+}
+
+.episode-editor-empty {
+  padding: 34rpx 0;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.episode-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.episode-editor-row {
+  display: grid;
+  grid-template-columns: 90rpx minmax(0, 1fr) 56rpx;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.episode-editor-row__number {
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+  white-space: nowrap;
+}
+
+.episode-editor-row__favorite {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-muted);
+}
+
+.episode-editor-row__favorite--active {
+  color: var(--media-color-favorite);
+}
+
+.season-add {
+  display: flex;
+  width: auto;
+  min-height: 72rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin: 18rpx var(--ui-page-gutter) 0;
+  border: 1rpx dashed var(--ui-color-border);
+  border-radius: var(--ui-radius-small);
+  background: transparent;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+}
+
+.season-add::after,
+.season-manager-save::after {
+  border: 0;
+}
+
+.season-manager-save-bar {
+  flex: none;
+  padding: 16rpx var(--ui-page-gutter) calc(16rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid var(--ui-color-border);
+  background: var(--ui-surface);
+}
+
+.season-manager-save {
+  min-height: 76rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+}
+
+.season-manager-save[disabled] {
+  opacity: 0.32;
+}
+
+.season-manager-safe-area {
+  height: 30rpx;
+}

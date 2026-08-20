@@ -30,6 +30,7 @@
         "index",
         "edit/index",
         "detail/index",
+        "season-manage/index",
         "episode-edit/index",
         "categories/index"
       ]

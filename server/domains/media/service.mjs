@@ -675,6 +675,44 @@ export async function createMediaSeason(supabase, uid, mediaEntryId, body) {
   return toSignedMediaCoverResponse(data);
 }
 
+export async function saveMediaSeasonDrafts(supabase, uid, mediaEntryId, body) {
+  assertCondition(UUID_PATTERN.test(mediaEntryId), 400, "INVALID_ID", "影视条目编号无效。");
+  const seasons = Array.isArray(body.seasons) ? body.seasons : null;
+  assertCondition(seasons, 400, "INVALID_MEDIA_SEASONS", "分季草稿格式无效。");
+  assertCondition(seasons.length <= 50, 400, "TOO_MANY_MEDIA_SEASONS", "每部作品最多 50 季。");
+  const normalizedSeasons = seasons.map((season) => {
+    assertCondition(season && typeof season === "object" && !Array.isArray(season), 400, "INVALID_MEDIA_SEASON", "分季草稿格式无效。");
+    const name = requiredText(season.name, "季名称", 80);
+    const episodes = Array.isArray(season.episodes) ? season.episodes : null;
+    assertCondition(episodes && episodes.length <= 500, 400, "INVALID_EPISODE_COUNT", "每季集数需为 0 到 500。");
+    return {
+      id: typeof season.id === "string" ? season.id : "",
+      name,
+      episodes: episodes.map((episode) => {
+        assertCondition(episode && typeof episode === "object" && !Array.isArray(episode), 400, "INVALID_MEDIA_EPISODE", "单集草稿格式无效。");
+        const plotSummary = typeof episode.plot_summary === "string" ? episode.plot_summary.trim() : "";
+        assertCondition(plotSummary.length <= 20, 400, "TEXT_TOO_LONG", "剧情详情不能超过 20 个字。");
+        return {
+          id: typeof episode.id === "string" ? episode.id : "",
+          plot_summary: plotSummary,
+          is_favorite: booleanValue(episode.is_favorite ?? false, "喜欢标记"),
+        };
+      }),
+    };
+  });
+  const { error } = await supabase.rpc("save_media_season_drafts", {
+    p_uid: uid,
+    p_media_entry_id: mediaEntryId,
+    p_seasons: normalizedSeasons,
+  });
+  throwSupabaseError(error, "保存剧集管理失败。", {
+    23505: { statusCode: 409, code: "MEDIA_SEASON_EXISTS", message: "这部作品中存在重复的季名称。" },
+    22023: { statusCode: 400, code: "INVALID_MEDIA_SEASONS", message: error?.message || "分季或单集数据无效。" },
+    P0002: { statusCode: 404, code: "MEDIA_SEASON_NOT_FOUND", message: error?.message || "作品、季或单集不存在。" },
+  });
+  return listMediaSeasons(supabase, uid, mediaEntryId);
+}
+
 export async function updateMediaSeason(supabase, uid, id, body) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "季编号无效。");
   const name = requiredText(body.name, "季名称", 80);

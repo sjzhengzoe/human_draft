@@ -244,6 +244,24 @@ export async function createMediaSeason(
   return data.item
 }
 
+export async function saveMediaSeasonDrafts(
+  mediaEntryId: string,
+  seasons: Array<{
+    id: string
+    name: string
+    episodes: Array<{ id: string; plot_summary: string; is_favorite: boolean }>
+  }>
+): Promise<MediaSeason[]> {
+  const data = await request<{ items: MediaSeason[] }>({
+    path: `/api/media/${mediaEntryId}/seasons`,
+    method: "PUT",
+    data: { seasons }
+  })
+  invalidateCachedMediaSeasons(mediaEntryId)
+  cacheMediaSeasons(mediaEntryId, data.items)
+  return data.items
+}
+
 export async function updateMediaSeason(id: string, name: string): Promise<MediaSeason> {
   const data = await request<{ item: MediaSeason }>({
     path: `/api/media-seasons/${id}`,
