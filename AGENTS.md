@@ -54,6 +54,15 @@
 - Keep migrations repeat-safe when they may also be applied manually or when live migration history is incomplete. Do not expose database URLs, keys, tokens, user identifiers, or other credentials in logs or responses.
 - In the final handoff for any database-affecting change, always include: business-data preservation, migration status, verification performed, deleted legacy structures, deployment status, and any required user action.
 
+## Logging and Operational Monitoring Policy
+
+- Follow `docs/logging-and-monitoring.md`. The current intentional operating model is AI-assisted, on-demand or periodic inspection of database events, with server journal inspection only when needed.
+- Do not routinely recommend adding a centralized log platform, fixed log-query dashboard, Sentry, ELK, Grafana Loki, Tencent Cloud Log Service, or proactive email, SMS, WeChat, or similar alerting. These are explicitly deferred and are not current project requirements.
+- Use `operational_events` as the primary source for persisted server 5xx errors, rate limits, storage-quota blocks, and runtime-control blocks. Use a returned `request_id` to investigate a user-reported failure.
+- Use the `human-draft-server` systemd journal for startup failures, process crashes, database-event persistence failures, and detailed request logs that are not represented in `operational_events`.
+- Periodic review by AI or an administrator is sufficient at the current scale. Reconsider a logging platform or proactive alerting only when concrete evidence shows a need, such as multiple production instances, materially increased event volume, repeated incidents found too late, a defined response-time requirement, or multiple operators needing concurrent access. Do not treat generic best practice alone as evidence.
+- A task that changes existing logging behavior must preserve privacy: never record request bodies, tokens, credentials, or user private content. Do not broaden event collection without an explicit task requirement.
+
 ## Git Push and WeChat Mini Program Upload
 
 When the user asks to commit/push code and upload the mini program, use this established release workflow instead of rediscovering the tooling each time.
