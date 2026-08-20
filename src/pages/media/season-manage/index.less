@@ -20,11 +20,26 @@
 
 .season-card {
   border-bottom: 1rpx solid var(--ui-color-border);
+  transition: opacity 120ms ease;
+}
+
+.season-card--dragging {
+  opacity: 0.24;
 }
 
 .season-card__header {
   display: flex;
   align-items: center;
+}
+
+.season-card__drag-handle,
+.episode-editor-row__drag-handle {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
 }
 
 .season-card__heading {
@@ -156,9 +171,14 @@
 
 .episode-editor-row {
   display: grid;
-  grid-template-columns: 90rpx minmax(0, 1fr) 56rpx;
+  grid-template-columns: 56rpx 90rpx minmax(0, 1fr) 56rpx;
   align-items: center;
   gap: 12rpx;
+  transition: opacity 120ms ease;
+}
+
+.episode-editor-row--dragging {
+  opacity: 0.24;
 }
 
 .episode-editor-row__number {
@@ -225,4 +245,53 @@
 
 .season-manager-safe-area {
   height: 30rpx;
+}
+
+.sort-drag-ghost {
+  position: fixed;
+  z-index: 1100;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 16rpx 0 4rpx;
+  border: 1rpx solid var(--ui-color-border-strong);
+  border-radius: var(--ui-radius-small);
+  background: var(--ui-surface);
+  box-shadow: 0 12rpx 30rpx var(--ui-color-shadow-strong);
+  pointer-events: none;
+  transform: scale(1.02);
+}
+
+.sort-drag-ghost__handle {
+  display: flex;
+  width: 56rpx;
+  height: 56rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.sort-drag-ghost__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 14rpx;
+}
+
+.sort-drag-ghost__title {
+  flex: none;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.sort-drag-ghost__meta {
+  overflow: hidden;
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

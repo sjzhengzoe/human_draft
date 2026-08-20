@@ -346,6 +346,11 @@ test("season management uses one accordion draft page and saves once", async () 
   assert.match(page, /maxlength="20"[\s\S]*?bindinput="handleEpisodeSummaryInput"/);
   assert.match(page, /episode-editor-row__favorite[\s\S]*?bindtap="handleEpisodeFavoriteTap"/);
   assert.match(page, /season-card__delete[^>]*catchtap="handleSeasonDeleteRequest"[\s\S]*?name="trash-2-danger"/);
+  assert.match(page, /season-card__drag-handle[\s\S]*?catchlongpress="handleSeasonDragLongPress"/);
+  assert.match(page, /episode-editor-row__drag-handle[\s\S]*?catchlongpress="handleEpisodeDragLongPress"/);
+  assert.match(page, /catchtouchmove="handleSortDragMove"/);
+  assert.match(page, /scroll-y scroll-top="\{\{managerScrollTop\}\}"/);
+  assert.match(page, /class="sort-drag-ghost/);
   assert.doesNotMatch(page, />删除本季</);
   assert.match(page, /bindtap="handleSeasonAdd"/);
   assert.match(page, /bindtap="handleSaveRequest">保存/);
@@ -354,6 +359,10 @@ test("season management uses one accordion draft page and saves once", async () 
   assert.match(logic, /this\.data\.expandedSeasonKey === key \? "" : key/);
   assert.match(logic, /dirty: true/);
   assert.match(logic, /saveMediaSeasonDrafts/);
+  assert.match(logic, /findClosestSortTarget/);
+  assert.match(logic, /draftSeasons\.splice\(targetIndex, 0, draggedSeason\)/);
+  assert.match(logic, /episodes\.splice\(targetIndex, 0, draggedEpisode\)/);
+  assert.match(logic, /scheduleDragAutoScroll/);
   assert.doesNotMatch(logic, /updateMediaSeason|updateMediaEpisode|createMediaSeason|addNextMediaEpisode/);
   assert.match(service, /method: "PUT"[\s\S]*?data: \{ seasons \}/);
   assert.match(styles, /\.season-manager-save-bar\s*\{[^}]*border-top:/s);

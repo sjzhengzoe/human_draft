@@ -8,6 +8,8 @@ import {
   isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../../utils/async-page"
+import { findClosestSortTarget } from "../../../utils/drag-sort"
+import type { SortableRect } from "../../../utils/drag-sort"
 import { markMediaDataChanged } from "../../../utils/media-data-revision"
 
 type DraftEpisode = {
@@ -24,7 +26,39 @@ type DraftSeason = {
   episodes: DraftEpisode[]
 }
 
+type SortDragKind = "season" | "episode"
+
+type ActiveSortDrag = {
+  kind: SortDragKind
+  key: string
+  seasonKey: string
+  rect: SortableRect
+  rects: SortableRect[]
+  touchOffsetY: number
+}
+
 let draftSequence = 0
+let sortDragSequence = 0
+let activeSortDrag: ActiveSortDrag | null = null
+let expandedSeasonBeforeDrag = ""
+let managerScrollTop = 0
+let lastDragTouchX = 0
+let lastDragTouchY = 0
+let dragAutoScrollTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearDragAutoScroll() {
+  if (dragAutoScrollTimer) clearTimeout(dragAutoScrollTimer)
+  dragAutoScrollTimer = null
+}
+
+function dragGhostStyle(touchY: number, touchOffsetY: number, rect: SortableRect) {
+  return [
+    `left:${rect.left}px`,
+    `top:${touchY - touchOffsetY}px`,
+    `width:${rect.right - rect.left}px`,
+    `height:${rect.bottom - rect.top}px`
+  ].join(";")
+}
 
 function draftKey(prefix: string) {
   draftSequence += 1
@@ -64,6 +98,12 @@ Page({
     loading: true,
     saving: false,
     dirty: false,
+    managerScrollTop: 0,
+    draggingKind: "" as "" | SortDragKind,
+    draggingKey: "",
+    dragGhostTitle: "",
+    dragGhostMeta: "",
+    dragGhostStyle: "",
     deleteDialogVisible: false,
     pendingDeleteSeasonIndex: -1,
     confirmDialogVisible: false,
@@ -73,11 +113,15 @@ Page({
 
   onLoad(query: Record<string, string | undefined>) {
     activateAsyncPage(this)
+    managerScrollTop = 0
     this.setData({ id: String(query.id || "") })
     void this.loadPage()
   },
 
   onUnload() {
+    sortDragSequence += 1
+    activeSortDrag = null
+    clearDragAutoScroll()
     deactivateAsyncPage(this)
   },
 
@@ -109,6 +153,194 @@ Page({
     } finally {
       if (isAsyncPageRequestCurrent(this, generation)) this.setData({ loading: false })
     }
+  },
+
+  handleManagerScroll(event: WechatMiniprogram.CustomEvent<{ scrollTop: number }>) {
+    const nextScrollTop = Math.max(0, Number(event.detail.scrollTop) || 0)
+    const scrollDelta = nextScrollTop - managerScrollTop
+    managerScrollTop = nextScrollTop
+    if (!activeSortDrag || !scrollDelta) return
+    activeSortDrag.rects = activeSortDrag.rects.map((rect) => ({
+      ...rect,
+      top: rect.top - scrollDelta,
+      bottom: rect.bottom - scrollDelta
+    }))
+    this.updateSortDrag(lastDragTouchX, lastDragTouchY)
+  },
+
+  scheduleDragAutoScroll() {
+    clearDragAutoScroll()
+    if (!activeSortDrag) return
+    const windowHeight = wx.getSystemInfoSync().windowHeight
+    const topEdge = 120
+    const bottomEdge = windowHeight - 120
+    const scrollDelta = lastDragTouchY < topEdge ? -18 : lastDragTouchY > bottomEdge ? 18 : 0
+    if (!scrollDelta) return
+    dragAutoScrollTimer = setTimeout(() => {
+      dragAutoScrollTimer = null
+      if (!activeSortDrag) return
+      this.setData({ managerScrollTop: Math.max(0, managerScrollTop + scrollDelta) })
+      this.scheduleDragAutoScroll()
+    }, 48)
+  },
+
+  updateSortDrag(clientX: number, clientY: number) {
+    const drag = activeSortDrag
+    if (!drag) return
+    const targetIndex = findClosestSortTarget(drag.rects, clientX, clientY)
+    const changes: Record<string, unknown> = {
+      dragGhostStyle: dragGhostStyle(clientY, drag.touchOffsetY, drag.rect)
+    }
+    if (drag.kind === "season") {
+      const currentIndex = this.data.draftSeasons.findIndex((season) => season.key === drag.key)
+      if (currentIndex >= 0 && targetIndex >= 0 && targetIndex !== currentIndex) {
+        const draftSeasons = [...this.data.draftSeasons]
+        const [draggedSeason] = draftSeasons.splice(currentIndex, 1)
+        draftSeasons.splice(targetIndex, 0, draggedSeason)
+        changes.draftSeasons = draftSeasons
+        changes.dirty = true
+      }
+    } else {
+      const seasonIndex = this.data.draftSeasons.findIndex((season) => season.key === drag.seasonKey)
+      const episodes = seasonIndex >= 0 ? [...this.data.draftSeasons[seasonIndex].episodes] : []
+      const currentIndex = episodes.findIndex((episode) => episode.key === drag.key)
+      if (seasonIndex >= 0 && currentIndex >= 0 && targetIndex >= 0 && targetIndex !== currentIndex) {
+        const [draggedEpisode] = episodes.splice(currentIndex, 1)
+        episodes.splice(targetIndex, 0, draggedEpisode)
+        changes[`draftSeasons[${seasonIndex}].episodes`] = episodes
+        changes.dirty = true
+      }
+    }
+    this.setData(changes)
+  },
+
+  prepareSortDrag(
+    kind: SortDragKind,
+    key: string,
+    seasonKey: string,
+    touch: WechatMiniprogram.TouchDetail,
+    selector: string,
+    itemIndex: number,
+    title: string,
+    meta: string,
+    preparationSequence?: number
+  ) {
+    const sequence = preparationSequence ?? ++sortDragSequence
+    lastDragTouchX = touch.clientX
+    lastDragTouchY = touch.clientY
+    this.setData({
+      draggingKind: kind,
+      draggingKey: key,
+      dragGhostTitle: title,
+      dragGhostMeta: meta,
+      dragGhostStyle: ""
+    })
+    wx.nextTick(() => {
+      wx.createSelectorQuery()
+        .in(this)
+        .selectAll(selector)
+        .boundingClientRect()
+        .exec((results) => {
+          if (sequence !== sortDragSequence || !isAsyncPageActive(this)) return
+          const rects = (results[0] || []) as SortableRect[]
+          const rect = rects[itemIndex]
+          if (!rect || rects.length < 2) {
+            this.finishSortDrag()
+            return
+          }
+          activeSortDrag = {
+            kind,
+            key,
+            seasonKey,
+            rect,
+            rects,
+            touchOffsetY: touch.clientY - rect.top
+          }
+          this.setData({ dragGhostStyle: dragGhostStyle(touch.clientY, activeSortDrag.touchOffsetY, rect) })
+          wx.vibrateShort({ type: "light" })
+        })
+    })
+  },
+
+  handleSeasonDragLongPress(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.saving || this.data.draggingKind || this.data.draftSeasons.length < 2) return
+    const index = Number(event.currentTarget.dataset.index)
+    const season = this.data.draftSeasons[index]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!season || !touch) return
+    expandedSeasonBeforeDrag = this.data.expandedSeasonKey
+    const sequence = ++sortDragSequence
+    this.setData({
+      expandedSeasonKey: "",
+      draggingKind: "season",
+      draggingKey: season.key,
+      dragGhostTitle: season.name || "未命名季",
+      dragGhostMeta: `${season.episodes.length} 集`,
+      dragGhostStyle: ""
+    }, () => {
+      if (sequence !== sortDragSequence) return
+      this.prepareSortDrag(
+        "season",
+        season.key,
+        season.key,
+        touch,
+        ".js-season-sort-item",
+        index,
+        season.name || "未命名季",
+        `${season.episodes.length} 集`,
+        sequence
+      )
+    })
+  },
+
+  handleEpisodeDragLongPress(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.saving || this.data.draggingKind) return
+    const seasonIndex = Number(event.currentTarget.dataset.seasonIndex)
+    const episodeIndex = Number(event.currentTarget.dataset.episodeIndex)
+    const season = this.data.draftSeasons[seasonIndex]
+    const episode = season?.episodes[episodeIndex]
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!season || !episode || !touch || season.episodes.length < 2) return
+    this.prepareSortDrag(
+      "episode",
+      episode.key,
+      season.key,
+      touch,
+      ".js-episode-sort-item",
+      episodeIndex,
+      `第 ${episodeIndex + 1} 集`,
+      episode.plot_summary || "暂无剧情详情"
+    )
+  },
+
+  handleSortDragMove(event: WechatMiniprogram.TouchEvent) {
+    const touch = event.touches[0] || event.changedTouches[0]
+    if (!activeSortDrag || !touch) return
+    lastDragTouchX = touch.clientX
+    lastDragTouchY = touch.clientY
+    this.updateSortDrag(touch.clientX, touch.clientY)
+    this.scheduleDragAutoScroll()
+  },
+
+  finishSortDrag() {
+    sortDragSequence += 1
+    const kind = this.data.draggingKind
+    activeSortDrag = null
+    clearDragAutoScroll()
+    const changes: Record<string, unknown> = {
+      draggingKind: "",
+      draggingKey: "",
+      dragGhostTitle: "",
+      dragGhostMeta: "",
+      dragGhostStyle: ""
+    }
+    if (kind === "season") changes.expandedSeasonKey = expandedSeasonBeforeDrag
+    expandedSeasonBeforeDrag = ""
+    this.setData(changes)
+  },
+
+  handleSortDragEnd() {
+    this.finishSortDrag()
   },
 
   handleSeasonToggle(event: WechatMiniprogram.TouchEvent) {
