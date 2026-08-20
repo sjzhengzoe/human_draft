@@ -346,26 +346,24 @@ Page({
     const cachedSeasons = options.forceRefresh ? null : getCachedMediaSeasons(this.data.id)
     const cachedCategories = options.forceRefresh ? null : getCachedMediaCategories()
     const currentUser = getCurrentUser()
-    if (cachedEntry && cachedSeasons && cachedCategories && currentUser) {
-      this.applyPageData(cachedEntry, cachedSeasons, cachedCategories, currentUser.can_write)
+    const canRenderFromListCache = Boolean(cachedEntry && cachedCategories && currentUser)
+    if (cachedEntry && cachedCategories && currentUser) {
+      this.applyPageData(cachedEntry, cachedSeasons || [], cachedCategories, currentUser.can_write)
       this.setData({
         loading: false,
         contentLoading: false,
         hasLoaded: true,
         errorMessage: ""
       })
-      if (
-        !isMediaEntryCacheFresh(this.data.id)
-        || !isMediaSeasonsCacheFresh(this.data.id)
-        || !isMediaCategoriesCacheFresh()
-      ) {
-        void this.loadPage({ forceRefresh: true, background: true })
-      }
-      return
+      const hasFreshPageCache = cachedSeasons !== null
+        && isMediaEntryCacheFresh(this.data.id)
+        && isMediaSeasonsCacheFresh(this.data.id)
+        && isMediaCategoriesCacheFresh()
+      if (hasFreshPageCache) return
     }
 
     const generation = beginAsyncPageRequest(this)
-    const background = options.background === true
+    const background = options.background === true || canRenderFromListCache
     const showInitialLoading = !this.data.hasLoaded && !background
     if (!background) {
       this.setData({

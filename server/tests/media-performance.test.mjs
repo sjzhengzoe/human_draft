@@ -55,7 +55,9 @@ test("media reads reuse session cache and successful writes update it", async ()
   assert.match(cache, /entry\.watch_status === "completed"[\s\S]*?entry\.personal_rating === input\.personalRating/);
   assert.match(cache, /MAX_CACHED_MEDIA_DETAILS = 20/);
   assert.match(detail, /getCachedMediaEntry\(this\.data\.id\)/);
-  assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons, cachedCategories/);
+  assert.match(detail, /canRenderFromListCache = Boolean\(cachedEntry && cachedCategories && currentUser\)/);
+  assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons \|\| \[\], cachedCategories/);
+  assert.match(detail, /background = options\.background === true \|\| canRenderFromListCache/);
   assert.match(detail, /restoreRecordsScroll\(\)/);
   assert.match(detail, /Math\.max\(EPISODE_RENDER_BATCH, this\.data\.visibleEpisodeCount\)/);
   assert.match(index, /getCachedMediaEntryPage/);
