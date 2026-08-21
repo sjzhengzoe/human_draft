@@ -234,6 +234,46 @@
   opacity: .5;
 }
 
+.detail-watch-progress {
+  display: flex;
+  min-height: 76rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-top: 18rpx;
+  padding: 0 4rpx;
+  border-top: 1rpx solid var(--ui-color-border);
+  border-bottom: 1rpx solid var(--ui-color-border);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.detail-watch-progress--disabled {
+  opacity: .55;
+}
+
+.detail-watch-progress__label {
+  flex: none;
+  color: var(--ui-color-text-muted);
+}
+
+.detail-watch-progress__value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  font-weight: 600;
+}
+
+.detail-watch-progress__value text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .detail-rating__star {
   position: relative;
   display: flex;

@@ -15,6 +15,9 @@ const seasonManagePageUrl = new URL("../../src/pages/media/season-manage/index.w
 const seasonManageLogicUrl = new URL("../../src/pages/media/season-manage/index.ts", import.meta.url);
 const seasonManageStylesUrl = new URL("../../src/pages/media/season-manage/index.less", import.meta.url);
 const seasonManageConfigUrl = new URL("../../src/pages/media/season-manage/index.json", import.meta.url);
+const progressPickerPageUrl = new URL("../../src/components/media-progress-picker/index.wxml", import.meta.url);
+const progressPickerLogicUrl = new URL("../../src/components/media-progress-picker/index.ts", import.meta.url);
+const progressPickerStylesUrl = new URL("../../src/components/media-progress-picker/index.less", import.meta.url);
 
 const mediaPageBases = [
   "../../src/pages/media/index",
@@ -169,7 +172,7 @@ test("the whole media module follows the shared three-tier typography", async ()
   }
 });
 
-test("media cards show only titles, record ratings, and category-specific placeholders", async () => {
+test("media cards show titles, watch progress, record ratings, and category-specific placeholders", async () => {
   const [page, logic] = await Promise.all([
     readFile(pageUrl, "utf8"),
     readFile(logicUrl, "utf8"),
@@ -179,6 +182,9 @@ test("media cards show only titles, record ratings, and category-specific placeh
   assert.doesNotMatch(logic, /metaText|statsText|favoriteText/);
   assert.doesNotMatch(page, /record-card__revisit|♥|♡/);
   assert.match(page, /record-card__rating-star/);
+  assert.equal(page.match(/class="record-card__progress"/g)?.length, 2);
+  assert.match(page, /catchtap="handleProgressTap"/);
+  assert.match(logic, /watchProgressText/);
   assert.match(page, /name="\{\{item\.placeholderIcon\}\}"/);
   for (const icon of ["book-open", "sparkles", "headphones", "tv", "clapperboard"]) {
     assert.match(logic, new RegExp(`"${icon}"`));
@@ -278,14 +284,14 @@ test("media detail embeds a ranged episode picker with short plot summaries", as
   assert.match(page, /catchtap="handleFavoriteTap"/);
   assert.match(page, /bindtap="handleEpisodeSummaryTap"/);
   assert.match(page, /placement="bottom"[\s\S]*?maxlength="\{\{textSheetMaxlength\}\}"/);
-  assert.match(page, /textSheetPurpose === 'episode-summary'[\s\S]*?\{\{textSheetValue\.length\}\} \/ 20/);
+  assert.match(page, /textSheetPurpose === 'episode-summary'[\s\S]*?\{\{textSheetValue\.length\}\} \/ 12/);
   assert.match(logic, /const EPISODE_RANGE_SIZE = 50/);
   assert.match(logic, /Math\.ceil\(episodeCount \/ EPISODE_RANGE_SIZE\)/);
   assert.match(logic, /handleEpisodeRangeDialogOpen/);
   assert.match(logic, /episodeRangeDialogVisible: false/);
   assert.match(logic, /handleEpisodeSummaryTap/);
-  assert.match(logic, /textSheetMaxlength: 20/);
-  assert.match(logic, /剧情详情不能超过 20 个字/);
+  assert.match(logic, /textSheetMaxlength: 12/);
+  assert.match(logic, /剧情详情不能超过 12 个字/);
   assert.match(logic, /updateMediaEpisode\(episodeId, \{ plot_summary: plotSummary \}\)/);
   assert.match(page, /aria-label="管理季和集"[\s\S]*?bindtap="handleSeasonManage"/);
   assert.doesNotMatch(page, /aria-label="新增季"/);
@@ -301,7 +307,7 @@ test("media detail embeds a ranged episode picker with short plot summaries", as
   assert.match(page, /class="detail-minimal__title"[\s\S]*?bindtap="handleEntryTitleTap"[\s\S]*?\{\{entry\.title\}\}/);
   assert.match(page, /class="detail-minimal__meta"[\s\S]*?bindtap="handleEntryCategoryTap"[\s\S]*?detail-minimal__separator[\s\S]*?bindtap="handleEntryPlatformsTap"/);
   assert.doesNotMatch(page, /detail-attribute__label">名称|detail-attribute__label">分类|detail-attribute__label">平台\/来源/);
-  const minimalDetails = page.slice(page.indexOf('class="detail-minimal"'), page.indexOf('</view>\n        </view>\n\n        <view wx:if="{{isEpisodic}}"'));
+  const minimalDetails = page.slice(page.indexOf('class="detail-minimal"'), page.indexOf('</view>\n        </view>\n\n        <view wx:if="{{entry.watch_status'));
   assert.doesNotMatch(minimalDetails, /<app-icon|chevron-right|name="pencil"/);
   assert.ok(page.indexOf('class="detail-fixed"') < page.indexOf('class="detail-attribute-scroll"'));
   assert.ok(page.indexOf('class="detail-status-options') < page.indexOf('class="detail-attribute-scroll"'));
@@ -328,6 +334,42 @@ test("media detail embeds a ranged episode picker with short plot summaries", as
   assert.match(styles, /\.episode-card__favorite\s*\{[^}]*width:\s*56rpx;[^}]*height:\s*56rpx;/s);
 });
 
+test("media watch progress uses one shared descending picker on lists and details", async () => {
+  const [indexPage, indexLogic, indexConfig, detailPage, detailLogic, detailConfig, pickerPage, pickerLogic, pickerStyles] = await Promise.all([
+    readFile(pageUrl, "utf8"),
+    readFile(logicUrl, "utf8"),
+    readFile(new URL("../../src/pages/media/index.json", import.meta.url), "utf8"),
+    readFile(detailPageUrl, "utf8"),
+    readFile(detailLogicUrl, "utf8"),
+    readFile(detailConfigUrl, "utf8"),
+    readFile(progressPickerPageUrl, "utf8"),
+    readFile(progressPickerLogicUrl, "utf8"),
+    readFile(progressPickerStylesUrl, "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(indexConfig).usingComponents["media-progress-picker"], "/components/media-progress-picker/index");
+  assert.equal(JSON.parse(detailConfig).usingComponents["media-progress-picker"], "/components/media-progress-picker/index");
+  assert.match(indexPage, /record-card__progress[\s\S]*?catchtap="handleProgressTap"/);
+  assert.match(indexPage, /<media-progress-picker[\s\S]*?bindselect="handleProgressPickerSelect"/);
+  assert.match(indexLogic, /listMediaSeasons\(entryId\)/);
+  assert.match(indexLogic, /setMediaWatchProgress\(mediaEntryId, episodeId\)/);
+  assert.match(detailPage, /class="detail-watch-progress[\s\S]*?bindtap="handleWatchProgressTap"/);
+  assert.match(detailPage, /<media-progress-picker[\s\S]*?current-episode-id="{{entry\.last_watched_episode_id}}"/);
+  assert.doesNotMatch(detailPage, /detail-watch-progress__(?:plus|minus|stepper)|handleWatchProgress(?:Plus|Minus)/);
+  assert.match(detailLogic, /setMediaWatchProgress\(entry\.id, episodeId\)/);
+  assert.match(pickerPage, /<app-dialog[\s\S]*?placement="bottom"[\s\S]*?title="看到哪一集"/);
+  assert.match(pickerPage, /data-order="desc"[\s\S]*?>倒序</);
+  assert.match(pickerPage, /data-order="asc"[\s\S]*?>正序</);
+  assert.match(pickerPage, /data-index="{{index}}"[\s\S]*?bindtap="handleSeasonTap"/);
+  assert.match(pickerLogic, /descending: true/);
+  assert.match(pickerLogic, /right\.episode_number - left\.episode_number/);
+  assert.match(pickerLogic, /handleSeasonTap[\s\S]*?setData\(\{ browsingSeasonIndex \}\)[\s\S]*?refreshEpisodes/);
+  assert.match(pickerLogic, /selected: episode\.id === currentEpisodeId/);
+  assert.match(pickerLogic, /triggerEvent\("select"/);
+  assert.match(pickerStyles, /media-progress-picker__episode--selected[\s\S]*?background:\s*var\(--ui-color-action-primary\)/);
+  assert.doesNotMatch(pickerStyles, /#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i);
+});
+
 test("season management uses one accordion draft page and saves once", async () => {
   const [page, logic, styles, config, appConfig, service] = await Promise.all([
     readFile(seasonManagePageUrl, "utf8"),
@@ -343,7 +385,7 @@ test("season management uses one accordion draft page and saves once", async () 
   assert.match(page, /wx:for="\{\{draftSeasons\}\}"/);
   assert.match(page, /expandedSeasonKey === item\.key/);
   assert.match(page, /bindtap="handleSeasonToggle"/);
-  assert.match(page, /maxlength="20"[\s\S]*?bindinput="handleEpisodeSummaryInput"/);
+  assert.match(page, /maxlength="12"[\s\S]*?bindinput="handleEpisodeSummaryInput"/);
   assert.match(page, /episode-editor-row__favorite[\s\S]*?bindtap="handleEpisodeFavoriteTap"/);
   assert.match(page, /season-card__delete[^>]*catchtap="handleSeasonDeleteRequest"[\s\S]*?name="trash-2-danger"/);
   assert.match(page, /season-card__drag-handle[\s\S]*?catchlongpress="handleSeasonDragLongPress"/);

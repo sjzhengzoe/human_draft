@@ -8,6 +8,7 @@ import {
   listMediaCategories,
   listMediaSeasons,
   replaceMediaEntryCover,
+  setMediaWatchProgress,
   setMediaEntryCoverFromSeason,
   updateMediaEntry,
   updateMediaEpisode,
@@ -254,6 +255,14 @@ function mediaCoversMatch(entry: MediaEntry | null, season: MediaSeason | null) 
   return entry.cover_url === season.cover_url
 }
 
+function watchProgressText(entry: MediaEntry | null) {
+  return entry?.last_watched_episode_id
+    && entry.last_watched_season_name
+    && Number.isInteger(entry.last_watched_episode_number)
+    ? `${entry.last_watched_season_name} · 看到第 ${entry.last_watched_episode_number} 集`
+    : "记录看到哪一集"
+}
+
 Page({
   data: {
     id: "",
@@ -279,6 +288,8 @@ Page({
     canWrite: false,
     isEpisodic: false,
     isAudio: false,
+    watchProgressText: "记录看到哪一集",
+    progressPickerVisible: false,
     activeDetailTab: "detail" as "detail" | "records",
     entryDraftMediaTypeIndex: 0,
     entryDraftPlatforms: [] as string[],
@@ -451,6 +462,7 @@ Page({
       canWrite,
       isEpisodic,
       isAudio: entry.media_type === "广播剧",
+      watchProgressText: watchProgressText(entry),
       activeDetailTab,
       requestedSeasonId: "",
       mediaRevision: getMediaDataRevision()
@@ -538,6 +550,46 @@ Page({
 
   handleEpisodeRangeDialogClose() {
     this.setData({ episodeRangeDialogVisible: false })
+  },
+
+  handleWatchProgressTap() {
+    const entry = this.data.entry
+    if (!this.data.canWrite || !entry || !this.data.isEpisodic || entry.watch_status !== "in_progress") return
+    if (this.data.operating || this.data.savingEntry || this.data.savingEpisode) return
+    this.setData({ progressPickerVisible: true })
+  },
+
+  handleProgressPickerCancel() {
+    if (this.data.operating) return
+    this.setData({ progressPickerVisible: false })
+  },
+
+  async handleProgressPickerSelect(
+    event: WechatMiniprogram.CustomEvent<{ episodeId: string }>
+  ) {
+    const entry = this.data.entry
+    const episodeId = String(event.detail.episodeId || "")
+    if (!this.data.canWrite || !entry || !episodeId || this.data.operating) return
+    this.setData({ progressPickerVisible: false, operating: true })
+    wx.showLoading({ title: "更新进度", mask: true })
+    try {
+      const persistedEntry = await setMediaWatchProgress(entry.id, episodeId)
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        entry: persistedEntry,
+        watchProgressText: watchProgressText(persistedEntry),
+        mediaRevision
+      })
+      wx.showToast({ title: "观看进度已更新", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "进度更新失败", icon: "none" })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ operating: false })
+    }
   },
 
   handleDetailTabTap(event: WechatMiniprogram.TouchEvent) {
@@ -957,7 +1009,13 @@ Page({
     try {
       const persistedEntry = await updateMediaEntry(entry.id, { watch_status: watchStatus })
       const mediaRevision = markMediaDataChanged()
-      if (isAsyncPageActive(this)) this.setData({ entry: persistedEntry, mediaRevision })
+      if (isAsyncPageActive(this)) {
+        this.setData({
+          entry: persistedEntry,
+          watchProgressText: watchProgressText(persistedEntry),
+          mediaRevision
+        })
+      }
     } catch (error) {
       if (isAsyncPageActive(this)) {
         this.setData({ entry })
@@ -1052,8 +1110,8 @@ Page({
       return
     }
     if (this.data.textSheetPurpose === "episode-summary") {
-      if (value.length > 20) {
-        wx.showToast({ title: "剧情详情不能超过 20 个字", icon: "none" })
+      if (value.length > 12) {
+        wx.showToast({ title: "剧情详情不能超过 12 个字", icon: "none" })
         return
       }
       const episodeId = this.data.pendingEpisodeId
@@ -1075,7 +1133,7 @@ Page({
       textSheetValue: episode.plot_summary,
       textSheetInputType: "text",
       textSheetConfirmText: "保存",
-      textSheetMaxlength: 20,
+      textSheetMaxlength: 12,
       pendingEpisodeId: episode.id,
       pendingSeasonName: "",
       pendingRenameSeasonId: ""

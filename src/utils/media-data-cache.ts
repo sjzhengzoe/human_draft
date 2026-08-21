@@ -157,11 +157,22 @@ function updateCachedEntryStats(mediaEntryId: string, seasons: MediaSeason[]) {
   const entry = cachedEntries.get(mediaEntryId)
   if (!entry) return
   const episodes = seasons.flatMap((season) => season.episodes)
+  const progressSeason = seasons.find((season) =>
+    season.episodes.some((episode) => episode.id === entry.last_watched_episode_id)
+  )
+  const progressEpisode = progressSeason?.episodes.find((episode) =>
+    episode.id === entry.last_watched_episode_id
+  )
   cacheEntryValue({
     ...entry,
     season_count: seasons.length,
     episode_count: episodes.length,
-    favorite_episode_count: episodes.filter((episode) => episode.is_favorite).length
+    favorite_episode_count: episodes.filter((episode) => episode.is_favorite).length,
+    last_watched_episode_id: progressEpisode?.id || "",
+    last_watched_episode_number: progressEpisode?.episode_number ?? null,
+    last_watched_season_id: progressSeason?.id || "",
+    last_watched_season_name: progressSeason?.name || "",
+    last_watched_season_sort_order: progressSeason?.sort_order ?? null
   })
 }
 

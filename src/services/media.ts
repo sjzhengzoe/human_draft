@@ -169,6 +169,19 @@ export async function updateMediaEntry(
   return data.item
 }
 
+export async function setMediaWatchProgress(
+  mediaEntryId: string,
+  episodeId: string
+): Promise<MediaEntry> {
+  const data = await request<{ item: MediaEntry }>({
+    path: `/api/media/${mediaEntryId}/progress`,
+    method: "PUT",
+    data: { episode_id: episodeId }
+  })
+  cacheMediaEntry(data.item)
+  return data.item
+}
+
 export async function replaceMediaEntryCover(
   id: string,
   imagePath: string,

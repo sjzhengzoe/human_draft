@@ -1,10 +1,16 @@
 import { ensureLogin, getCurrentUser } from "../../services/auth"
-import { listMediaCategories, listMediaEntries } from "../../services/media"
-import type { MediaEntry, MediaStatus, MediaType } from "../../types/media"
+import {
+  listMediaCategories,
+  listMediaEntries,
+  listMediaSeasons,
+  setMediaWatchProgress
+} from "../../services/media"
+import type { MediaEntry, MediaSeason, MediaStatus, MediaType } from "../../types/media"
 import {
   activateAsyncPage,
   beginAsyncPageRequest,
   deactivateAsyncPage,
+  isAsyncPageActive,
   isAsyncPageRequestCurrent
 } from "../../utils/async-page"
 import { requireLoginForAction } from "../../utils/login-required"
@@ -17,7 +23,7 @@ import {
   isMediaCategoriesCacheFresh,
   type MediaEntryQuery
 } from "../../utils/media-data-cache"
-import { getMediaDataRevision } from "../../utils/media-data-revision"
+import { getMediaDataRevision, markMediaDataChanged } from "../../utils/media-data-revision"
 
 type DisplayMode = "overview" | "record"
 type OverviewStatus = Extract<MediaStatus, "in_progress" | "planned"> | "all" | "special_favorite"
@@ -37,6 +43,8 @@ type DisplayMediaEntry = MediaEntry & {
   placeholderIcon: string
   coverImageUrl: string
   ratingStars: Array<{ position: number; filled: boolean }>
+  showWatchProgress: boolean
+  watchProgressText: string
 }
 
 type CachedSequence = {
@@ -82,6 +90,15 @@ function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
     personal_rating: personalRating,
     placeholderIcon: mediaPlaceholderIcon(entry.media_type),
     coverImageUrl: entry.cover_url || "",
+    showWatchProgress: entry.watch_status === "in_progress" && (
+      entry.season_count > 0
+      || /电视剧|剧集|综艺|电视|动漫|动画|广播剧/.test(entry.media_type)
+    ),
+    watchProgressText: entry.last_watched_episode_id
+      && entry.last_watched_season_name
+      && Number.isInteger(entry.last_watched_episode_number)
+      ? `${entry.last_watched_season_name} · 看到第 ${entry.last_watched_episode_number} 集`
+      : "记录看到哪一集",
     ratingStars: [1, 2, 3, 4, 5].map((position) => ({
       position,
       filled: personalRating !== null && position <= personalRating
@@ -230,7 +247,13 @@ Page({
     localSyncExpiresAt: 0,
     contentScrollTop: 0,
     errorMessage: "",
-    moreMenuVisible: false
+    moreMenuVisible: false,
+    progressPickerVisible: false,
+    progressPickerSeasons: [] as MediaSeason[],
+    progressPickerEntryId: "",
+    progressPickerEpisodeId: "",
+    progressPickerLoading: false,
+    progressSaving: false
   },
 
   onLoad() {
@@ -856,6 +879,62 @@ Page({
 
   openMediaEntry(id: string) {
     if (id) wx.navigateTo({ url: `/pages/media/detail/index?id=${id}` })
+  },
+
+  async handleProgressTap(event: WechatMiniprogram.TouchEvent) {
+    const entryId = String(event.currentTarget.dataset.id || "")
+    if (!this.data.canWrite || !entryId || this.data.progressPickerLoading || this.data.progressSaving) return
+    const entry = [...this.data.overviewItems, ...this.data.recordItems]
+      .find((item) => item.id === entryId)
+    if (!entry || entry.watch_status !== "in_progress") return
+    this.setData({ progressPickerLoading: true })
+    wx.showLoading({ title: "加载选集", mask: true })
+    try {
+      const seasons = await listMediaSeasons(entryId)
+      if (!isAsyncPageActive(this)) return
+      this.setData({
+        progressPickerVisible: true,
+        progressPickerSeasons: seasons,
+        progressPickerEntryId: entryId,
+        progressPickerEpisodeId: entry.last_watched_episode_id || ""
+      })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "选集加载失败", icon: "none" })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ progressPickerLoading: false })
+    }
+  },
+
+  handleProgressPickerCancel() {
+    if (this.data.progressSaving) return
+    this.setData({ progressPickerVisible: false })
+  },
+
+  async handleProgressPickerSelect(
+    event: WechatMiniprogram.CustomEvent<{ episodeId: string }>
+  ) {
+    const mediaEntryId = this.data.progressPickerEntryId
+    const episodeId = String(event.detail.episodeId || "")
+    if (!this.data.canWrite || !mediaEntryId || !episodeId || this.data.progressSaving) return
+    this.setData({ progressPickerVisible: false, progressSaving: true })
+    wx.showLoading({ title: "更新进度", mask: true })
+    try {
+      await setMediaWatchProgress(mediaEntryId, episodeId)
+      const mediaRevision = markMediaDataChanged()
+      if (!isAsyncPageActive(this)) return
+      this.syncLoadedDataFromCache(mediaRevision)
+      wx.showToast({ title: "观看进度已更新", icon: "success" })
+    } catch (error) {
+      if (isAsyncPageActive(this)) {
+        wx.showToast({ title: error instanceof Error ? error.message : "进度更新失败", icon: "none" })
+      }
+    } finally {
+      wx.hideLoading()
+      if (isAsyncPageActive(this)) this.setData({ progressSaving: false })
+    }
   },
 
   handleRetry() {

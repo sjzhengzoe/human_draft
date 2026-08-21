@@ -17,6 +17,7 @@ import {
   replaceMediaEntryCover,
   saveMediaSeasonDrafts,
   setMediaEntryCoverFromSeason,
+  setMediaWatchProgress,
   swapMediaCategorySortOrders,
   swapMediaEntrySortOrders,
   updateMediaCategory,
@@ -129,6 +130,18 @@ export function registerMediaRoutes(app, context) {
     ok: true,
     data: {
       item: await getMediaEntry(getSupabaseAdmin(), request.auth.user.uid, request.params.id),
+    },
+  }));
+
+  app.put("/api/media/:id/progress", { preHandler: authenticated }, async (request) => ({
+    ok: true,
+    data: {
+      item: await setMediaWatchProgress(
+        getSupabaseAdmin(),
+        request.auth.user.uid,
+        request.params.id,
+        request.body || {},
+      ),
     },
   }));
 

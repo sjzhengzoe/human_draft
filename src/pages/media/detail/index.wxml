@@ -54,6 +54,14 @@
           </view>
         </view>
 
+        <view wx:if="{{entry.watch_status === 'in_progress' && isEpisodic}}" class="detail-watch-progress {{!canWrite || operating || savingEntry ? 'detail-watch-progress--disabled' : ''}}" role="button" aria-label="修改观看进度，{{watchProgressText}}" bindtap="handleWatchProgressTap">
+          <view class="detail-watch-progress__label">观看进度</view>
+          <view class="detail-watch-progress__value">
+            <text>{{watchProgressText}}</text>
+            <app-icon name="chevron-right" size="24" />
+          </view>
+        </view>
+
         <view wx:if="{{isEpisodic}}" class="episode-picker">
           <view class="episode-picker__heading">
             <view>
@@ -111,6 +119,14 @@
   </view>
 </app-dialog>
 
+<media-progress-picker
+  visible="{{progressPickerVisible}}"
+  seasons="{{seasons}}"
+  current-episode-id="{{entry.last_watched_episode_id}}"
+  bindcancel="handleProgressPickerCancel"
+  bindselect="handleProgressPickerSelect"
+/>
+
 <app-dialog wx:if="{{episodeRangeDialogVisible}}" visible="{{true}}" title="快速选集" custom-body="{{true}}" custom-actions="{{true}}" bind:cancel="handleEpisodeRangeDialogClose">
   <view slot="body" class="episode-range-dialog__options">
     <view wx:for="{{episodeRangeOptions}}" wx:key="label" class="episode-range-dialog__option {{activeEpisodeRangeIndex === index ? 'episode-range-dialog__option--active' : ''}}" role="button" aria-label="查看第 {{item.label}} 集" data-index="{{index}}" bindtap="handleEpisodeRangeTap">{{item.label}}</view>
@@ -123,7 +139,7 @@
 <app-dialog wx:if="{{textSheetVisible}}" visible="{{true}}" placement="bottom" title="{{textSheetTitle}}" custom-body="{{true}}" confirm-text="{{textSheetConfirmText}}" bind:cancel="handleTextSheetCancel" bind:confirm="handleTextSheetConfirm">
   <view slot="body" class="text-sheet-body">
     <app-input custom-class="text-sheet-input" type="{{textSheetInputType}}" value="{{textSheetValue}}" maxlength="{{textSheetMaxlength}}" placeholder="{{textSheetPlaceholder}}" focus dialog-mode bindinput="handleTextSheetInput" bindconfirm="handleTextSheetConfirm" />
-    <view wx:if="{{textSheetPurpose === 'episode-summary'}}" class="text-sheet-count">{{textSheetValue.length}} / 20</view>
+    <view wx:if="{{textSheetPurpose === 'episode-summary'}}" class="text-sheet-count">{{textSheetValue.length}} / 12</view>
     <view wx:if="{{textSheetPurpose === 'add-season-count'}}" class="text-sheet-hint">更新中的作品可以填写 0</view>
   </view>
 </app-dialog>

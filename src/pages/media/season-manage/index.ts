@@ -330,8 +330,8 @@ Page({
       if (!name) return "请填写季名称"
       if (names.has(name.toLocaleLowerCase())) return "季名称不能重复"
       names.add(name.toLocaleLowerCase())
-      if (season.episodes.some((episode) => episode.plot_summary.trim().length > 20)) {
-        return "剧情详情不能超过 20 个字"
+      if (season.episodes.some((episode) => episode.plot_summary.trim().length > 12)) {
+        return "剧情详情不能超过 12 个字"
       }
     }
     return ""

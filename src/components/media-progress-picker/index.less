@@ -1,0 +1,121 @@
+.media-progress-picker {
+  min-height: 280rpx;
+}
+
+.media-progress-picker__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.media-progress-picker__season-scroll {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.media-progress-picker__season-list,
+.media-progress-picker__order {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.media-progress-picker__order {
+  flex: none;
+}
+
+.media-progress-picker__season,
+.media-progress-picker__order-item {
+  display: flex;
+  min-height: 56rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20rpx;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-surface);
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.media-progress-picker__order-item {
+  padding: 0 16rpx;
+}
+
+.media-progress-picker__season--selected,
+.media-progress-picker__order-item--selected {
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+}
+
+.media-progress-picker__episode-scroll {
+  max-height: 480rpx;
+  margin-top: 24rpx;
+}
+
+.media-progress-picker__episode-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12rpx;
+  padding-bottom: 4rpx;
+}
+
+.media-progress-picker__episode {
+  display: flex;
+  min-width: 0;
+  height: 72rpx;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid var(--ui-color-border);
+  border-radius: var(--ui-radius-card);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  line-height: normal;
+}
+
+.media-progress-picker__episode--selected {
+  border-color: var(--ui-color-action-primary);
+  background: var(--ui-color-action-primary);
+  color: var(--ui-color-text-inverse);
+  font-weight: 650;
+}
+
+.media-progress-picker__empty {
+  display: flex;
+  min-height: 220rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-placeholder);
+  font-size: var(--ui-font-size-base);
+  text-align: center;
+}
+
+.media-progress-picker__actions {
+  display: flex;
+}
+
+.media-progress-picker__cancel {
+  display: flex;
+  width: 100%;
+  height: 76rpx;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 16rpx;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-color-background-subtle);
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  line-height: normal;
+}
+
+.media-progress-picker__cancel::after {
+  border: 0;
+}

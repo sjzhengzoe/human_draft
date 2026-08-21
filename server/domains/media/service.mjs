@@ -72,6 +72,70 @@ async function toSignedMediaCoverResponse(record) {
   return toMediaCoverResponse(record, coverUrls);
 }
 
+async function createMediaWatchProgressMap(supabase, uid, records) {
+  const episodeIds = [...new Set(
+    records.map((record) => record?.last_watched_episode_id).filter(Boolean),
+  )];
+  if (!episodeIds.length) return new Map();
+
+  const { data: episodes, error: episodesError } = await supabase
+    .from("media_episodes")
+    .select("id,season_id,episode_number")
+    .eq("uid", uid)
+    .in("id", episodeIds);
+  throwSupabaseError(episodesError, "读取影视观看进度失败。");
+  const seasonIds = [...new Set((episodes || []).map((episode) => episode.season_id))];
+  if (!seasonIds.length) return new Map();
+
+  const { data: seasons, error: seasonsError } = await supabase
+    .from("media_seasons")
+    .select("id,media_entry_id,name,sort_order")
+    .eq("uid", uid)
+    .in("id", seasonIds);
+  throwSupabaseError(seasonsError, "读取影视观看进度失败。");
+  const seasonsById = new Map((seasons || []).map((season) => [season.id, season]));
+  return new Map((episodes || []).flatMap((episode) => {
+    const season = seasonsById.get(episode.season_id);
+    if (!season) return [];
+    return [[episode.id, {
+      episode_id: episode.id,
+      episode_number: episode.episode_number,
+      season_id: season.id,
+      season_name: season.name,
+      season_sort_order: season.sort_order,
+      media_entry_id: season.media_entry_id,
+    }]];
+  }));
+}
+
+function toMediaWatchProgressResponse(record, progressMap) {
+  const progress = progressMap.get(record?.last_watched_episode_id);
+  const validProgress = progress?.media_entry_id === record?.id ? progress : null;
+  if (!validProgress) return { ...record };
+  return {
+    ...record,
+    last_watched_season_id: validProgress.season_id,
+    last_watched_season_name: validProgress.season_name,
+    last_watched_season_sort_order: validProgress.season_sort_order,
+    last_watched_episode_number: validProgress.episode_number,
+  };
+}
+
+async function toMediaEntryResponses(supabase, uid, records) {
+  const [coverUrls, progressMap] = await Promise.all([
+    createMediaCoverUrlMap(records),
+    createMediaWatchProgressMap(supabase, uid, records),
+  ]);
+  return records.map((record) => toMediaWatchProgressResponse(
+    toMediaCoverResponse(record, coverUrls),
+    progressMap,
+  ));
+}
+
+async function toMediaEntryResponse(supabase, uid, record) {
+  return (await toMediaEntryResponses(supabase, uid, [record]))[0];
+}
+
 async function removeManagedMediaCover(supabase, uid, path) {
   if (!path) return;
   await removeStorageImages(supabase, {
@@ -323,9 +387,9 @@ export async function listMediaEntries(supabase, uid, query) {
 
   const { data, error, count } = await request.range(from, to);
   throwSupabaseError(error, "读取影视记录失败。");
-  const coverUrls = await createMediaCoverUrlMap(data || []);
+  const items = await toMediaEntryResponses(supabase, uid, data || []);
   return {
-    items: (data || []).map((entry) => toMediaCoverResponse(entry, coverUrls)),
+    items,
     pagination: {
       page,
       page_size: pageSize,
@@ -337,7 +401,7 @@ export async function listMediaEntries(supabase, uid, query) {
 
 export async function getMediaEntry(supabase, uid, id) {
   assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
-  return toSignedMediaCoverResponse(
+  return toMediaEntryResponse(supabase, uid,
     await requireRecord(supabase, uid, "media_entries", id),
   );
 }
@@ -389,7 +453,7 @@ export async function createMediaEntry(supabase, uid, body) {
     })
     .single();
   throwSupabaseError(error, "新增影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  return toSignedMediaCoverResponse(data);
+  return toMediaEntryResponse(supabase, uid, data);
 }
 
 export async function updateMediaEntry(supabase, uid, id, body) {
@@ -476,7 +540,7 @@ export async function updateMediaEntry(supabase, uid, id, body) {
       throwSupabaseError(result.error, "更新我的评分失败。");
       data = result.data;
     }
-    return toSignedMediaCoverResponse(data);
+    return toMediaEntryResponse(supabase, uid, data);
   }
 
   const { data, error } = await supabase
@@ -487,7 +551,33 @@ export async function updateMediaEntry(supabase, uid, id, body) {
     .select("*")
     .single();
   throwSupabaseError(error, "更新影视条目失败。", MEDIA_TITLE_UNIQUE_ERROR);
-  return toSignedMediaCoverResponse(data);
+  return toMediaEntryResponse(supabase, uid, data);
+}
+
+export async function setMediaWatchProgress(supabase, uid, id, body) {
+  assertCondition(UUID_PATTERN.test(id), 400, "INVALID_ID", "影视条目编号无效。");
+  const episodeId = typeof body.episode_id === "string" ? body.episode_id.trim() : "";
+  assertCondition(UUID_PATTERN.test(episodeId), 400, "INVALID_ID", "单集编号无效。");
+  const { data, error } = await supabase
+    .rpc("set_media_watch_progress", {
+      p_uid: uid,
+      p_media_entry_id: id,
+      p_episode_id: episodeId,
+    })
+    .single();
+  throwSupabaseError(error, "更新观看进度失败。", {
+    P0002: {
+      statusCode: 404,
+      code: "MEDIA_ENTRY_NOT_FOUND",
+      message: "影视条目不存在。",
+    },
+    22023: {
+      statusCode: 400,
+      code: "INVALID_MEDIA_PROGRESS",
+      message: error?.message || "所选单集不能作为这部作品的观看进度。",
+    },
+  });
+  return toMediaEntryResponse(supabase, uid, data);
 }
 
 export async function deleteMediaEntry(supabase, uid, id) {
@@ -556,7 +646,7 @@ export async function setMediaEntryCoverFromSeason(supabase, uid, id, body) {
     id,
     current.cover_url,
   );
-  return toSignedMediaCoverResponse(data);
+  return toMediaEntryResponse(supabase, uid, data);
 }
 
 export async function replaceMediaEntryCover(supabase, uid, id, image) {
@@ -607,7 +697,7 @@ export async function replaceMediaEntryCover(supabase, uid, id, image) {
     id,
     current.cover_url,
   );
-  return toSignedMediaCoverResponse(data);
+  return toMediaEntryResponse(supabase, uid, data);
 }
 
 export async function reorderMediaEntries(supabase, uid, body) {
@@ -691,7 +781,7 @@ export async function saveMediaSeasonDrafts(supabase, uid, mediaEntryId, body) {
       episodes: episodes.map((episode) => {
         assertCondition(episode && typeof episode === "object" && !Array.isArray(episode), 400, "INVALID_MEDIA_EPISODE", "单集草稿格式无效。");
         const plotSummary = typeof episode.plot_summary === "string" ? episode.plot_summary.trim() : "";
-        assertCondition(plotSummary.length <= 20, 400, "TEXT_TOO_LONG", "剧情详情不能超过 20 个字。");
+        assertCondition(plotSummary.length <= 12, 400, "TEXT_TOO_LONG", "剧情详情不能超过 12 个字。");
         return {
           id: typeof episode.id === "string" ? episode.id : "",
           plot_summary: plotSummary,

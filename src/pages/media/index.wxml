@@ -109,6 +109,10 @@
               <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
               <view class="record-card__overlay">
                 <view class="record-card__title">{{item.title}}</view>
+                <view wx:if="{{item.showWatchProgress}}" class="record-card__progress" role="button" aria-label="修改 {{item.title}} 的观看进度，{{item.watchProgressText}}" data-id="{{item.id}}" catchtap="handleProgressTap">
+                  <text class="record-card__progress-text">{{item.watchProgressText}}</text>
+                  <app-icon name="chevron-right" size="24" />
+                </view>
                 <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
                   <text
                     wx:for="{{item.ratingStars}}"
@@ -135,6 +139,10 @@
             <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
             <view class="record-card__overlay">
               <view class="record-card__title">{{item.title}}</view>
+              <view wx:if="{{item.showWatchProgress}}" class="record-card__progress" role="button" aria-label="修改 {{item.title}} 的观看进度，{{item.watchProgressText}}" data-id="{{item.id}}" catchtap="handleProgressTap">
+                <text class="record-card__progress-text">{{item.watchProgressText}}</text>
+                <app-icon name="chevron-right" size="24" />
+              </view>
               <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
                 <text
                   wx:for="{{item.ratingStars}}"
@@ -173,5 +181,13 @@
     <button class="more-dialog-close" bindtap="handleMoreClose">取消</button>
   </view>
 </app-dialog>
+
+<media-progress-picker
+  visible="{{progressPickerVisible}}"
+  seasons="{{progressPickerSeasons}}"
+  current-episode-id="{{progressPickerEpisodeId}}"
+  bindcancel="handleProgressPickerCancel"
+  bindselect="handleProgressPickerSelect"
+/>
 
 <login-required-dialog id="login-required-dialog" />

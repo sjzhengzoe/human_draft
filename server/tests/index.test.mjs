@@ -2698,6 +2698,79 @@ test("luggage scene order is saved from one final ordered id list", async (t) =>
   assert.equal(savedOrderById.get(firstSceneId), 2000);
 });
 
+test("media watch progress resolves one selected episode with its season", async (t) => {
+  const progressEntry = {
+    id: MEDIA_ID,
+    uid: UID,
+    title: "进度测试作品",
+    media_type: "电视剧",
+    watch_status: "in_progress",
+    platforms: [],
+    cover_url: "",
+    last_watched_episode_id: EPISODE_ID,
+    season_count: 2,
+    episode_count: 24,
+    favorite_episode_count: 0,
+    sort_order: 1000,
+  };
+  const supabase = createFakeSupabase({
+    tables: authenticatedTables({
+      media_entries: [progressEntry],
+      media_seasons: [{
+        id: SEASON_ID,
+        uid: UID,
+        media_entry_id: MEDIA_ID,
+        name: "第二季",
+        sort_order: 2000,
+      }],
+      media_episodes: [{
+        id: EPISODE_ID,
+        uid: UID,
+        season_id: SEASON_ID,
+        episode_number: 12,
+      }],
+    }),
+    rpc: {
+      set_media_watch_progress: { data: progressEntry, error: null },
+    },
+  });
+  const app = buildServer({ logger: false, supabase });
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/progress`,
+    headers: authHeaders,
+    payload: { episode_id: EPISODE_ID },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(supabase.rpcCalls.at(-1), {
+    name: "set_media_watch_progress",
+    params: {
+      p_uid: UID,
+      p_media_entry_id: MEDIA_ID,
+      p_episode_id: EPISODE_ID,
+    },
+  });
+  assert.deepEqual(response.json().data.item, {
+    ...progressEntry,
+    cover_path: "",
+    last_watched_season_id: SEASON_ID,
+    last_watched_season_name: "第二季",
+    last_watched_season_sort_order: 2000,
+    last_watched_episode_number: 12,
+  });
+
+  const invalidResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/progress`,
+    headers: authHeaders,
+    payload: { episode_id: "not-an-id" },
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.equal(invalidResponse.json().error.code, "INVALID_ID");
+});
+
 test("media writes accept an omitted platform and validate selected platforms before the create RPC", async (t) => {
   const supabase = createFakeSupabase({
     tables: authenticatedTables({

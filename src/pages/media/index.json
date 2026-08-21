@@ -3,6 +3,7 @@
   "disableScroll": true,
   "usingComponents": {
     "app-dialog": "/components/app-dialog/index",
-    "app-input": "/components/app-input/index"
+    "app-input": "/components/app-input/index",
+    "media-progress-picker": "/components/media-progress-picker/index"
   }
 }

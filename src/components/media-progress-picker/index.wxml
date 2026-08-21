@@ -1,0 +1,50 @@
+<app-dialog
+  visible="{{visible}}"
+  placement="bottom"
+  title="看到哪一集"
+  custom-body="{{true}}"
+  custom-actions="{{true}}"
+  bindcancel="handleCancel"
+>
+  <view slot="body" class="media-progress-picker">
+    <view class="media-progress-picker__toolbar">
+      <scroll-view class="media-progress-picker__season-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="media-progress-picker__season-list" role="tablist" aria-label="选择季或篇章">
+          <view
+            wx:for="{{seasons}}"
+            wx:key="id"
+            class="media-progress-picker__season {{browsingSeasonIndex === index ? 'media-progress-picker__season--selected' : ''}}"
+            role="tab"
+            aria-selected="{{browsingSeasonIndex === index}}"
+            data-index="{{index}}"
+            bindtap="handleSeasonTap"
+          >{{item.name}}</view>
+        </view>
+      </scroll-view>
+      <view class="media-progress-picker__order" role="group" aria-label="集数排序">
+        <view class="media-progress-picker__order-item {{descending ? 'media-progress-picker__order-item--selected' : ''}}" role="button" aria-pressed="{{descending}}" data-order="desc" bindtap="handleOrderTap">倒序</view>
+        <view class="media-progress-picker__order-item {{!descending ? 'media-progress-picker__order-item--selected' : ''}}" role="button" aria-pressed="{{!descending}}" data-order="asc" bindtap="handleOrderTap">正序</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!seasons.length}}" class="media-progress-picker__empty">还没有可选择的季或篇章。</view>
+    <view wx:elif="{{!pickerEpisodes.length}}" class="media-progress-picker__empty">这一季还没有可选择的单集。</view>
+    <scroll-view wx:else class="media-progress-picker__episode-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}">
+      <view class="media-progress-picker__episode-grid" role="group" aria-label="选择看到的集数">
+        <view
+          wx:for="{{pickerEpisodes}}"
+          wx:key="id"
+          class="media-progress-picker__episode {{item.selected ? 'media-progress-picker__episode--selected' : ''}}"
+          role="button"
+          aria-label="看到第 {{item.episode_number}} 集"
+          aria-pressed="{{item.selected}}"
+          data-id="{{item.id}}"
+          bindtap="handleEpisodeTap"
+        >{{item.episode_number}}</view>
+      </view>
+    </scroll-view>
+  </view>
+  <view slot="actions" class="media-progress-picker__actions">
+    <button class="media-progress-picker__cancel" bindtap="handleCancel">取消</button>
+  </view>
+</app-dialog>

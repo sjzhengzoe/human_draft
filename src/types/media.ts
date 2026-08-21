@@ -22,6 +22,11 @@ export type MediaEntry = {
   season_count: number
   episode_count: number
   favorite_episode_count: number
+  last_watched_episode_id: string | null
+  last_watched_episode_number?: number | null
+  last_watched_season_id?: string
+  last_watched_season_name?: string
+  last_watched_season_sort_order?: number | null
   sort_order: number
   created_at: string
   updated_at: string

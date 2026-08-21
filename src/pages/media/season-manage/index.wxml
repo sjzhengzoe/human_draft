@@ -77,7 +77,7 @@
                 catchtouchcancel="handleSortDragEnd"
               ><app-icon name="drag-handle" size="27" /></view>
               <view class="episode-editor-row__number">第 {{episodeIndex + 1}} 集</view>
-              <app-input custom-class="episode-editor-row__input" value="{{episode.plot_summary}}" maxlength="20" placeholder="用一句话记录本集剧情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindinput="handleEpisodeSummaryInput" />
+              <app-input custom-class="episode-editor-row__input" value="{{episode.plot_summary}}" maxlength="12" placeholder="用一句话记录本集剧情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindinput="handleEpisodeSummaryInput" />
               <view class="episode-editor-row__favorite {{episode.is_favorite ? 'episode-editor-row__favorite--active' : ''}}" role="button" aria-label="{{episode.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeFavoriteTap">{{episode.is_favorite ? '♥' : '♡'}}</view>
             </view>
           </view>
