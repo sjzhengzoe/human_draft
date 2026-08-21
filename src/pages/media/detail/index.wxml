@@ -16,10 +16,6 @@
             <app-icon name="clapperboard" size="30" />
             <text>暂无封面</text>
           </view>
-          <view wx:if="{{canWrite}}" class="detail-cover-action">
-            <app-icon name="image-plus" size="24" />
-            <text>{{selectedEntryImagePath || coverUrl ? '更换封面' : '选择封面'}}</text>
-          </view>
         </view>
 
         <view class="detail-status-options {{operating || savingEntry ? 'detail-status-options--disabled' : ''}}" role="group" aria-label="切换观看状态">

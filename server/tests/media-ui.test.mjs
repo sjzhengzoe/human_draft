@@ -496,6 +496,8 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(createLogic, /MEDIA_CREATE_DRAFT_KEY/);
   assert.match(createLogic, /enableAlertBeforeUnload/);
   assert.match(detailPage, /name="\{\{item\.is_favorite \? 'heart-favorite-filled' : 'heart-muted'\}\}" size="30"/);
+  assert.doesNotMatch(detailPage, /detail-cover-action/);
+  assert.doesNotMatch(detailPage, />\{\{selectedEntryImagePath \|\| coverUrl \? '更换封面' : '选择封面'\}\}<\/text>/);
   assert.doesNotMatch(`${createPage}\n${detailPage}`, /[♥♡]/);
   assert.match(detailPage, />我的评分<\/text>/);
   assert.match(detailPage, /wx:if="\{\{entry\.watch_status === 'completed'\}\}" class="detail-rating"/);
