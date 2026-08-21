@@ -501,6 +501,7 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(detailPage, /wx:if="\{\{entry\.watch_status === 'completed'\}\}" class="detail-rating"/);
   assert.match(detailPage, /class="detail-minimal__meta"[\s\S]*?class="detail-rating"/);
   assert.match(detailStyles, /\.detail-rating\s*\{[^}]*display:\s*flex;[^}]*justify-content:\s*space-between;/s);
+  assert.match(detailStyles, /\.detail-rating\s*\{[^}]*border-radius:\s*var\(--ui-radius-small\);[^}]*background:\s*var\(--ui-color-background-subtle\);/s);
   assert.match(detailPage, /bindtap="handlePersonalRatingTap"/);
   assert.doesNotMatch(detailPage, /handlePersonalRatingClear|detail-rating__clear|>清除<\/view>/);
   assert.match(detailPage, /data-rating="\{\{item\}\}"/);
