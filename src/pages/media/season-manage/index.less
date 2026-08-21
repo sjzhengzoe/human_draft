@@ -23,6 +23,14 @@
   transition: opacity 120ms ease, transform 160ms ease;
 }
 
+.season-card--expanded .season-card__header {
+  box-shadow: inset 6rpx 0 var(--ui-color-action-primary);
+}
+
+.season-card--expanded .season-card__name {
+  font-weight: 700;
+}
+
 .season-card--dragging {
   opacity: 0;
 }
@@ -30,6 +38,7 @@
 .season-card__header {
   display: flex;
   align-items: center;
+  transition: box-shadow 120ms ease;
 }
 
 .season-card__drag-handle,
@@ -91,69 +100,41 @@
 }
 
 .season-editor__fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 224rpx;
-  gap: 18rpx;
+  display: flex;
+  flex-direction: column;
 }
 
 .season-field {
+  display: grid;
   min-width: 0;
-  padding-top: 18rpx;
+  min-height: 72rpx;
+  grid-template-columns: auto minmax(0, 1fr) 16rpx;
+  align-items: center;
+  gap: 12rpx;
+  border-bottom: 1rpx solid var(--ui-color-border);
 }
 
-.season-field__label,
-.episode-editor-heading {
-  margin-bottom: 10rpx;
+.season-field__label {
   color: var(--ui-color-text-primary);
   font-size: var(--ui-font-size-base);
   font-weight: 600;
 }
 
-.season-field__input,
-.episode-editor-row__input {
-  width: 100%;
-  height: 72rpx;
-  box-sizing: border-box;
-  padding: 0 18rpx;
-  border: 1rpx solid var(--ui-color-border);
-  border-radius: var(--ui-radius-small);
-  background: var(--ui-surface);
-  color: var(--ui-color-text-primary);
-  font-size: var(--ui-font-size-base);
-}
-
-.episode-count-editor {
-  display: flex;
-  height: 72rpx;
-  align-items: center;
+.season-field__value {
   overflow: hidden;
-  border: 1rpx solid var(--ui-color-border);
-  border-radius: var(--ui-radius-small);
-  background: var(--ui-surface);
-}
-
-.episode-count-editor__button {
-  display: flex;
-  width: 76rpx;
-  height: 72rpx;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  color: var(--ui-color-text-primary);
-  font-size: var(--ui-font-size-large);
-}
-
-.episode-count-editor__input {
-  min-width: 0;
-  height: 72rpx;
-  flex: 1;
-  color: var(--ui-color-text-primary);
+  color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-base);
-  text-align: center;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .episode-editor-heading {
   margin-top: 26rpx;
+  margin-bottom: 10rpx;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
 }
 
 .episode-editor-empty {
@@ -166,14 +147,14 @@
 .episode-editor-list {
   display: flex;
   flex-direction: column;
-  gap: 14rpx;
 }
 
 .episode-editor-row {
   display: grid;
-  grid-template-columns: 56rpx 90rpx minmax(0, 1fr) 56rpx;
-  align-items: center;
-  gap: 12rpx;
+  min-height: 108rpx;
+  grid-template-columns: 56rpx minmax(0, 1fr) 56rpx;
+  align-items: start;
+  border-bottom: 1rpx solid var(--ui-color-border);
   transition: opacity 120ms ease, transform 160ms ease;
 }
 
@@ -181,10 +162,39 @@
   opacity: 0;
 }
 
-.episode-editor-row__number {
+.episode-editor-row__drag-handle,
+.episode-editor-row__favorite {
+  margin-top: 9rpx;
+}
+
+.episode-editor-row__copy {
+  min-width: 0;
+  padding: 18rpx 12rpx 18rpx 0;
+}
+
+.episode-editor-row__title {
+  overflow: hidden;
+  color: var(--ui-color-text-primary);
+  font-size: var(--ui-font-size-base);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.episode-editor-row__summary {
+  display: -webkit-box;
+  margin-top: 6rpx;
+  overflow: hidden;
   color: var(--ui-color-text-muted);
   font-size: var(--ui-font-size-small);
-  white-space: nowrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.episode-editor-row__summary--empty {
+  color: var(--ui-color-text-placeholder);
 }
 
 .episode-editor-row__favorite {
@@ -194,9 +204,7 @@
   align-items: center;
   justify-content: center;
   color: var(--ui-color-text-muted);
-  font-size: var(--ui-font-size-large);
   line-height: 1;
-  transform: scale(1.25);
 }
 
 .episode-editor-row__favorite--active {

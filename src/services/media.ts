@@ -262,7 +262,7 @@ export async function saveMediaSeasonDrafts(
   seasons: Array<{
     id: string
     name: string
-    episodes: Array<{ id: string; plot_summary: string; is_favorite: boolean }>
+    episodes: Array<{ id: string; title: string; plot_summary: string; is_favorite: boolean }>
   }>
 ): Promise<MediaSeason[]> {
   const data = await request<{ items: MediaSeason[] }>({

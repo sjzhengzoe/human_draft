@@ -14,6 +14,7 @@ import { markMediaDataChanged } from "../../../utils/media-data-revision"
 type DraftEpisode = {
   key: string
   id: string
+  title: string
   plot_summary: string
   is_favorite: boolean
 }
@@ -25,7 +26,11 @@ type DraftSeason = {
   episodes: DraftEpisode[]
 }
 
+type FieldEditorPurpose = "" | "season-name" | "episode-count" | "episode-title" | "episode-summary"
+
 let draftSequence = 0
+const EPISODE_SUMMARY_MAX_LENGTH = 24
+const EPISODE_TITLE_MAX_LENGTH = 120
 const seasonDragSort = createDragSortController()
 let managerScrollTop = 0
 let lastDragTouchY = 0
@@ -41,8 +46,8 @@ function draftKey(prefix: string) {
   return `${prefix}_${Date.now()}_${draftSequence}`
 }
 
-function createEpisodeDraft(id = "", plotSummary = "", isFavorite = false): DraftEpisode {
-  return { key: id || draftKey("episode"), id, plot_summary: plotSummary, is_favorite: isFavorite }
+function createEpisodeDraft(id = "", title = "", plotSummary = "", isFavorite = false): DraftEpisode {
+  return { key: id || draftKey("episode"), id, title, plot_summary: plotSummary, is_favorite: isFavorite }
 }
 
 function createSeasonDraft(season: MediaSeason): DraftSeason {
@@ -51,7 +56,7 @@ function createSeasonDraft(season: MediaSeason): DraftSeason {
     id: season.id,
     name: season.name,
     episodes: season.episodes.map((episode) =>
-      createEpisodeDraft(episode.id, episode.plot_summary, episode.is_favorite)
+      createEpisodeDraft(episode.id, episode.title, episode.plot_summary, episode.is_favorite)
     )
   }
 }
@@ -80,7 +85,18 @@ Page({
     pendingDeleteSeasonIndex: -1,
     confirmDialogVisible: false,
     confirmDialogPurpose: "" as "" | "save" | "leave",
-    confirmDialogContent: ""
+    confirmDialogContent: "",
+    fieldEditorVisible: false,
+    fieldEditorPurpose: "" as FieldEditorPurpose,
+    fieldEditorTitle: "",
+    fieldEditorValue: "",
+    fieldEditorType: "text",
+    fieldEditorPlaceholder: "",
+    fieldEditorMaxlength: 120,
+    fieldEditorHint: "",
+    fieldEditorShowCount: false,
+    pendingSeasonIndex: -1,
+    pendingEpisodeIndex: -1,
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -228,11 +244,45 @@ Page({
     this.setData({ expandedSeasonKey: this.data.expandedSeasonKey === key ? "" : key })
   },
 
-  handleSeasonNameInput(event: WechatMiniprogram.Input) {
+  openFieldEditor(options: {
+    purpose: FieldEditorPurpose
+    title: string
+    value: string
+    type?: string
+    placeholder?: string
+    maxlength?: number
+    hint?: string
+    showCount?: boolean
+    seasonIndex: number
+    episodeIndex?: number
+  }) {
+    this.setData({
+      fieldEditorVisible: true,
+      fieldEditorPurpose: options.purpose,
+      fieldEditorTitle: options.title,
+      fieldEditorValue: options.value,
+      fieldEditorType: options.type || "text",
+      fieldEditorPlaceholder: options.placeholder || "",
+      fieldEditorMaxlength: options.maxlength ?? 120,
+      fieldEditorHint: options.hint || "",
+      fieldEditorShowCount: options.showCount || false,
+      pendingSeasonIndex: options.seasonIndex,
+      pendingEpisodeIndex: options.episodeIndex ?? -1
+    })
+  },
+
+  handleSeasonNameTap(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
     const season = this.data.draftSeasons[index]
     if (!season) return
-    this.setData({ [`draftSeasons[${index}].name`]: event.detail.value, dirty: true })
+    this.openFieldEditor({
+      purpose: "season-name",
+      title: "修改季名称",
+      value: season.name,
+      placeholder: "例如：第一季",
+      maxlength: 80,
+      seasonIndex: index
+    })
   },
 
   resizeSeason(index: number, requestedCount: number) {
@@ -244,32 +294,133 @@ Page({
     this.setData({ [`draftSeasons[${index}].episodes`]: episodes, dirty: true })
   },
 
-  handleEpisodeCountStep(event: WechatMiniprogram.TouchEvent) {
+  handleEpisodeCountTap(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
-    const delta = Number(event.currentTarget.dataset.delta)
     const season = this.data.draftSeasons[index]
     if (!season) return
-    this.resizeSeason(index, season.episodes.length + delta)
+    this.openFieldEditor({
+      purpose: "episode-count",
+      title: "修改总集数",
+      value: String(season.episodes.length),
+      type: "number",
+      placeholder: "请输入 0 到 500",
+      maxlength: 3,
+      hint: "减少集数会在最终保存时删除末尾单集",
+      seasonIndex: index
+    })
   },
 
-  handleEpisodeCountInput(event: WechatMiniprogram.Input) {
-    const index = Number(event.currentTarget.dataset.index)
-    const count = Number(event.detail.value)
-    if (!Number.isInteger(count) || count < 0 || count > 500) {
-      wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
-      return
-    }
-    this.resizeSeason(index, count)
-  },
-
-  handleEpisodeSummaryInput(event: WechatMiniprogram.Input) {
+  handleEpisodeSummaryTap(event: WechatMiniprogram.TouchEvent) {
     const seasonIndex = Number(event.currentTarget.dataset.seasonIndex)
     const episodeIndex = Number(event.currentTarget.dataset.episodeIndex)
-    if (!this.data.draftSeasons[seasonIndex]?.episodes[episodeIndex]) return
-    this.setData({
-      [`draftSeasons[${seasonIndex}].episodes[${episodeIndex}].plot_summary`]: event.detail.value,
-      dirty: true
+    const episode = this.data.draftSeasons[seasonIndex]?.episodes[episodeIndex]
+    if (!episode) return
+    this.openFieldEditor({
+      purpose: "episode-summary",
+      title: `第 ${episodeIndex + 1} 集剧情详情`,
+      value: episode.plot_summary,
+      placeholder: "用一句话记录本集剧情",
+      maxlength: EPISODE_SUMMARY_MAX_LENGTH,
+      showCount: true,
+      seasonIndex,
+      episodeIndex
     })
+  },
+
+  handleEpisodeTitleTap(event: WechatMiniprogram.TouchEvent) {
+    const seasonIndex = Number(event.currentTarget.dataset.seasonIndex)
+    const episodeIndex = Number(event.currentTarget.dataset.episodeIndex)
+    const episode = this.data.draftSeasons[seasonIndex]?.episodes[episodeIndex]
+    if (!episode) return
+    this.openFieldEditor({
+      purpose: "episode-title",
+      title: "修改单集名称",
+      value: episode.title,
+      placeholder: "不填写则显示默认集数",
+      maxlength: EPISODE_TITLE_MAX_LENGTH,
+      seasonIndex,
+      episodeIndex
+    })
+  },
+
+  handleFieldEditorCancel() {
+    this.setData({
+      fieldEditorVisible: false,
+      fieldEditorPurpose: "",
+      fieldEditorValue: "",
+      fieldEditorHint: "",
+      fieldEditorShowCount: false,
+      pendingSeasonIndex: -1,
+      pendingEpisodeIndex: -1
+    })
+  },
+
+  handleFieldEditorConfirm(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const purpose = this.data.fieldEditorPurpose
+    const seasonIndex = this.data.pendingSeasonIndex
+    const episodeIndex = this.data.pendingEpisodeIndex
+    const season = this.data.draftSeasons[seasonIndex]
+    if (!season) {
+      this.handleFieldEditorCancel()
+      return
+    }
+
+    const value = String(event.detail.value || "").trim()
+    if (purpose === "season-name") {
+      if (!value) {
+        wx.showToast({ title: "请填写季名称", icon: "none" })
+        return
+      }
+      if (value.length > 80) {
+        wx.showToast({ title: "季名称不能超过 80 个字", icon: "none" })
+        return
+      }
+      const duplicated = this.data.draftSeasons.some((item, index) =>
+        index !== seasonIndex && item.name.trim().toLocaleLowerCase() === value.toLocaleLowerCase()
+      )
+      if (duplicated) {
+        wx.showToast({ title: "季名称不能重复", icon: "none" })
+        return
+      }
+      this.setData({ [`draftSeasons[${seasonIndex}].name`]: value, dirty: true })
+      this.handleFieldEditorCancel()
+      return
+    }
+
+    if (purpose === "episode-count") {
+      if (!/^\d+$/.test(value)) {
+        wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
+        return
+      }
+      const count = Number(value)
+      if (!Number.isInteger(count) || count < 0 || count > 500) {
+        wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
+        return
+      }
+      this.resizeSeason(seasonIndex, count)
+      this.handleFieldEditorCancel()
+      return
+    }
+
+    const episode = season.episodes[episodeIndex]
+    if (!episode) {
+      this.handleFieldEditorCancel()
+      return
+    }
+    if (purpose === "episode-title") {
+      if (value.length > EPISODE_TITLE_MAX_LENGTH) {
+        wx.showToast({ title: `单集名称不能超过 ${EPISODE_TITLE_MAX_LENGTH} 个字`, icon: "none" })
+        return
+      }
+      this.setData({ [`draftSeasons[${seasonIndex}].episodes[${episodeIndex}].title`]: value, dirty: true })
+    } else if (purpose === "episode-summary") {
+      if (value.length > EPISODE_SUMMARY_MAX_LENGTH) {
+        wx.showToast({ title: `剧情详情不能超过 ${EPISODE_SUMMARY_MAX_LENGTH} 个字`, icon: "none" })
+        return
+      }
+      this.setData({ [`draftSeasons[${seasonIndex}].episodes[${episodeIndex}].plot_summary`]: value, dirty: true })
+    }
+    this.handleFieldEditorCancel()
   },
 
   handleEpisodeFavoriteTap(event: WechatMiniprogram.TouchEvent) {
@@ -330,8 +481,11 @@ Page({
       if (!name) return "请填写季名称"
       if (names.has(name.toLocaleLowerCase())) return "季名称不能重复"
       names.add(name.toLocaleLowerCase())
-      if (season.episodes.some((episode) => episode.plot_summary.trim().length > 12)) {
-        return "剧情详情不能超过 12 个字"
+      if (season.episodes.some((episode) => episode.plot_summary.trim().length > EPISODE_SUMMARY_MAX_LENGTH)) {
+        return `剧情详情不能超过 ${EPISODE_SUMMARY_MAX_LENGTH} 个字`
+      }
+      if (season.episodes.some((episode) => episode.title.trim().length > EPISODE_TITLE_MAX_LENGTH)) {
+        return `单集名称不能超过 ${EPISODE_TITLE_MAX_LENGTH} 个字`
       }
     }
     return ""
@@ -366,6 +520,7 @@ Page({
           name: season.name.trim(),
           episodes: season.episodes.map((episode) => ({
             id: episode.id,
+            title: episode.title.trim(),
             plot_summary: episode.plot_summary.trim(),
             is_favorite: episode.is_favorite
           }))

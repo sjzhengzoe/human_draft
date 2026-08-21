@@ -22,34 +22,32 @@
           </view>
         </view>
 
-        <view class="detail-action-row">
-          <view class="detail-title-actions">
-            <view wx:if="{{canWrite}}" class="special-favorite-toggle {{entry.is_special_favorite ? 'special-favorite-toggle--active' : ''}} {{operating || savingEntry ? 'special-favorite-toggle--disabled' : ''}}" role="button" aria-label="{{entry.is_special_favorite ? '取消特别喜爱' : '设为特别喜爱'}}" bindtap="handleSpecialFavoriteChange"><text class="special-favorite-toggle__icon">{{entry.is_special_favorite ? '♥' : '♡'}}</text></view>
-          </view>
-        </view>
-
         <view class="detail-status-options {{operating || savingEntry ? 'detail-status-options--disabled' : ''}}" role="group" aria-label="切换观看状态">
           <view class="detail-status-option {{entry.watch_status === 'planned' ? 'detail-status-option--active' : ''}}" role="button" aria-pressed="{{entry.watch_status === 'planned'}}" data-status="planned" bindtap="handleWatchStatusTap">{{isAudio ? '想听' : '想看'}}</view>
           <view class="detail-status-option {{entry.watch_status === 'in_progress' ? 'detail-status-option--active' : ''}}" role="button" aria-pressed="{{entry.watch_status === 'in_progress'}}" data-status="in_progress" bindtap="handleWatchStatusTap">{{isAudio ? '在听' : '在看'}}</view>
           <view class="detail-status-option {{entry.watch_status === 'completed' ? 'detail-status-option--active' : ''}}" role="button" aria-pressed="{{entry.watch_status === 'completed'}}" data-status="completed" bindtap="handleWatchStatusTap">{{isAudio ? '听过' : '看过'}}</view>
-        </view>
-
-        <view wx:if="{{entry.watch_status === 'completed'}}" class="detail-rating">
-          <view class="detail-rating__heading"><text>我的评分</text></view>
-          <view class="detail-rating__stars {{!canWrite || operating || savingEntry ? 'detail-rating__stars--disabled' : ''}}" aria-label="{{(entry.personal_rating || 3) + ' 星'}}">
-            <view wx:for="{{ratingOptions}}" wx:key="*this" class="detail-rating__star {{item <= (entry.personal_rating || 3) ? 'detail-rating__star--filled' : ''}}" data-rating="{{item}}" role="button" aria-label="评为 {{item}} 星" bindtap="handlePersonalRatingTap">{{item <= (entry.personal_rating || 3) ? '★' : '☆'}}</view>
-          </view>
         </view>
       </view>
 
       <scroll-view class="detail-attribute-scroll" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}" scroll-top="{{detailScrollTop}}" bindscroll="handleDetailScroll" refresher-enabled refresher-triggered="{{detailRefresherTriggered}}" bindrefresherrefresh="handleDetailPullRefresh">
         <view class="detail-attributes">
           <view class="detail-minimal">
-            <view class="detail-minimal__title" role="button" aria-label="修改名称" bindtap="handleEntryTitleTap">{{entry.title}}</view>
+            <view class="detail-minimal__heading">
+              <view class="detail-minimal__title" role="button" aria-label="修改名称" bindtap="handleEntryTitleTap">{{entry.title}}</view>
+              <view wx:if="{{canWrite}}" class="special-favorite-toggle {{entry.is_special_favorite ? 'special-favorite-toggle--active' : ''}} {{operating || savingEntry ? 'special-favorite-toggle--disabled' : ''}}" role="button" aria-label="{{entry.is_special_favorite ? '取消特别喜爱' : '设为特别喜爱'}}" bindtap="handleSpecialFavoriteChange"><app-icon name="{{entry.is_special_favorite ? 'heart-favorite-filled' : 'heart-muted'}}" size="30" /></view>
+            </view>
             <view class="detail-minimal__meta">
               <view class="detail-minimal__meta-item" role="button" aria-label="修改分类" bindtap="handleEntryCategoryTap">{{entry.media_type}}</view>
               <view class="detail-minimal__separator" aria-hidden="true">·</view>
               <view class="detail-minimal__meta-item" role="button" aria-label="修改平台或来源" bindtap="handleEntryPlatformsTap">{{platformText}}</view>
+            </view>
+            <view wx:if="{{entry.watch_status === 'completed'}}" class="detail-rating">
+              <view class="detail-rating__heading"><text>我的评分</text></view>
+              <view class="detail-rating__stars {{!canWrite || operating || savingEntry ? 'detail-rating__stars--disabled' : ''}}" aria-label="{{(entry.personal_rating || 3) + ' 星'}}">
+                <view wx:for="{{ratingOptions}}" wx:key="*this" class="detail-rating__star {{item <= (entry.personal_rating || 3) ? 'detail-rating__star--filled' : ''}}" data-rating="{{item}}" role="button" aria-label="评为 {{item}} 星" bindtap="handlePersonalRatingTap">
+                  <app-icon name="{{item <= (entry.personal_rating || 3) ? 'star-rating-filled' : 'star-muted'}}" size="30" />
+                </view>
+              </view>
             </view>
           </view>
         </view>
@@ -58,7 +56,7 @@
           <view class="detail-watch-progress__label">观看进度</view>
           <view class="detail-watch-progress__value">
             <text>{{watchProgressText}}</text>
-            <app-icon name="chevron-right" size="24" />
+            <app-icon name="chevron-right" size="16" />
           </view>
         </view>
 
@@ -66,39 +64,48 @@
           <view class="episode-picker__heading">
             <view>
               <view class="episode-picker__title">选集</view>
-              <view wx:if="{{activeSeason}}" class="episode-picker__subtitle">{{activeSeason.name}} · {{activeSeason.episodes.length}} 集</view>
+              <view wx:if="{{activeSeason}}" class="episode-picker__subtitle">全 {{entry.season_count}} 季 · {{entry.episode_count}} 集 · 已喜爱 {{entry.favorite_episode_count}} 集</view>
             </view>
             <view wx:if="{{canWrite}}" class="episode-picker__actions">
               <view class="episode-picker__icon" role="button" aria-label="管理季和集" bindtap="handleSeasonManage"><app-icon name="pencil" size="24" /></view>
             </view>
           </view>
 
-          <view wx:if="{{episodeRangeOptions.length > 1}}" class="episode-picker__range-row">
-            <view class="episode-picker__range-button" role="button" aria-label="快速选择集数范围" bindtap="handleEpisodeRangeDialogOpen">
-              <text>{{episodeRangeOptions[activeEpisodeRangeIndex].label}}</text>
-              <app-icon name="chevron-right" size="24" />
-            </view>
-          </view>
-
           <scroll-view wx:if="{{seasons.length > 1}}" class="episode-picker__scroll" scroll-x enhanced show-scrollbar="{{false}}">
             <view class="episode-picker__tabs">
-              <view wx:for="{{seasons}}" wx:key="id" class="episode-picker__tab {{activeSeasonIndex === index ? 'episode-picker__tab--active' : ''}}" data-index="{{index}}" bindtap="handleSeasonTap">{{item.name}}</view>
-            </view>
-          </scroll-view>
-
-          <view wx:if="{{!activeSeason}}" class="episode-picker__empty">还没有季或篇章，可从管理入口开始添加。</view>
-          <view wx:elif="{{activeSeason.episodes.length === 0}}" class="episode-picker__empty">还没有单集，可从当前季的管理入口增加。</view>
-          <scroll-view wx:else class="episode-picker__episodes-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-            <view class="episode-picker__track">
-              <view wx:for="{{episodePickerEpisodes}}" wx:key="id" class="episode-card {{item.is_favorite ? 'episode-card--favorite' : ''}}" role="button" aria-label="编辑第 {{item.episode_number}} 集剧情详情" data-id="{{item.id}}" bindtap="handleEpisodeSummaryTap">
-                <view class="episode-card__top">
-                  <view class="episode-card__number">第 {{item.episode_number}} 集</view>
-                  <view class="episode-card__favorite {{item.is_favorite ? 'episode-card__favorite--active' : ''}}" role="button" aria-label="{{item.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-id="{{item.id}}" catchtap="handleFavoriteTap">{{item.is_favorite ? '♥' : '♡'}}</view>
-                </view>
-                <view class="episode-card__summary {{item.plot_summary ? '' : 'episode-card__summary--empty'}}">{{item.plot_summary || '点击添加剧情详情'}}</view>
+              <view wx:for="{{seasons}}" wx:key="id" class="episode-picker__tab {{activeSeasonIndex === index ? 'episode-picker__tab--active' : ''}}" data-index="{{index}}" bindtap="handleSeasonTap">
+                <text class="episode-picker__tab-name">{{item.name}}</text>
               </view>
             </view>
           </scroll-view>
+
+          <view wx:if="{{activeSeason && (episodeRangeOptions.length > 1 || activeSeasonFavoriteCount > 0)}}" class="episode-picker__tools">
+            <scroll-view wx:if="{{episodeRangeOptions.length > 1 && !episodePickerFavoriteOnly}}" class="episode-picker__range-scroll" scroll-x enhanced show-scrollbar="{{false}}" scroll-with-animation scroll-into-view="episode-range-{{activeEpisodeRangeIndex}}">
+              <view class="episode-picker__range-options">
+                <view wx:for="{{episodeRangeOptions}}" wx:key="label" id="episode-range-{{index}}" class="episode-picker__range-option {{activeEpisodeRangeIndex === index ? 'episode-picker__range-option--active' : ''}}" role="button" aria-pressed="{{activeEpisodeRangeIndex === index}}" aria-label="查看第 {{item.label}} 集" data-index="{{index}}" bindtap="handleEpisodeRangeTap">{{item.label}}</view>
+              </view>
+            </scroll-view>
+            <view wx:if="{{episodePickerFavoriteOnly}}" class="episode-picker__tools-spacer" />
+            <view wx:if="{{activeSeasonFavoriteCount > 0}}" class="episode-picker__favorite-filter {{episodePickerFavoriteOnly ? 'episode-picker__favorite-filter--active' : ''}}" role="button" aria-pressed="{{episodePickerFavoriteOnly}}" aria-label="{{episodePickerFavoriteOnly ? '显示全部单集' : '只看喜爱的单集'}}" bindtap="handleEpisodePickerFavoriteTap">
+              <app-icon name="{{episodePickerFavoriteOnly ? 'heart-favorite-filled' : 'heart-muted'}}" size="30" />
+              <text>只看喜爱</text>
+              <text class="episode-picker__favorite-count">{{activeSeasonFavoriteCount}}</text>
+            </view>
+          </view>
+
+          <view wx:if="{{!activeSeason}}" class="episode-picker__empty">还没有季或篇章，可从管理入口开始添加。</view>
+          <view wx:elif="{{activeSeason.episodes.length === 0}}" class="episode-picker__empty">还没有单集，可从当前季的管理入口增加。</view>
+          <view wx:elif="{{episodePickerFavoriteOnly && episodePickerEpisodes.length === 0}}" class="episode-picker__empty">这一季还没有喜爱的单集。</view>
+          <view wx:else class="episode-picker__list">
+            <view wx:for="{{episodePickerEpisodes}}" wx:key="id" class="episode-row" role="button" aria-label="查看并编辑第 {{item.episode_number}} 集剧情详情" data-id="{{item.id}}" bindtap="handleEpisodeSummaryTap">
+              <view class="episode-row__media-icon" aria-hidden="true"><app-icon name="{{isAudio ? 'headphones' : 'clapperboard'}}" size="24" /></view>
+              <view class="episode-row__copy">
+                <view class="episode-row__title">{{item.title || '第 ' + item.episode_number + ' 集'}}</view>
+                <view class="episode-row__summary {{item.plot_summary ? '' : 'episode-row__summary--empty'}}">{{item.plot_summary || '点击添加剧情详情'}}</view>
+              </view>
+              <view class="episode-row__favorite {{item.is_favorite ? 'episode-row__favorite--active' : ''}}" role="button" aria-label="{{item.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-id="{{item.id}}" catchtap="handleFavoriteTap"><app-icon name="{{item.is_favorite ? 'heart-favorite-filled' : 'heart-muted'}}" size="30" /></view>
+            </view>
+          </view>
         </view>
         <view class="detail-scroll-safe-area" />
       </scroll-view>
@@ -127,19 +134,10 @@
   bindselect="handleProgressPickerSelect"
 />
 
-<app-dialog wx:if="{{episodeRangeDialogVisible}}" visible="{{true}}" title="快速选集" custom-body="{{true}}" custom-actions="{{true}}" bind:cancel="handleEpisodeRangeDialogClose">
-  <view slot="body" class="episode-range-dialog__options">
-    <view wx:for="{{episodeRangeOptions}}" wx:key="label" class="episode-range-dialog__option {{activeEpisodeRangeIndex === index ? 'episode-range-dialog__option--active' : ''}}" role="button" aria-label="查看第 {{item.label}} 集" data-index="{{index}}" bindtap="handleEpisodeRangeTap">{{item.label}}</view>
-  </view>
-  <view slot="actions" class="episode-range-dialog__actions">
-    <button class="episode-range-dialog__close" bindtap="handleEpisodeRangeDialogClose">取消</button>
-  </view>
-</app-dialog>
-
 <app-dialog wx:if="{{textSheetVisible}}" visible="{{true}}" placement="bottom" title="{{textSheetTitle}}" custom-body="{{true}}" confirm-text="{{textSheetConfirmText}}" bind:cancel="handleTextSheetCancel" bind:confirm="handleTextSheetConfirm">
   <view slot="body" class="text-sheet-body">
     <app-input custom-class="text-sheet-input" type="{{textSheetInputType}}" value="{{textSheetValue}}" maxlength="{{textSheetMaxlength}}" placeholder="{{textSheetPlaceholder}}" focus dialog-mode bindinput="handleTextSheetInput" bindconfirm="handleTextSheetConfirm" />
-    <view wx:if="{{textSheetPurpose === 'episode-summary'}}" class="text-sheet-count">{{textSheetValue.length}} / 12</view>
+    <view wx:if="{{textSheetPurpose === 'episode-summary'}}" class="text-sheet-count">{{textSheetValue.length}} / {{textSheetMaxlength}}</view>
     <view wx:if="{{textSheetPurpose === 'add-season-count'}}" class="text-sheet-hint">更新中的作品可以填写 0</view>
   </view>
 </app-dialog>

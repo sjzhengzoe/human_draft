@@ -12,7 +12,7 @@
         wx:for="{{draftSeasons}}"
         wx:key="key"
         style="{{dragSortKind === 'season' ? dragSortPreviewStyles[index] : ''}}"
-        class="season-card js-season-sort-item {{draggingSortKey === item.key ? 'season-card--dragging' : ''}}"
+        class="season-card js-season-sort-item {{expandedSeasonKey === item.key ? 'season-card--expanded' : ''}} {{draggingSortKey === item.key ? 'season-card--dragging' : ''}}"
       >
         <view class="season-card__header js-season-sort-anchor">
           <view
@@ -39,18 +39,16 @@
 
         <view wx:if="{{expandedSeasonKey === item.key}}" class="season-editor">
           <view class="season-editor__fields">
-            <view class="season-field">
+            <view class="season-field" role="button" aria-label="修改季名称" data-index="{{index}}" bindtap="handleSeasonNameTap">
               <view class="season-field__label">季名称</view>
-              <app-input custom-class="season-field__input" value="{{item.name}}" maxlength="80" placeholder="例如：第一季" data-index="{{index}}" bindinput="handleSeasonNameInput" />
+              <view class="season-field__value">{{item.name || '未命名季'}}</view>
+              <app-icon name="chevron-right" size="16" />
             </view>
 
-            <view class="season-field season-field--count">
+            <view class="season-field" role="button" aria-label="修改总集数" data-index="{{index}}" bindtap="handleEpisodeCountTap">
               <view class="season-field__label">总集数</view>
-              <view class="episode-count-editor">
-                <view class="episode-count-editor__button" role="button" aria-label="减少一集" data-index="{{index}}" data-delta="-1" bindtap="handleEpisodeCountStep">−</view>
-                <app-input custom-class="episode-count-editor__input" type="number" value="{{item.episodes.length}}" persistent data-index="{{index}}" bindblur="handleEpisodeCountInput" />
-                <view class="episode-count-editor__button" role="button" aria-label="增加一集" data-index="{{index}}" data-delta="1" bindtap="handleEpisodeCountStep">＋</view>
-              </view>
+              <view class="season-field__value">{{item.episodes.length}} 集</view>
+              <app-icon name="chevron-right" size="16" />
             </view>
           </view>
 
@@ -76,9 +74,11 @@
                 catchtouchend="handleSortDragEnd"
                 catchtouchcancel="handleSortDragEnd"
               ><app-icon name="drag-handle" size="27" /></view>
-              <view class="episode-editor-row__number">第 {{episodeIndex + 1}} 集</view>
-              <app-input custom-class="episode-editor-row__input" value="{{episode.plot_summary}}" maxlength="12" placeholder="用一句话记录本集剧情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindinput="handleEpisodeSummaryInput" />
-              <view class="episode-editor-row__favorite {{episode.is_favorite ? 'episode-editor-row__favorite--active' : ''}}" role="button" aria-label="{{episode.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeFavoriteTap">{{episode.is_favorite ? '♥' : '♡'}}</view>
+              <view class="episode-editor-row__copy">
+                <view class="episode-editor-row__title" role="button" aria-label="修改第 {{episodeIndex + 1}} 集名称" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeTitleTap">{{episode.title || '第 ' + (episodeIndex + 1) + ' 集'}}</view>
+                <view class="episode-editor-row__summary {{episode.plot_summary ? '' : 'episode-editor-row__summary--empty'}}" role="button" aria-label="查看并编辑第 {{episodeIndex + 1}} 集剧情详情" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeSummaryTap">{{episode.plot_summary || '点击添加剧情详情'}}</view>
+              </view>
+              <view class="episode-editor-row__favorite {{episode.is_favorite ? 'episode-editor-row__favorite--active' : ''}}" role="button" aria-label="{{episode.is_favorite ? '取消喜欢本集' : '喜欢本集'}}" data-season-index="{{index}}" data-episode-index="{{episodeIndex}}" bindtap="handleEpisodeFavoriteTap"><app-icon name="{{episode.is_favorite ? 'heart-favorite-filled' : 'heart-muted'}}" size="30" /></view>
             </view>
           </view>
         </view>
@@ -97,6 +97,8 @@
 </view>
 
 <operation-loading visible="{{saving}}" text="正在保存剧集…" />
+
+<app-field-editor visible="{{fieldEditorVisible}}" title="{{fieldEditorTitle}}" value="{{fieldEditorValue}}" type="{{fieldEditorType}}" placeholder="{{fieldEditorPlaceholder}}" maxlength="{{fieldEditorMaxlength}}" hint="{{fieldEditorHint}}" show-count="{{fieldEditorShowCount}}" bind:cancel="handleFieldEditorCancel" bind:confirm="handleFieldEditorConfirm" />
 
 <app-dialog wx:if="{{confirmDialogVisible}}" visible="{{true}}" title="{{confirmDialogPurpose === 'leave' ? '放弃修改' : '确认保存'}}" content="{{confirmDialogContent}}" confirm-text="{{confirmDialogPurpose === 'leave' ? '放弃' : '保存'}}" bind:cancel="handleConfirmCancel" bind:confirm="handleConfirmAction" />
 

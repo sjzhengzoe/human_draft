@@ -47,7 +47,7 @@
         role="button"
         aria-label="{{isSpecialFavorite ? '取消特别喜爱' : '设为特别喜爱'}}"
         bindtap="handleSpecialFavoriteChange"
-      >{{isSpecialFavorite ? '♥' : '♡'}}</view>
+      ><app-icon name="{{isSpecialFavorite ? 'heart-favorite-filled' : 'heart-muted'}}" size="30" /></view>
     </view>
     <view class="field">
       <view class="field-label">封面（选填）</view>

@@ -163,6 +163,9 @@ function updateCachedEntryStats(mediaEntryId: string, seasons: MediaSeason[]) {
   const progressEpisode = progressSeason?.episodes.find((episode) =>
     episode.id === entry.last_watched_episode_id
   )
+  const progressSeasonIndex = progressSeason
+    ? seasons.findIndex((season) => season.id === progressSeason.id)
+    : -1
   cacheEntryValue({
     ...entry,
     season_count: seasons.length,
@@ -172,6 +175,7 @@ function updateCachedEntryStats(mediaEntryId: string, seasons: MediaSeason[]) {
     last_watched_episode_number: progressEpisode?.episode_number ?? null,
     last_watched_season_id: progressSeason?.id || "",
     last_watched_season_name: progressSeason?.name || "",
+    last_watched_season_number: progressSeasonIndex >= 0 ? progressSeasonIndex + 1 : null,
     last_watched_season_sort_order: progressSeason?.sort_order ?? null
   })
 }

@@ -81,6 +81,21 @@ function mediaPlaceholderIcon(mediaType: MediaType): string {
   return "clapperboard"
 }
 
+function watchProgressText(entry: MediaEntry): string {
+  if (!entry.last_watched_episode_id || !Number.isInteger(entry.last_watched_episode_number)) {
+    return "记录看到哪一集"
+  }
+  const seasonNumber = Number.isInteger(entry.last_watched_season_number)
+    ? Number(entry.last_watched_season_number)
+    : Number.isInteger(Number(entry.last_watched_season_sort_order) / 1000)
+      ? Number(entry.last_watched_season_sort_order) / 1000
+      : null
+  if (entry.season_count > 1 && seasonNumber) {
+    return `看到第 ${seasonNumber} 季 · ${entry.last_watched_episode_number} 集`
+  }
+  return `看到 ${entry.last_watched_episode_number} 集`
+}
+
 function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
   const personalRating = entry.watch_status === "completed" && Number.isInteger(entry.personal_rating)
     ? Math.min(5, Math.max(1, Number(entry.personal_rating)))
@@ -94,11 +109,7 @@ function toDisplayEntry(entry: MediaEntry): DisplayMediaEntry {
       entry.season_count > 0
       || /电视剧|剧集|综艺|电视|动漫|动画|广播剧/.test(entry.media_type)
     ),
-    watchProgressText: entry.last_watched_episode_id
-      && entry.last_watched_season_name
-      && Number.isInteger(entry.last_watched_episode_number)
-      ? `${entry.last_watched_season_name} · 看到第 ${entry.last_watched_episode_number} 集`
-      : "记录看到哪一集",
+    watchProgressText: watchProgressText(entry),
     ratingStars: [1, 2, 3, 4, 5].map((position) => ({
       position,
       filled: personalRating !== null && position <= personalRating

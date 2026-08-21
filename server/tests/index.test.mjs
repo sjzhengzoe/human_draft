@@ -2003,6 +2003,7 @@ test("key moment staged uploads do not change the gallery before the final save"
 });
 
 test("episodic media routes expose seasons, favorites, and episode updates", async (t) => {
+  const maxLengthSummary = "一".repeat(24);
   const episode = {
     id: EPISODE_ID,
     season_id: SEASON_ID,
@@ -2108,7 +2109,7 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
       seasons: [{
         id: SEASON_ID,
         name: "第一季",
-        episodes: [{ id: EPISODE_ID, plot_summary: "两人在车站重逢", is_favorite: true }],
+        episodes: [{ id: EPISODE_ID, title: "墨府风云", plot_summary: maxLengthSummary, is_favorite: true }],
       }],
     },
   });
@@ -2121,10 +2122,40 @@ test("episodic media routes expose seasons, favorites, and episode updates", asy
       p_seasons: [{
         id: SEASON_ID,
         name: "第一季",
-        episodes: [{ id: EPISODE_ID, plot_summary: "两人在车站重逢", is_favorite: true }],
+        episodes: [{ id: EPISODE_ID, title: "墨府风云", plot_summary: maxLengthSummary, is_favorite: true }],
       }],
     },
   });
+
+  const tooLongSummaryResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/seasons`,
+    headers: authHeaders,
+    payload: {
+      seasons: [{
+        id: SEASON_ID,
+        name: "第一季",
+        episodes: [{ id: EPISODE_ID, plot_summary: "一".repeat(25), is_favorite: true }],
+      }],
+    },
+  });
+  assert.equal(tooLongSummaryResponse.statusCode, 400);
+  assert.equal(tooLongSummaryResponse.json().error.message, "剧情详情不能超过 24 个字。");
+
+  const tooLongEpisodeTitleResponse = await app.inject({
+    method: "PUT",
+    url: `/api/media/${MEDIA_ID}/seasons`,
+    headers: authHeaders,
+    payload: {
+      seasons: [{
+        id: SEASON_ID,
+        name: "第一季",
+        episodes: [{ id: EPISODE_ID, title: "一".repeat(121), plot_summary: "", is_favorite: false }],
+      }],
+    },
+  });
+  assert.equal(tooLongEpisodeTitleResponse.statusCode, 400);
+  assert.equal(tooLongEpisodeTitleResponse.json().error.message, "单集名称不能超过 120 个字。");
 
   const setCoverResponse = await app.inject({
     method: "PUT",
@@ -2717,10 +2748,16 @@ test("media watch progress resolves one selected episode with its season", async
     tables: authenticatedTables({
       media_entries: [progressEntry],
       media_seasons: [{
+        id: "10000000-0000-4000-8000-000000000099",
+        uid: UID,
+        media_entry_id: MEDIA_ID,
+        name: "凡界篇",
+        sort_order: 1000,
+      }, {
         id: SEASON_ID,
         uid: UID,
         media_entry_id: MEDIA_ID,
-        name: "第二季",
+        name: "仙界篇",
         sort_order: 2000,
       }],
       media_episodes: [{
@@ -2756,7 +2793,8 @@ test("media watch progress resolves one selected episode with its season", async
     ...progressEntry,
     cover_path: "",
     last_watched_season_id: SEASON_ID,
-    last_watched_season_name: "第二季",
+    last_watched_season_name: "仙界篇",
+    last_watched_season_number: 2,
     last_watched_season_sort_order: 2000,
     last_watched_episode_number: 12,
   });

@@ -1,7 +1,7 @@
-<view class="app-input__field">
+<view class="app-input__field custom-class">
   <input
     wx:if="{{dialogMode || persistent || editing}}"
-    class="app-input__control custom-class"
+    class="app-input__control"
     style="font-family: HumanDraftUI, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: {{fontSize}};"
     always-embed="{{dialogMode ? false : true}}"
     type="{{type}}"
@@ -24,11 +24,11 @@
   />
   <view
     wx:else
-    class="app-input__display custom-class {{localValue ? '' : 'app-input__display--placeholder'}} {{disabled ? 'app-input__display--disabled' : ''}}"
+    class="app-input__display {{localValue ? '' : 'app-input__display--placeholder'}} {{disabled ? 'app-input__display--disabled' : ''}}"
     style="font-size: {{fontSize}};"
     role="textbox"
     aria-disabled="{{disabled}}"
     bindtap="handleActivate"
   >{{localValue || placeholder}}</view>
-  <view wx:if="{{clearable && localValue && !disabled}}" class="app-input__clear" role="button" aria-label="{{clearAriaLabel}}" catchtap="handleClear"><app-icon name="x-muted" size="22" /></view>
+  <view wx:if="{{clearable && localValue && !disabled}}" class="app-input__clear" role="button" aria-label="{{clearAriaLabel}}" catchtap="handleClear"><app-icon name="x-muted" size="24" /></view>
 </view>

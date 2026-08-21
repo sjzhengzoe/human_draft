@@ -1,0 +1,7 @@
+<app-dialog wx:if="{{visible}}" visible="{{true}}" placement="bottom" title="{{title}}" custom-body="{{true}}" confirm-text="{{confirmText}}" bind:cancel="handleCancel" bind:confirm="handleConfirm">
+  <view slot="body">
+    <app-input custom-class="app-field-editor__input" type="{{type}}" value="{{draftValue}}" maxlength="{{maxlength}}" placeholder="{{placeholder}}" focus dialog-mode bindinput="handleInput" bindconfirm="handleConfirm" />
+    <view wx:if="{{showCount}}" class="app-field-editor__count">{{draftValue.length}} / {{maxlength}}</view>
+    <view wx:if="{{hint}}" class="app-field-editor__hint">{{hint}}</view>
+  </view>
+</app-dialog>

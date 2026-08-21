@@ -115,6 +115,7 @@
     "backgroundTextStyle": "dark"
   },
   "usingComponents": {
+    "app-field-editor": "/components/app-field-editor/index",
     "app-icon": "/components/app-icon/index",
     "custom-navigation": "/components/custom-navigation/index",
     "login-required-dialog": "/components/login-required-dialog/index",

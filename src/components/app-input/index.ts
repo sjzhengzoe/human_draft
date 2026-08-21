@@ -45,7 +45,7 @@ Component({
     },
     clearable: {
       type: Boolean,
-      value: false
+      value: true
     },
     clearAriaLabel: {
       type: String,

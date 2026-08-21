@@ -82,7 +82,7 @@
                   <view class="meal-slot__type">{{planItem.item.record_type === 'outside' ? '店铺' : '菜品'}}</view>
                 </view>
                 <view class="meal-slot__remove" role="button" aria-label="移除{{planItem.item.name}}" data-meal-index="{{mealIndex}}" data-item-index="{{itemIndex}}" catchtap="handleRemoveMealItem">
-                  <view class="meal-slot__remove-visual"><app-icon name="x-muted" size="18" /></view>
+                  <view class="meal-slot__remove-visual"><app-icon name="x-muted" size="24" /></view>
                 </view>
                 <view class="meal-slot__name">{{planItem.item.name}}</view>
               </view>

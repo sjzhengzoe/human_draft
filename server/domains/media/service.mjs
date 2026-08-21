@@ -33,6 +33,7 @@ export const MEDIA_PLATFORMS = [
 ];
 export const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"];
 export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
+export const MEDIA_EPISODE_SUMMARY_MAX_LENGTH = 24;
 
 function mediaCoverStoragePath(url) {
   if (typeof url !== "string" || !url.trim()) return "";
@@ -84,16 +85,23 @@ async function createMediaWatchProgressMap(supabase, uid, records) {
     .eq("uid", uid)
     .in("id", episodeIds);
   throwSupabaseError(episodesError, "读取影视观看进度失败。");
-  const seasonIds = [...new Set((episodes || []).map((episode) => episode.season_id))];
-  if (!seasonIds.length) return new Map();
+  const mediaEntryIds = [...new Set(records.map((record) => record?.id).filter(Boolean))];
+  if (!mediaEntryIds.length) return new Map();
 
   const { data: seasons, error: seasonsError } = await supabase
     .from("media_seasons")
     .select("id,media_entry_id,name,sort_order")
     .eq("uid", uid)
-    .in("id", seasonIds);
+    .in("media_entry_id", mediaEntryIds);
   throwSupabaseError(seasonsError, "读取影视观看进度失败。");
   const seasonsById = new Map((seasons || []).map((season) => [season.id, season]));
+  const seasonNumberById = new Map();
+  for (const mediaEntryId of mediaEntryIds) {
+    (seasons || [])
+      .filter((season) => season.media_entry_id === mediaEntryId)
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .forEach((season, index) => seasonNumberById.set(season.id, index + 1));
+  }
   return new Map((episodes || []).flatMap((episode) => {
     const season = seasonsById.get(episode.season_id);
     if (!season) return [];
@@ -102,6 +110,7 @@ async function createMediaWatchProgressMap(supabase, uid, records) {
       episode_number: episode.episode_number,
       season_id: season.id,
       season_name: season.name,
+      season_number: seasonNumberById.get(season.id),
       season_sort_order: season.sort_order,
       media_entry_id: season.media_entry_id,
     }]];
@@ -116,6 +125,7 @@ function toMediaWatchProgressResponse(record, progressMap) {
     ...record,
     last_watched_season_id: validProgress.season_id,
     last_watched_season_name: validProgress.season_name,
+    last_watched_season_number: validProgress.season_number,
     last_watched_season_sort_order: validProgress.season_sort_order,
     last_watched_episode_number: validProgress.episode_number,
   };
@@ -780,10 +790,18 @@ export async function saveMediaSeasonDrafts(supabase, uid, mediaEntryId, body) {
       name,
       episodes: episodes.map((episode) => {
         assertCondition(episode && typeof episode === "object" && !Array.isArray(episode), 400, "INVALID_MEDIA_EPISODE", "单集草稿格式无效。");
+        const title = typeof episode.title === "string" ? episode.title.trim() : "";
+        assertCondition(title.length <= 120, 400, "TEXT_TOO_LONG", "单集名称不能超过 120 个字。");
         const plotSummary = typeof episode.plot_summary === "string" ? episode.plot_summary.trim() : "";
-        assertCondition(plotSummary.length <= 12, 400, "TEXT_TOO_LONG", "剧情详情不能超过 12 个字。");
+        assertCondition(
+          plotSummary.length <= MEDIA_EPISODE_SUMMARY_MAX_LENGTH,
+          400,
+          "TEXT_TOO_LONG",
+          `剧情详情不能超过 ${MEDIA_EPISODE_SUMMARY_MAX_LENGTH} 个字。`,
+        );
         return {
           id: typeof episode.id === "string" ? episode.id : "",
+          title,
           plot_summary: plotSummary,
           is_favorite: booleanValue(episode.is_favorite ?? false, "喜欢标记"),
         };

@@ -9,6 +9,7 @@
   display: flex;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   align-items: center;
 }
 
@@ -18,7 +19,17 @@
   min-width: 0;
   box-sizing: border-box;
   flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font-family: var(--ui-font-family);
+  font-weight: inherit;
+  text-align: inherit;
+}
+
+.app-input__control {
+  height: 100%;
+  padding: 0;
 }
 
 .app-input__clear {

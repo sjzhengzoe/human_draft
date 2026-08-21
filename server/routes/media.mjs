@@ -175,7 +175,7 @@ export function registerMediaRoutes(app, context) {
       ...seasons.flatMap((season) => [
         season?.name,
         ...(Array.isArray(season?.episodes)
-          ? season.episodes.map((episode) => episode?.plot_summary)
+          ? season.episodes.flatMap((episode) => [episode?.title, episode?.plot_summary])
           : []),
       ]),
     );

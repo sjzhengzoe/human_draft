@@ -103,7 +103,7 @@ test("weekly menu component keeps focused day and week displays with the random 
   assert.match(page, /wx:for="\{\{meal\.items\}\}"/);
   assert.match(page, /class="meal-slot meal-slot--add"[\s\S]*?bindtap="handleMealEdit"/);
   assert.match(page, /class="meal-slot__remove"[\s\S]*?catchtap="handleRemoveMealItem"/);
-  assert.match(page, /class="meal-slot__remove"[\s\S]*?<app-icon name="x-muted" size="18"/);
+  assert.match(page, /class="meal-slot__remove"[\s\S]*?<app-icon name="x-muted" size="24"/);
   assert.match(page, /class="meal-slot__image"[^>]*mode="aspectFit"[^>]*fade-in="\{\{false\}\}"/);
   assert.doesNotMatch(page, /meal-list__line|meal-section__marker/);
   assert.match(page, /class="meal-section__count">\{\{meal\.items\.length \? meal\.items\.length \+ ' 道' : '未安排'\}\}/);

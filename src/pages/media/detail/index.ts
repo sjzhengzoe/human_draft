@@ -65,7 +65,8 @@ const BUILTIN_PLATFORMS = [
   "Books"
 ]
 const EPISODE_RENDER_BATCH = 20
-const EPISODE_RANGE_SIZE = 50
+const EPISODE_RANGE_SIZE = 10
+const EPISODE_SUMMARY_MAX_LENGTH = 24
 const EPISODE_DRAFT_PREFIX = "media:episode-draft:v1:"
 const RATING_OPTIONS = [1, 2, 3, 4, 5]
 
@@ -186,8 +187,13 @@ function episodeRangeOptions(season: MediaSeason | null) {
   })
 }
 
-function episodesInRange(season: MediaSeason | null, rangeIndex: number): MediaEpisode[] {
+function episodePickerEpisodes(
+  season: MediaSeason | null,
+  rangeIndex: number,
+  favoriteOnly = false
+): MediaEpisode[] {
   if (!season) return []
+  if (favoriteOnly) return season.episodes.filter((episode) => episode.is_favorite)
   const startIndex = Math.max(0, rangeIndex) * EPISODE_RANGE_SIZE
   return season.episodes.slice(startIndex, startIndex + EPISODE_RANGE_SIZE)
 }
@@ -256,11 +262,18 @@ function mediaCoversMatch(entry: MediaEntry | null, season: MediaSeason | null) 
 }
 
 function watchProgressText(entry: MediaEntry | null) {
-  return entry?.last_watched_episode_id
-    && entry.last_watched_season_name
-    && Number.isInteger(entry.last_watched_episode_number)
-    ? `${entry.last_watched_season_name} · 看到第 ${entry.last_watched_episode_number} 集`
-    : "记录看到哪一集"
+  if (!entry?.last_watched_episode_id || !Number.isInteger(entry.last_watched_episode_number)) {
+    return "记录看到哪一集"
+  }
+  const seasonNumber = Number.isInteger(entry.last_watched_season_number)
+    ? Number(entry.last_watched_season_number)
+    : Number.isInteger(Number(entry.last_watched_season_sort_order) / 1000)
+      ? Number(entry.last_watched_season_sort_order) / 1000
+      : null
+  if (entry.season_count > 1 && seasonNumber) {
+    return `看到第 ${seasonNumber} 季 · ${entry.last_watched_episode_number} 集`
+  }
+  return `看到 ${entry.last_watched_episode_number} 集`
 }
 
 Page({
@@ -277,7 +290,7 @@ Page({
     activeEpisodeRangeIndex: 0,
     episodeRangeOptions: [] as Array<{ label: string; start: number; end: number }>,
     episodePickerEpisodes: [] as MediaEpisode[],
-    episodeRangeDialogVisible: false,
+    episodePickerFavoriteOnly: false,
     activeSeasonIsEntryCover: false,
     timelineFilterOptions,
     timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
@@ -438,6 +451,9 @@ Page({
       ? requestedIndex
       : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
     const activeSeason = normalizedSeasons[activeSeasonIndex] || null
+    const activeSeasonFavoriteCount = favoriteCount(activeSeason)
+    const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
+      && activeSeasonFavoriteCount > 0
     const activeEpisodeRangeIndex = Math.min(
       this.data.activeEpisodeRangeIndex,
       Math.max(0, episodeRangeOptions(activeSeason).length - 1)
@@ -452,10 +468,15 @@ Page({
       activeSeasonIsEntryCover: mediaCoversMatch(entry, activeSeason),
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: Math.max(EPISODE_RENDER_BATCH, this.data.visibleEpisodeCount),
-      activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      activeSeasonFavoriteCount,
       activeEpisodeRangeIndex,
       episodeRangeOptions: episodeRangeOptions(activeSeason),
-      episodePickerEpisodes: episodesInRange(activeSeason, activeEpisodeRangeIndex),
+      episodePickerEpisodes: episodePickerEpisodes(
+        activeSeason,
+        activeEpisodeRangeIndex,
+        episodePickerFavoriteOnly
+      ),
+      episodePickerFavoriteOnly,
       coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
       platformText: platformText(entry.platforms),
       mediaTypes: categories.map((category) => category.name),
@@ -519,16 +540,20 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const activeSeason = this.data.seasons[index]
     if (!activeSeason) return
+    const activeSeasonFavoriteCount = favoriteCount(activeSeason)
+    const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
+      && activeSeasonFavoriteCount > 0
     this.setData({
       activeSeasonIndex: index,
       activeSeason,
       activeSeasonIsEntryCover: mediaCoversMatch(this.data.entry, activeSeason),
       filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
       visibleEpisodeCount: EPISODE_RENDER_BATCH,
-      activeSeasonFavoriteCount: favoriteCount(activeSeason),
+      activeSeasonFavoriteCount,
       activeEpisodeRangeIndex: 0,
       episodeRangeOptions: episodeRangeOptions(activeSeason),
-      episodePickerEpisodes: episodesInRange(activeSeason, 0)
+      episodePickerEpisodes: episodePickerEpisodes(activeSeason, 0, episodePickerFavoriteOnly),
+      episodePickerFavoriteOnly
     })
   },
 
@@ -538,18 +563,24 @@ Page({
     if (!this.data.episodeRangeOptions[activeEpisodeRangeIndex]) return
     this.setData({
       activeEpisodeRangeIndex,
-      episodePickerEpisodes: episodesInRange(this.data.activeSeason, activeEpisodeRangeIndex),
-      episodeRangeDialogVisible: false
+      episodePickerEpisodes: episodePickerEpisodes(
+        this.data.activeSeason,
+        activeEpisodeRangeIndex,
+        this.data.episodePickerFavoriteOnly
+      )
     })
   },
 
-  handleEpisodeRangeDialogOpen() {
-    if (this.data.episodeRangeOptions.length <= 1) return
-    this.setData({ episodeRangeDialogVisible: true })
-  },
-
-  handleEpisodeRangeDialogClose() {
-    this.setData({ episodeRangeDialogVisible: false })
+  handleEpisodePickerFavoriteTap() {
+    const episodePickerFavoriteOnly = !this.data.episodePickerFavoriteOnly
+    this.setData({
+      episodePickerFavoriteOnly,
+      episodePickerEpisodes: episodePickerEpisodes(
+        this.data.activeSeason,
+        this.data.activeEpisodeRangeIndex,
+        episodePickerFavoriteOnly
+      )
+    })
   },
 
   handleWatchProgressTap() {
@@ -1110,8 +1141,8 @@ Page({
       return
     }
     if (this.data.textSheetPurpose === "episode-summary") {
-      if (value.length > 12) {
-        wx.showToast({ title: "剧情详情不能超过 12 个字", icon: "none" })
+      if (value.length > EPISODE_SUMMARY_MAX_LENGTH) {
+        wx.showToast({ title: `剧情详情不能超过 ${EPISODE_SUMMARY_MAX_LENGTH} 个字`, icon: "none" })
         return
       }
       const episodeId = this.data.pendingEpisodeId
@@ -1128,12 +1159,14 @@ Page({
     this.setData({
       textSheetVisible: true,
       textSheetPurpose: "episode-summary",
-      textSheetTitle: `第 ${episode.episode_number} 集剧情详情`,
+      textSheetTitle: episode.title
+        ? `第 ${episode.episode_number} 集 · ${episode.title}`
+        : `第 ${episode.episode_number} 集剧情详情`,
       textSheetPlaceholder: "用一句话记录本集剧情",
       textSheetValue: episode.plot_summary,
       textSheetInputType: "text",
       textSheetConfirmText: "保存",
-      textSheetMaxlength: 12,
+      textSheetMaxlength: EPISODE_SUMMARY_MAX_LENGTH,
       pendingEpisodeId: episode.id,
       pendingSeasonName: "",
       pendingRenameSeasonId: ""
@@ -1159,7 +1192,11 @@ Page({
       this.setData({
         seasons,
         activeSeason: nextActiveSeason,
-        episodePickerEpisodes: episodesInRange(nextActiveSeason, this.data.activeEpisodeRangeIndex),
+        episodePickerEpisodes: episodePickerEpisodes(
+          nextActiveSeason,
+          this.data.activeEpisodeRangeIndex,
+          this.data.episodePickerFavoriteOnly
+        ),
         filteredEpisodes: filterTimelineEpisodes(
           nextActiveSeason,
           this.data.timelineTypeFilters,
@@ -1647,6 +1684,9 @@ Page({
       const mediaRevision = markMediaDataChanged()
       if (!isAsyncPageActive(this)) return
       this.clearEpisodeDraft(id)
+      const activeSeasonFavoriteCount = favoriteCount(activeSeason)
+      const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
+        && activeSeasonFavoriteCount > 0
       this.setData({
         seasons,
         activeSeason,
@@ -1655,7 +1695,13 @@ Page({
           this.data.timelineTypeFilters,
           this.data.favoriteEpisodesOnly
         ),
-        activeSeasonFavoriteCount: favoriteCount(activeSeason),
+        activeSeasonFavoriteCount,
+        episodePickerEpisodes: episodePickerEpisodes(
+          activeSeason,
+          this.data.activeEpisodeRangeIndex,
+          episodePickerFavoriteOnly
+        ),
+        episodePickerFavoriteOnly,
         editingEpisodeId: "",
         episodeDraftTitle: "",
         episodeDraftPlotSummary: "",
@@ -1691,6 +1737,9 @@ Page({
       )
     }
     seasons[this.data.activeSeasonIndex] = activeSeason
+    const activeSeasonFavoriteCount = favoriteCount(activeSeason)
+    const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
+      && activeSeasonFavoriteCount > 0
     this.setData({
       seasons,
       activeSeason,
@@ -1699,8 +1748,13 @@ Page({
         this.data.timelineTypeFilters,
         this.data.favoriteEpisodesOnly
       ),
-      activeSeasonFavoriteCount: favoriteCount(activeSeason),
-      episodePickerEpisodes: episodesInRange(activeSeason, this.data.activeEpisodeRangeIndex),
+      activeSeasonFavoriteCount,
+      episodePickerEpisodes: episodePickerEpisodes(
+        activeSeason,
+        this.data.activeEpisodeRangeIndex,
+        episodePickerFavoriteOnly
+      ),
+      episodePickerFavoriteOnly,
       entry: this.data.entry
         ? {
             ...this.data.entry,
