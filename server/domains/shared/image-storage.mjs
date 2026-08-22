@@ -15,11 +15,14 @@ import {
 import { recordImageUploaded } from "../system/product-analytics.mjs";
 
 export const USER_IMAGE_SIGNED_URL_TTL_SECONDS = 6 * 60 * 60;
-export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "3600";
+export const PRIVATE_IMAGE_CACHE_CONTROL_SECONDS = "18000";
 export const DEFAULT_IMAGE_STORAGE_QUOTA_BYTES = 100 * 1024 * 1024;
 export const DEFAULT_IMAGE_STORAGE_WARNING_BYTES = 80 * 1024 * 1024;
 
 const userStorageLocks = new Map();
+const signedImageUrls = new Map();
+const SIGNED_IMAGE_URL_REUSE_MS = 5 * 60 * 60 * 1000;
+const MAX_SIGNED_IMAGE_URLS = 2_000;
 
 const IMAGE_MODULE_BY_BUCKET = new Map([
   [config.dishBucket, "menu"],
@@ -203,10 +206,27 @@ export async function createSignedUrlMap({ bucketName, paths, expiresIn, errorMe
   if (!uniquePaths.length) return new Map();
 
   try {
-    const pairs = await Promise.all(uniquePaths.map(async (path) => [
-      path,
-      await getCosSignedObjectUrl(cosObjectKey(bucketName, path), expiresIn),
-    ]));
+    const now = Date.now();
+    const pairs = await Promise.all(uniquePaths.map(async (path) => {
+      const cacheKey = `${bucketName}:${expiresIn}:${path}`;
+      const cached = signedImageUrls.get(cacheKey);
+      if (cached && cached.reuseUntil > now) {
+        signedImageUrls.delete(cacheKey);
+        signedImageUrls.set(cacheKey, cached);
+        return [path, cached.url];
+      }
+      const url = await getCosSignedObjectUrl(cosObjectKey(bucketName, path), expiresIn);
+      signedImageUrls.set(cacheKey, {
+        url,
+        reuseUntil: now + Math.min(SIGNED_IMAGE_URL_REUSE_MS, Math.max(0, expiresIn * 1000 - 60_000)),
+      });
+      while (signedImageUrls.size > MAX_SIGNED_IMAGE_URLS) {
+        const oldestKey = signedImageUrls.keys().next().value;
+        if (!oldestKey) break;
+        signedImageUrls.delete(oldestKey);
+      }
+      return [path, url];
+    }));
     return new Map(pairs);
   } catch (error) {
     const wrapped = new HttpError(500, "IMAGE_URL_FAILED", errorMessage);

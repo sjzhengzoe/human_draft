@@ -134,6 +134,5 @@
   <view slot="body" class="text-sheet-body">
     <app-input custom-class="text-sheet-input" type="{{textSheetInputType}}" value="{{textSheetValue}}" maxlength="{{textSheetMaxlength}}" placeholder="{{textSheetPlaceholder}}" focus dialog-mode bindinput="handleTextSheetInput" bindconfirm="handleTextSheetConfirm" />
     <view wx:if="{{textSheetPurpose === 'episode-summary'}}" class="text-sheet-count">{{textSheetValue.length}} / {{textSheetMaxlength}}</view>
-    <view wx:if="{{textSheetPurpose === 'add-season-count'}}" class="text-sheet-hint">更新中的作品可以填写 0</view>
   </view>
 </app-dialog>

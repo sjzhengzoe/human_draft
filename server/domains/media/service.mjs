@@ -35,6 +35,35 @@ export const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片
 export const MEDIA_TIMELINE_NOTE_TYPES = ["normal", "key", "quote"];
 export const MEDIA_EPISODE_SUMMARY_MAX_LENGTH = 24;
 
+const MEDIA_ENTRY_LIST_COLUMNS = [
+  "id",
+  "title",
+  "media_type",
+  "watch_status",
+  "platforms",
+  "cover_url",
+  "personal_rating",
+  "is_special_favorite",
+  "season_count",
+  "episode_count",
+  "favorite_episode_count",
+  "last_watched_episode_id",
+  "sort_order",
+  "created_at",
+  "updated_at",
+].join(",");
+
+const MEDIA_SEASON_SUMMARY_COLUMNS = [
+  "id",
+  "media_entry_id",
+  "name",
+  "sort_order",
+  "cover_url",
+  "created_at",
+  "updated_at",
+  "media_episodes(id,season_id,episode_number,title,plot_summary,is_favorite,created_at,updated_at)",
+].join(",");
+
 function mediaCoverStoragePath(url) {
   if (typeof url !== "string" || !url.trim()) return "";
   const value = url.trim();
@@ -85,7 +114,9 @@ async function createMediaWatchProgressMap(supabase, uid, records) {
     .eq("uid", uid)
     .in("id", episodeIds);
   throwSupabaseError(episodesError, "读取影视观看进度失败。");
-  const mediaEntryIds = [...new Set(records.map((record) => record?.id).filter(Boolean))];
+  const mediaEntryIds = [...new Set(records
+    .filter((record) => record?.last_watched_episode_id)
+    .map((record) => record.id))];
   if (!mediaEntryIds.length) return new Map();
 
   const { data: seasons, error: seasonsError } = await supabase
@@ -95,10 +126,15 @@ async function createMediaWatchProgressMap(supabase, uid, records) {
     .in("media_entry_id", mediaEntryIds);
   throwSupabaseError(seasonsError, "读取影视观看进度失败。");
   const seasonsById = new Map((seasons || []).map((season) => [season.id, season]));
+  const seasonsByEntry = new Map();
+  for (const season of seasons || []) {
+    const entrySeasons = seasonsByEntry.get(season.media_entry_id) || [];
+    entrySeasons.push(season);
+    seasonsByEntry.set(season.media_entry_id, entrySeasons);
+  }
   const seasonNumberById = new Map();
   for (const mediaEntryId of mediaEntryIds) {
-    (seasons || [])
-      .filter((season) => season.media_entry_id === mediaEntryId)
+    (seasonsByEntry.get(mediaEntryId) || [])
       .sort((left, right) => left.sort_order - right.sort_order)
       .forEach((season, index) => seasonNumberById.set(season.id, index + 1));
   }
@@ -345,11 +381,18 @@ export async function listMediaEntries(supabase, uid, query) {
     : "";
   const page = Math.max(1, Math.trunc(Number(query.page) || 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(Number(query.page_size) || 20)));
+  const suppliedTotal = Number(query.known_total);
+  const knownTotal = Number.isInteger(suppliedTotal) && suppliedTotal >= 0
+    ? suppliedTotal
+    : null;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   let request = supabase
     .from("media_entries")
-    .select("*", { count: "exact" })
+    .select(
+      MEDIA_ENTRY_LIST_COLUMNS,
+      page === 1 || knownTotal === null ? { count: "exact" } : undefined,
+    )
     .eq("uid", uid);
 
   if (mediaType) request = request.eq("media_type", mediaType);
@@ -386,25 +429,30 @@ export async function listMediaEntries(supabase, uid, query) {
   if (query.sort === "rating_desc") {
     request = request
       .order("completed_personal_rating", { ascending: false, nullsFirst: false })
-      .order("updated_at", { ascending: false });
-  } else if (query.sort === "created_desc") {
-    request = request.order("created_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false });
+  } else if (query.sort === "updated_desc") {
+    request = request
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false });
   } else {
     request = request
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
   }
 
   const { data, error, count } = await request.range(from, to);
   throwSupabaseError(error, "读取影视记录失败。");
   const items = await toMediaEntryResponses(supabase, uid, data || []);
+  const total = count ?? knownTotal ?? 0;
   return {
     items,
     pagination: {
       page,
       page_size: pageSize,
-      total: count || 0,
-      has_more: to + 1 < (count || 0),
+      total,
+      has_more: to + 1 < total,
     },
   };
 }
@@ -740,7 +788,7 @@ export async function listMediaSeasons(supabase, uid, mediaEntryId) {
   await requireRecord(supabase, uid, "media_entries", mediaEntryId, "id");
   const { data, error } = await supabase
     .from("media_seasons")
-    .select("*, media_episodes(*)")
+    .select(MEDIA_SEASON_SUMMARY_COLUMNS)
     .eq("uid", uid)
     .eq("media_entry_id", mediaEntryId)
     .order("sort_order", { ascending: true });

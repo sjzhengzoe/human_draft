@@ -4,6 +4,7 @@ import type {
   MediaEntryPage,
   MediaEpisode,
   MediaSeason,
+  MediaEntrySort,
   MediaStatus,
   MediaTimelineNote,
   MediaType
@@ -48,9 +49,10 @@ export async function listMediaEntries(input: {
   personalRating?: number
   keyword?: string
   specialFavorite?: boolean
-  sort?: "created_desc" | "rating_desc"
+  sort?: MediaEntrySort
   page?: number
   pageSize?: number
+  knownTotal?: number
 }, options: CacheReadOptions = {}): Promise<MediaEntryPage> {
   const cached = options.forceRefresh ? null : getCachedMediaEntryPage(input)
   if (cached?.fresh) return cached.data
@@ -63,8 +65,10 @@ export async function listMediaEntries(input: {
       keyword: input.keyword,
       sort: input.sort,
       page: input.page ? String(input.page) : undefined,
-      page_size: input.pageSize ? String(input.pageSize) : undefined
-    })}`
+      page_size: input.pageSize ? String(input.pageSize) : undefined,
+      known_total: Number.isInteger(input.knownTotal) ? String(input.knownTotal) : undefined
+    })}`,
+    cancelKey: "media-entry-list"
   })
   cacheMediaEntryPage(input, data)
   return data

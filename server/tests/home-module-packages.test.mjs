@@ -39,7 +39,5 @@ test("home feature pages stay reachable while loading outside the main package",
 
   const preloadedPackages = app.preloadRule?.["pages/create/index"]?.packages || []
   assert.equal(app.preloadRule?.["pages/create/index"]?.network, "all")
-  for (const root of [...expectedRoots, "exercise"]) {
-    assert.ok(preloadedPackages.includes(root), `${root} should preload from home`)
-  }
+  assert.deepEqual(preloadedPackages, ["pages/media"])
 })

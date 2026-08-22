@@ -1427,7 +1427,7 @@ test("media records can request personal-rating priority", async (t) => {
   });
 
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(supabase.orderCalls.slice(-2), [
+  assert.deepEqual(supabase.orderCalls.slice(-3), [
     {
       table: "media_entries",
       field: "completed_personal_rating",
@@ -1436,6 +1436,11 @@ test("media records can request personal-rating priority", async (t) => {
     {
       table: "media_entries",
       field: "updated_at",
+      options: { ascending: false },
+    },
+    {
+      table: "media_entries",
+      field: "id",
       options: { ascending: false },
     },
   ]);

@@ -4,6 +4,7 @@ import type {
   MediaEntryPage,
   MediaEpisode,
   MediaSeason,
+  MediaEntrySort,
   MediaStatus,
   MediaTimelineDialogue,
   MediaTimelineNote
@@ -11,6 +12,8 @@ import type {
 
 export const MEDIA_CACHE_FRESH_MS = 3 * 60 * 1000
 const MAX_CACHED_MEDIA_DETAILS = 20
+const MAX_CACHED_MEDIA_ENTRY_PAGES = 80
+const MAX_CACHED_MEDIA_EPISODES = 100
 
 export type MediaEntryQuery = {
   mediaType?: string
@@ -18,9 +21,10 @@ export type MediaEntryQuery = {
   personalRating?: number
   specialFavorite?: boolean
   keyword?: string
-  sort?: "created_desc" | "rating_desc"
+  sort?: MediaEntrySort
   page?: number
   pageSize?: number
+  knownTotal?: number
 }
 
 type CachedEntryPage = {
@@ -37,6 +41,7 @@ const cachedSeasons = new Map<string, MediaSeason[]>()
 const cachedSeasonsAt = new Map<string, number>()
 const cachedSeasonsAccessedAt = new Map<string, number>()
 const cachedEpisodes = new Map<string, MediaEpisode>()
+const cachedEpisodesAt = new Map<string, number>()
 const cachedEntryPages = new Map<string, CachedEntryPage>()
 const deletedEntryIds = new Set<string>()
 
@@ -108,6 +113,19 @@ function cloneEntryPage(page: MediaEntryPage): MediaEntryPage {
   return {
     items: page.items.map(cloneEntry),
     pagination: { ...page.pagination }
+  }
+}
+
+function cacheEpisodeValue(episode: MediaEpisode) {
+  cachedEpisodes.delete(episode.id)
+  cachedEpisodesAt.delete(episode.id)
+  cachedEpisodes.set(episode.id, cloneEpisode(episode))
+  cachedEpisodesAt.set(episode.id, Date.now())
+  while (cachedEpisodes.size > MAX_CACHED_MEDIA_EPISODES) {
+    const oldestId = cachedEpisodes.keys().next().value as string | undefined
+    if (!oldestId) break
+    cachedEpisodes.delete(oldestId)
+    cachedEpisodesAt.delete(oldestId)
   }
 }
 
@@ -244,8 +262,11 @@ export function getCachedMediaEntryPage(input: MediaEntryQuery): {
   data: MediaEntryPage
   fresh: boolean
 } | null {
-  const cached = cachedEntryPages.get(entryPageKey(input))
+  const key = entryPageKey(input)
+  const cached = cachedEntryPages.get(key)
   if (!cached) return null
+  cachedEntryPages.delete(key)
+  cachedEntryPages.set(key, cached)
   return {
     data: cloneEntryPage(cached.data),
     fresh: Date.now() - cached.cachedAt < MEDIA_CACHE_FRESH_MS
@@ -259,6 +280,11 @@ export function cacheMediaEntryPage(input: MediaEntryQuery, data: MediaEntryPage
     data: cloneEntryPage(data),
     cachedAt: Date.now()
   })
+  while (cachedEntryPages.size > MAX_CACHED_MEDIA_ENTRY_PAGES) {
+    const oldestKey = cachedEntryPages.keys().next().value as string | undefined
+    if (!oldestKey) break
+    cachedEntryPages.delete(oldestKey)
+  }
 }
 
 export function getCachedMediaEntries(): MediaEntry[] {
@@ -278,7 +304,10 @@ export function removeCachedMediaEntry(id: string) {
   cachedEntries.delete(id)
   cachedEntriesAt.delete(id)
   const seasons = cachedSeasons.get(id) || []
-  seasons.forEach((season) => season.episodes.forEach((episode) => cachedEpisodes.delete(episode.id)))
+  seasons.forEach((season) => season.episodes.forEach((episode) => {
+    cachedEpisodes.delete(episode.id)
+    cachedEpisodesAt.delete(episode.id)
+  }))
   cachedSeasons.delete(id)
   cachedSeasonsAt.delete(id)
   cachedSeasonsAccessedAt.delete(id)
@@ -337,15 +366,15 @@ export function isMediaSeasonsCacheFresh(mediaEntryId: string) {
 export function cacheMediaSeasons(mediaEntryId: string, seasons: MediaSeason[]) {
   const previousSeasons = cachedSeasons.get(mediaEntryId) || []
   previousSeasons.forEach((season) => {
-    season.episodes.forEach((episode) => cachedEpisodes.delete(episode.id))
+    season.episodes.forEach((episode) => {
+      cachedEpisodes.delete(episode.id)
+      cachedEpisodesAt.delete(episode.id)
+    })
   })
   const normalized = seasons.map(cloneSeason)
   cachedSeasons.set(mediaEntryId, normalized)
   cachedSeasonsAt.set(mediaEntryId, Date.now())
   cachedSeasonsAccessedAt.set(mediaEntryId, Date.now())
-  normalized.forEach((season) => {
-    season.episodes.forEach((episode) => cachedEpisodes.set(episode.id, cloneEpisode(episode)))
-  })
   updateCachedEntryStats(mediaEntryId, normalized)
   while (cachedSeasons.size > MAX_CACHED_MEDIA_DETAILS) {
     const oldest = [...cachedSeasonsAccessedAt.entries()]
@@ -357,7 +386,10 @@ export function cacheMediaSeasons(mediaEntryId: string, seasons: MediaSeason[]) 
 
 export function invalidateCachedMediaSeasons(mediaEntryId: string) {
   const seasons = cachedSeasons.get(mediaEntryId) || []
-  seasons.forEach((season) => season.episodes.forEach((episode) => cachedEpisodes.delete(episode.id)))
+  seasons.forEach((season) => season.episodes.forEach((episode) => {
+    cachedEpisodes.delete(episode.id)
+    cachedEpisodesAt.delete(episode.id)
+  }))
   cachedSeasons.delete(mediaEntryId)
   cachedSeasonsAt.delete(mediaEntryId)
   cachedSeasonsAccessedAt.delete(mediaEntryId)
@@ -387,7 +419,10 @@ export function removeCachedMediaSeason(id: string) {
   for (const [mediaEntryId, seasons] of cachedSeasons) {
     const removedSeason = seasons.find((season) => season.id === id)
     if (!removedSeason) continue
-    removedSeason.episodes.forEach((episode) => cachedEpisodes.delete(episode.id))
+    removedSeason.episodes.forEach((episode) => {
+      cachedEpisodes.delete(episode.id)
+      cachedEpisodesAt.delete(episode.id)
+    })
     const nextSeasons = seasons.filter((season) => season.id !== id)
     cachedSeasons.set(mediaEntryId, nextSeasons)
     cachedSeasonsAt.set(mediaEntryId, Date.now())
@@ -398,7 +433,7 @@ export function removeCachedMediaSeason(id: string) {
 }
 
 export function cacheAddedMediaEpisode(episode: MediaEpisode) {
-  cachedEpisodes.set(episode.id, cloneEpisode(episode))
+  cacheEpisodeValue(episode)
   for (const [mediaEntryId, seasons] of cachedSeasons) {
     const seasonIndex = seasons.findIndex((season) => season.id === episode.season_id)
     if (seasonIndex < 0) continue
@@ -419,19 +454,18 @@ export function cacheAddedMediaEpisode(episode: MediaEpisode) {
 
 export function getCachedMediaEpisode(id: string): MediaEpisode | null {
   const cachedEpisode = cachedEpisodes.get(id)
-  if (cachedEpisode) return cloneEpisode(cachedEpisode)
-  for (const seasons of cachedSeasons.values()) {
-    for (const season of seasons) {
-      const episode = season.episodes.find((item) => item.id === id)
-      if (episode) return cloneEpisode(episode)
-    }
+  if (!cachedEpisode) return null
+  if (Date.now() - (cachedEpisodesAt.get(id) || 0) >= MEDIA_CACHE_FRESH_MS) {
+    cachedEpisodes.delete(id)
+    cachedEpisodesAt.delete(id)
+    return null
   }
-  return null
+  return cloneEpisode(cachedEpisode)
 }
 
 export function updateCachedMediaEpisode(updatedEpisode: MediaEpisode) {
   const previous = cachedEpisodes.get(updatedEpisode.id)
-  cachedEpisodes.set(updatedEpisode.id, cloneEpisode({ ...previous, ...updatedEpisode }))
+  cacheEpisodeValue({ ...previous, ...updatedEpisode })
   for (const [mediaEntryId, seasons] of cachedSeasons) {
     let changed = false
     const nextSeasons = seasons.map((season) => ({
@@ -460,6 +494,7 @@ export function clearMediaDataCache() {
   cachedSeasonsAt.clear()
   cachedSeasonsAccessedAt.clear()
   cachedEpisodes.clear()
+  cachedEpisodesAt.clear()
   cachedEntryPages.clear()
   deletedEntryIds.clear()
 }

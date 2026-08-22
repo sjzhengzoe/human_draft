@@ -59,8 +59,9 @@ test("finished media shows five-star personal ratings in every list", async () =
 
   assert.match(page, />速览<\/view>/);
   assert.match(page, />记录<\/view>/);
-  assert.equal(page.match(/class="record-grid/g)?.length, 2);
+  assert.equal(page.match(/class="record-grid/g)?.length, 3);
   assert.equal(page.match(/class="record-card"/g)?.length, 2);
+  assert.match(page, /record-card--skeleton[\s\S]*?record-card__skeleton-shimmer/);
   assert.doesNotMatch(page, /overview-list|overview-row/);
   assert.doesNotMatch(page, /swiper|status-badge/);
   assert.doesNotMatch(page, /overviewCategoryOptions|handleOverviewCategoryChange/);
@@ -77,17 +78,18 @@ test("finished media shows five-star personal ratings in every list", async () =
   assert.match(logic, /showSelectedOverviewStatus\(\)/);
   assert.equal(page.match(/class="record-card__rating"/g)?.length, 2);
   assert.equal(page.match(/wx:if="\{\{item\.watch_status === 'completed'\}\}" class="record-card__rating"/g)?.length, 2);
-  assert.match(page, /wx:for="\{\{item\.ratingStars\}\}"/);
-  assert.match(page, /ratingStar\.filled \? '★' : '☆'/);
+  assert.equal(page.match(/<app-icon name="star-rating-filled" size="16"/g)?.length, 2);
+  assert.match(page, /\{\{item\.personal_rating \|\| '未评分'\}\}/);
+  assert.doesNotMatch(page, /ratingStars|[★☆]/);
   assert.doesNotMatch(page, /handleRevisitableTap|record-card__revisit|值得重温/);
   assert.match(logic, /function sortByRating/);
   assert.match(logic, /entry\.watch_status === "completed" && Number\.isInteger\(entry\.personal_rating\)/);
-  assert.match(logic, /function overviewQuery[\s\S]*?sort: "created_desc"/);
+  assert.match(logic, /function overviewQuery[\s\S]*?sort: "updated_desc"/);
   assert.match(logic, /function recordQuery[\s\S]*?sort: "rating_desc"/);
   assert.match(logic, /personalRating: personalRating \|\| undefined/);
   assert.match(logic, /handleRatingTap[\s\S]*?selectedRating[\s\S]*?loadCurrentView\(\{ reset: true \}\)/);
   assert.doesNotMatch(logic, /handleRevisitableTap|setRevisitableValue/);
-  assert.match(styles, /\.record-card__rating-star--filled\s*\{[^}]*color:\s*var\(--media-color-rating\);/s);
+  assert.match(styles, /\.record-card__rating\s*\{[^}]*color:\s*var\(--media-color-rating\);/s);
   assert.match(styles, /\.record-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
   assert.equal(page.match(/class="record-card__overlay"/g)?.length, 2);
   assert.match(styles, /\.record-card__overlay\s*\{[^}]*position:\s*absolute;[^}]*background:\s*linear-gradient\(to bottom, transparent, var\(--ui-color-overlay-strong\)\);/s);
@@ -181,7 +183,7 @@ test("media cards show titles, watch progress, record ratings, and category-spec
   assert.doesNotMatch(page, /record-card__meta|record-card__details/);
   assert.doesNotMatch(logic, /metaText|statsText|favoriteText/);
   assert.doesNotMatch(page, /record-card__revisit|♥|♡/);
-  assert.match(page, /record-card__rating-star/);
+  assert.match(page, /<app-icon name="star-rating-filled" size="16"/);
   assert.equal(page.match(/class="record-card__progress"/g)?.length, 2);
   assert.match(page, /catchtap="handleProgressTap"/);
   assert.match(logic, /watchProgressText/);
@@ -260,7 +262,7 @@ test("all media cards open the shared detail page with property-level editors", 
   assert.match(detailPage, /bindtap="handleEntryTitleTap"/);
   assert.match(detailPage, /entryChoiceDialogVisible/);
   assert.doesNotMatch(detailLogic, /wx\.navigateTo\(\{ url: `\/pages\/media\/edit/);
-  assert.match(detailLogic, /normalizedSeasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
+  assert.match(detailLogic, /seasons\.length > 0 \|\| EPISODIC_MEDIA_TYPES\.includes\(entry\.media_type\)/);
 });
 
 test("media detail embeds a ranged episode picker with short plot summaries", async () => {
@@ -490,8 +492,8 @@ test("media UI keeps dense controls compact while improving long-list interactio
   assert.match(logic, /coverImageUrl: entry\.cover_url/);
   assert.doesNotMatch(logic, /normalized-v3\|cost-v4/);
   assert.match(styles, /-webkit-line-clamp:\s*2/);
-  assert.match(logic, /const PAGE_SIZE = 60/);
-  assert.match(logic, /SEARCH_DEBOUNCE_MS = 180/);
+  assert.match(logic, /const PAGE_SIZE = 30/);
+  assert.match(logic, /SEARCH_DEBOUNCE_MS = 400/);
   assert.match(createPage, /field-label">名称[\s\S]*field-label">封面（选填）/);
   assert.match(createLogic, /MEDIA_CREATE_DRAFT_KEY/);
   assert.match(createLogic, /enableAlertBeforeUnload/);

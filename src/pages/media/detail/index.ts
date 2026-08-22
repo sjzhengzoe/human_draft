@@ -1,18 +1,13 @@
 import { ensureLogin, getCurrentUser } from "../../../services/auth"
 import { UI_COLORS } from "../../../styles/colors"
 import {
-  addNextMediaEpisode,
-  createMediaSeason,
-  deleteMediaSeason,
   getMediaEntry,
   listMediaCategories,
   listMediaSeasons,
   replaceMediaEntryCover,
   setMediaWatchProgress,
-  setMediaEntryCoverFromSeason,
   updateMediaEntry,
-  updateMediaEpisode,
-  updateMediaSeason
+  updateMediaEpisode
 } from "../../../services/media"
 import type {
   MediaCategory,
@@ -20,9 +15,6 @@ import type {
   MediaEpisode,
   MediaSeason,
   MediaStatus,
-  MediaTimelineDialogue,
-  MediaTimelineNote,
-  MediaTimelineNoteType,
   MediaType
 } from "../../../types/media"
 import type { ImageCrop, ImageCropResult } from "../../../types/images"
@@ -46,11 +38,7 @@ import {
   markMediaDataChanged
 } from "../../../utils/media-data-revision"
 
-let timelineNoteSequence = 0
-let timelineDialogueSequence = 0
-let episodeDraftTimer: ReturnType<typeof setTimeout> | null = null
 const detailScrollPositions = new WeakMap<object, number>()
-const recordsScrollPositions = new WeakMap<object, number>()
 
 const EPISODIC_MEDIA_TYPES = ["电视剧", "动漫", "动画", "动画片", "广播剧"]
 const BUILTIN_PLATFORMS = [
@@ -64,115 +52,9 @@ const BUILTIN_PLATFORMS = [
   "漫播",
   "Books"
 ]
-const EPISODE_RENDER_BATCH = 20
 const EPISODE_RANGE_SIZE = 10
 const EPISODE_SUMMARY_MAX_LENGTH = 24
-const EPISODE_DRAFT_PREFIX = "media:episode-draft:v1:"
 const RATING_OPTIONS = [1, 2, 3, 4, 5]
-
-type TimePickerValue = [number, number, number]
-
-type EditableTimelineNote = Omit<MediaTimelineNote, "type" | "dialogues"> & {
-  type: MediaTimelineNoteType
-  dialogues: MediaTimelineDialogue[]
-  timePickerValue: TimePickerValue
-}
-
-const timePickerColumnSizes: TimePickerValue = [100, 60, 60]
-
-// 微信原生 picker 没有 circular 属性。每列重复三段，并始终将选中项
-// 归位到中间段，使首尾数字可以继续向两个方向滚动。
-const timePickerRange = timePickerColumnSizes.map((size) =>
-  Array.from({ length: size * 3 }, (_, index) => String(index % size).padStart(2, "0"))
-)
-
-const timelineNoteTypes: Array<{ value: MediaTimelineNoteType; label: string }> = [
-  { value: "normal", label: "普通剧情" },
-  { value: "key", label: "关键剧情" },
-  { value: "quote", label: "语录" }
-]
-
-const timelineFilterOptions: Array<{
-  value: MediaTimelineNoteType
-  label: string
-  selected: boolean
-}> = [
-  { value: "normal", label: "普通剧情", selected: true },
-  { value: "key", label: "关键剧情", selected: true },
-  { value: "quote", label: "语录", selected: true }
-]
-
-const allTimelineTypes = timelineFilterOptions.map((option) => option.value)
-
-function isTimelineNoteType(value: unknown): value is MediaTimelineNoteType {
-  return value === "normal" || value === "key" || value === "quote"
-}
-
-function createTimelineDialogue(speaker = "", content = ""): MediaTimelineDialogue {
-  timelineDialogueSequence += 1
-  return {
-    id: `dialogue_${Date.now()}_${timelineDialogueSequence}`,
-    speaker,
-    content
-  }
-}
-
-function getTimeValue(timecode: string): TimePickerValue {
-  const match = /^(\d{2}):([0-5]\d):([0-5]\d)$/.exec(timecode.trim())
-  if (!match) return [0, 0, 0]
-  return [Number(match[1]), Number(match[2]), Number(match[3])]
-}
-
-function getLoopedTimePickerValue(value: TimePickerValue): TimePickerValue {
-  return value.map((part, index) => part + timePickerColumnSizes[index]) as TimePickerValue
-}
-
-function normalizeTimePickerValue(value: TimePickerValue): TimePickerValue {
-  return value.map((part, index) => part % timePickerColumnSizes[index]) as TimePickerValue
-}
-
-function formatTimecode(value: TimePickerValue) {
-  return value.map((part) => String(part).padStart(2, "0")).join(":")
-}
-
-function createEditableTimelineNote(note: MediaTimelineNote): EditableTimelineNote {
-  const timeValue = getTimeValue(note.timecode)
-  const type = isTimelineNoteType(note.type) ? note.type : "normal"
-  const dialogues = Array.isArray(note.dialogues)
-    ? note.dialogues.map((dialogue) => ({
-        id: String(dialogue.id || createTimelineDialogue().id),
-        speaker: String(dialogue.speaker || ""),
-        content: String(dialogue.content || "")
-      }))
-    : []
-  return {
-    ...note,
-    timecode: formatTimecode(timeValue),
-    type,
-    dialogues: type === "quote" && dialogues.length === 0
-      ? [createTimelineDialogue("", note.content)]
-      : dialogues,
-    timePickerValue: getLoopedTimePickerValue(timeValue)
-  }
-}
-
-function createTimelineNote(): EditableTimelineNote {
-  timelineNoteSequence += 1
-  return createEditableTimelineNote({
-    id: `note_${Date.now()}_${timelineNoteSequence}`,
-    timecode: "00:00:00",
-    content: ""
-  })
-}
-
-function getSubmittedText(
-  values: WechatMiniprogram.IAnyObject,
-  name: string,
-  fallback: string
-): string {
-  const value = values[name]
-  return typeof value === "string" ? value : fallback
-}
 
 function favoriteCount(season: MediaSeason | null): number {
   return season?.episodes.filter((episode) => episode.is_favorite).length || 0
@@ -215,52 +97,6 @@ function platformText(platforms: string[]) {
   return supported.length ? supported.join("、") : "未填写"
 }
 
-function normalizedTimelineType(value: unknown): MediaTimelineNoteType {
-  return value === "key" || value === "quote" ? value : "normal"
-}
-
-function normalizeTimelineNote(note: MediaTimelineNote): MediaTimelineNote {
-  const type = normalizedTimelineType(note.type)
-  return {
-    ...note,
-    type,
-    dialogues: type === "quote" && Array.isArray(note.dialogues) ? note.dialogues : []
-  }
-}
-
-function normalizeMediaSeasons(seasons: MediaSeason[]): MediaSeason[] {
-  return seasons.map((season) => ({
-    ...season,
-    episodes: season.episodes.map((episode) => ({
-      ...episode,
-      timeline_notes: Array.isArray(episode.timeline_notes)
-        ? episode.timeline_notes.map(normalizeTimelineNote)
-        : []
-    }))
-  }))
-}
-
-function filterTimelineEpisodes(
-  season: MediaSeason | null,
-  selectedTypes: MediaTimelineNoteType[],
-  favoriteOnly = false
-): MediaEpisode[] {
-  if (!season) return []
-  const selected = new Set(selectedTypes)
-  return season.episodes
-    .filter((episode) => !favoriteOnly || episode.is_favorite)
-    .map((episode) => ({
-      ...episode,
-      timeline_notes: episode.timeline_notes.filter((note) => selected.has(normalizedTimelineType(note.type)))
-    }))
-}
-
-function mediaCoversMatch(entry: MediaEntry | null, season: MediaSeason | null) {
-  if (!entry?.cover_url || !season?.cover_url) return false
-  if (entry.cover_path && season.cover_path) return entry.cover_path === season.cover_path
-  return entry.cover_url === season.cover_url
-}
-
 function watchProgressText(entry: MediaEntry | null) {
   if (!entry?.last_watched_episode_id || !Number.isInteger(entry.last_watched_episode_number)) {
     return "记录看到哪一集"
@@ -283,18 +119,12 @@ Page({
     entry: null as MediaEntry | null,
     seasons: [] as MediaSeason[],
     activeSeason: null as MediaSeason | null,
-    filteredEpisodes: [] as MediaEpisode[],
-    visibleEpisodeCount: EPISODE_RENDER_BATCH,
     activeSeasonIndex: 0,
     activeSeasonFavoriteCount: 0,
     activeEpisodeRangeIndex: 0,
     episodeRangeOptions: [] as Array<{ label: string; start: number; end: number }>,
     episodePickerEpisodes: [] as MediaEpisode[],
     episodePickerFavoriteOnly: false,
-    activeSeasonIsEntryCover: false,
-    timelineFilterOptions,
-    timelineTypeFilters: [...allTimelineTypes] as MediaTimelineNoteType[],
-    favoriteEpisodesOnly: false,
     coverUrl: "",
     platformText: "",
     mediaTypes: [] as MediaType[],
@@ -303,7 +133,6 @@ Page({
     isAudio: false,
     watchProgressText: "记录看到哪一集",
     progressPickerVisible: false,
-    activeDetailTab: "detail" as "detail" | "records",
     entryDraftMediaTypeIndex: 0,
     entryDraftPlatforms: [] as string[],
     entryPlatformOptions: platformOptions([]),
@@ -314,14 +143,6 @@ Page({
     showEntryImageCropper: false,
     entryCropSourcePath: "",
     savingEntry: false,
-    editingEpisodeId: "",
-    episodeDraftTitle: "",
-    episodeDraftPlotSummary: "",
-    episodeDraftTimelineNotes: [] as EditableTimelineNote[],
-    timelineNoteTypes,
-    timePickerRange,
-    savingEpisode: false,
-    episodeDraftDirty: false,
     loading: true,
     contentLoading: false,
     detailRefresherTriggered: false,
@@ -337,11 +158,8 @@ Page({
     textSheetConfirmText: "确定",
     textSheetMaxlength: 120,
     themeColors: UI_COLORS,
-    pendingSeasonName: "",
-    pendingRenameSeasonId: "",
     pendingEpisodeId: "",
     detailScrollTop: 0,
-    recordsScrollTop: 0,
     errorMessage: "",
     ratingOptions: RATING_OPTIONS
   },
@@ -349,7 +167,6 @@ Page({
   onLoad(query: Record<string, string | undefined>) {
     activateAsyncPage(this)
     detailScrollPositions.set(this, 0)
-    recordsScrollPositions.set(this, 0)
     this.setData({
       id: String(query.id || ""),
       requestedSeasonId: String(query.seasonId || "")
@@ -371,14 +188,8 @@ Page({
   },
 
   onUnload() {
-    this.flushEpisodeDraft()
     deactivateAsyncPage(this)
     detailScrollPositions.delete(this)
-    recordsScrollPositions.delete(this)
-  },
-
-  onHide() {
-    this.flushEpisodeDraft()
   },
 
   async loadPage(options: { forceRefresh?: boolean; background?: boolean } = {}) {
@@ -445,12 +256,11 @@ Page({
     categories: MediaCategory[],
     canWrite: boolean
   ) {
-    const normalizedSeasons = normalizeMediaSeasons(seasons)
-    const requestedIndex = normalizedSeasons.findIndex((season) => season.id === this.data.requestedSeasonId)
+    const requestedIndex = seasons.findIndex((season) => season.id === this.data.requestedSeasonId)
     const activeSeasonIndex = requestedIndex >= 0
       ? requestedIndex
-      : Math.min(this.data.activeSeasonIndex, Math.max(0, normalizedSeasons.length - 1))
-    const activeSeason = normalizedSeasons[activeSeasonIndex] || null
+      : Math.min(this.data.activeSeasonIndex, Math.max(0, seasons.length - 1))
+    const activeSeason = seasons[activeSeasonIndex] || null
     const activeSeasonFavoriteCount = favoriteCount(activeSeason)
     const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
       && activeSeasonFavoriteCount > 0
@@ -458,16 +268,12 @@ Page({
       this.data.activeEpisodeRangeIndex,
       Math.max(0, episodeRangeOptions(activeSeason).length - 1)
     )
-    const isEpisodic = normalizedSeasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
-    const activeDetailTab = isEpisodic ? this.data.activeDetailTab : "detail"
+    const isEpisodic = seasons.length > 0 || EPISODIC_MEDIA_TYPES.includes(entry.media_type)
     this.setData({
       entry,
-      seasons: normalizedSeasons,
+      seasons,
       activeSeasonIndex,
       activeSeason,
-      activeSeasonIsEntryCover: mediaCoversMatch(entry, activeSeason),
-      filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      visibleEpisodeCount: Math.max(EPISODE_RENDER_BATCH, this.data.visibleEpisodeCount),
       activeSeasonFavoriteCount,
       activeEpisodeRangeIndex,
       episodeRangeOptions: episodeRangeOptions(activeSeason),
@@ -477,20 +283,16 @@ Page({
         episodePickerFavoriteOnly
       ),
       episodePickerFavoriteOnly,
-      coverUrl: entry.cover_url || normalizedSeasons[0]?.cover_url || "",
+      coverUrl: entry.cover_url || seasons[0]?.cover_url || "",
       platformText: platformText(entry.platforms),
       mediaTypes: categories.map((category) => category.name),
       canWrite,
       isEpisodic,
       isAudio: entry.media_type === "广播剧",
       watchProgressText: watchProgressText(entry),
-      activeDetailTab,
       requestedSeasonId: "",
       mediaRevision: getMediaDataRevision()
-    }, () => {
-      if (activeDetailTab === "records") this.restoreRecordsScroll()
-      else this.restoreDetailScroll()
-    })
+    }, () => this.restoreDetailScroll())
     wx.setNavigationBarTitle({ title: entry.title })
   },
 
@@ -499,44 +301,19 @@ Page({
     if (Number.isFinite(scrollTop)) detailScrollPositions.set(this, scrollTop)
   },
 
-  handleRecordsScroll(event: WechatMiniprogram.CustomEvent<{ scrollTop: number }>) {
-    const scrollTop = Number(event.detail.scrollTop)
-    if (Number.isFinite(scrollTop)) recordsScrollPositions.set(this, scrollTop)
-  },
-
   restoreDetailScroll() {
     const detailScrollTop = detailScrollPositions.get(this) || 0
     if (Math.abs(this.data.detailScrollTop - detailScrollTop) < 1) return
     this.setData({ detailScrollTop })
   },
 
-  restoreRecordsScroll() {
-    const recordsScrollTop = recordsScrollPositions.get(this) || 0
-    if (Math.abs(this.data.recordsScrollTop - recordsScrollTop) < 1) return
-    this.setData({ recordsScrollTop })
-  },
-
   handleDetailPullRefresh() {
-    if (this.data.operating || this.data.savingEntry || this.data.savingEpisode) return
+    if (this.data.operating || this.data.savingEntry) return
     this.setData({ detailRefresherTriggered: true })
     void this.loadPage({ forceRefresh: true, background: true })
   },
 
-  handleRecordsLower() {
-    if (this.data.visibleEpisodeCount >= this.data.filteredEpisodes.length) return
-    this.setData({
-      visibleEpisodeCount: Math.min(
-        this.data.filteredEpisodes.length,
-        this.data.visibleEpisodeCount + EPISODE_RENDER_BATCH
-      )
-    })
-  },
-
   handleSeasonTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.editingEpisodeId) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
     const index = Number(event.currentTarget.dataset.index)
     const activeSeason = this.data.seasons[index]
     if (!activeSeason) return
@@ -546,9 +323,6 @@ Page({
     this.setData({
       activeSeasonIndex: index,
       activeSeason,
-      activeSeasonIsEntryCover: mediaCoversMatch(this.data.entry, activeSeason),
-      filteredEpisodes: filterTimelineEpisodes(activeSeason, this.data.timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      visibleEpisodeCount: EPISODE_RENDER_BATCH,
       activeSeasonFavoriteCount,
       activeEpisodeRangeIndex: 0,
       episodeRangeOptions: episodeRangeOptions(activeSeason),
@@ -586,7 +360,7 @@ Page({
   handleWatchProgressTap() {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || !this.data.isEpisodic || entry.watch_status !== "in_progress") return
-    if (this.data.operating || this.data.savingEntry || this.data.savingEpisode) return
+    if (this.data.operating || this.data.savingEntry) return
     this.setData({ progressPickerVisible: true })
   },
 
@@ -623,114 +397,6 @@ Page({
     }
   },
 
-  handleDetailTabTap(event: WechatMiniprogram.TouchEvent) {
-    const activeDetailTab = String(event.currentTarget.dataset.tab || "") as "detail" | "records"
-    if (!(["detail", "records"] as string[]).includes(activeDetailTab)) return
-    if (activeDetailTab === "records" && !this.data.isEpisodic) return
-    if (activeDetailTab === this.data.activeDetailTab) return
-    if (this.data.editingEpisodeId) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
-    this.setData({ activeDetailTab })
-  },
-
-  handleFavoriteEpisodesFilterTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.editingEpisodeId) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
-    const favoriteEpisodesOnly = String(event.currentTarget.dataset.scope || "") === "favorites"
-    this.setData({
-      favoriteEpisodesOnly,
-      filteredEpisodes: filterTimelineEpisodes(
-        this.data.activeSeason,
-        this.data.timelineTypeFilters,
-        favoriteEpisodesOnly
-      ),
-      visibleEpisodeCount: EPISODE_RENDER_BATCH
-    })
-  },
-
-  handleTimelineFilterTypeTap(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.editingEpisodeId) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
-    const type = String(event.currentTarget.dataset.type || "") as MediaTimelineNoteType
-    if (!allTimelineTypes.includes(type)) return
-    const isSelected = this.data.timelineTypeFilters.includes(type)
-    if (isSelected && this.data.timelineTypeFilters.length === 1) {
-      wx.showToast({ title: "请至少保留一种时间线类型", icon: "none" })
-      return
-    }
-    const timelineTypeFilters = isSelected
-      ? this.data.timelineTypeFilters.filter((item) => item !== type)
-      : allTimelineTypes.filter((item) => [...this.data.timelineTypeFilters, type].includes(item))
-    this.setData({
-      timelineTypeFilters,
-      timelineFilterOptions: this.data.timelineFilterOptions.map((option) => ({
-        ...option,
-        selected: timelineTypeFilters.includes(option.value)
-      })),
-      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters, this.data.favoriteEpisodesOnly),
-      visibleEpisodeCount: EPISODE_RENDER_BATCH
-    })
-  },
-
-  handleTimelineFilterReset() {
-    if (this.data.editingEpisodeId) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
-    const timelineTypeFilters = [...allTimelineTypes]
-    this.setData({
-      timelineTypeFilters,
-      favoriteEpisodesOnly: false,
-      timelineFilterOptions: this.data.timelineFilterOptions.map((option) => ({
-        ...option,
-        selected: true
-      })),
-      filteredEpisodes: filterTimelineEpisodes(this.data.activeSeason, timelineTypeFilters),
-      visibleEpisodeCount: EPISODE_RENDER_BATCH
-    })
-  },
-
-  async handleSetSeasonCover() {
-    const entry = this.data.entry
-    const season = this.data.activeSeason
-    if (!this.data.canWrite || !entry || !season || this.data.operating) return
-    if (!season.cover_url) {
-      wx.showToast({ title: "这一季还没有图片", icon: "none" })
-      return
-    }
-    if (mediaCoversMatch(entry, season)) {
-      wx.showToast({ title: "当前已是作品封面", icon: "none" })
-      return
-    }
-    this.setData({ operating: true })
-    wx.showLoading({ title: "设置中", mask: true })
-    try {
-      const updatedEntry = await setMediaEntryCoverFromSeason(entry.id, season.id)
-      const mediaRevision = markMediaDataChanged()
-      if (!isAsyncPageActive(this)) return
-      this.setData({
-        entry: updatedEntry,
-        coverUrl: updatedEntry.cover_url,
-        activeSeasonIsEntryCover: mediaCoversMatch(updatedEntry, season),
-        mediaRevision
-      })
-      wx.showToast({ title: "已设为封面", icon: "success" })
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "设置失败", icon: "none" })
-      }
-    } finally {
-      wx.hideLoading()
-      if (isAsyncPageActive(this)) this.setData({ operating: false })
-    }
-  },
-
   handleEntryTitleTap() {
     const entry = this.data.entry
     if (!this.data.canWrite || !entry || this.data.operating || this.data.savingEntry) return
@@ -743,9 +409,7 @@ Page({
       textSheetInputType: "text",
       textSheetConfirmText: "保存",
       textSheetMaxlength: 120,
-      pendingEpisodeId: "",
-      pendingSeasonName: "",
-      pendingRenameSeasonId: ""
+      pendingEpisodeId: ""
     })
   },
 
@@ -962,7 +626,6 @@ Page({
         entry: persistedEntry,
         coverUrl: persistedEntry.cover_url,
         selectedEntryImagePath: "",
-        activeSeasonIsEntryCover: mediaCoversMatch(persistedEntry, this.data.activeSeason),
         mediaRevision
       })
       wx.showToast({ title: "封面已保存", icon: "success" })
@@ -1058,23 +721,6 @@ Page({
     }
   },
 
-  handleAddSeason() {
-    if (!this.data.canWrite || this.data.operating) return
-    this.setData({
-      textSheetVisible: true,
-      textSheetPurpose: "add-season-name",
-      textSheetTitle: "新增季或篇章",
-      textSheetPlaceholder: `例如：第${this.data.seasons.length + 1}季`,
-      textSheetValue: "",
-      textSheetInputType: "text",
-      textSheetConfirmText: "下一步",
-      textSheetMaxlength: 120,
-      pendingSeasonName: "",
-      pendingRenameSeasonId: "",
-      pendingEpisodeId: ""
-    })
-  },
-
   handleTextSheetInput(event: WechatMiniprogram.Input) {
     this.setData({ textSheetValue: event.detail.value })
   },
@@ -1086,8 +732,6 @@ Page({
       textSheetPurpose: "",
       textSheetValue: "",
       textSheetMaxlength: 120,
-      pendingSeasonName: "",
-      pendingRenameSeasonId: "",
       pendingEpisodeId: ""
     })
   },
@@ -1101,43 +745,6 @@ Page({
       }
       this.handleTextSheetCancel()
       void this.saveEntryProperties({ title: value })
-      return
-    }
-    if (this.data.textSheetPurpose === "add-season-name") {
-      if (!value) {
-        wx.showToast({ title: "请填写名称", icon: "none" })
-        return
-      }
-      this.setData({
-        textSheetPurpose: "add-season-count",
-        textSheetTitle: "总集数",
-        textSheetPlaceholder: "请输入 0 到 500；更新中可填 0",
-        textSheetValue: "",
-        textSheetInputType: "number",
-        textSheetConfirmText: "创建",
-        pendingSeasonName: value
-      })
-      return
-    }
-    if (this.data.textSheetPurpose === "add-season-count") {
-      const episodeCount = Number(value || "0")
-      if (!Number.isInteger(episodeCount) || episodeCount < 0 || episodeCount > 500) {
-        wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
-        return
-      }
-      const name = this.data.pendingSeasonName
-      this.handleTextSheetCancel()
-      void this.createSeason(name, episodeCount)
-      return
-    }
-    if (this.data.textSheetPurpose === "rename-season") {
-      if (!value) {
-        wx.showToast({ title: "请填写名称", icon: "none" })
-        return
-      }
-      const seasonId = this.data.pendingRenameSeasonId
-      this.handleTextSheetCancel()
-      void this.saveSeasonName(seasonId, value)
       return
     }
     if (this.data.textSheetPurpose === "episode-summary") {
@@ -1167,9 +774,7 @@ Page({
       textSheetInputType: "text",
       textSheetConfirmText: "保存",
       textSheetMaxlength: EPISODE_SUMMARY_MAX_LENGTH,
-      pendingEpisodeId: episode.id,
-      pendingSeasonName: "",
-      pendingRenameSeasonId: ""
+      pendingEpisodeId: episode.id
     })
   },
 
@@ -1197,11 +802,6 @@ Page({
           this.data.activeEpisodeRangeIndex,
           this.data.episodePickerFavoriteOnly
         ),
-        filteredEpisodes: filterTimelineEpisodes(
-          nextActiveSeason,
-          this.data.timelineTypeFilters,
-          this.data.favoriteEpisodesOnly
-        ),
         mediaRevision
       })
       wx.showToast({ title: "已保存", icon: "success" })
@@ -1214,513 +814,11 @@ Page({
     }
   },
 
-  async createSeason(name: string, episodeCount: number) {
-    if (!name || !isAsyncPageActive(this)) return
-    if (!Number.isInteger(episodeCount) || episodeCount < 0 || episodeCount > 500) {
-      wx.showToast({ title: "总集数需为 0 到 500 的整数", icon: "none" })
-      return
-    }
-    this.setData({ operating: true })
-    wx.showLoading({ title: "创建中", mask: true })
-    try {
-      const season = await createMediaSeason(this.data.id, name, episodeCount)
-      markMediaDataChanged()
-      this.setData({ requestedSeasonId: season.id })
-      await this.loadPage()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "创建失败", icon: "none" })
-      }
-    } finally {
-      wx.hideLoading()
-      if (isAsyncPageActive(this)) this.setData({ operating: false })
-    }
-  },
-
   handleSeasonManage() {
     if (!this.data.canWrite || !this.data.id || this.data.operating) return
     wx.navigateTo({
       url: `/pages/media/season-manage/index?id=${encodeURIComponent(this.data.id)}`
     })
-  },
-
-  renameSeason(season: MediaSeason) {
-    this.setData({
-      textSheetVisible: true,
-      textSheetPurpose: "rename-season",
-      textSheetTitle: "修改名称",
-      textSheetPlaceholder: `当前：${season.name}`,
-      textSheetValue: season.name,
-      textSheetInputType: "text",
-      textSheetConfirmText: "保存",
-      textSheetMaxlength: 120,
-      pendingSeasonName: "",
-      pendingRenameSeasonId: season.id,
-      pendingEpisodeId: ""
-    })
-  },
-
-  async saveSeasonName(seasonId: string, name: string) {
-    if (!seasonId || !name || !isAsyncPageActive(this)) return
-    try {
-      await updateMediaSeason(seasonId, name)
-      markMediaDataChanged()
-      this.setData({ requestedSeasonId: seasonId })
-      await this.loadPage()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "更新失败", icon: "none" })
-      }
-    }
-  },
-
-  async addEpisode(season: MediaSeason) {
-    this.setData({ operating: true })
-    try {
-      await addNextMediaEpisode(season.id)
-      markMediaDataChanged()
-      this.setData({ requestedSeasonId: season.id })
-      await this.loadPage()
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        wx.showToast({ title: error instanceof Error ? error.message : "新增失败", icon: "none" })
-      }
-    } finally {
-      if (isAsyncPageActive(this)) this.setData({ operating: false })
-    }
-  },
-
-  removeSeason(season: MediaSeason) {
-    wx.showModal({
-      title: `删除${season.name}`,
-      content: `其中的 ${season.episodes.length} 集及剧情记录都会删除，且无法恢复。`,
-      confirmText: "删除",
-      confirmColor: UI_COLORS.danger,
-      success: async (result) => {
-        if (!result.confirm || !isAsyncPageActive(this)) return
-        this.setData({ operating: true })
-        try {
-          await deleteMediaSeason(season.id)
-          markMediaDataChanged()
-          this.setData({ activeSeasonIndex: 0 })
-          await this.loadPage()
-        } catch (error) {
-          if (isAsyncPageActive(this)) {
-            wx.showToast({ title: error instanceof Error ? error.message : "删除失败", icon: "none" })
-          }
-        } finally {
-          if (isAsyncPageActive(this)) this.setData({ operating: false })
-        }
-      }
-    })
-  },
-
-  episodeDraftKey(id: string) {
-    return `${EPISODE_DRAFT_PREFIX}${id}`
-  },
-
-  readEpisodeDraft(id: string): {
-    title: string
-    plotSummary: string
-    timelineNotes: MediaTimelineNote[]
-  } | null {
-    try {
-      const draft = wx.getStorageSync(this.episodeDraftKey(id)) as {
-        title?: unknown
-        plotSummary?: unknown
-        timelineNotes?: unknown
-      } | undefined
-      if (!draft || typeof draft.title !== "string" || typeof draft.plotSummary !== "string") return null
-      return {
-        title: draft.title,
-        plotSummary: draft.plotSummary,
-        timelineNotes: Array.isArray(draft.timelineNotes)
-          ? draft.timelineNotes as MediaTimelineNote[]
-          : []
-      }
-    } catch (_error) {
-      return null
-    }
-  },
-
-  persistEpisodeDraft() {
-    const id = this.data.editingEpisodeId
-    if (!id) return
-    const timelineNotes = this.data.episodeDraftTimelineNotes.map((note) => ({
-      id: note.id,
-      timecode: note.timecode,
-      type: note.type,
-      content: note.content,
-      dialogues: note.dialogues.map((dialogue) => ({ ...dialogue }))
-    }))
-    try {
-      wx.setStorageSync(this.episodeDraftKey(id), {
-        title: this.data.episodeDraftTitle,
-        plotSummary: this.data.episodeDraftPlotSummary,
-        timelineNotes
-      })
-    } catch (_error) {
-      // 本地空间不足时不阻断当前编辑。
-    }
-    if (!this.data.episodeDraftDirty) this.setData({ episodeDraftDirty: true })
-    wx.enableAlertBeforeUnload({ message: "剧情修改还没有保存，确定离开吗？" })
-  },
-
-  scheduleEpisodeDraftPersist() {
-    if (episodeDraftTimer) clearTimeout(episodeDraftTimer)
-    episodeDraftTimer = setTimeout(() => {
-      episodeDraftTimer = null
-      this.persistEpisodeDraft()
-    }, 240)
-  },
-
-  flushEpisodeDraft() {
-    if (!episodeDraftTimer) return
-    clearTimeout(episodeDraftTimer)
-    episodeDraftTimer = null
-    this.persistEpisodeDraft()
-  },
-
-  clearEpisodeDraft(id: string) {
-    if (episodeDraftTimer) clearTimeout(episodeDraftTimer)
-    episodeDraftTimer = null
-    try {
-      wx.removeStorageSync(this.episodeDraftKey(id))
-    } catch (_error) {
-      // 忽略草稿清理失败。
-    }
-    wx.disableAlertBeforeUnload()
-  },
-
-  handleEpisodeEdit(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.canWrite || this.data.savingEpisode) return
-    const id = String(event.currentTarget.dataset.id || "")
-    const episode = this.data.activeSeason?.episodes.find((item) => item.id === id)
-    if (!episode) return
-    if (this.data.editingEpisodeId && this.data.editingEpisodeId !== id) {
-      wx.showToast({ title: "请先保存或取消当前编辑", icon: "none" })
-      return
-    }
-    const draft = this.readEpisodeDraft(id)
-    this.setData({
-      editingEpisodeId: id,
-      episodeDraftTitle: draft?.title ?? episode.title,
-      episodeDraftPlotSummary: draft?.plotSummary ?? episode.plot_summary,
-      episodeDraftTimelineNotes: (draft?.timelineNotes || episode.timeline_notes || [])
-        .map(createEditableTimelineNote),
-      episodeDraftDirty: Boolean(draft)
-    }, () => {
-      wx.enableAlertBeforeUnload({ message: "剧情修改还没有保存，确定离开吗？" })
-      if (draft) wx.showToast({ title: "已恢复未保存剧情", icon: "none" })
-    })
-  },
-
-  handleEpisodeEditCancel() {
-    if (this.data.savingEpisode) return
-    const id = this.data.editingEpisodeId
-    if (id) this.clearEpisodeDraft(id)
-    this.setData({
-      editingEpisodeId: "",
-      episodeDraftTitle: "",
-      episodeDraftPlotSummary: "",
-      episodeDraftTimelineNotes: [],
-      episodeDraftDirty: false
-    })
-  },
-
-  handleEpisodeTitleInput(event: WechatMiniprogram.Input) {
-    this.setData({ episodeDraftTitle: event.detail.value }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeSummaryInput(event: WechatMiniprogram.TextareaInput) {
-    this.setData({ episodeDraftPlotSummary: event.detail.value }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeAddTimelineNote() {
-    if (this.data.episodeDraftTimelineNotes.length >= 100) {
-      wx.showToast({ title: "每集最多记录 100 个时间点", icon: "none" })
-      return
-    }
-    this.setData({
-      episodeDraftTimelineNotes: [
-        ...this.data.episodeDraftTimelineNotes,
-        createTimelineNote()
-      ]
-    }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeTimelineTimeChange(event: WechatMiniprogram.PickerChange) {
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
-    const pickerValue = event.detail.value as number[]
-    if (pickerValue.length !== 3 || pickerValue.some((value) => !Number.isInteger(value))) return
-    const rawPickerValue: TimePickerValue = [pickerValue[0], pickerValue[1], pickerValue[2]]
-    const timeValue = normalizeTimePickerValue(rawPickerValue)
-    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
-    episodeDraftTimelineNotes[index] = {
-      ...episodeDraftTimelineNotes[index],
-      timecode: formatTimecode(timeValue),
-      timePickerValue: getLoopedTimePickerValue(timeValue)
-    }
-    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeTimelineTimeColumnChange(event: WechatMiniprogram.PickerColumnChange) {
-    const index = Number(event.currentTarget.dataset.index)
-    const column = event.detail.column
-    const value = event.detail.value
-    const note = this.data.episodeDraftTimelineNotes[index]
-    const columnSize = timePickerColumnSizes[column]
-    if (!note || columnSize === undefined || !Number.isInteger(value)) return
-    if (value >= columnSize && value < columnSize * 2) {
-      note.timePickerValue[column] = value
-      return
-    }
-    const timePickerValue = [...note.timePickerValue] as TimePickerValue
-    timePickerValue[column] = columnSize + (value % columnSize)
-    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
-    episodeDraftTimelineNotes[index] = { ...note, timePickerValue }
-    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeTimelineTypeChange(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const type = String(event.currentTarget.dataset.type || "")
-    if (
-      !Number.isInteger(index)
-      || !this.data.episodeDraftTimelineNotes[index]
-      || !isTimelineNoteType(type)
-    ) return
-    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
-    const note = episodeDraftTimelineNotes[index]
-    if (note.type === type) return
-    let content = note.content
-    let dialogues = note.dialogues
-    if (type === "quote" && dialogues.length === 0) {
-      dialogues = [createTimelineDialogue("", content)]
-    } else if (note.type === "quote" && type !== "quote" && !content.trim()) {
-      content = dialogues
-        .map((dialogue) => `${dialogue.speaker.trim()}：${dialogue.content.trim()}`)
-        .join("\n")
-    }
-    episodeDraftTimelineNotes[index] = { ...note, type, content, dialogues }
-    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeTimelineContentInput(event: WechatMiniprogram.TextareaInput) {
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
-    this.data.episodeDraftTimelineNotes[index].content = event.detail.value
-    this.scheduleEpisodeDraftPersist()
-  },
-
-  handleEpisodeTimelineContentBlur(event: WechatMiniprogram.TextareaBlur) {
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
-    this.data.episodeDraftTimelineNotes[index].content = event.detail.value
-    this.scheduleEpisodeDraftPersist()
-  },
-
-  handleEpisodeDialogueSpeakerInput(event: WechatMiniprogram.Input) {
-    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
-    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
-    const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
-    if (!dialogue) return
-    dialogue.speaker = event.detail.value
-    this.scheduleEpisodeDraftPersist()
-  },
-
-  handleEpisodeDialogueContentInput(event: WechatMiniprogram.TextareaInput) {
-    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
-    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
-    const dialogue = this.data.episodeDraftTimelineNotes[noteIndex]?.dialogues[dialogueIndex]
-    if (!dialogue) return
-    dialogue.content = event.detail.value
-    this.scheduleEpisodeDraftPersist()
-  },
-
-  handleEpisodeAddDialogue(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const note = this.data.episodeDraftTimelineNotes[index]
-    if (!note || note.type !== "quote") return
-    if (note.dialogues.length >= 20) {
-      wx.showToast({ title: "每个时间点最多记录 20 条对话", icon: "none" })
-      return
-    }
-    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
-    episodeDraftTimelineNotes[index] = {
-      ...note,
-      dialogues: [...note.dialogues, createTimelineDialogue()]
-    }
-    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeRemoveDialogue(event: WechatMiniprogram.TouchEvent) {
-    const noteIndex = Number(event.currentTarget.dataset.noteIndex)
-    const dialogueIndex = Number(event.currentTarget.dataset.dialogueIndex)
-    const note = this.data.episodeDraftTimelineNotes[noteIndex]
-    if (!note || note.type !== "quote" || note.dialogues.length <= 1 || !note.dialogues[dialogueIndex]) return
-    const episodeDraftTimelineNotes = [...this.data.episodeDraftTimelineNotes]
-    episodeDraftTimelineNotes[noteIndex] = {
-      ...note,
-      dialogues: note.dialogues.filter((_, index) => index !== dialogueIndex)
-    }
-    this.setData({ episodeDraftTimelineNotes }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeRemoveTimelineNote(event: WechatMiniprogram.TouchEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || !this.data.episodeDraftTimelineNotes[index]) return
-    this.setData({
-      episodeDraftTimelineNotes: this.data.episodeDraftTimelineNotes.filter(
-        (_, noteIndex) => noteIndex !== index
-      )
-    }, () => this.scheduleEpisodeDraftPersist())
-  },
-
-  handleEpisodeSave(event: WechatMiniprogram.FormSubmit) {
-    const id = String(event.currentTarget.dataset.id || "")
-    void this.saveEpisodeDraft(id, event.detail.value)
-  },
-
-  handleEpisodeStickySave() {
-    void this.saveEpisodeDraft(this.data.editingEpisodeId, {})
-  },
-
-  async saveEpisodeDraft(id: string, submittedValues: WechatMiniprogram.IAnyObject) {
-    if (
-      !this.data.canWrite
-      || this.data.savingEpisode
-      || !id
-      || id !== this.data.editingEpisodeId
-    ) return
-    const title = getSubmittedText(submittedValues, "title", this.data.episodeDraftTitle)
-    const plotSummary = getSubmittedText(
-      submittedValues,
-      "plot_summary",
-      this.data.episodeDraftPlotSummary
-    )
-    const timelineNotes = this.data.episodeDraftTimelineNotes.map((note, noteIndex) => ({
-      ...note,
-      content: note.type === "quote"
-        ? note.content
-        : getSubmittedText(
-            submittedValues,
-            `timeline_content_${noteIndex}`,
-            note.content
-          ),
-      dialogues: note.type === "quote"
-        ? note.dialogues.map((dialogue, dialogueIndex) => ({
-            ...dialogue,
-            speaker: getSubmittedText(
-              submittedValues,
-              `dialogue_speaker_${noteIndex}_${dialogueIndex}`,
-              dialogue.speaker
-            ),
-            content: getSubmittedText(
-              submittedValues,
-              `dialogue_content_${noteIndex}_${dialogueIndex}`,
-              dialogue.content
-            )
-          }))
-        : note.dialogues
-    }))
-    this.data.episodeDraftTitle = title
-    this.data.episodeDraftPlotSummary = plotSummary
-    this.data.episodeDraftTimelineNotes = timelineNotes
-    if (timelineNotes.some((note) => !/^\d{2}:[0-5]\d:[0-5]\d$/.test(note.timecode.trim()))) {
-      wx.showToast({ title: "时间需使用 01:03:09 格式", icon: "none" })
-      return
-    }
-    if (timelineNotes.some((note) => note.type !== "quote" && !note.content.trim())) {
-      wx.showToast({ title: "请填写每条剧情内容", icon: "none" })
-      return
-    }
-    if (timelineNotes.some((note) =>
-      note.type === "quote"
-      && (note.dialogues.length === 0 || note.dialogues.some((dialogue) =>
-        !dialogue.speaker.trim() || !dialogue.content.trim()
-      ))
-    )) {
-      wx.showToast({ title: "请填写语录中的人物和文案", icon: "none" })
-      return
-    }
-    this.setData({ savingEpisode: true })
-    try {
-      const updatedEpisode = await updateMediaEpisode(id, {
-        title,
-        plot_summary: plotSummary,
-        timeline_notes: timelineNotes.map((note) => ({
-          id: note.id,
-          timecode: note.timecode.trim(),
-          type: note.type,
-          content: note.type === "quote" ? "" : note.content.trim(),
-          dialogues: note.type === "quote"
-            ? note.dialogues.map((dialogue) => ({
-                id: dialogue.id,
-                speaker: dialogue.speaker.trim(),
-                content: dialogue.content.trim()
-              }))
-            : []
-        }))
-      })
-      const normalizedEpisode = {
-        ...updatedEpisode,
-        timeline_notes: Array.isArray(updatedEpisode.timeline_notes)
-          ? updatedEpisode.timeline_notes.map(normalizeTimelineNote)
-          : []
-      }
-      const seasons = [...this.data.seasons]
-      const currentSeason = seasons[this.data.activeSeasonIndex]
-      const activeSeason = currentSeason
-        ? {
-            ...currentSeason,
-            episodes: currentSeason.episodes.map((episode) =>
-              episode.id === id ? normalizedEpisode : episode
-            )
-          }
-        : null
-      if (activeSeason) seasons[this.data.activeSeasonIndex] = activeSeason
-      const mediaRevision = markMediaDataChanged()
-      if (!isAsyncPageActive(this)) return
-      this.clearEpisodeDraft(id)
-      const activeSeasonFavoriteCount = favoriteCount(activeSeason)
-      const episodePickerFavoriteOnly = this.data.episodePickerFavoriteOnly
-        && activeSeasonFavoriteCount > 0
-      this.setData({
-        seasons,
-        activeSeason,
-        filteredEpisodes: filterTimelineEpisodes(
-          activeSeason,
-          this.data.timelineTypeFilters,
-          this.data.favoriteEpisodesOnly
-        ),
-        activeSeasonFavoriteCount,
-        episodePickerEpisodes: episodePickerEpisodes(
-          activeSeason,
-          this.data.activeEpisodeRangeIndex,
-          episodePickerFavoriteOnly
-        ),
-        episodePickerFavoriteOnly,
-        editingEpisodeId: "",
-        episodeDraftTitle: "",
-        episodeDraftPlotSummary: "",
-        episodeDraftTimelineNotes: [],
-        episodeDraftDirty: false,
-        savingEpisode: false,
-        mediaRevision
-      }, () => this.restoreRecordsScroll())
-      wx.showToast({ title: "保存成功", icon: "success" })
-    } catch (error) {
-      if (isAsyncPageActive(this)) {
-        this.setData({ savingEpisode: false })
-        wx.showToast({
-          title: error instanceof Error ? error.message : "保存失败，请稍后重试",
-          icon: "none",
-          duration: 3000
-        })
-      }
-    }
   },
 
   async handleFavoriteTap(event: WechatMiniprogram.TouchEvent) {
@@ -1743,11 +841,6 @@ Page({
     this.setData({
       seasons,
       activeSeason,
-      filteredEpisodes: filterTimelineEpisodes(
-        activeSeason,
-        this.data.timelineTypeFilters,
-        this.data.favoriteEpisodesOnly
-      ),
       activeSeasonFavoriteCount,
       episodePickerEpisodes: episodePickerEpisodes(
         activeSeason,

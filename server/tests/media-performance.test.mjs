@@ -58,8 +58,11 @@ test("media reads reuse session cache and successful writes update it", async ()
   assert.match(detail, /canRenderFromListCache = Boolean\(cachedEntry && cachedCategories && currentUser\)/);
   assert.match(detail, /this\.applyPageData\(cachedEntry, cachedSeasons \|\| \[\], cachedCategories/);
   assert.match(detail, /background = options\.background === true \|\| canRenderFromListCache/);
-  assert.match(detail, /restoreRecordsScroll\(\)/);
-  assert.match(detail, /Math\.max\(EPISODE_RENDER_BATCH, this\.data\.visibleEpisodeCount\)/);
+  assert.match(detail, /restoreDetailScroll\(\)/);
+  assert.doesNotMatch(detail, /filteredEpisodes|EPISODE_RENDER_BATCH|timeline_notes/);
+  assert.match(cache, /MAX_CACHED_MEDIA_ENTRY_PAGES = 80/);
+  assert.match(cache, /MAX_CACHED_MEDIA_EPISODES = 100/);
+  assert.doesNotMatch(cache, /for \(const seasons of cachedSeasons\.values\(\)\)/);
   assert.match(index, /getCachedMediaEntryPage/);
   assert.match(index, /hydrateCurrentViewFromCache/);
   assert.match(auth, /clearMediaDataCache\(\)/);
@@ -77,4 +80,30 @@ test("every media mutation page marks cached lists as changed", async () => {
   for (const source of sources) {
     assert.match(source, /markMediaDataChanged/);
   }
+});
+
+test("media list requests stay small, cancellable, and stable across pages", async () => {
+  const [clientService, requestService, serverService, listPage] = await Promise.all([
+    readProjectFile("src/services/media.ts"),
+    readProjectFile("src/services/request.ts"),
+    readProjectFile("server/domains/media/service.mjs"),
+    readProjectFile("src/pages/media/index.ts"),
+  ]);
+
+  assert.match(clientService, /known_total:/);
+  assert.match(clientService, /cancelKey: "media-entry-list"/);
+  assert.match(requestService, /pendingGetRequests/);
+  assert.match(requestService, /activeRequestTasks\.get\(options\.cancelKey\)\?\.abort\(\)/);
+  assert.match(serverService, /MEDIA_ENTRY_LIST_COLUMNS/);
+  assert.match(serverService, /MEDIA_SEASON_SUMMARY_COLUMNS/);
+  assert.doesNotMatch(
+    serverService.match(/const MEDIA_SEASON_SUMMARY_COLUMNS = \[[\s\S]*?\]\.join\(","\);/)?.[0] || "",
+    /timeline_notes/,
+  );
+  assert.match(serverService, /page === 1 \|\| knownTotal === null \? \{ count: "exact" \}/);
+  assert.match(serverService, /\.order\("updated_at", \{ ascending: false \}\)[\s\S]*?\.order\("id", \{ ascending: false \}\)/);
+  assert.match(listPage, /const PAGE_SIZE = 30/);
+  assert.match(listPage, /SEARCH_DEBOUNCE_MS = 400/);
+  assert.match(listPage, /const mediaListStores = new WeakMap/);
+  assert.doesNotMatch(listPage, /overviewInProgressSource|recordSourceItems|ratingStars/);
 });

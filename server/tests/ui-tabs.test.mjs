@@ -10,9 +10,8 @@ const tabSelectors = new Map([
     ".category-chip--active"
   ]],
   ["src/pages/media/detail/index.less", [
-    ".detail-tab--active",
-    ".season-tab--active",
-    ".timeline-filter-option--active"
+    ".episode-picker__tab--active",
+    ".episode-picker__range-option--active"
   ]],
   ["src/pages/media/episode-edit/index.less", [
     ".timeline-type-option--active"

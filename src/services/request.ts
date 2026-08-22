@@ -20,7 +20,11 @@ type RequestOptions = {
   path: string
   method?: "GET" | "POST" | "PUT" | "DELETE"
   data?: WechatMiniprogram.IAnyObject | string | ArrayBuffer
+  cancelKey?: string
 }
+
+const activeRequestTasks = new Map<string, WechatMiniprogram.RequestTask>()
+const pendingGetRequests = new Map<string, Promise<unknown>>()
 
 function toApiEnvelope<T>(value: unknown): ApiEnvelope<T> {
   if (value !== null && typeof value === "object") {
@@ -33,7 +37,9 @@ async function sendRequest<T>(options: RequestOptions, canRefresh = true): Promi
   const session = await ensureLogin()
   const response = await new Promise<WechatMiniprogram.RequestSuccessCallbackResult<ApiEnvelope<T>>>(
     (resolve, reject) => {
-      wx.request<ApiEnvelope<T>>({
+      if (options.cancelKey) activeRequestTasks.get(options.cancelKey)?.abort()
+      let requestTask: WechatMiniprogram.RequestTask
+      requestTask = wx.request<ApiEnvelope<T>>({
         url: `${API_BASE_URL}${options.path}`,
         method: options.method || "GET",
         data:
@@ -42,8 +48,14 @@ async function sendRequest<T>(options: RequestOptions, canRefresh = true): Promi
             : options.data,
         header: { Authorization: `Bearer ${session.token}` },
         success: resolve,
-        fail: reject
+        fail: reject,
+        complete: () => {
+          if (options.cancelKey && activeRequestTasks.get(options.cancelKey) === requestTask) {
+            activeRequestTasks.delete(options.cancelKey)
+          }
+        }
       })
+      if (options.cancelKey) activeRequestTasks.set(options.cancelKey, requestTask)
     }
   )
   const body = toApiEnvelope<T>(response.data)
@@ -77,7 +89,16 @@ async function sendRequest<T>(options: RequestOptions, canRefresh = true): Promi
 }
 
 export function request<T>(options: RequestOptions): Promise<T> {
-  return sendRequest<T>(options)
+  const method = options.method || "GET"
+  if (method !== "GET") return sendRequest<T>(options)
+  const key = `${method}:${options.path}`
+  const pending = pendingGetRequests.get(key)
+  if (pending) return pending as Promise<T>
+  const next = sendRequest<T>(options).finally(() => {
+    if (pendingGetRequests.get(key) === next) pendingGetRequests.delete(key)
+  })
+  pendingGetRequests.set(key, next)
+  return next
 }
 
 export async function publicRequest<T>(options: RequestOptions): Promise<T> {

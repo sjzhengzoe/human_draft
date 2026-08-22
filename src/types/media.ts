@@ -43,6 +43,8 @@ export type MediaEntryPage = {
   }
 }
 
+export type MediaEntrySort = "updated_desc" | "rating_desc"
+
 export type MediaTimelineNoteType = "normal" | "key" | "quote"
 
 export type MediaTimelineDialogue = {

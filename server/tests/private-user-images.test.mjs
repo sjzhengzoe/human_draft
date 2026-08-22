@@ -69,7 +69,7 @@ test("personal image responses and uploaded avatars use signed URLs", async () =
 
 test("private image uploads do not outlive their signed access window in caches", async () => {
   const sharedStorage = await readProjectFile("server/domains/shared/image-storage.mjs");
-  assert.match(sharedStorage, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS\s*=\s*"3600"/);
+  assert.match(sharedStorage, /PRIVATE_IMAGE_CACHE_CONTROL_SECONDS\s*=\s*"18000"/);
   assert.doesNotMatch(sharedStorage, /cacheControl:\s*"31536000"/);
 });
 
@@ -106,6 +106,15 @@ test("signed image URLs come directly from COS without Supabase Storage", async 
   assert.equal(requests.every(({ expiresIn }) => expiresIn === 21_600), true);
   assert.equal(urls.size, 205);
   assert.equal(urls.get(paths[204]), `signed:dish-images/${paths[204]}`);
+
+  const reusedUrls = await createSignedUrlMap({
+    bucketName: "dish-images",
+    paths,
+    expiresIn: 21_600,
+    errorMessage: "读取图片失败。",
+  });
+  assert.equal(requests.length, 205);
+  assert.equal(reusedUrls.get(paths[0]), `signed:dish-images/${paths[0]}`);
 });
 
 test("storage usage is aggregated from the authenticated user's asset ledger", async () => {

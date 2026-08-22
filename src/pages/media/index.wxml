@@ -92,9 +92,10 @@
     refresher-triggered="{{refresherTriggered}}"
     bindrefresherrefresh="handlePullRefresh"
   >
-    <view wx:if="{{contentLoading}}" class="content-loading">
-      <view class="content-loading__spinner" />
-      <view class="content-loading__text">正在加载影视记录…</view>
+    <view wx:if="{{contentLoading}}" class="record-grid record-grid--skeleton" aria-label="正在加载影视记录">
+      <view wx:for="{{loadingPlaceholders}}" wx:key="*this" class="record-card record-card--skeleton">
+        <view class="record-card__cover-frame"><view class="record-card__skeleton-shimmer" /></view>
+      </view>
     </view>
     <view wx:elif="{{errorMessage}}" class="state-block">
       <view>{{errorMessage}}</view>
@@ -103,7 +104,7 @@
 
     <block wx:elif="{{displayMode === 'overview'}}">
       <view wx:if="{{overviewItems.length}}" class="record-grid overview-grid">
-          <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
+          <view wx:for="{{overviewItems}}" wx:key="id" class="record-card" role="button" aria-label="查看 {{item.title}}" data-id="{{item.id}}" bindtap="handleItemTap">
             <view class="record-card__cover-frame">
               <image wx:if="{{item.coverImageUrl}}" class="record-card__cover" src="{{item.coverImageUrl}}" mode="aspectFill" lazy-load />
               <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
@@ -114,12 +115,8 @@
                   <app-icon name="chevron-right" size="24" />
                 </view>
                 <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
-                  <text
-                    wx:for="{{item.ratingStars}}"
-                    wx:for-item="ratingStar"
-                    wx:key="position"
-                    class="record-card__rating-star {{ratingStar.filled ? 'record-card__rating-star--filled' : ''}}"
-                  >{{ratingStar.filled ? '★' : '☆'}}</text>
+                  <app-icon name="star-rating-filled" size="16" />
+                  <text>{{item.personal_rating || '未评分'}}</text>
                 </view>
               </view>
             </view>
@@ -133,7 +130,7 @@
 
     <block wx:else>
       <view wx:if="{{recordItems.length}}" class="record-grid">
-        <view wx:for="{{recordItems}}" wx:key="id" class="record-card" data-id="{{item.id}}" bindtap="handleItemTap">
+        <view wx:for="{{recordItems}}" wx:key="id" class="record-card" role="button" aria-label="查看 {{item.title}}" data-id="{{item.id}}" bindtap="handleItemTap">
           <view class="record-card__cover-frame">
             <image wx:if="{{item.coverImageUrl}}" class="record-card__cover" src="{{item.coverImageUrl}}" mode="aspectFill" lazy-load />
             <view wx:else class="record-card__cover record-card__cover--empty"><app-icon name="{{item.placeholderIcon}}" size="30" /></view>
@@ -144,12 +141,8 @@
                 <app-icon name="chevron-right" size="24" />
               </view>
               <view wx:if="{{item.watch_status === 'completed'}}" class="record-card__rating" aria-label="{{item.personal_rating ? item.personal_rating + ' 星' : '未评分'}}">
-                <text
-                  wx:for="{{item.ratingStars}}"
-                  wx:for-item="ratingStar"
-                  wx:key="position"
-                  class="record-card__rating-star {{ratingStar.filled ? 'record-card__rating-star--filled' : ''}}"
-                >{{ratingStar.filled ? '★' : '☆'}}</text>
+                <app-icon name="star-rating-filled" size="16" />
+                <text>{{item.personal_rating || '未评分'}}</text>
               </view>
             </view>
           </view>
