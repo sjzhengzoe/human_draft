@@ -117,7 +117,17 @@ test("key moment editor selects up to nine original images and displays a WeChat
     /const remaining = MAX_IMAGE_COUNT - this\.data\.editorImages\.length[\s\S]*?count: remaining/,
   );
   assert.match(editorLogic, /MAX_IMAGE_COUNT = 9/);
+  assert.match(editorLogic, /MAX_IMAGE_UPLOAD_BYTES = 10 \* 1024 \* 1024/);
   assert.match(editorLogic, /sizeType: \["original"\]/);
+  assert.match(editorLogic, /localEditorImage\(file\.tempFilePath, Number\(file\.size\) \|\| 0\)/);
+  assert.match(
+    editorLogic,
+    /第 \$\{positions\.join\("、"\)\} 张照片超过 10 MB，请压缩或删除/,
+  );
+  assert.match(
+    editorLogic,
+    /async saveEditor\(\)[\s\S]*?oversizedImagePositions\(this\.data\.editorImages\)[\s\S]*?showOversizedImageWarning\(oversizedPositions\)[\s\S]*?return/,
+  );
 });
 
 test("key moment editor saves the complete ordered gallery instead of incremental mutations", async () => {

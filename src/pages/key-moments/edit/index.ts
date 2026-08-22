@@ -17,12 +17,14 @@ import {
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000
 const MAX_IMAGE_COUNT = 9
+const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024
 const MAX_CONTENT_LENGTH = 2_000
 
 type EditorImage = {
   key: string
   previewUrl: string
   selectedImageUploadPath: string
+  sourceBytes: number
   persistedPath: string
   stagedPath: string
 }
@@ -47,15 +49,31 @@ let activeImageDrag: ActiveImageDrag | null = null
 let suppressPreviewUntil = 0
 let saveEditorInFlight = false
 
-function localEditorImage(path: string): EditorImage {
+function localEditorImage(path: string, sourceBytes: number): EditorImage {
   editorImageSequence += 1
   return {
     key: `local_${Date.now()}_${editorImageSequence}`,
     previewUrl: path,
     selectedImageUploadPath: path,
+    sourceBytes,
     persistedPath: "",
     stagedPath: ""
   }
+}
+
+function oversizedImagePositions(images: EditorImage[]): number[] {
+  return images
+    .map((image, index) => image.sourceBytes > MAX_IMAGE_UPLOAD_BYTES ? index + 1 : 0)
+    .filter((position) => position > 0)
+}
+
+function showOversizedImageWarning(positions: number[]) {
+  if (!positions.length) return
+  wx.showToast({
+    title: `第 ${positions.join("、")} 张照片超过 10 MB，请压缩或删除`,
+    icon: "none",
+    duration: 3500
+  })
 }
 
 function pad(value: number): string {
@@ -158,6 +176,7 @@ Page({
           key: `persisted_${persistedIndex}`,
           previewUrl,
           selectedImageUploadPath: "",
+          sourceBytes: 0,
           persistedPath: item.image_paths[persistedIndex] || "",
           stagedPath: ""
         })),
@@ -235,15 +254,15 @@ Page({
       success: (result) => {
         if (!isAsyncPageActive(this)) return
         const addedImages = result.tempFiles
-          .map((file) => file.tempFilePath)
-          .filter(Boolean)
-          .map((sourceFilePath) => localEditorImage(sourceFilePath))
+          .filter((file) => Boolean(file.tempFilePath))
+          .map((file) => localEditorImage(file.tempFilePath, Number(file.size) || 0))
         const editorImages = [...this.data.editorImages, ...addedImages].slice(0, MAX_IMAGE_COUNT)
         this.setData({
           editorImages,
           canAddImage: editorImages.length < MAX_IMAGE_COUNT,
           selectingImage: false
         })
+        showOversizedImageWarning(oversizedImagePositions(editorImages))
       },
       fail: () => {
         if (isAsyncPageActive(this)) this.setData({ selectingImage: false })
@@ -380,6 +399,11 @@ Page({
     const hasImage = this.data.editorImages.length > 0
     if (!content && !hasImage) {
       wx.showToast({ title: "请填写文案或上传图片", icon: "none" })
+      return
+    }
+    const oversizedPositions = oversizedImagePositions(this.data.editorImages)
+    if (oversizedPositions.length) {
+      showOversizedImageWarning(oversizedPositions)
       return
     }
     const occurredAt = `${this.data.editorDate}T${this.data.editorTime}:00+08:00`
